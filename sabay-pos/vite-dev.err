@@ -1,0 +1,10 @@
+[2m3:26:02 PM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled error] [1mSyntaxError[22m: The requested module '/src/components/LoginScreen.jsx' does not provide an export named 'default'
+[39m
+[2m3:26:04 PM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled error] [1mSyntaxError[22m: The requested module '/src/components/LoginScreen.jsx' does not provide an export named 'default'
+[39m
+[2m3:27:15 PM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled error] [1mSyntaxError[22m: The requested module '/src/components/LoginScreen.jsx' does not provide an export named 'default'
+[39m
+[2m3:27:18 PM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled error] [1mSyntaxError[22m: The requested module '/src/components/LoginScreen.jsx' does not provide an export named 'default'
+[39m
+[2m3:29:17 PM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled error] [1mSyntaxError[22m: The requested module '/src/CashierWorkspace.jsx?t=1780388956976' does not provide an export named 'default'
+[39m
