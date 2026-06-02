@@ -1,5 +1,14 @@
 const ROLES = ['Admin', 'Manager', 'Cashier'];
 
+const blankUserForm = () => ({
+  id: null,
+  name: '',
+  role: 'Cashier',
+  station: 'Station 01',
+  pin: '',
+  active: true,
+});
+
 export default function UserAdmin({
   userForm,
   setUserForm,
@@ -13,15 +22,6 @@ export default function UserAdmin({
     event.preventDefault();
     onSave();
   };
-
-  const blankUserForm = () => ({
-    id: null,
-    name: '',
-    role: 'Cashier',
-    station: 'Station 01',
-    pin: '',
-    active: true,
-  });
 
   return (
     <section className="admin-grid">

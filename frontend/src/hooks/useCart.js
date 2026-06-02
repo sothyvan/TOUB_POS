@@ -21,16 +21,32 @@ export function useCart(categoryById) {
 
   const updateQuantity = (id, change) =>
     setCart((current) =>
-      current
-        .map((item) => (item.id === id ? { ...item, quantity: item.quantity + change } : item))
-        .filter((item) => item.quantity > 0)
+      current.reduce((acc, item) => {
+        if (item.id === id) {
+          const newQty = item.quantity + change;
+          if (newQty > 0) {
+            acc.push({ ...item, quantity: newQty });
+          }
+        } else {
+          acc.push(item);
+        }
+        return acc;
+      }, [])
     );
 
   const setCartItemQuantity = (id, quantity) =>
     setCart((current) =>
-      current
-        .map((item) => (item.id === id ? { ...item, quantity: Math.max(0, quantity) } : item))
-        .filter((item) => item.quantity > 0)
+      current.reduce((acc, item) => {
+        if (item.id === id) {
+          const newQty = Math.max(0, quantity);
+          if (newQty > 0) {
+            acc.push({ ...item, quantity: newQty });
+          }
+        } else {
+          acc.push(item);
+        }
+        return acc;
+      }, [])
     );
 
   const removeItemFromCart = (productId) =>

@@ -3,6 +3,16 @@ import { suggestedCode } from '../utils/format';
 
 const TONES = ['gold', 'green', 'blue', 'rose'];
 
+const blankProductForm = (categoryId) => ({
+  id: null,
+  name: '',
+  code: '',
+  price: '',
+  categoryId,
+  tone: 'gold',
+  available: true,
+});
+
 export default function ProductAdmin({
   productForm,
   setProductForm,
@@ -18,16 +28,6 @@ export default function ProductAdmin({
     event.preventDefault();
     onSave();
   };
-
-  const blankProductForm = (categoryId) => ({
-    id: null,
-    name: '',
-    code: '',
-    price: '',
-    categoryId,
-    tone: 'gold',
-    available: true,
-  });
 
   return (
     <section className="admin-grid">

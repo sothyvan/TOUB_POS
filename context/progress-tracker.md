@@ -21,6 +21,13 @@ Update this file after every meaningful implementation change.
   - `user.repository.js` fully implemented.
   - Stub services/repositories for order, product, report.
 - **Reorganized frontend** (`CashierWorkspace.jsx` → `pages/CashierPage.jsx`, CSS deduplicated into `styles/`, import paths corrected).
+- **Resolved React Doctor diagnostics** (fixed 13 warnings, score improved from 93 to 96):
+  - Replaced non-semantic `role="button"` container with `<button>` tag for cart backdrop in `CashierScreen.jsx`.
+  - Added descriptive `aria-label` to quantity inputs in `CashierScreen.jsx` and `OrderPanel.jsx`.
+  - Renamed vague event handlers in quantity inputs to `handleQuantityChange` and `handleQuantityBlur`.
+  - Optimized cart mutation hook `useCart.js` by combining chained map-filter operations into single-pass `.reduce()` loops.
+  - Relocated pure functions `blankUserForm` and `blankProductForm` outside of component render scopes in `UserAdmin.jsx` and `ProductAdmin.jsx`.
+  - Removed unused exports from `seedData.js`.
 
 ## Next Up
 

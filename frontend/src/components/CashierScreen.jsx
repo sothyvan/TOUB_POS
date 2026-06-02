@@ -8,7 +8,7 @@ function QuantityInput({ value, onChange }) {
     setLocalVal(value);
   }, [value]);
 
-  const handleChange = (e) => {
+  const handleQuantityChange = (e) => {
     setLocalVal(e.target.value);
     const num = parseInt(e.target.value, 10);
     if (!isNaN(num) && num > 0) {
@@ -16,7 +16,7 @@ function QuantityInput({ value, onChange }) {
     }
   };
 
-  const handleBlur = () => {
+  const handleQuantityBlur = () => {
     const num = parseInt(localVal, 10);
     if (isNaN(num) || num <= 0) {
       setLocalVal(value);
@@ -29,9 +29,10 @@ function QuantityInput({ value, onChange }) {
       type="number"
       min="1"
       value={localVal}
-      onChange={handleChange}
-      onBlur={handleBlur}
+      onChange={handleQuantityChange}
+      onBlur={handleQuantityBlur}
       onFocus={(e) => e.target.select()}
+      aria-label="Quantity"
     />
   );
 }
@@ -141,11 +142,10 @@ export default function CashierScreen({
       </section>
 
       {isCartOpen ? (
-        <div
+        <button
           className="cart-backdrop"
-          role="button"
           aria-label="Close cart"
-          tabIndex={0}
+          type="button"
           onClick={() => setIsCartOpen(false)}
           onKeyDown={(e) => e.key === 'Escape' && setIsCartOpen(false)}
         />
