@@ -1,15 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import '../styles/CashierWorkspace.css';
 import { getPermissions } from '../utils/permissions';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useCart } from '../hooks/useCart';
 import { useProducts } from '../hooks/useProducts';
 import { useUsers } from '../hooks/useUsers';
 import { useOrders } from '../hooks/useOrders';
-import Topbar from '../components/Topbar';
+import PageShell from '../components/PageShell';
 import CashierScreen from '../components/CashierScreen';
-import OrderPanel from '../components/OrderPanel';
 import AdminWorkspace from '../components/AdminWorkspace';
 
 export default function CashierPage() {
@@ -33,8 +31,8 @@ export default function CashierPage() {
     categories, products, categoryById, filteredProducts,
     productForm, setProductForm, categoryForm, setCategoryForm,
     selectedCategory, setSelectedCategory, searchQuery, setSearchQuery,
-    saveCategory, editCategory, deleteCategory,
-    saveProduct, editProduct, toggleProductAvailability, deleteProduct,
+    saveCategory, editCategory, deleteCategory, cancelCategoryEdit,
+    saveProduct, editProduct, toggleProductAvailability, deleteProduct, cancelProductEdit,
   } = useProducts(canManageMenu);
 
   const {
@@ -42,7 +40,7 @@ export default function CashierPage() {
     addToCart, updateQuantity, setCartItemQuantity, clearCart, removeItemFromCart,
   } = useCart(categoryById);
 
-  const { users, userForm, setUserForm, saveUser, editUser, toggleUserActive, deleteUser } =
+  const { users, userForm, setUserForm, saveUser, editUser, cancelUserEdit, toggleUserActive, deleteUser } =
     useUsers(canManageUsers, currentUser?.id);
 
   const { orders, todaysOrders, todaysTotal, handleCheckout } =
@@ -90,52 +88,38 @@ export default function CashierPage() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="pos-shell">
-      <Topbar
-        currentUser={currentUser}
-        isCashier={isCashier}
-        isOnline={isOnline}
-        itemCount={itemCount}
-        onCartOpen={() => setIsCartOpen(true)}
-        onLogout={handleLogout}
-      />
-
+    <PageShell
+      currentUser={currentUser}
+      isCashier={isCashier}
+      isOnline={isOnline}
+      itemCount={itemCount}
+      onCartOpen={() => setIsCartOpen(true)}
+      onLogout={handleLogout}
+    >
       {isCashier ? (
-        <>
-          <CashierScreen
-            products={products}
-            categories={categories}
-            categoryById={categoryById}
-            selectedCategory={selectedCategory}
-            setSelectedCategory={setSelectedCategory}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            filteredProducts={filteredProducts}
-            cart={cart}
-            cartById={cartById}
-            addToCart={addToCart}
-            updateQuantity={updateQuantity}
-            setCartItemQuantity={setCartItemQuantity}
-            isCartOpen={isCartOpen}
-            setIsCartOpen={setIsCartOpen}
-            itemCount={itemCount}
-          />
-
-          <OrderPanel
-            cart={cart}
-            itemCount={itemCount}
-            subtotal={subtotal}
-            serviceFee={serviceFee}
-            total={total}
-            isCartOpen={isCartOpen}
-            setIsCartOpen={setIsCartOpen}
-            clearCart={clearCart}
-            updateQuantity={updateQuantity}
-            setCartItemQuantity={setCartItemQuantity}
-            handleCheckout={handleCheckout}
-            isOnline={isOnline}
-          />
-        </>
+        <CashierScreen
+          categories={categories}
+          categoryById={categoryById}
+          selectedCategory={selectedCategory}
+          setSelectedCategory={setSelectedCategory}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          filteredProducts={filteredProducts}
+          cart={cart}
+          cartById={cartById}
+          addToCart={addToCart}
+          updateQuantity={updateQuantity}
+          setCartItemQuantity={setCartItemQuantity}
+          isCartOpen={isCartOpen}
+          setIsCartOpen={setIsCartOpen}
+          itemCount={itemCount}
+          subtotal={subtotal}
+          serviceFee={serviceFee}
+          total={total}
+          clearCart={clearCart}
+          handleCheckout={handleCheckout}
+          isOnline={isOnline}
+        />
       ) : (
         <AdminWorkspace
           visibleAdminTab={visibleAdminTab}
@@ -162,11 +146,14 @@ export default function CashierPage() {
           onEditUser={editUser}
           onToggleUserActive={toggleUserActive}
           onDeleteUser={deleteUser}
+          onCancelProduct={cancelProductEdit}
+          onCancelCategory={cancelCategoryEdit}
+          onCancelUser={cancelUserEdit}
           categoryById={categoryById}
           todaysOrders={todaysOrders}
           todaysTotal={todaysTotal}
         />
       )}
-    </div>
+    </PageShell>
   );
 }

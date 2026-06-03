@@ -1,6 +1,6 @@
 export const SERVICE_RATE = 0.05;
-const ROLES = ['Admin', 'Manager', 'Cashier'];
-const TONES = ['gold', 'green', 'blue', 'rose'];
+export const ROLES = ['Admin', 'Manager', 'Cashier'];
+export const TONES = ['gold', 'green', 'blue', 'rose'];
 
 export const DEFAULT_CATEGORIES = [
   { id: 'cat-coffee', name: 'Coffee', tone: 'gold' },

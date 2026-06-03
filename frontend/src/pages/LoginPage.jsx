@@ -4,7 +4,6 @@ import { useSavedState } from '../hooks/useSavedState';
 import { DEFAULT_USERS } from '../data/seedData';
 import { defaultPinForRole } from '../utils/permissions';
 import LoginScreen from '../components/LoginScreen';
-import '../styles/CashierWorkspace.css';
 
 export default function LoginPage() {
   const navigate = useNavigate();

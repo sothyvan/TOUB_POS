@@ -28,31 +28,36 @@ export default function AdminWorkspace({
   onEditUser,
   onToggleUserActive,
   onDeleteUser,
+  onCancelProduct,
+  onCancelCategory,
+  onCancelUser,
   categoryById,
   todaysOrders,
   todaysTotal,
 }) {
   return (
-    <main className="admin-workspace">
-      <section className="admin-hero">
+    <main className="flex-1 p-[clamp(18px,2.4vw,30px)] overflow-auto max-[768px]:p-4">
+      <section className="p-5.5 border border-[#ded8ca] rounded-lg bg-[#fffdfa]/78 flex items-center justify-between gap-4.5 shadow-[0_10px_24px_rgba(52,45,35,0.07)] max-[768px]:flex-col max-[768px]:items-start">
         <div>
-          <p className="eyebrow">Back office</p>
-          <h2>{users.some((u) => u.role === 'Admin') ? 'Admin management' : 'Manager workspace'}</h2>
+          <p className="m-0 mb-[3px] text-[#776f63] text-[11px] font-extrabold tracking-wider uppercase">Back office</p>
+          <h2 className="m-0 text-brand-dark text-[26px] leading-[1.1] font-bold">{users.some((u) => u.role === 'Admin') ? 'Admin management' : 'Manager workspace'}</h2>
         </div>
-        <div className="admin-stats">
-          <span>{products.length} items</span>
-          <span>{categories.length} categories</span>
-          <span>{orders.length} orders</span>
-          {users.some((u) => u.role === 'Admin') ? <span>{users.length} users</span> : null}
+        <div className="flex flex-wrap gap-2 justify-end max-[768px]:justify-start">
+          <span className="min-h-[34px] py-2 px-2.75 rounded-full bg-[#24211f] text-[#fff9ee] text-[13px] font-black">{products.length} items</span>
+          <span className="min-h-[34px] py-2 px-2.75 rounded-full bg-[#24211f] text-[#fff9ee] text-[13px] font-black">{categories.length} categories</span>
+          <span className="min-h-[34px] py-2 px-2.75 rounded-full bg-[#24211f] text-[#fff9ee] text-[13px] font-black">{orders.length} orders</span>
+          {users.some((u) => u.role === 'Admin') ? <span className="min-h-[34px] py-2 px-2.75 rounded-full bg-[#24211f] text-[#fff9ee] text-[13px] font-black">{users.length} users</span> : null}
         </div>
       </section>
 
-      <div className="admin-tabs" role="tablist" aria-label="Admin areas">
+      <div className="my-4.5 mx-0 flex flex-wrap gap-2" role="tablist" aria-label="Admin areas">
         {allowedAdminTabs.map((tab) => (
           <button
             key={tab}
             type="button"
-            className={visibleAdminTab === tab ? 'active' : ''}
+            className={`min-h-[40px] px-4 border border-[#d9d0c1] rounded-full bg-[#fffdfa] text-[#4f483f] text-sm font-black capitalize cursor-pointer ${
+              visibleAdminTab === tab ? 'bg-brand-primary border-brand-primary text-[#fffaf0]' : ''
+            }`}
             onClick={() => setAdminTab(tab)}
           >
             {tab}
@@ -71,6 +76,7 @@ export default function AdminWorkspace({
           onEdit={onEditProduct}
           onToggleAvailability={onToggleProductAvailability}
           onDelete={onDeleteProduct}
+          onCancel={onCancelProduct}
         />
       ) : null}
 
@@ -83,6 +89,7 @@ export default function AdminWorkspace({
           onSave={onSaveCategory}
           onEdit={onEditCategory}
           onDelete={onDeleteCategory}
+          onCancel={onCancelCategory}
         />
       ) : null}
 
@@ -103,6 +110,7 @@ export default function AdminWorkspace({
           onEdit={onEditUser}
           onToggleActive={onToggleUserActive}
           onDelete={onDeleteUser}
+          onCancel={onCancelUser}
         />
       ) : null}
     </main>

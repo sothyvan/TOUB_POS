@@ -4,7 +4,7 @@ import { suggestedCode } from '../utils/format';
 import { makeId } from '../utils/ids';
 import { useSavedState } from './useSavedState';
 
-const blankProductForm = (categoryId = DEFAULT_CATEGORIES[0].id) => ({
+export const blankProductForm = (categoryId = '') => ({
   id: null, name: '', code: '', price: '', categoryId, tone: 'gold', available: true,
 });
 
@@ -22,7 +22,7 @@ const blankCategoryForm = () => ({ id: null, name: '', tone: 'gold' });
 export function useProducts(canManageMenu) {
   const [categories, setCategories] = useSavedState('sabay-pos-categories', DEFAULT_CATEGORIES);
   const [products, setProducts] = useSavedState('sabay-pos-products', DEFAULT_PRODUCTS);
-  const [productForm, setProductForm] = useState(() => blankProductForm());
+  const [productForm, setProductForm] = useState(() => blankProductForm(categories[0]?.id || ''));
   const [categoryForm, setCategoryForm] = useState(blankCategoryForm);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -72,13 +72,25 @@ export function useProducts(canManageMenu) {
 
   const editCategory = (cat) => setCategoryForm(cat);
 
+  const cancelCategoryEdit = () => {
+    setCategoryForm(blankCategoryForm());
+  };
+
   const deleteCategory = (categoryId) => {
     if (!canManageMenu) return;
     if (products.some((p) => p.categoryId === categoryId)) {
       alert('Move or delete products in this category first.');
       return;
     }
-    setCategories((cur) => cur.filter((c) => c.id !== categoryId));
+    const nextCats = categories.filter((c) => c.id !== categoryId);
+    setCategories(nextCats);
+    if (productForm.categoryId === categoryId) {
+      setProductForm((prev) => ({
+        ...prev,
+        categoryId: nextCats[0]?.id || '',
+        tone: nextCats[0]?.tone || 'gold',
+      }));
+    }
     if (selectedCategory === categoryId) setSelectedCategory('All');
   };
 
@@ -116,6 +128,10 @@ export function useProducts(canManageMenu) {
   const editProduct = (product) =>
     setProductForm({ ...product, price: String(product.price) });
 
+  const cancelProductEdit = () => {
+    setProductForm(blankProductForm(categories[0]?.id || ''));
+  };
+
   const toggleProductAvailability = (productId) => {
     if (!canManageMenu) return;
     setProducts((cur) =>
@@ -136,7 +152,7 @@ export function useProducts(canManageMenu) {
     categoryForm, setCategoryForm,
     selectedCategory, setSelectedCategory,
     searchQuery, setSearchQuery,
-    saveCategory, editCategory, deleteCategory,
-    saveProduct, editProduct, toggleProductAvailability, deleteProduct,
+    saveCategory, editCategory, deleteCategory, cancelCategoryEdit,
+    saveProduct, editProduct, toggleProductAvailability, deleteProduct, cancelProductEdit,
   };
 }

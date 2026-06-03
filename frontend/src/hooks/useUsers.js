@@ -39,6 +39,10 @@ export function useUsers(canManageUsers, currentUserId) {
 
   const editUser = (user) => setUserForm(user);
 
+  const cancelUserEdit = () => {
+    setUserForm(blankUserForm());
+  };
+
   const toggleUserActive = (userId) => {
     if (!canManageUsers) return;
     if (userId === currentUserId) {
@@ -59,5 +63,5 @@ export function useUsers(canManageUsers, currentUserId) {
     setUsers((cur) => cur.filter((u) => u.id !== userId));
   };
 
-  return { users, userForm, setUserForm, saveUser, editUser, toggleUserActive, deleteUser };
+  return { users, userForm, setUserForm, saveUser, editUser, cancelUserEdit, toggleUserActive, deleteUser };
 }
