@@ -56,13 +56,14 @@ export function useCart(categoryById) {
 
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const serviceFee = Math.round(subtotal * SERVICE_RATE * 100) / 100;
-  const total = subtotal + serviceFee;
+  const serviceFee = Math.round(subtotal * 0.03 * 100) / 100;
+  const estimatedTax = Math.round(subtotal * 0.08 * 100) / 100;
+  const total = subtotal + serviceFee + estimatedTax;
   const cartById = useMemo(() => new Map(cart.map((item) => [item.id, item])), [cart]);
 
   return {
     cart, cartById, itemCount,
-    subtotal, serviceFee, total,
+    subtotal, serviceFee, estimatedTax, total,
     addToCart, updateQuantity, setCartItemQuantity, clearCart, removeItemFromCart,
   };
 }

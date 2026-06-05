@@ -5,7 +5,7 @@ import { makeId } from '../utils/ids';
 import { useSavedState } from './useSavedState';
 
 export const blankProductForm = (categoryId = '') => ({
-  id: null, name: '', code: '', price: '', categoryId, tone: 'gold', available: true,
+  id: null, name: '', code: '', price: '', categoryId, tone: 'gold', available: true, image: '',
 });
 
 const blankCategoryForm = () => ({ id: null, name: '', tone: 'gold' });
@@ -20,8 +20,8 @@ const blankCategoryForm = () => ({ id: null, name: '', tone: 'gold' });
  * @param {boolean} canManageMenu
  */
 export function useProducts(canManageMenu) {
-  const [categories, setCategories] = useSavedState('sabay-pos-categories', DEFAULT_CATEGORIES);
-  const [products, setProducts] = useSavedState('sabay-pos-products', DEFAULT_PRODUCTS);
+  const [categories, setCategories] = useSavedState('sabay-pos-categories-v3', DEFAULT_CATEGORIES);
+  const [products, setProducts] = useSavedState('sabay-pos-products-v3', DEFAULT_PRODUCTS);
   const [productForm, setProductForm] = useState(() => blankProductForm(categories[0]?.id || ''));
   const [categoryForm, setCategoryForm] = useState(blankCategoryForm);
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -114,6 +114,7 @@ export function useProducts(canManageMenu) {
       categoryId: productForm.categoryId,
       tone: productForm.tone,
       available: productForm.available,
+      image: productForm.image || '',
     };
     if (productForm.id) {
       setProducts((cur) => cur.map((p) => (p.id === product.id ? product : p)));

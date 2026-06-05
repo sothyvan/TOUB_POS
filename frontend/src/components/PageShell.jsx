@@ -11,11 +11,7 @@ export default function PageShell({
 }) {
   return (
     <div
-      style={{
-        background:
-          'linear-gradient(135deg, rgba(247, 198, 78, 0.16), transparent 34%), linear-gradient(315deg, rgba(53, 139, 139, 0.14), transparent 38%), #f6f4ef',
-      }}
-      className="min-h-[100svh] flex flex-col text-brand-text"
+      className="h-[100svh] max-h-[100svh] flex flex-col bg-brand-bg text-brand-text overflow-hidden"
     >
       <Topbar
         currentUser={currentUser}

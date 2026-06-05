@@ -10,7 +10,7 @@ import { money } from '../utils/format';
  * @param {Object}  currentUser
  * @param {Object}  totals - { subtotal, serviceFee, total }
  */
-export function useOrders(isOnline, cart, clearCart, currentUser, { subtotal, serviceFee, total }) {
+export function useOrders(isOnline, cart, clearCart, currentUser, { subtotal, serviceFee, estimatedTax, total }) {
   const [orders, setOrders] = useSavedState('sabay-pos-orders', []);
 
   const todaysOrders = orders.filter(
@@ -42,12 +42,13 @@ export function useOrders(isOnline, cart, clearCart, currentUser, { subtotal, se
       })),
       subtotal,
       serviceFee,
+      estimatedTax,
       total,
     };
 
     setOrders((cur) => [order, ...cur]);
     clearCart();
-    alert(`Receipt ${order.orderNo}\n${method} payment confirmed\nTotal: ${money(total)}`);
+    return order;
   };
 
   return { orders, todaysOrders, todaysTotal, handleCheckout };

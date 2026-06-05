@@ -9,64 +9,86 @@ export default function LoginScreen({
 }) {
   return (
     <main
-      style={{
-        background:
-          'linear-gradient(135deg, rgba(247, 198, 78, 0.16), transparent 34%), linear-gradient(315deg, rgba(53, 139, 139, 0.14), transparent 38%), #f6f4ef',
-      }}
-      className="min-h-[100svh] p-5.5 grid place-items-center text-brand-text"
+      className="relative min-h-[100svh] p-6 grid place-items-center bg-brand-yellow text-gray-800 selection:bg-brand-blue/20"
     >
-      <section className="w-[min(440px,100%)] p-6.5 border border-[#ded8ca] rounded-lg bg-[#fffdfa]/90 shadow-[0_18px_54px_rgba(52,45,35,0.14)] grid gap-6">
-        <div className="flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-lg bg-[#23211f] text-[#f8d36b] grid place-items-center text-2xl font-extrabold shadow-[inset_0_-4px_0_rgba(255,255,255,0.08)]">
+      <section className="w-[min(380px,calc(100%-1.5rem))] p-8 rounded-[24px] bg-white shadow-[0_24px_64px_-16px_rgba(0,0,0,0.12)] flex flex-col gap-6">
+        {/* Header Logo & Title */}
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-xl bg-[#1a1a1a] text-brand-yellow grid place-items-center text-3xl font-black shadow-[inset_0_-3px_0_rgba(255,255,255,0.06)] shrink-0">
             T
           </div>
           <div>
-            <p className="m-0 mb-[3px] text-[#776f63] text-[11px] font-extrabold tracking-wider uppercase">Secure register</p>
-            <h1 className="m-0 text-brand-dark text-3xl leading-[1.1] font-bold">Toub POS</h1>
+            <p className="m-0 mb-1 text-gray-500 text-[10px] font-extrabold tracking-wider uppercase">Secure register</p>
+            <h1 className="m-0 text-brand-blue text-[26px] leading-none font-bold tracking-tight">ToubPOS</h1>
           </div>
         </div>
 
-        <form className="grid gap-3.5" onSubmit={onLogin}>
-          <label className="grid gap-1.75 text-[#5c544a] text-[13px] font-black">
-            User
-            <select
-              value={effectiveLoginUserId}
-              onChange={(event) => onUserChange(event.target.value)}
-              className="w-full min-h-[48px] px-3 border border-[#d9d0c1] rounded-lg bg-white text-brand-text text-[15px] font-bold"
-            >
-              {activeUsers.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.name} - {user.role}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="grid gap-1.75 text-[#5c544a] text-[13px] font-black">
-            PIN
+        {/* Login Form */}
+        <form className="flex flex-col gap-5" onSubmit={onLogin}>
+          {/* User Select */}
+          <div>
+            <label htmlFor="user-select" className="block text-gray-700 text-[14px] font-bold mb-1.5">
+              User
+            </label>
+            <div className="relative">
+              <select
+                id="user-select"
+                value={effectiveLoginUserId}
+                onChange={(event) => onUserChange(event.target.value)}
+                className="w-full h-12 pl-3.5 pr-10 border border-gray-200 rounded-xl bg-white text-gray-800 text-[15px] font-semibold appearance-none cursor-pointer focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue"
+              >
+                {activeUsers.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.name} - {user.role}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-gray-500">
+                <svg className="h-4.5 w-4.5 stroke-2 stroke-current fill-none" viewBox="0 0 24 24">
+                  <path d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          {/* PIN Input */}
+          <div>
+            <label htmlFor="pin-input" className="block text-gray-700 text-[14px] font-bold mb-1.5">
+              PIN
+            </label>
             <input
+              id="pin-input"
               type="password"
               inputMode="numeric"
               value={loginPin}
               onChange={(event) => onPinChange(event.target.value)}
               placeholder="Enter staff PIN"
-              className="w-full min-h-[48px] px-3 border border-[#d9d0c1] rounded-lg bg-white text-brand-text text-[15px] font-bold"
+              className="w-full h-12 px-3.5 border border-gray-200 rounded-xl bg-white text-gray-800 text-[15px] font-medium placeholder-gray-400 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue"
             />
-          </label>
-          {loginError ? <p className="m-0 text-[#8f3c28] text-[13px] font-black">{loginError}</p> : null}
+          </div>
+
+          {/* Error Message */}
+          {loginError ? (
+            <p className="m-0 text-red-500 text-xs font-semibold">{loginError}</p>
+          ) : null}
+
+          {/* Submit Button */}
           <button
             type="submit"
-            className="min-h-[50px] border-0 rounded-lg bg-[#24211f] text-[#fff9ee] text-base font-black cursor-pointer"
+            className="w-full h-12 mt-1 bg-brand-blue text-white text-[15px] font-bold rounded-xl hover:bg-brand-blue/95 active:scale-[0.98] transition-all cursor-pointer shadow-[0_2px_4px_rgba(0,71,204,0.1)]"
           >
             Log in
           </button>
         </form>
-
-        <div className="flex flex-wrap gap-2">
-          <span className="min-h-[30px] py-1.75 px-2.5 rounded-full bg-brand-primary/10 text-brand-primary text-xs font-black">Admin - 1234</span>
-          <span className="min-h-[30px] py-1.75 px-2.5 rounded-full bg-brand-primary/10 text-brand-primary text-xs font-black">Manager - 2222</span>
-          <span className="min-h-[30px] py-1.75 px-2.5 rounded-full bg-brand-primary/10 text-brand-primary text-xs font-black">Cashier - 1111</span>
-        </div>
       </section>
+
+      {/* Floating Demo Credentials at page bottom */}
+      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-white/20 backdrop-blur-md px-4 py-2.5 rounded-full border border-white/25 text-[11px] font-semibold text-brand-blue shadow-sm">
+        <span className="opacity-80">Demo Credentials:</span>
+        <span className="bg-white/35 px-2 py-0.5 rounded-full">Admin (1234)</span>
+        <span className="bg-white/35 px-2 py-0.5 rounded-full">Manager (2222)</span>
+        <span className="bg-white/35 px-2 py-0.5 rounded-full">Cashier (1111)</span>
+      </div>
     </main>
   );
 }
