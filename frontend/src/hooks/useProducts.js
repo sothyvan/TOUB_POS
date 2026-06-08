@@ -1,8 +1,6 @@
 import { useMemo, useState } from 'react';
-import { DEFAULT_CATEGORIES, DEFAULT_PRODUCTS } from '../data/seedData';
 import { suggestedCode } from '../utils/format';
-import { makeId } from '../utils/ids';
-import { useSavedState } from './useSavedState';
+import { api } from '../services/api';
 
 export const blankProductForm = (categoryId = '') => ({
   id: null, name: '', code: '', price: '', categoryId, tone: 'gold', available: true, image: '',
@@ -20,8 +18,8 @@ const blankCategoryForm = () => ({ id: null, name: '', tone: 'gold' });
  * @param {boolean} canManageMenu
  */
 export function useProducts(canManageMenu) {
-  const [categories, setCategories] = useSavedState('sabay-pos-categories-v3', DEFAULT_CATEGORIES);
-  const [products, setProducts] = useSavedState('sabay-pos-products-v3', DEFAULT_PRODUCTS);
+  const [categories, setCategories] = useState(() => api.categories.getAll());
+  const [products, setProducts] = useState(() => api.products.getAll());
   const [productForm, setProductForm] = useState(() => blankProductForm(categories[0]?.id || ''));
   const [categoryForm, setCategoryForm] = useState(blankCategoryForm);
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -56,17 +54,23 @@ export function useProducts(canManageMenu) {
       return;
     }
     if (categoryForm.id) {
-      setCategories((cur) =>
-        cur.map((c) => (c.id === categoryForm.id ? { ...c, name, tone: categoryForm.tone } : c))
-      );
-      setProducts((cur) =>
-        cur.map((p) => (p.categoryId === categoryForm.id ? { ...p, tone: categoryForm.tone } : p))
-      );
+      api.categories.save({ id: categoryForm.id, name, tone: categoryForm.tone });
+      
+      // Update all products in this category to use the new tone
+      const allProducts = api.products.getAll();
+      allProducts.forEach((p) => {
+        if (p.categoryId === categoryForm.id) {
+          api.products.save({ ...p, tone: categoryForm.tone });
+        }
+      });
     } else {
-      const cat = { id: makeId('cat'), name, tone: categoryForm.tone };
-      setCategories((cur) => [...cur, cat]);
-      setProductForm((cur) => ({ ...cur, categoryId: cat.id, tone: cat.tone }));
+      const newCat = api.categories.save({ name, tone: categoryForm.tone });
+      setProductForm((cur) => ({ ...cur, categoryId: newCat.id, tone: newCat.tone }));
     }
+    
+    // Sync states
+    setCategories(api.categories.getAll());
+    setProducts(api.products.getAll());
     setCategoryForm(blankCategoryForm());
   };
 
@@ -82,7 +86,8 @@ export function useProducts(canManageMenu) {
       alert('Move or delete products in this category first.');
       return;
     }
-    const nextCats = categories.filter((c) => c.id !== categoryId);
+    api.categories.delete(categoryId);
+    const nextCats = api.categories.getAll();
     setCategories(nextCats);
     if (productForm.categoryId === categoryId) {
       setProductForm((prev) => ({
@@ -107,7 +112,7 @@ export function useProducts(canManageMenu) {
       return null;
     }
     const product = {
-      id: productForm.id || makeId('prod'),
+      id: productForm.id,
       name,
       code: (productForm.code.trim() || suggestedCode(name)).toUpperCase(),
       price,
@@ -116,14 +121,10 @@ export function useProducts(canManageMenu) {
       available: productForm.available,
       image: productForm.image || '',
     };
-    if (productForm.id) {
-      setProducts((cur) => cur.map((p) => (p.id === product.id ? product : p)));
-      setProductForm(blankProductForm(productForm.categoryId));
-      return product.id; // signal: remove this id from cart
-    }
-    setProducts((cur) => [...cur, product]);
+    const saved = api.products.save(product);
+    setProducts(api.products.getAll());
     setProductForm(blankProductForm(productForm.categoryId));
-    return null;
+    return productForm.id ? saved.id : null;
   };
 
   const editProduct = (product) =>
@@ -135,15 +136,18 @@ export function useProducts(canManageMenu) {
 
   const toggleProductAvailability = (productId) => {
     if (!canManageMenu) return;
-    setProducts((cur) =>
-      cur.map((p) => (p.id === productId ? { ...p, available: !p.available } : p))
-    );
+    const target = products.find((p) => p.id === productId);
+    if (target) {
+      api.products.save({ ...target, available: !target.available });
+      setProducts(api.products.getAll());
+    }
     return productId; // signal: remove from cart
   };
 
   const deleteProduct = (productId) => {
     if (!canManageMenu) return;
-    setProducts((cur) => cur.filter((p) => p.id !== productId));
+    api.products.delete(productId);
+    setProducts(api.products.getAll());
     return productId; // signal: remove from cart
   };
 
@@ -157,3 +161,4 @@ export function useProducts(canManageMenu) {
     saveProduct, editProduct, toggleProductAvailability, deleteProduct, cancelProductEdit,
   };
 }
+

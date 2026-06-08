@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ROLES } from '../data/seedData';
 
 export default function UserAdmin({
@@ -11,28 +11,23 @@ export default function UserAdmin({
   onDelete,
   onCancel,
 }) {
-  const [isFormOpen, setIsFormOpen] = useState(false);
-
-  useEffect(() => {
-    if (userForm.id) {
-      setIsFormOpen(true);
-    }
-  }, [userForm.id]);
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const isFormOpen = Boolean(userForm.id) || isAddingNew;
 
   const handleSubmit = (event) => {
     event.preventDefault();
     onSave();
-    setIsFormOpen(false);
+    setIsAddingNew(false);
   };
 
   const handleCancel = () => {
     onCancel();
-    setIsFormOpen(false);
+    setIsAddingNew(false);
   };
 
   const handleAddNewClick = () => {
     onCancel();
-    setIsFormOpen(true);
+    setIsAddingNew(true);
   };
 
   return (

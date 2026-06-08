@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { money } from '../utils/format';
 import { TONES } from '../data/seedData';
 
@@ -14,28 +14,23 @@ export default function ProductAdmin({
   onDelete,
   onCancel,
 }) {
-  const [isFormOpen, setIsFormOpen] = useState(false);
-
-  useEffect(() => {
-    if (productForm.id) {
-      setIsFormOpen(true);
-    }
-  }, [productForm.id]);
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const isFormOpen = Boolean(productForm.id) || isAddingNew;
 
   const handleSubmit = (event) => {
     event.preventDefault();
     onSave();
-    setIsFormOpen(false);
+    setIsAddingNew(false);
   };
 
   const handleCancel = () => {
     onCancel();
-    setIsFormOpen(false);
+    setIsAddingNew(false);
   };
 
   const handleAddNewClick = () => {
     onCancel();
-    setIsFormOpen(true);
+    setIsAddingNew(true);
   };
 
   return (

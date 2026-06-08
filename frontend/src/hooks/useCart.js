@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { SERVICE_RATE } from '../data/seedData';
 
 /**
  * Manages cart state and all derived totals.

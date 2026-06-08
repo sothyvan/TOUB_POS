@@ -1,6 +1,5 @@
-import { useSavedState } from './useSavedState';
-import { makeId } from '../utils/ids';
-import { money } from '../utils/format';
+import { useState } from 'react';
+import { api } from '../services/api';
 
 /**
  * Manages order history and checkout logic.
@@ -11,7 +10,7 @@ import { money } from '../utils/format';
  * @param {Object}  totals - { subtotal, serviceFee, total }
  */
 export function useOrders(isOnline, cart, clearCart, currentUser, { subtotal, serviceFee, estimatedTax, total }) {
-  const [orders, setOrders] = useSavedState('sabay-pos-orders', []);
+  const [orders, setOrders] = useState(() => api.orders.getAll());
 
   const todaysOrders = orders.filter(
     (o) => new Date(o.createdAt).toDateString() === new Date().toDateString()
@@ -29,9 +28,6 @@ export function useOrders(isOnline, cart, clearCart, currentUser, { subtotal, se
     }
 
     const order = {
-      id: makeId('order'),
-      orderNo: `ORD-${String(orders.length + 1).padStart(4, '0')}`,
-      createdAt: new Date().toISOString(),
       cashierId: currentUser.id,
       cashierName: currentUser.name,
       station: currentUser.station,
@@ -46,9 +42,10 @@ export function useOrders(isOnline, cart, clearCart, currentUser, { subtotal, se
       total,
     };
 
-    setOrders((cur) => [order, ...cur]);
+    const createdOrder = api.orders.create(order);
+    setOrders(api.orders.getAll());
     clearCart();
-    return order;
+    return createdOrder;
   };
 
   return { orders, todaysOrders, todaysTotal, handleCheckout };

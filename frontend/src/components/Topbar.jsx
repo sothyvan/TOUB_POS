@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { initials } from '../utils/format';
 
-export default function Topbar({ currentUser, isCashier, isOnline, itemCount, onCartOpen, onLogout }) {
+export default function Topbar({ currentUser, isCashier, itemCount, onCartOpen, onLogout }) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 

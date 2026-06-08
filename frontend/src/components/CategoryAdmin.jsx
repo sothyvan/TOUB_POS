@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { TONES } from '../data/seedData';
 
 export default function CategoryAdmin({
@@ -11,28 +11,23 @@ export default function CategoryAdmin({
   onDelete,
   onCancel,
 }) {
-  const [isFormOpen, setIsFormOpen] = useState(false);
-
-  useEffect(() => {
-    if (categoryForm.id) {
-      setIsFormOpen(true);
-    }
-  }, [categoryForm.id]);
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const isFormOpen = Boolean(categoryForm.id) || isAddingNew;
 
   const handleSubmit = (event) => {
     event.preventDefault();
     onSave();
-    setIsFormOpen(false);
+    setIsAddingNew(false);
   };
 
   const handleCancel = () => {
     onCancel();
-    setIsFormOpen(false);
+    setIsAddingNew(false);
   };
 
   const handleAddNewClick = () => {
     onCancel();
-    setIsFormOpen(true);
+    setIsAddingNew(true);
   };
 
   return (

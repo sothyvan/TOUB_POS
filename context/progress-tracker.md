@@ -71,6 +71,21 @@ Update this file after every meaningful implementation change.
     * Added responsive mobile handling to automatically render a header bar with a hamburger menu button on phone viewports, which toggle the vertical sidebar menu directly under it.
     * Integrated a central golden-yellow (`#ebc02b`) Deletion Confirmation Modal Overlay in `AdminWorkspace.jsx` to intercept all CRUD deletions with a prompt, preventing accidental modifications.
     * Replaced all text-based row action buttons (Edit, Show/Hide, Disable/Enable, Delete) in `ProductAdmin.jsx`, `CategoryAdmin.jsx`, and `UserAdmin.jsx` with clean circular SVG icon buttons (`w-9 h-9`) to enhance layout spacing and cleanliness on small screens.
+- **Reorganized & Componentized ToubPOS** (current sprint):
+  - Created `src/services/api.js` - centralized API service layer with localStorage-backed CRUD operations for products, categories, users, and orders.
+  - Refactored `src/hooks/useProducts.js` to use the API service layer.
+  - Refactored `src/hooks/useUsers.js` to use the API service layer.
+  - Refactored `src/hooks/useOrders.js` to use the API service layer.
+  - Created `src/components/CartItem.jsx` - extracted cart item UI component.
+  - Created `src/components/ProductCard.jsx` - extracted product card UI component.
+  - Created `src/components/ReceiptModal.jsx` - extracted receipt modal UI.
+  - Created `src/components/CashConfirmationModal.jsx` - extracted cash confirmation modal UI.
+  - Created `src/components/KhqrPaymentModal.jsx` - extracted KHQR payment modal UI.
+  - Refactored `src/components/OrderPanel.jsx` to use `CartItem` component.
+  - Refactored `src/components/CashierScreen.jsx` to use `ProductCard` component.
+  - Refactored `src/pages/CashierPage.jsx` to use extracted modal components.
+  - Fixed all lint errors (removed unused `useEffect` imports, wrapped callback in `useCallback`).
+  - Verified production build (53 modules transformed, 316KB JS bundle).
 
 ## Next Up
 
