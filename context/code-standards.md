@@ -9,13 +9,16 @@
 
 - Keep UI components functional and use hooks for state management.
 - Validate unknown external input at system boundaries before trusting it.
+- Make sure state changes are properly handled with useState and/or useEffect.
 
 ## Styling
 
-- Use CSS custom property tokens or consistent utility classes — no hardcoded hex values.
-- Ensure all cashier-facing interfaces are fully responsive for mobile and tablet views.
+- Ensure all cashier-facing interfaces are fully responsive for mobile, tablet and also work fine on big computer screens.
+- **Layout Sizing:** Use relative units (`%`, `vw`, `vh`, `fr` in grid, `flex`) for major structural containers and widths to ensure fluid responsiveness.
+- **Spacing Grid:** Use strict `8px`-based increments (`8px`, `16px`, `24px`, etc., or Tailwind equivalents like `p-2`, `m-4`) for padding, margins, gaps, and border radii. Fixed pixel sizes (or their `rem` equivalents) are correct for spacing, but not for structural layout widths.
+- Font Inter must be used throughout the app for all text.
 
-## API Routes (Express.js)
+## API Routes (Express.js)  
 
 - Validate and parse request input before any logic runs.
 - Enforce auth and ownership before any mutation.
@@ -27,3 +30,5 @@
 - `controllers/` — Handlers for route requests.
 - `services/` — Business logic.
 - `repositories/` — Database interactions.
+
+It's called Controller-Service-Repository pattern, and it's an industry standard for modern MVC backends.

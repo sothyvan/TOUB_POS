@@ -32,5 +32,29 @@
 
 1. Request handlers must only handle HTTP routing; business logic strictly belongs in the services layer.
 2. Auth must be enforced at every mutation boundary.
-3. A transaction cannot be marked as complete without a valid, verified webhook/listener event.
+3. A transaction cannot be marked as complete without a valid, verified webhook/listener event. Except for cash payment method, it can be marked as complete without webhook/listener event.
 4. Notifications must only be routed to the specific cashier who initiated the QR session.
+
+## Frontend State Management
+
+- **UI State**: Handled locally within components using `useState` and `useEffect` (e.g., active modals, UI toggles).
+- **Global/Server State**: Abstracted into custom hooks (e.g., `useProducts`, `useOrders`) which interface with the central API service.
+- **Cart Management**: Cart state is managed globally or passed down from a parent POS container to ensure synchronization between the product grid and the order panel.
+
+## Real-Time & Payment Flow (KHQR)
+
+- The system relies on event-driven updates for payments.
+- When a KHQR code is generated, the frontend enters a polling or WebSocket listening state.
+- Upon successful payment, the banking webhook hits the `backend/routes/` which triggers the `services/` layer to update the DB and push a real-time success event to the specific cashier's active session.
+
+## Core Data Entities
+
+- **User / Staff**: Contains auth credentials and role (`manager` vs `cashier`).
+- **Product**: Catalog items with price, category, and inventory status.
+- **Order**: Represents a transaction. Belongs to a `User` (the cashier who processed it).
+- **OrderItem**: Junction table linking `Order` and `Product` (recording quantity and historical price).
+
+## Error Handling Strategy
+
+- **Backend**: All errors are caught by a global Express error handler and mapped to a standard JSON format: `{ success: false, code: 400, message: "..." }`.
+- **Frontend**: The `services/api.js` layer intercepts failing requests and surfaces them to the UI via toast notifications or inline error states, preventing silent failures.

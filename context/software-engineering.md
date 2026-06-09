@@ -22,9 +22,9 @@ This document captures the Software Engineering deliverables required by the Cro
 
 The MVP targets the core flow described in `context/project-overview.md`:
 
-- Cashier creates an order/transaction and generates a payment QR
+- Cashier creates an order/order and generates a payment QR
 - System receives/derives a payment confirmation event
-- System notifies the **specific cashier** who initiated the transaction
+- System notifies the **specific cashier** who initiated the order
 - Manager can view a simple daily summary report
 
 **Out of scope (for MVP)**
@@ -42,8 +42,8 @@ The MVP targets the core flow described in `context/project-overview.md`:
 
 **Roles (RBAC)**
 
-- `CASHIER`: create transactions, view own active/session transactions
-- `MANAGER`: read access to all transactions + reporting
+- `CASHIER`: create orders, view own active/session orders
+- `MANAGER`: read access to all orders + reporting
 
 ## 4) Functional Requirements
 
@@ -54,35 +54,35 @@ FR-01 Authentication
 
 FR-02 Authorization
 
-- Cashier can only access and mutate transactions they own (or are assigned to).
-- Manager can access reporting and read all transactions.
+- Cashier can only access and mutate orders they own (or are assigned to).
+- Manager can access reporting and read all orders.
 
 FR-03 Products (basic)
 
 - Manager can create/update/delete products (or preset items).
 - Cashier can list products to build an order.
 
-FR-04 Transaction creation
+FR-04 Order creation
 
-- Cashier can create a transaction with line items and total.
-- Transaction is created in `PENDING_PAYMENT` state.
+- Cashier can create an order with line items and total.
+- Order is created in `PENDING_PAYMENT` state.
 
 FR-05 QR generation
 
-- System can generate a payment QR payload for the transaction.
+- System can generate a payment QR payload for the order.
 
 FR-06 Payment confirmation
 
-- System can record a payment confirmation event for a transaction.
-- A transaction cannot be marked `PAID/COMPLETED` without a valid confirmation event (see invariants in `context/architecture.md`).
+- System can record a payment confirmation event for an order.
+- An order cannot be marked `PAID/COMPLETED` without a valid confirmation event (see invariants in `context/architecture.md`).
 
 FR-07 Cashier-specific notification
 
-- When payment is confirmed, the system notifies the **specific cashier** who initiated the transaction.
+- When payment is confirmed, the system notifies the **specific cashier** who initiated the order.
 
 FR-08 Reporting
 
-- Manager can view a daily summary report (e.g., total count, total amount, list of transactions).
+- Manager can view a daily summary report (e.g., total count, total amount, list of orders).
 
 FR-09 API documentation + testing
 
@@ -123,18 +123,18 @@ US-01 Cashier login
   - Given valid credentials, I receive a JWT
   - Given invalid credentials, I receive an error response
 
-US-02 Create transaction
+US-02 Create order
 
-- As a cashier, I want to create a new transaction so I can request a QR payment.
+- As a cashier, I want to create a new order so I can request a QR payment.
 - Acceptance:
-  - Creates a transaction in `PENDING_PAYMENT`
-  - Transaction is linked to the cashier
+  - Creates an order in `PENDING_PAYMENT`
+  - Order is linked to the cashier
 
 US-03 Show QR
 
 - As a cashier, I want to display a QR code so the customer can pay.
 - Acceptance:
-  - A QR payload is generated for a transaction
+  - A QR payload is generated for an order
   - UI indicates “waiting for payment”
 
 US-04 Receive confirmation
@@ -142,13 +142,13 @@ US-04 Receive confirmation
 - As a cashier, I want an instant confirmation when the payment is received so I can complete the sale.
 - Acceptance:
   - Only the initiating cashier sees the confirmation
-  - The transaction status becomes `PAID/COMPLETED` only after confirmation
+  - The order status becomes `PAID/COMPLETED` only after confirmation
 
 US-05 Manager report
 
 - As a manager, I want to see a daily report so I can reconcile sales.
 - Acceptance:
-  - Manager can view totals and transaction list for a day
+  - Manager can view totals and order list for a day
   - Cashier cannot access manager-only report endpoints
 
 ## 7) Team Responsibilities (example mapping)
@@ -171,40 +171,47 @@ flowchart LR
   Manager[Actor: Manager]
 
   subgraph System[Toub POS]
-    UC1((Log in))
-    UC2((Create transaction))
+    %% Cashier Flow
+    UC1_Cashier((Log in to Cashier Session))
+    UC2((Create order))
     UC3((Generate / show QR))
-    UC4((Receive payment confirmation))
+    
+    %% Manager Flow
+    UC1_Admin((Log in to Admin Dashboard))
     UC5((View daily report))
     UC6((Manage products))
   end
 
-  Cashier --> UC1
+  %% Cashier Connections
   Cashier --> UC2
   Cashier --> UC3
-  Cashier --> UC4
+  UC2 .->|&lt;&lt;include&gt;&gt;| UC1_Cashier
+  UC3 .->|&lt;&lt;include&gt;&gt;| UC1_Cashier
 
-  Manager --> UC1
+  %% Manager Connections
   Manager --> UC5
   Manager --> UC6
+  UC5 .->|&lt;&lt;include&gt;&gt;| UC1_Admin
+  UC6 .->|&lt;&lt;include&gt;&gt;| UC1_Admin
 ```
 
 **Description**
 
-- Cashier focuses on creating transactions and receiving payment confirmations.
+- Cashier focuses on creating orders and receiving payment confirmations.
 - Manager focuses on reporting and product management.
 
-### 8.2 Activity Diagram (Main cashier flow)
+### 8.2 Activity Diagram 
+1. Main cashier flow
 
 ```mermaid
 flowchart TD
   A([Start]) --> B[Cashier logs in]
-  B --> C[Create transaction]
+  B --> C[Create order]
   C --> D[Generate QR]
   D --> E[Show QR / Waiting]
   E --> F{Payment confirmed?}
   F -- No --> E
-  F -- Yes --> G[Mark transaction PAID/COMPLETED]
+  F -- Yes --> G[Mark order PAID/COMPLETED]
   G --> H[Notify initiating cashier]
   H --> I([End])
 ```
@@ -213,52 +220,90 @@ flowchart TD
 
 - Loops in “waiting” until a confirmation event is recorded.
 
+2. Main manager flow 
+```mermaid
+graph TD
+  Start([Start]) --> Login[Manager logs in]
+  Login --> Dashboard[Access Admin Dashboard]
+  
+  %% Decision point for the Manager's intent
+  Dashboard --> Action{Choose Action}
+  
+  %% Branch 1: View Reports
+  Action -->|View Reports| ViewReport[Request daily report]
+  ViewReport --> FetchData[System fetches order data]
+  FetchData --> DisplayReport[Display daily report summary]
+  DisplayReport --> EndLoop1{Done?}
+  EndLoop1 -->|No| Dashboard
+  EndLoop1 -->|Yes| End
+  
+  %% Branch 2: Manage Products
+  Action -->|Manage Products| SelectProduct[View product list]
+  SelectProduct --> ModifyProduct{Add/Edit/Delete?}
+  ModifyProduct --> UpdateDB[Update product database]
+  UpdateDB --> DisplaySuccess[Show success message]
+  DisplaySuccess --> EndLoop2{Done?}
+  EndLoop2 -->|No| Dashboard
+  EndLoop2 -->|Yes| End
+```
+
 ### 8.3 Class Diagram (Domain model)
 
 ```mermaid
 classDiagram
   class User {
-    +id
-    +username
-    +passwordHash
-    +role
+    +int id
+    +string username
+    +string passwordHash
+    +string role
+    +login(string username, string password) bool
+    +logout() void
   }
 
-  class Transaction {
-    +id
-    +cashierId
-    +status
-    +totalAmount
-    +createdAt
+  class Order {
+    +int id
+    +int cashierId
+    +string status
+    +double totalAmount
+    +dateTime createdAt
+    +createOrder() Order
+    +updateStatus(string newStatus) void
+    +calculateTotal() double
   }
 
-  class TransactionItem {
-    +id
-    +transactionId
-    +productId
-    +qty
-    +unitPrice
+  class OrderItem {
+    +int id
+    +int orderId
+    +int productId
+    +int qty
+    +double unitPrice
+    +calculateSubtotal() double
   }
 
   class Product {
-    +id
-    +name
-    +price
-    +isActive
+    +int id
+    +string name
+    +double price
+    +bool isActive
+    +updatePrice(double newPrice) void
+    +toggleActiveStatus() void
   }
 
   class PaymentConfirmation {
-    +id
-    +transactionId
-    +providerRef
-    +amount
-    +confirmedAt
+    +int id
+    +int orderId
+    +string providerRef
+    +double amount
+    +dateTime confirmedAt
+    +verifyWithProvider() bool
+    +saveConfirmation() bool
   }
 
-  User "1" --> "many" Transaction : creates
-  Transaction "1" --> "many" TransactionItem : contains
-  Product "1" --> "many" TransactionItem : referenced by
-  Transaction "1" --> "0..1" PaymentConfirmation : has
+  %% Relationships representing data flow and structural dependencies
+  User "1" --> "many" Order : creates
+  Order "1" *-- "many" OrderItem : contains
+  Product "1" --> "many" OrderItem : referenced by
+  Order "1" --> "0..1" PaymentConfirmation : has
 ```
 
 **Description**
@@ -274,17 +319,17 @@ sequenceDiagram
   participant DB as MySQL
   participant L as Payment Listener/Webhook
 
-  C->>API: POST /transactions (JWT)
-  API->>DB: insert Transaction(status=PENDING_PAYMENT)
-  DB-->>API: transactionId
-  API-->>C: 201 Created + transactionId
+  C->>API: POST /orders (JWT)
+  API->>DB: insert Order(status=PENDING_PAYMENT)
+  DB-->>API: orderId
+  API-->>C: 201 Created + orderId
 
-  C->>API: GET /transactions/{id}/qr (JWT)
+  C->>API: GET /orders/{id}/qr (JWT)
   API-->>C: QR payload
 
   L->>API: POST /payments/confirm (provider event)
   API->>DB: insert PaymentConfirmation
-  API->>DB: update Transaction(status=PAID)
+  API->>DB: update Order(status=PAID)
   API-->>C: realtime event (notify initiating cashier)
 ```
 
