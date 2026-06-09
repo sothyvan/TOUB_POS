@@ -33,13 +33,13 @@ export default function CategoryAdmin({
   return (
     <div className="w-full">
       {/* Categories List Card */}
-      <div className="border border-[#ded8ca] rounded-[24px] bg-[#fffdfa] shadow-[0_12px_36px_rgba(52,45,35,0.04)] p-6 grid gap-2">
+      <div className="border border-brand-border rounded-3xl bg-brand-card shadow-[0_12px_36px_rgba(52,45,35,0.04)] p-6 grid gap-2">
         <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-2">
           <h3 className="m-0 text-brand-dark text-lg font-black tracking-tight">Categories</h3>
           <button
             type="button"
             onClick={handleAddNewClick}
-            className="min-h-[38px] px-4 rounded-full bg-[#003ec7] text-white text-xs font-bold hover:bg-[#003ec7]/90 active:scale-95 transition-all cursor-pointer shadow-sm flex items-center gap-1"
+            className="min-h-9.5 px-4 rounded-full bg-[#003ec7] text-white text-xs font-bold hover:bg-[#003ec7]/90 active:scale-95 transition-all cursor-pointer shadow-sm flex items-center gap-1"
           >
             <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -101,7 +101,7 @@ export default function CategoryAdmin({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#23211f]/40 backdrop-blur-sm">
           <div className="absolute inset-0" onClick={handleCancel} />
           
-          <div className="relative w-full max-w-[420px] border border-[#ded8ca] rounded-[24px] bg-[#fffdfa] shadow-[0_20px_50px_rgba(52,45,35,0.15)] p-6 z-10">
+          <div className="relative w-full max-w-105 border border-brand-border rounded-3xl bg-brand-card shadow-[0_20px_50px_rgba(52,45,35,0.15)] p-6 z-10">
             {/* Close Button */}
             <button
               type="button"
@@ -126,7 +126,7 @@ export default function CategoryAdmin({
                   onChange={(event) => setCategoryForm((current) => ({ ...current, name: event.target.value }))}
                   placeholder="Smoothies"
                   required
-                  className="w-full min-h-[46px] px-3.5 border border-[#ded8ca] rounded-xl bg-white text-brand-text text-[14px] font-semibold focus:border-[#003ec7] focus:ring-1 focus:ring-[#003ec7] outline-none transition-all placeholder:text-gray-300"
+                  className="w-full min-h-11.5 px-3.5 border border-brand-border rounded-xl bg-white text-brand-text text-[14px] font-semibold focus:border-[#003ec7] focus:ring-1 focus:ring-[#003ec7] outline-none transition-all placeholder:text-gray-300"
                 />
               </label>
               
@@ -135,7 +135,7 @@ export default function CategoryAdmin({
                 <select
                   value={categoryForm.tone}
                   onChange={(event) => setCategoryForm((current) => ({ ...current, tone: event.target.value }))}
-                  className="w-full min-h-[46px] px-3.5 border border-[#ded8ca] rounded-xl bg-white text-brand-text text-[14px] font-semibold focus:border-[#003ec7] focus:ring-1 focus:ring-[#003ec7] outline-none transition-all"
+                  className="w-full min-h-11.5 px-3.5 border border-brand-border rounded-xl bg-white text-brand-text text-[14px] font-semibold focus:border-[#003ec7] focus:ring-1 focus:ring-[#003ec7] outline-none transition-all"
                 >
                   {TONES.map((tone) => (
                     <option key={tone} value={tone}>
@@ -147,7 +147,7 @@ export default function CategoryAdmin({
               
               <div className="flex items-center gap-2.5 mt-4">
                 <button 
-                  className="flex-1 min-h-[48px] rounded-xl font-bold bg-[#003ec7] hover:bg-[#003ec7]/90 active:scale-[0.98] transition-all text-white border-0 cursor-pointer shadow-sm" 
+                  className="flex-1 min-h-12 rounded-xl font-bold bg-[#003ec7] hover:bg-[#003ec7]/90 active:scale-[0.98] transition-all text-white border-0 cursor-pointer shadow-sm" 
                   type="submit"
                 >
                   {categoryForm.id ? 'Save category' : 'Add category'}
@@ -155,7 +155,7 @@ export default function CategoryAdmin({
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="flex-1 min-h-[48px] border border-[#d9d0c1] rounded-xl bg-white text-brand-text font-bold hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer"
+                  className="flex-1 min-h-12 border border-[#d9d0c1] rounded-xl bg-white text-brand-text font-bold hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer"
                 >
                   Cancel
                 </button>

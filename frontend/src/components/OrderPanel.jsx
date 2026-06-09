@@ -53,9 +53,9 @@ export default function OrderPanel({
       {/* Cart Items List */}
       <div className="flex-1 min-h-0 overflow-auto py-3 px-6 space-y-2">
         {cart.length === 0 ? (
-          <div className="h-full min-h-[220px] border border-dashed border-gray-200 rounded-xl grid place-content-center gap-1.5 text-center text-gray-400 p-6">
+          <div className="h-full min-h-55 border border-dashed border-gray-200 rounded-xl grid place-content-center gap-1.5 text-center text-gray-400 p-6">
             <strong className="text-gray-900 font-bold">No items yet</strong>
-            <span className="max-w-[230px] text-xs font-semibold leading-relaxed">
+            <span className="max-w-57.5 text-xs font-semibold leading-relaxed">
               Choose a product from the menu to start the ticket.
             </span>
           </div>

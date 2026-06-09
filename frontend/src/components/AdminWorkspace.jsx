@@ -59,7 +59,7 @@ export default function AdminWorkspace({
   return (
     <div className="flex-1 flex overflow-hidden max-[768px]:flex-col">
       {/* Left Sidebar Navigation (Desktop) */}
-      <aside className="w-60 border-r border-[#ded8ca] bg-[#fffdfa] flex flex-col p-6 gap-5 shrink-0 max-[768px]:hidden">
+      <aside className="w-60 border-r border-brand-border bg-brand-card flex flex-col p-6 gap-5 shrink-0 max-[768px]:hidden">
         <div className="text-[11px] font-extrabold tracking-wider text-gray-400 uppercase select-none">
           Back Office Menu
         </div>
@@ -71,7 +71,7 @@ export default function AdminWorkspace({
                 key={tab}
                 type="button"
                 onClick={() => setAdminTab(tab)}
-                className={`flex items-center gap-3 w-full min-h-[46px] px-4 rounded-xl text-[14px] font-bold capitalize transition-all duration-200 cursor-pointer active:scale-[0.98] ${
+                className={`flex items-center gap-3 w-full min-h-11.5 px-4 rounded-xl text-[14px] font-bold capitalize transition-all duration-200 cursor-pointer active:scale-[0.98] ${
                   isActive
                     ? 'bg-[#003ec7] text-white shadow-sm'
                     : 'text-[#776f63] hover:bg-gray-50 hover:text-brand-dark'
@@ -105,7 +105,7 @@ export default function AdminWorkspace({
       </aside>
 
       {/* Mobile Hamburger Header Bar (Phone) */}
-      <div className="hidden max-[768px]:flex flex-col bg-[#fffdfa] border-b border-[#ded8ca] z-30 shrink-0">
+      <div className="hidden max-[768px]:flex flex-col bg-brand-card border-b border-brand-border z-30 shrink-0">
         <div className="flex items-center justify-between p-4">
           <span className="text-sm font-bold text-brand-dark flex items-center gap-2">
             {visibleAdminTab === 'products' && (
@@ -134,7 +134,7 @@ export default function AdminWorkspace({
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="w-10 h-10 rounded-xl border border-[#ded8ca] bg-[#fffdfa] grid place-items-center text-brand-text hover:bg-gray-50 active:scale-95 transition-all cursor-pointer"
+            className="w-10 h-10 rounded-xl border border-brand-border bg-brand-card grid place-items-center text-brand-text hover:bg-gray-50 active:scale-95 transition-all cursor-pointer"
             aria-label="Toggle menu"
           >
             {isMobileMenuOpen ? (
@@ -151,7 +151,7 @@ export default function AdminWorkspace({
 
         {/* Collapsible Mobile Sidebar (Dropdown menu) */}
         {isMobileMenuOpen && (
-          <nav className="flex flex-col p-4 pt-0 gap-1 border-t border-[#ded8ca]/60 bg-[#fffdfa] animate-in slide-in-from-top duration-150">
+          <nav className="flex flex-col p-4 pt-0 gap-1 border-t border-brand-border/60 bg-brand-card animate-in slide-in-from-top duration-150">
             {allowedAdminTabs.map((tab) => {
               const isActive = visibleAdminTab === tab;
               return (
@@ -162,7 +162,7 @@ export default function AdminWorkspace({
                     setAdminTab(tab);
                     setIsMobileMenuOpen(false);
                   }}
-                  className={`flex items-center gap-3 w-full min-h-[46px] px-4 rounded-xl text-[14px] font-bold capitalize transition-all duration-200 cursor-pointer active:scale-[0.98] ${
+                  className={`flex items-center gap-3 w-full min-h-11.5 px-4 rounded-xl text-[14px] font-bold capitalize transition-all duration-200 cursor-pointer active:scale-[0.98] ${
                     isActive
                       ? 'bg-[#003ec7] text-white shadow-sm'
                       : 'text-[#776f63] hover:bg-gray-50 hover:text-brand-dark'
@@ -197,21 +197,21 @@ export default function AdminWorkspace({
       </div>
 
       {/* Right Main Content area */}
-      <main className="flex-1 p-[clamp(18px,2.4vw,30px)] overflow-y-auto max-[768px]:p-4 bg-[#f6f4ef] flex flex-col gap-6">
+      <main className="flex-1 p-[clamp(18px,2.4vw,30px)] overflow-y-auto max-[768px]:p-4 bg-brand-bg flex flex-col gap-6">
         {/* Dashboard Title & Quick Stats Info Banner */}
-        <section className="p-6 border border-[#ded8ca] rounded-[24px] bg-[#fffdfa] flex items-center justify-between gap-4.5 shadow-[0_10px_24px_rgba(52,45,35,0.04)] max-[768px]:flex-col max-[768px]:items-start shrink-0">
+        <section className="p-6 border border-brand-border rounded-3xl bg-brand-card flex items-center justify-between gap-4.5 shadow-[0_10px_24px_rgba(52,45,35,0.04)] max-[768px]:flex-col max-[768px]:items-start shrink-0">
           <div>
-            <p className="m-0 mb-[3px] text-[#776f63] text-[11px] font-extrabold tracking-wider uppercase">Back office</p>
+            <p className="m-0 mb-0.75 text-[#776f63] text-[11px] font-extrabold tracking-wider uppercase">Back office</p>
             <h2 className="m-0 text-brand-dark text-[26px] leading-[1.1] font-black tracking-tight">
               {users.some((u) => u.role === 'Admin') ? 'Admin management' : 'Manager workspace'}
             </h2>
           </div>
           <div className="flex flex-wrap gap-2 justify-end max-[768px]:justify-start">
-            <span className="min-h-[34px] py-1.75 px-3.5 rounded-full bg-[#f5f2eb] border border-[#e6e0d4] text-[#23211f] text-[13px] font-bold flex items-center">{products.length} items</span>
-            <span className="min-h-[34px] py-1.75 px-3.5 rounded-full bg-[#f5f2eb] border border-[#e6e0d4] text-[#23211f] text-[13px] font-bold flex items-center">{categories.length} categories</span>
-            <span className="min-h-[34px] py-1.75 px-3.5 rounded-full bg-[#f5f2eb] border border-[#e6e0d4] text-[#23211f] text-[13px] font-bold flex items-center">{orders.length} orders</span>
+            <span className="min-h-8.5 py-1.75 px-3.5 rounded-full bg-[#f5f2eb] border border-[#e6e0d4] text-[#23211f] text-[13px] font-bold flex items-center">{products.length} items</span>
+            <span className="min-h-8.5 py-1.75 px-3.5 rounded-full bg-[#f5f2eb] border border-[#e6e0d4] text-[#23211f] text-[13px] font-bold flex items-center">{categories.length} categories</span>
+            <span className="min-h-8.5 py-1.75 px-3.5 rounded-full bg-[#f5f2eb] border border-[#e6e0d4] text-[#23211f] text-[13px] font-bold flex items-center">{orders.length} orders</span>
             {users.some((u) => u.role === 'Admin') ? (
-              <span className="min-h-[34px] py-1.75 px-3.5 rounded-full bg-[#f5f2eb] border border-[#e6e0d4] text-[#23211f] text-[13px] font-bold flex items-center">{users.length} users</span>
+              <span className="min-h-8.5 py-1.75 px-3.5 rounded-full bg-[#f5f2eb] border border-[#e6e0d4] text-[#23211f] text-[13px] font-bold flex items-center">{users.length} users</span>
             ) : null}
           </div>
         </section>
@@ -274,9 +274,9 @@ export default function AdminWorkspace({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#23211f]/40 backdrop-blur-sm">
           <div className="absolute inset-0" onClick={() => setPendingDelete(null)} />
           
-          <div className="relative w-full max-w-[400px] border border-[#ebc02b] rounded-[24px] bg-[#fffcf0] shadow-[0_20px_50px_rgba(52,45,35,0.15)] p-6 z-10 animate-in fade-in zoom-in-95 duration-200 text-center flex flex-col items-center">
+          <div className="relative w-full max-w-100 border border-brand-yellow rounded-3xl bg-[#fffcf0] shadow-[0_20px_50px_rgba(52,45,35,0.15)] p-6 z-10 animate-in fade-in zoom-in-95 duration-200 text-center flex flex-col items-center">
             {/* Warning Icon Container */}
-            <div className="w-16 h-16 rounded-full bg-[#fdf5d6] flex items-center justify-center text-[#ebc02b] mb-4">
+            <div className="w-16 h-16 rounded-full bg-[#fdf5d6] flex items-center justify-center text-brand-yeborder-brand-yellow mb-4">
               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
@@ -293,14 +293,14 @@ export default function AdminWorkspace({
               <button
                 type="button"
                 onClick={() => setPendingDelete(null)}
-                className="flex-1 min-h-[48px] border border-[#d9d0c1] rounded-xl bg-white text-brand-text font-bold hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer"
+                className="flex-1 min-h-12 border border-[#d9d0c1] rounded-xl bg-white text-brand-text font-bold hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleConfirmDelete}
-                className="flex-1 min-h-[48px] rounded-xl font-bold bg-[#c70000] hover:bg-[#c70000]/90 active:scale-[0.98] transition-all text-white border-0 cursor-pointer shadow-sm"
+                className="flex-1 min-h-12 rounded-xl font-bold bg-[#c70000] hover:bg-[#c70000]/90 active:scale-[0.98] transition-all text-white border-0 cursor-pointer shadow-sm"
               >
                 Delete
               </button>

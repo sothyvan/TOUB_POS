@@ -9,9 +9,9 @@ export default function LoginScreen({
 }) {
   return (
     <main
-      className="relative min-h-[100svh] p-6 grid place-items-center bg-brand-yellow text-gray-800 selection:bg-brand-blue/20"
+      className="relative min-h-svh p-6 grid place-items-center bg-brand-yellow text-gray-800 selection:bg-brand-blue/20"
     >
-      <section className="w-[min(380px,calc(100%-1.5rem))] p-8 rounded-[24px] bg-white shadow-[0_24px_64px_-16px_rgba(0,0,0,0.12)] flex flex-col gap-6">
+      <section className="w-[min(380px,calc(100%-1.5rem))] p-8 rounded-3xl bg-white shadow-[0_24px_64px_-16px_rgba(0,0,0,0.12)] flex flex-col gap-6">
         {/* Header Logo & Title */}
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-xl bg-[#1a1a1a] text-brand-yellow grid place-items-center text-3xl font-black shadow-[inset_0_-3px_0_rgba(255,255,255,0.06)] shrink-0">

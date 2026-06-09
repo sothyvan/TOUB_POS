@@ -4,7 +4,7 @@ export default function OrderHistory({ orders, todaysOrders, todaysTotal }) {
   return (
     <section className="grid grid-cols-[minmax(220px,300px)_minmax(0,1fr)] gap-6 items-start max-[768px]:grid-cols-1">
       {/* Today Widget Card */}
-      <div className="border border-[#ded8ca] rounded-[24px] bg-[#fffdfa] shadow-[0_12px_36px_rgba(52,45,35,0.04)] p-6 grid gap-3.5">
+      <div className="border border-brand-border rounded-3xl bg-brand-card shadow-[0_12px_36px_rgba(52,45,35,0.04)] p-6 grid gap-3.5">
         <h3 className="m-0 text-brand-dark text-lg font-black tracking-tight border-b border-gray-100 pb-3">Today</h3>
         <div className="space-y-1 mt-1">
           <strong className="block text-[38px] leading-none font-black text-[#003ec7] tracking-tight">
@@ -17,10 +17,10 @@ export default function OrderHistory({ orders, todaysOrders, todaysTotal }) {
       </div>
 
       {/* History List Card */}
-      <div className="border border-[#ded8ca] rounded-[24px] bg-[#fffdfa] shadow-[0_12px_36px_rgba(52,45,35,0.04)] p-6 grid gap-2">
+      <div className="border border-brand-border rounded-3xl bg-brand-card shadow-[0_12px_36px_rgba(52,45,35,0.04)] p-6 grid gap-2">
         <h3 className="m-0 text-brand-dark text-lg font-black tracking-tight border-b border-gray-100 pb-3">Order history</h3>
         {orders.length === 0 ? (
-          <div className="py-8 px-4 border border-dashed border-[#ded8ca] rounded-xl text-gray-400 text-sm font-bold text-center mt-2">
+          <div className="py-8 px-4 border border-dashed border-brand-border rounded-xl text-gray-400 text-sm font-bold text-center mt-2">
             No paid orders yet.
           </div>
         ) : (

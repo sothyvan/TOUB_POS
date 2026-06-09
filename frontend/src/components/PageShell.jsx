@@ -11,7 +11,7 @@ export default function PageShell({
 }) {
   return (
     <div
-      className="h-[100svh] max-h-[100svh] flex flex-col bg-brand-bg text-brand-text overflow-hidden"
+      className="h-svh max-h-svh flex flex-col bg-brand-bg text-brand-text overflow-hidden"
     >
       <Topbar
         currentUser={currentUser}

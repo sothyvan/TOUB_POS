@@ -3,7 +3,7 @@ export default function CashConfirmationModal({ isOpen, onCancel, onConfirm }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-[#ebc02b] rounded-[32px] w-[540px] max-w-full p-8 flex flex-col items-center text-center shadow-[0_24px_64px_rgba(0,0,0,0.24)] animate-in fade-in zoom-in-95 duration-200 border-0">
+      <div className="bg-brand-yellow rounded-4xl w-135 max-w-full p-8 flex flex-col items-center text-center shadow-[0_24px_64px_rgba(0,0,0,0.24)] animate-in fade-in zoom-in-95 duration-200 border-0">
         <h3 className="m-0 text-3xl font-extrabold text-[#1a1c1e] mb-8 mt-2 tracking-tight">
           Did you received the cash?
         </h3>

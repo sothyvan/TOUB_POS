@@ -10,7 +10,7 @@ export default function ProductCard({
   setCartItemQuantity,
 }) {
   return (
-    <article className="group relative bg-white border border-[#c3c5d9]/60 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:translate-y-[-2px] transition-all duration-200 flex flex-col justify-between">
+    <article className="group relative bg-white border border-[#c3c5d9]/60 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:translate-y-0.5 transition-all duration-200 flex flex-col justify-between">
       {/* Background Tap Target to Add to Cart */}
       <button
         className="absolute inset-0 w-full h-full border-0 bg-transparent z-10 cursor-pointer rounded-2xl"
@@ -20,7 +20,7 @@ export default function ProductCard({
       />
 
       {/* Card Image */}
-      <div className="relative aspect-[4/3] w-full bg-gray-50 overflow-hidden border-b border-gray-100">
+      <div className="relative aspect-4/3 w-full bg-gray-50 overflow-hidden border-b border-gray-100">
         {product.image ? (
           <img
             src={product.image}
