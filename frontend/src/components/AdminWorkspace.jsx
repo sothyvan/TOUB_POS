@@ -13,6 +13,13 @@ const adminTabIcons = {
   users: 'users',
 };
 
+const navButtonClass = (isActive) =>
+  `flex items-center gap-3 w-full min-h-11.5 px-4 rounded-xl text-[14px] font-bold capitalize transition-all duration-200 cursor-pointer active:scale-[0.98] ${
+    isActive
+      ? 'bg-brand-action text-white shadow-sm'
+      : 'text-[#776f63] hover:bg-gray-50 hover:text-brand-dark'
+  }`;
+
 export default function AdminWorkspace({
   visibleAdminTab,
   setAdminTab,
@@ -80,11 +87,7 @@ export default function AdminWorkspace({
                 key={tab}
                 type="button"
                 onClick={() => setAdminTab(tab)}
-                className={`flex items-center gap-3 w-full min-h-11.5 px-4 rounded-xl text-[14px] font-bold capitalize transition-all duration-200 cursor-pointer active:scale-[0.98] ${
-                  isActive
-                    ? 'bg-brand-action text-white shadow-sm'
-                    : 'text-[#776f63] hover:bg-gray-50 hover:text-brand-dark'
-                }`}
+                className={navButtonClass(isActive)}
               >
                 <Icon name={adminTabIcons[tab]} className="w-5 h-5 shrink-0" />
                 <span>{tab}</span>
@@ -129,11 +132,7 @@ export default function AdminWorkspace({
                     setAdminTab(tab);
                     setIsMobileMenuOpen(false);
                   }}
-                  className={`flex items-center gap-3 w-full min-h-11.5 px-4 rounded-xl text-[14px] font-bold capitalize transition-all duration-200 cursor-pointer active:scale-[0.98] ${
-                    isActive
-                      ? 'bg-brand-action text-white shadow-sm'
-                      : 'text-[#776f63] hover:bg-gray-50 hover:text-brand-dark'
-                  }`}
+                  className={navButtonClass(isActive)}
                 >
                   <Icon name={adminTabIcons[tab]} className="w-5 h-5 shrink-0" />
                   <span>{tab}</span>

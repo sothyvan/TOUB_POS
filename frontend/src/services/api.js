@@ -25,88 +25,40 @@ function setStorageItem(key, value) {
   }
 }
 
+function createCrudResource(storageKey, defaultData, prefix) {
+  return {
+    getAll() {
+      return getStorageItem(storageKey, defaultData);
+    },
+    save(item) {
+      const items = this.getAll();
+      let updatedItem = { ...item };
+      
+      if (!item.id) {
+        updatedItem.id = makeId(prefix);
+        items.push(updatedItem);
+      } else {
+        const index = items.findIndex((i) => i.id === item.id);
+        if (index !== -1) {
+          items[index] = updatedItem;
+        } else {
+          items.push(updatedItem);
+        }
+      }
+      setStorageItem(storageKey, items);
+      return updatedItem;
+    },
+    delete(id) {
+      const items = this.getAll().filter((i) => i.id !== id);
+      setStorageItem(storageKey, items);
+    },
+  };
+}
+
 export const api = {
-  products: {
-    getAll() {
-      return getStorageItem(STORAGE_KEYS.PRODUCTS, DEFAULT_PRODUCTS);
-    },
-    save(product) {
-      const products = this.getAll();
-      let updatedProduct = { ...product };
-      
-      if (!product.id) {
-        updatedProduct.id = makeId('prod');
-        products.push(updatedProduct);
-      } else {
-        const index = products.findIndex((p) => p.id === product.id);
-        if (index !== -1) {
-          products[index] = updatedProduct;
-        } else {
-          products.push(updatedProduct);
-        }
-      }
-      setStorageItem(STORAGE_KEYS.PRODUCTS, products);
-      return updatedProduct;
-    },
-    delete(id) {
-      const products = this.getAll().filter((p) => p.id !== id);
-      setStorageItem(STORAGE_KEYS.PRODUCTS, products);
-    },
-  },
-  categories: {
-    getAll() {
-      return getStorageItem(STORAGE_KEYS.CATEGORIES, DEFAULT_CATEGORIES);
-    },
-    save(category) {
-      const categories = this.getAll();
-      let updatedCategory = { ...category };
-      
-      if (!category.id) {
-        updatedCategory.id = makeId('cat');
-        categories.push(updatedCategory);
-      } else {
-        const index = categories.findIndex((c) => c.id === category.id);
-        if (index !== -1) {
-          categories[index] = updatedCategory;
-        } else {
-          categories.push(updatedCategory);
-        }
-      }
-      setStorageItem(STORAGE_KEYS.CATEGORIES, categories);
-      return updatedCategory;
-    },
-    delete(id) {
-      const categories = this.getAll().filter((c) => c.id !== id);
-      setStorageItem(STORAGE_KEYS.CATEGORIES, categories);
-    },
-  },
-  users: {
-    getAll() {
-      return getStorageItem(STORAGE_KEYS.USERS, DEFAULT_USERS);
-    },
-    save(user) {
-      const users = this.getAll();
-      let updatedUser = { ...user };
-      
-      if (!user.id) {
-        updatedUser.id = makeId('user');
-        users.push(updatedUser);
-      } else {
-        const index = users.findIndex((u) => u.id === user.id);
-        if (index !== -1) {
-          users[index] = updatedUser;
-        } else {
-          users.push(updatedUser);
-        }
-      }
-      setStorageItem(STORAGE_KEYS.USERS, users);
-      return updatedUser;
-    },
-    delete(id) {
-      const users = this.getAll().filter((u) => u.id !== id);
-      setStorageItem(STORAGE_KEYS.USERS, users);
-    },
-  },
+  products: createCrudResource(STORAGE_KEYS.PRODUCTS, DEFAULT_PRODUCTS, 'prod'),
+  categories: createCrudResource(STORAGE_KEYS.CATEGORIES, DEFAULT_CATEGORIES, 'cat'),
+  users: createCrudResource(STORAGE_KEYS.USERS, DEFAULT_USERS, 'user'),
   orders: {
     getAll() {
       return getStorageItem(STORAGE_KEYS.ORDERS, []);

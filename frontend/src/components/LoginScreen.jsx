@@ -1,4 +1,6 @@
 import Icon from './ui/Icon';
+import FormInput from './ui/FormInput';
+import FormSelect from './ui/FormSelect';
 
 export default function LoginScreen({
   activeUsers,
@@ -28,44 +30,38 @@ export default function LoginScreen({
         {/* Login Form */}
         <form className="flex flex-col gap-5" onSubmit={onLogin}>
           {/* User Select */}
-          <div>
-            <label htmlFor="user-select" className="block text-gray-700 text-[14px] font-bold mb-1.5">
-              User
-            </label>
-            <div className="relative">
-              <select
-                id="user-select"
-                value={effectiveLoginUserId}
-                onChange={(event) => onUserChange(event.target.value)}
-                className="w-full h-12 pl-3.5 pr-10 border border-gray-200 rounded-xl bg-white text-gray-800 text-[15px] font-semibold appearance-none cursor-pointer focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue"
-              >
-                {activeUsers.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.name} - {user.role}
-                  </option>
-                ))}
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-gray-500">
-                <Icon name="chevronDown" className="h-4.5 w-4.5 stroke-2 stroke-current fill-none" strokeWidth={2} />
-              </div>
+          <div className="relative">
+            <FormSelect
+              label="User"
+              id="user-select"
+              value={effectiveLoginUserId}
+              onChange={(event) => onUserChange(event.target.value)}
+              wrapperClassName="block text-gray-700 text-[14px] font-bold"
+              className="mt-1.5 w-full h-12 pl-3.5 pr-10 border-gray-200 bg-white text-gray-800 text-[15px] appearance-none cursor-pointer focus:outline-none focus:border-brand-blue focus:ring-brand-blue"
+            >
+              {activeUsers.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.name} - {user.role}
+                </option>
+              ))}
+            </FormSelect>
+            <div className="pointer-events-none absolute bottom-0 right-0 flex items-center h-12 px-3.5 text-gray-500">
+              <Icon name="chevronDown" className="h-4.5 w-4.5 stroke-2 stroke-current fill-none" strokeWidth={2} />
             </div>
           </div>
 
           {/* PIN Input */}
-          <div>
-            <label htmlFor="pin-input" className="block text-gray-700 text-[14px] font-bold mb-1.5">
-              PIN
-            </label>
-            <input
-              id="pin-input"
-              type="password"
-              inputMode="numeric"
-              value={loginPin}
-              onChange={(event) => onPinChange(event.target.value)}
-              placeholder="Enter staff PIN"
-              className="w-full h-12 px-3.5 border border-gray-200 rounded-xl bg-white text-gray-800 text-[15px] font-medium placeholder-gray-400 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue"
-            />
-          </div>
+          <FormInput
+            label="PIN"
+            id="pin-input"
+            type="password"
+            inputMode="numeric"
+            value={loginPin}
+            onChange={(event) => onPinChange(event.target.value)}
+            placeholder="Enter staff PIN"
+            wrapperClassName="block text-gray-700 text-[14px] font-bold"
+            className="mt-1.5 w-full h-12 border-gray-200 bg-white text-gray-800 text-[15px] font-medium placeholder-gray-400 focus:outline-none focus:border-brand-blue focus:ring-brand-blue"
+          />
 
           {/* Error Message */}
           {loginError ? (

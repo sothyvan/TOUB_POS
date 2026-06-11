@@ -79,20 +79,14 @@ export default function CashierPage() {
   const [adminTab, setAdminTab] = useState('products');
 
   // ── Cart-sync wrappers ────────────────────────────────────────────────────
-  const handleSaveProduct = () => {
-    const removedId = saveProduct();
+  const withCartSync = (action) => (...args) => {
+    const removedId = action(...args);
     if (removedId) removeItemFromCart(removedId);
   };
 
-  const handleToggleProductAvailability = (productId) => {
-    const removedId = toggleProductAvailability(productId);
-    if (removedId) removeItemFromCart(removedId);
-  };
-
-  const handleDeleteProduct = (productId) => {
-    const removedId = deleteProduct(productId);
-    if (removedId) removeItemFromCart(removedId);
-  };
+  const handleSaveProduct = withCartSync(saveProduct);
+  const handleToggleProductAvailability = withCartSync(toggleProductAvailability);
+  const handleDeleteProduct = withCartSync(deleteProduct);
 
   // ── Logout ────────────────────────────────────────────────────────────────
   const handleLogout = () => {

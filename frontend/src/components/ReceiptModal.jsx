@@ -1,6 +1,7 @@
 import { money } from '../utils/format';
 import Icon from './ui/Icon';
 import ModalShell from './ui/ModalShell';
+import TotalsBreakdown from './ui/TotalsBreakdown';
 
 export default function ReceiptModal({ activeReceipt, onClose }) {
   return (
@@ -47,24 +48,13 @@ export default function ReceiptModal({ activeReceipt, onClose }) {
           </div>
 
           {/* Totals Breakdown */}
-          <div className="border-t border-gray-100 pt-4 mt-4 space-y-2">
-            <div className="flex justify-between text-gray-500 text-sm font-semibold">
-              <span>Subtotal</span>
-              <span className="text-gray-950">{money(activeReceipt.subtotal)}</span>
-            </div>
-            <div className="flex justify-between text-gray-500 text-sm font-semibold">
-              <span>Service Fee (3%)</span>
-              <span className="text-gray-950">{money(activeReceipt.serviceFee)}</span>
-            </div>
-            <div className="flex justify-between text-gray-500 text-sm font-semibold">
-              <span>Estimated Tax (8%)</span>
-              <span className="text-gray-950">{money(activeReceipt.estimatedTax)}</span>
-            </div>
-            <div className="flex justify-between text-gray-900 text-base font-bold pt-3 mt-1.5 border-t border-gray-100 items-baseline">
-              <span>Total Amount</span>
-              <span className="text-2xl text-brand-action font-black">{money(activeReceipt.total)}</span>
-            </div>
-          </div>
+          <TotalsBreakdown
+            subtotal={activeReceipt.subtotal}
+            serviceFee={activeReceipt.serviceFee}
+            estimatedTax={activeReceipt.estimatedTax}
+            total={activeReceipt.total}
+            variant="receipt"
+          />
 
           {/* Metadata */}
           <div className="border-t border-dashed border-gray-200 pt-4 mt-4 text-[11px] text-gray-400 font-bold space-y-1">

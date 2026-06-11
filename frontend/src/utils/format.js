@@ -2,22 +2,21 @@ export function money(value) {
   return `$${value.toFixed(2)}`;
 }
 
-export function initials(name) {
+function nameAcronym(name, maxLen) {
+  if (!name) return '';
   return name
     .split(' ')
     .filter(Boolean)
     .map((part) => part[0])
     .join('')
-    .slice(0, 2)
+    .slice(0, maxLen)
     .toUpperCase();
 }
 
+export function initials(name) {
+  return nameAcronym(name, 2);
+}
+
 export function suggestedCode(name) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 3)
-    .toUpperCase();
+  return nameAcronym(name, 3);
 }

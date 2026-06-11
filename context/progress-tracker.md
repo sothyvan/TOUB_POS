@@ -101,6 +101,26 @@ Update this file after every meaningful implementation change.
   - Replaced inline SVG markup across admin navigation, admin CRUD actions, cashier order controls, login selector, topbar logout/profile controls, cart controls, payment buttons, search, and receipt confirmation.
   - Normalized admin CRUD table imports to match the actual `AdminCrudTable.jsx` filename casing.
   - Verified lint and production build after the refactor.
+- **Extracted reusable form field components**:
+  - Created `src/components/ui/FormInput.jsx` — reusable labeled `<input>` with standard admin-form Tailwind classes, `wrapperClassName`/`className` override props, and rest-spread to native element.
+  - Created `src/components/ui/FormSelect.jsx` — reusable labeled `<select>` with standard classes and children slot for `<option>` elements.
+  - Created `src/components/ui/FormCheckbox.jsx` — reusable labeled checkbox with accent color styling.
+  - Refactored `ProductAdmin.jsx`, `CategoryAdmin.jsx`, and `UserAdmin.jsx` to use `FormInput`, `FormSelect`, and `FormCheckbox` instead of raw HTML elements with repeated Tailwind class strings.
+  - Refactored `LoginScreen.jsx` to use `FormInput` and `FormSelect` with custom `wrapperClassName`/`className` overrides to preserve its unique login-page styling (brand-blue focus, gray-200 borders, block label layout with chevron icon overlay).
+- **Refactored codebase to eliminate repetitive code and improve maintainability**:
+  - Created custom hook `useAdminForm` (`src/hooks/useAdminForm.js`) to unify duplicate state management (`isAddingNew`, `isFormOpen`, `handleSubmit`, `handleCancel`, `handleAddNewClick`) shared across all back-office admin forms.
+  - Created `FormActions` (`src/components/ui/FormActions.jsx`) component to consolidate duplicated save/cancel actions styling and layout in admin forms.
+  - Created `StatusBadge` (`src/components/ui/StatusBadge.jsx`) component to handle visible/hidden and active/disabled status pills with indicator dots consistently.
+  - Created `TotalsBreakdown` (`src/components/ui/TotalsBreakdown.jsx`) component to unify order summaries display structure between `ReceiptModal` and `OrderPanel`.
+  - Created centralized `toneClasses` utility (`src/utils/toneClasses.js`) to map category tone values (`gold`, `green`, `blue`, `rose`) to their badge and swatch Tailwind classes.
+  - Refactored `ProductAdmin.jsx`, `CategoryAdmin.jsx`, and `UserAdmin.jsx` to utilize `useAdminForm`, `FormActions`, `StatusBadge`, and color tone mapping utilities.
+  - Refactored `AdminWorkspace.jsx` desktop and mobile nav menus to use a shared `navButtonClass(isActive)` layout helper.
+  - Extracted dynamic factory `createCrudResource` in `api.js` (`src/services/api.js`) to deduplicate CRUD operations across products, categories, and users resources.
+  - Extracted shared reducer helper `adjustQuantity` in `useCart.js` to deduplicate cart quantity modification logic.
+  - Centralized `SERVICE_RATE` (0.03) and `TAX_RATE` (0.08) in `seedData.js` and imported them in `useCart.js`.
+  - Deduplicated `initials` and `suggestedCode` in `format.js` using a shared `nameAcronym` helper.
+  - Extracted higher-order wrapper `withCartSync` in `CashierPage.jsx` to deduplicate cart synchronization handlers.
+  - Verified production build and linting to ensure zero syntax or compilation errors.
 
 ## Next Up
 

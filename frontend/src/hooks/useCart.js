@@ -1,4 +1,18 @@
 import { useMemo, useState } from 'react';
+import { SERVICE_RATE, TAX_RATE } from '../data/seedData';
+
+const adjustQuantity = (current, id, getNewQty) =>
+  current.reduce((acc, item) => {
+    if (item.id === id) {
+      const newQty = getNewQty(item.quantity);
+      if (newQty > 0) {
+        acc.push({ ...item, quantity: newQty });
+      }
+    } else {
+      acc.push(item);
+    }
+    return acc;
+  }, []);
 
 /**
  * Manages cart state and all derived totals.
@@ -19,34 +33,10 @@ export function useCart(categoryById) {
   };
 
   const updateQuantity = (id, change) =>
-    setCart((current) =>
-      current.reduce((acc, item) => {
-        if (item.id === id) {
-          const newQty = item.quantity + change;
-          if (newQty > 0) {
-            acc.push({ ...item, quantity: newQty });
-          }
-        } else {
-          acc.push(item);
-        }
-        return acc;
-      }, [])
-    );
+    setCart((current) => adjustQuantity(current, id, (q) => q + change));
 
   const setCartItemQuantity = (id, quantity) =>
-    setCart((current) =>
-      current.reduce((acc, item) => {
-        if (item.id === id) {
-          const newQty = Math.max(0, quantity);
-          if (newQty > 0) {
-            acc.push({ ...item, quantity: newQty });
-          }
-        } else {
-          acc.push(item);
-        }
-        return acc;
-      }, [])
-    );
+    setCart((current) => adjustQuantity(current, id, () => Math.max(0, quantity)));
 
   const removeItemFromCart = (productId) =>
     setCart((current) => current.filter((item) => item.id !== productId));
@@ -55,8 +45,8 @@ export function useCart(categoryById) {
 
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const serviceFee = Math.round(subtotal * 0.03 * 100) / 100;
-  const estimatedTax = Math.round(subtotal * 0.08 * 100) / 100;
+  const serviceFee = Math.round(subtotal * SERVICE_RATE * 100) / 100;
+  const estimatedTax = Math.round(subtotal * TAX_RATE * 100) / 100;
   const total = subtotal + serviceFee + estimatedTax;
   const cartById = useMemo(() => new Map(cart.map((item) => [item.id, item])), [cart]);
 
