@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { initials } from '../utils/format';
+import ConfirmDialog from './ui/ConfirmDialog';
 
 export default function Topbar({ currentUser, isCashier, itemCount, onCartOpen, onLogout }) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -25,7 +26,7 @@ export default function Topbar({ currentUser, isCashier, itemCount, onCartOpen, 
 
         {isCashier ? (
           <button
-            className="hidden max-[1100px]:inline-flex relative min-w-11.5 h-10.5 px-2.5 border border-[#d9d0c1] rounded-full bg-brand-card text-brand-text items-center justify-center gap-1.5 cursor-pointer shadow-[0_10px_24px_rgba(52,45,35,0.08)]"
+            className="hidden max-[1100px]:inline-flex relative min-w-11.5 h-10.5 px-2.5 border border-brand-border rounded-full bg-brand-card text-brand-text items-center justify-center gap-1.5 cursor-pointer shadow-[0_10px_24px_rgba(52,45,35,0.08)]"
             type="button"
             aria-label={`Open cart with ${itemCount} items`}
             onClick={onCartOpen}
@@ -40,7 +41,7 @@ export default function Topbar({ currentUser, isCashier, itemCount, onCartOpen, 
         <div className="relative">
           <button
             type="button"
-            className="min-h-11 py-1 pr-3.5 pl-1 border border-[#d9d0c1] rounded-full bg-brand-card flex items-center gap-2 cursor-pointer hover:bg-gray-50 active:scale-[0.98] transition-all"
+            className="min-h-11 py-1 pr-3.5 pl-1 border border-brand-border rounded-full bg-brand-card flex items-center gap-2 cursor-pointer hover:bg-gray-50 active:scale-[0.98] transition-all"
             onClick={() => setIsProfileOpen(!isProfileOpen)}
             aria-expanded={isProfileOpen}
             aria-label="Profile actions"
@@ -82,7 +83,7 @@ export default function Topbar({ currentUser, isCashier, itemCount, onCartOpen, 
                     setIsProfileOpen(false);
                     setShowLogoutConfirm(true);
                   }}
-                  className="w-full text-left px-4 py-2.5 text-[13px] font-bold text-[#c70000] hover:bg-red-50/60 transition-colors flex items-center gap-2 cursor-pointer border-0 bg-transparent"
+                  className="w-full text-left px-4 py-2.5 text-[13px] font-bold text-state-danger hover:bg-red-50/60 transition-colors flex items-center gap-2 cursor-pointer border-0 bg-transparent"
                 >
                   <svg
                     className="w-4 h-4 shrink-0"
@@ -105,35 +106,15 @@ export default function Topbar({ currentUser, isCashier, itemCount, onCartOpen, 
         </div>
       </div>
 
-      {/* Logout Confirmation Toast/Modal */}
-      {showLogoutConfirm && (
-        <div className="fixed inset-0 z-100 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-brand-yellow rounded-4xl w-135 max-w-full p-8 flex flex-col items-center text-center shadow-[0_24px_64px_rgba(0,0,0,0.24)] animate-in fade-in zoom-in-95 duration-200 border-0">
-            <h3 className="m-0 text-3xl font-extrabold text-[#1a1c1e] mb-8 mt-2 tracking-tight">
-              Are you sure you wanna log out?
-            </h3>
-            <div className="flex items-center justify-center gap-6 w-full mb-2">
-              <button
-                className="flex-1 h-15 bg-[#c70000] hover:brightness-105 active:scale-[0.98] text-white text-2xl font-black rounded-2xl transition-all cursor-pointer border-0 shadow-md flex items-center justify-center"
-                type="button"
-                onClick={() => setShowLogoutConfirm(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="flex-1 h-15 bg-[#157811] hover:brightness-105 active:scale-[0.98] text-white text-2xl font-black rounded-2xl transition-all cursor-pointer border-0 shadow-md flex items-center justify-center"
-                type="button"
-                onClick={() => {
-                  setShowLogoutConfirm(false);
-                  onLogout();
-                }}
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        title="Are you sure you want to log out?"
+        onCancel={() => setShowLogoutConfirm(false)}
+        onConfirm={() => {
+          setShowLogoutConfirm(false);
+          onLogout();
+        }}
+      />
     </header>
   );
 }

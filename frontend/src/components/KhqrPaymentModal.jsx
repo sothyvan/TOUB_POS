@@ -1,10 +1,13 @@
-export default function KhqrPaymentModal({ isOpen, total, onCancel, onConfirm }) {
-  if (!isOpen) return null;
+import ModalShell from './ui/ModalShell';
 
+export default function KhqrPaymentModal({ isOpen, total, onCancel, onConfirm }) {
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-brand-yellow rounded-4xl w-115 max-w-full p-7 flex flex-col items-center text-center shadow-[0_24px_64px_rgba(0,0,0,0.24)] animate-in fade-in zoom-in-95 duration-200 border-0">
-        <h3 className="m-0 text-[26px] font-extrabold text-[#1a1c1e] mb-5 mt-1 tracking-tight">
+    <ModalShell
+      isOpen={isOpen}
+      labelledBy="khqr-payment-title"
+      panelClassName="bg-brand-yellow rounded-4xl w-115 max-w-full p-7 flex flex-col items-center text-center shadow-[0_24px_64px_rgba(0,0,0,0.24)] border-0"
+    >
+        <h3 id="khqr-payment-title" className="m-0 text-[26px] font-extrabold text-brand-dark mb-5 mt-1 tracking-tight">
           Scan QR Code to Pay!
         </h3>
 
@@ -14,8 +17,8 @@ export default function KhqrPaymentModal({ isOpen, total, onCancel, onConfirm })
           title="Click to simulate scan / payment success"
           onClick={onConfirm}
         >
-          <span className="text-[28px] font-black tracking-tight text-[#d32f2f] uppercase leading-none mt-1">
-            BANK LOGO
+          <span className="text-[28px] font-black tracking-tight text-state-danger uppercase leading-none mt-1">
+            TOUB PAY
           </span>
           <span className="text-[11px] font-bold text-gray-400 tracking-wide uppercase mt-1">
             Scan. Pay. Done.
@@ -44,12 +47,12 @@ export default function KhqrPaymentModal({ isOpen, total, onCancel, onConfirm })
           {/* Member of KHQR footer */}
           <div className="w-full flex justify-between items-center mt-5 pt-3 border-t border-gray-100 text-gray-400">
             <span className="text-[10px] font-bold uppercase tracking-wider">Member of</span>
-            <span className="text-base font-black text-[#d32f2f] tracking-tighter leading-none">KHQR</span>
+            <span className="text-base font-black text-state-danger tracking-tighter leading-none">KHQR</span>
           </div>
         </div>
 
         <button
-          className="w-4/5 h-14 bg-[#c70000] hover:brightness-105 active:scale-[0.98] text-white text-xl font-bold rounded-2xl transition-all cursor-pointer border-0 shadow-md flex items-center justify-center mt-6"
+          className="w-4/5 h-14 bg-state-danger hover:bg-state-danger/90 active:scale-[0.98] text-white text-xl font-bold rounded-2xl transition-all cursor-pointer border-0 shadow-md flex items-center justify-center mt-6"
           type="button"
           onClick={onCancel}
         >
@@ -58,7 +61,6 @@ export default function KhqrPaymentModal({ isOpen, total, onCancel, onConfirm })
         <span className="text-xs font-semibold text-gray-700 mt-3 animate-pulse">
           Waiting for payment detection...
         </span>
-      </div>
-    </div>
+    </ModalShell>
   );
 }

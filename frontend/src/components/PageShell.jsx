@@ -4,7 +4,6 @@ export default function PageShell({
   children,
   currentUser,
   isCashier,
-  isOnline,
   itemCount,
   onCartOpen,
   onLogout,
@@ -16,7 +15,6 @@ export default function PageShell({
       <Topbar
         currentUser={currentUser}
         isCashier={isCashier}
-        isOnline={isOnline}
         itemCount={itemCount}
         onCartOpen={onCartOpen}
         onLogout={onLogout}

@@ -1,8 +1,6 @@
 import { money } from '../utils/format';
 
 export default function CartItem({ item, updateQuantity }) {
-  const minusPlusColor = item.tone === 'rose' || item.tone === 'green' ? 'bg-[#00531e]' : 'bg-black';
-
   return (
     <div className="py-4.5 border-b border-gray-100 flex items-center justify-between gap-4">
       <div className="min-w-0 flex-1">
@@ -18,7 +16,7 @@ export default function CartItem({ item, updateQuantity }) {
         {/* Quantity Pill */}
         <div className="flex items-center h-8 px-1 rounded-full bg-[#eeeef0] border border-gray-150">
           <button
-            className={`w-6 h-6 rounded-full ${minusPlusColor} text-white flex items-center justify-center font-bold text-xs cursor-pointer hover:brightness-110 active:scale-95 transition-all border-0`}
+            className={`w-6 h-6 rounded-full bg-green-800 text-white flex items-center justify-center font-bold text-xs cursor-pointer hover:brightness-110 active:scale-95 transition-all border-0`}
             type="button"
             onClick={() => updateQuantity(item.id, -1)}
           >
@@ -30,7 +28,7 @@ export default function CartItem({ item, updateQuantity }) {
             {item.quantity}
           </span>
           <button
-            className={`w-6 h-6 rounded-full ${minusPlusColor} text-white flex items-center justify-center font-bold text-xs cursor-pointer hover:brightness-110 active:scale-95 transition-all border-0`}
+            className={`w-6 h-6 rounded-full bg-green-800 text-white flex items-center justify-center font-bold text-xs cursor-pointer hover:brightness-110 active:scale-95 transition-all border-0`}
             type="button"
             onClick={() => updateQuantity(item.id, 1)}
           >

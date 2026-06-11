@@ -3,6 +3,7 @@ import ProductAdmin from './ProductAdmin';
 import CategoryAdmin from './CategoryAdmin';
 import OrderHistory from './OrderHistory';
 import UserAdmin from './UserAdmin';
+import ConfirmDialog from './ui/ConfirmDialog';
 
 export default function AdminWorkspace({
   visibleAdminTab,
@@ -73,7 +74,7 @@ export default function AdminWorkspace({
                 onClick={() => setAdminTab(tab)}
                 className={`flex items-center gap-3 w-full min-h-11.5 px-4 rounded-xl text-[14px] font-bold capitalize transition-all duration-200 cursor-pointer active:scale-[0.98] ${
                   isActive
-                    ? 'bg-[#003ec7] text-white shadow-sm'
+                    ? 'bg-brand-action text-white shadow-sm'
                     : 'text-[#776f63] hover:bg-gray-50 hover:text-brand-dark'
                 }`}
               >
@@ -109,22 +110,22 @@ export default function AdminWorkspace({
         <div className="flex items-center justify-between p-4">
           <span className="text-sm font-bold text-brand-dark flex items-center gap-2">
             {visibleAdminTab === 'products' && (
-              <svg className="w-5 h-5 text-[#003ec7]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <svg className="w-5 h-5 text-brand-action" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
               </svg>
             )}
             {visibleAdminTab === 'categories' && (
-              <svg className="w-5 h-5 text-[#003ec7]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <svg className="w-5 h-5 text-brand-action" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
             )}
             {visibleAdminTab === 'orders' && (
-              <svg className="w-5 h-5 text-[#003ec7]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <svg className="w-5 h-5 text-brand-action" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
               </svg>
             )}
             {visibleAdminTab === 'users' && (
-              <svg className="w-5 h-5 text-[#003ec7]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <svg className="w-5 h-5 text-brand-action" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
             )}
@@ -164,7 +165,7 @@ export default function AdminWorkspace({
                   }}
                   className={`flex items-center gap-3 w-full min-h-11.5 px-4 rounded-xl text-[14px] font-bold capitalize transition-all duration-200 cursor-pointer active:scale-[0.98] ${
                     isActive
-                      ? 'bg-[#003ec7] text-white shadow-sm'
+                      ? 'bg-brand-action text-white shadow-sm'
                       : 'text-[#776f63] hover:bg-gray-50 hover:text-brand-dark'
                   }`}
                 >
@@ -269,45 +270,32 @@ export default function AdminWorkspace({
         </div>
       </main>
 
-      {/* Golden-Yellow Deletion Confirmation Modal Overlay */}
-      {pendingDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#23211f]/40 backdrop-blur-sm">
-          <div className="absolute inset-0" onClick={() => setPendingDelete(null)} />
-          
-          <div className="relative w-full max-w-100 border border-brand-yellow rounded-3xl bg-[#fffcf0] shadow-[0_20px_50px_rgba(52,45,35,0.15)] p-6 z-10 animate-in fade-in zoom-in-95 duration-200 text-center flex flex-col items-center">
-            {/* Warning Icon Container */}
-            <div className="w-16 h-16 rounded-full bg-[#fdf5d6] flex items-center justify-center text-brand-yeborder-brand-yellow mb-4">
-              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            
-            <h3 className="m-0 text-brand-dark text-xl font-black tracking-tight mb-2">
-              Are you sure?
-            </h3>
-            <p className="m-0 text-[#776f63] text-[14px] leading-relaxed mb-6 font-semibold">
-              You are about to delete the {pendingDelete.type} <strong className="text-brand-dark">"{pendingDelete.name}"</strong>. This action cannot be undone.
-            </p>
-            
-            <div className="flex items-center gap-3 w-full">
-              <button
-                type="button"
-                onClick={() => setPendingDelete(null)}
-                className="flex-1 min-h-12 border border-[#d9d0c1] rounded-xl bg-white text-brand-text font-bold hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmDelete}
-                className="flex-1 min-h-12 rounded-xl font-bold bg-[#c70000] hover:bg-[#c70000]/90 active:scale-[0.98] transition-all text-white border-0 cursor-pointer shadow-sm"
-              >
-                Delete
-              </button>
-            </div>
+      <ConfirmDialog
+        isOpen={Boolean(pendingDelete)}
+        size="compact"
+        title="Are you sure?"
+        message={pendingDelete ? (
+          <>
+            You are about to delete the {pendingDelete.type}{' '}
+            <strong className="text-brand-dark">"{pendingDelete.name}"</strong>.
+            This action cannot be undone.
+          </>
+        ) : null}
+        icon={(
+          <div className="w-16 h-16 rounded-full bg-[#fdf5d6] flex items-center justify-center text-brand-yellow mb-4">
+            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
           </div>
-        </div>
-      )}
+        )}
+        cancelTone="secondary"
+        confirmTone="danger"
+        confirmLabel="Delete"
+        overlayClassName="bg-brand-dark/40"
+        panelClassName="border-brand-yellow bg-[#fffcf0]"
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

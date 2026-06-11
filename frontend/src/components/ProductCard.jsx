@@ -40,7 +40,7 @@ export default function ProductCard({
       {/* Card Info & Action */}
       <div className="p-3.5 flex flex-col flex-1 justify-between gap-3">
         <div>
-          <h3 className="m-0 text-[15px] font-bold text-gray-900 leading-snug group-hover:text-[#003ec7] transition-colors line-clamp-2">
+          <h3 className="m-0 text-[15px] font-bold text-gray-900 leading-snug group-hover:text-brand-action transition-colors line-clamp-2">
             {product.name}
           </h3>
           <span className="block mt-1 text-gray-400 text-xs font-semibold">
@@ -79,7 +79,7 @@ export default function ProductCard({
             </div>
           ) : (
             <button
-              className="relative z-20 pointer-events-auto h-8 px-4 rounded-full bg-[#003ec7] hover:bg-[#003ec7]/90 active:scale-95 text-white text-xs font-bold transition-all cursor-pointer shadow-sm"
+              className="relative z-20 pointer-events-auto h-8 px-4 rounded-full bg-brand-action hover:bg-brand-action/90 active:scale-95 text-white text-xs font-bold transition-all cursor-pointer shadow-sm"
               onClick={() => addToCart(product)}
               type="button"
             >

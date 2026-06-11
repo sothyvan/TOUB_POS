@@ -1,11 +1,15 @@
 import { money } from '../utils/format';
+import ModalShell from './ui/ModalShell';
 
 export default function ReceiptModal({ activeReceipt, onClose }) {
-  if (!activeReceipt) return null;
-
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-105 overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+    <ModalShell
+      isOpen={Boolean(activeReceipt)}
+      labelledBy="receipt-modal-title"
+      panelClassName="bg-white rounded-2xl w-full max-w-105 overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+    >
+      {activeReceipt ? (
+        <>
         {/* Header */}
         <div className="bg-[#f8f9fa] border-b border-gray-100 p-5 text-center flex flex-col items-center">
           <div className="w-12 h-12 rounded-full bg-[#e6f4eb] text-[#126149] flex items-center justify-center mb-3">
@@ -13,12 +17,12 @@ export default function ReceiptModal({ activeReceipt, onClose }) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h3 className="m-0 text-xl font-bold text-gray-900 leading-snug">Payment Confirmed</h3>
+          <h3 id="receipt-modal-title" className="m-0 text-xl font-bold text-gray-900 leading-snug">Payment Confirmed</h3>
           <p className="m-0 mt-1 text-gray-500 text-sm font-semibold">
             Receipt: {activeReceipt.orderNo}
           </p>
           <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-bold text-white ${
-            activeReceipt.paymentMethod === 'KHQR' ? 'bg-[#c70000]' : 'bg-[#157811]'
+            activeReceipt.paymentMethod === 'KHQR' ? 'bg-state-danger' : 'bg-state-success'
           }`}>
             Paid via {activeReceipt.paymentMethod}
           </span>
@@ -57,9 +61,9 @@ export default function ReceiptModal({ activeReceipt, onClose }) {
               <span>Estimated Tax (8%)</span>
               <span className="text-gray-950">{money(activeReceipt.estimatedTax)}</span>
             </div>
-            <div className="flex justify-between text-gray-955 text-base font-bold pt-3 mt-1.5 border-t border-gray-100 items-baseline">
+            <div className="flex justify-between text-gray-900 text-base font-bold pt-3 mt-1.5 border-t border-gray-100 items-baseline">
               <span>Total Amount</span>
-              <span className="text-2xl text-[#003ec7] font-black">{money(activeReceipt.total)}</span>
+              <span className="text-2xl text-brand-action font-black">{money(activeReceipt.total)}</span>
             </div>
           </div>
 
@@ -83,14 +87,15 @@ export default function ReceiptModal({ activeReceipt, onClose }) {
         {/* Actions */}
         <div className="p-5 border-t border-gray-100 bg-[#f8f9fa] flex gap-3">
           <button
-            className="flex-1 h-12 bg-[#003ec7] hover:bg-[#003ec7]/90 text-white rounded-xl font-bold transition-all cursor-pointer border-0 shadow-sm"
+            className="flex-1 h-12 bg-brand-action hover:bg-brand-action/90 text-white rounded-xl font-bold transition-all cursor-pointer border-0 shadow-sm"
             type="button"
             onClick={onClose}
           >
             New Order
           </button>
         </div>
-      </div>
-    </div>
+        </>
+      ) : null}
+    </ModalShell>
   );
 }

@@ -86,6 +86,16 @@ Update this file after every meaningful implementation change.
   - Refactored `src/pages/CashierPage.jsx` to use extracted modal components.
   - Fixed all lint errors (removed unused `useEffect` imports, wrapped callback in `useCallback`).
   - Verified production build (53 modules transformed, 316KB JS bundle).
+- **Refactored shared frontend UI consistency layer**:
+  - Added `ModalShell`, `ConfirmDialog`, and `AdminFormModal` primitives for consistent overlays, confirmation dialogs, and admin CRUD forms.
+  - Refactored Cash confirmation, KHQR payment, receipt, logout confirmation, delete confirmation, and admin CRUD overlays to use shared modal structure.
+  - Added Tailwind theme tokens for `brand-action`, `state-danger`, and `state-success`; updated common cashier/admin action controls to use token classes instead of repeated hardcoded hex values.
+  - Cleaned up copy and class issues (`Did you receive the cash?`, logout wording, delete warning icon color, invalid receipt text class).
+  - Removed unused prop forwarding from `PageShell`/`Topbar` and `CashierScreen`/`OrderPanel`.
+  - Verified lint and production build after refactor.
+- **Refactored Admin CRUD tables into reusable component**:
+  - Expanded `AdminCRUDTable` to own shared admin list panel, add button, row action buttons, accessibility labels, and admin form modal sizing/scroll behavior.
+  - Refactored `ProductAdmin`, `CategoryAdmin`, and `UserAdmin` to reuse `AdminCRUDTable` while keeping domain-specific row rendering and form fields inside each feature component.
 
 ## Next Up
 

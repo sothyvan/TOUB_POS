@@ -119,7 +119,6 @@ export default function CashierPage() {
     <PageShell
       currentUser={currentUser}
       isCashier={isCashier}
-      isOnline={isOnline}
       itemCount={itemCount}
       onCartOpen={() => setIsCartOpen(true)}
       onLogout={handleLogout}

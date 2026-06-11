@@ -30,7 +30,7 @@ export default function OrderPanel({
           {cart.length > 0 && (
             <button
               onClick={clearCart}
-              className="flex items-center gap-1 text-[#c70000] hover:text-[#aa0000] text-sm font-semibold cursor-pointer border-0 bg-transparent p-0 transition-colors"
+              className="flex items-center gap-1 text-state-danger hover:text-state-danger/80 text-sm font-semibold cursor-pointer border-0 bg-transparent p-0 transition-colors"
               type="button"
             >
               <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2">
@@ -100,7 +100,7 @@ export default function OrderPanel({
           </div>
           <div className="flex justify-between items-baseline pt-4 border-t border-gray-100 mt-2">
             <span className="text-[#1a1c1e] text-base font-bold">Total Amount</span>
-            <strong className="text-5xl text-[#003ec7] font-black leading-none tracking-tight">
+            <strong className="text-5xl text-brand-action font-black leading-none tracking-tight">
               {money(total)}
             </strong>
           </div>
@@ -108,7 +108,7 @@ export default function OrderPanel({
 
         <div className="flex items-center gap-3">
           <button
-            className="flex-1 h-13 border-0 rounded-xl text-white text-base font-bold cursor-pointer bg-[#157811] hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-45 flex items-center justify-center gap-2 shadow-sm transition-all"
+            className="flex-1 h-13 border-0 rounded-xl text-white text-base font-bold cursor-pointer bg-state-success hover:bg-state-success/90 disabled:cursor-not-allowed disabled:opacity-45 flex items-center justify-center gap-2 shadow-sm transition-all"
             type="button"
             disabled={cart.length === 0}
             onClick={() => handleCheckout('CASH')}
@@ -121,7 +121,7 @@ export default function OrderPanel({
             Cash
           </button>
           <button
-            className="flex-1 h-13 border-0 rounded-xl text-white text-base font-bold cursor-pointer bg-[#c70000] hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-45 flex items-center justify-center gap-2 shadow-sm transition-all"
+            className="flex-1 h-13 border-0 rounded-xl text-white text-base font-bold cursor-pointer bg-state-danger hover:bg-state-danger/90 disabled:cursor-not-allowed disabled:opacity-45 flex items-center justify-center gap-2 shadow-sm transition-all"
             type="button"
             disabled={!isOnline || cart.length === 0}
             onClick={() => handleCheckout('KHQR')}

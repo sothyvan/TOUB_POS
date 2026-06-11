@@ -16,6 +16,14 @@ The design language must be highly legible, high-contrast, and optimized for fas
 | Error/Alert     | `--state-error`    | `bg-red-500`           |
 | Success         | `--state-success`  | `bg-green-500`         |
 
+## Frontend Theme Tokens
+
+The Tailwind v4 theme in `frontend/src/index.css` defines app-specific tokens for the current visual system:
+
+- `brand-action` — primary action blue for checkout, admin tabs, submit buttons, and important totals.
+- `state-danger` — destructive/cancel red for KHQR, delete, logout, and clear actions.
+- `state-success` — confirmation green for cash and successful payment actions.
+
 ## Layout Patterns
 
 - **Cashier View**: Full-viewport with a large central numeric keypad/item grid, and a prominent right-side order summary and checkout button.
