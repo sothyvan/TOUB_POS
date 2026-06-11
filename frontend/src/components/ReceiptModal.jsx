@@ -1,4 +1,5 @@
 import { money } from '../utils/format';
+import Icon from './ui/Icon';
 import ModalShell from './ui/ModalShell';
 
 export default function ReceiptModal({ activeReceipt, onClose }) {
@@ -13,9 +14,7 @@ export default function ReceiptModal({ activeReceipt, onClose }) {
         {/* Header */}
         <div className="bg-[#f8f9fa] border-b border-gray-100 p-5 text-center flex flex-col items-center">
           <div className="w-12 h-12 rounded-full bg-[#e6f4eb] text-[#126149] flex items-center justify-center mb-3">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
+            <Icon name="check" className="w-6 h-6" strokeWidth={3} />
           </div>
           <h3 id="receipt-modal-title" className="m-0 text-xl font-bold text-gray-900 leading-snug">Payment Confirmed</h3>
           <p className="m-0 mt-1 text-gray-500 text-sm font-semibold">

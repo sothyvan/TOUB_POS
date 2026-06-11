@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { TONES } from '../data/seedData';
 import { money } from '../utils/format';
-import AdminCRUDTable from './common/AdminCRUDTable';
+import AdminCRUDTable from './common/AdminCrudTable';
 
 export default function ProductAdmin({
   productForm,

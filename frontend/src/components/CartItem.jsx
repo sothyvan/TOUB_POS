@@ -1,4 +1,5 @@
 import { money } from '../utils/format';
+import Icon from './ui/Icon';
 
 export default function CartItem({ item, updateQuantity }) {
   return (
@@ -20,9 +21,7 @@ export default function CartItem({ item, updateQuantity }) {
             type="button"
             onClick={() => updateQuantity(item.id, -1)}
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M20 12H4" />
-            </svg>
+            <Icon name="minus" className="w-3.5 h-3.5" strokeWidth={3.5} />
           </button>
           <span className="w-7 text-center text-sm font-bold text-gray-900 select-none">
             {item.quantity}
@@ -32,9 +31,7 @@ export default function CartItem({ item, updateQuantity }) {
             type="button"
             onClick={() => updateQuantity(item.id, 1)}
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
+            <Icon name="plus" className="w-3.5 h-3.5" strokeWidth={3.5} />
           </button>
         </div>
 
@@ -49,9 +46,7 @@ export default function CartItem({ item, updateQuantity }) {
           type="button"
           onClick={() => updateQuantity(item.id, -item.quantity)}
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          <Icon name="close" />
         </button>
       </div>
     </div>

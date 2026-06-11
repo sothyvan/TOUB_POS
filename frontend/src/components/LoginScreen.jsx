@@ -1,3 +1,5 @@
+import Icon from './ui/Icon';
+
 export default function LoginScreen({
   activeUsers,
   effectiveLoginUserId,
@@ -44,9 +46,7 @@ export default function LoginScreen({
                 ))}
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-gray-500">
-                <svg className="h-4.5 w-4.5 stroke-2 stroke-current fill-none" viewBox="0 0 24 24">
-                  <path d="M19 9l-7 7-7-7" />
-                </svg>
+                <Icon name="chevronDown" className="h-4.5 w-4.5 stroke-2 stroke-current fill-none" strokeWidth={2} />
               </div>
             </div>
           </div>

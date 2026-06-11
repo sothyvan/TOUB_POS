@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { initials } from '../utils/format';
 import ConfirmDialog from './ui/ConfirmDialog';
+import Icon from './ui/Icon';
 
 export default function Topbar({ currentUser, isCashier, itemCount, onCartOpen, onLogout }) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -57,15 +58,11 @@ export default function Topbar({ currentUser, isCashier, itemCount, onCartOpen, 
                 {currentUser.station}
               </small>
             </div>
-            <svg
+            <Icon
+              name="chevronDown"
               className={`w-3.5 h-3.5 text-[#776f63] transition-transform duration-200 shrink-0 ${isProfileOpen ? 'rotate-180' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              strokeWidth="3"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
+              strokeWidth={3}
+            />
           </button>
 
           {isProfileOpen && (
@@ -85,19 +82,10 @@ export default function Topbar({ currentUser, isCashier, itemCount, onCartOpen, 
                   }}
                   className="w-full text-left px-4 py-2.5 text-[13px] font-bold text-state-danger hover:bg-red-50/60 transition-colors flex items-center gap-2 cursor-pointer border-0 bg-transparent"
                 >
-                  <svg
+                  <Icon
+                    name="logout"
                     className="w-4 h-4 shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    strokeWidth="2.5"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                    />
-                  </svg>
+                  />
                   Logout
                 </button>
               </div>

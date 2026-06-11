@@ -1,6 +1,7 @@
 import { money } from '../utils/format';
 import ProductCard from './ProductCard';
 import OrderPanel from './OrderPanel';
+import Icon from './ui/Icon';
 
 export default function CashierScreen({
   categories,
@@ -36,9 +37,7 @@ export default function CashierScreen({
           </div>
 
           <label className="w-[min(320px,46vw)] h-12 px-3.5 border border-brand-border rounded-full bg-brand-card flex items-center gap-2.5 text-[#776f63] text-xs font-extrabold uppercase max-sm:w-full">
-            <svg className="w-4.5 h-4.5 text-[#434656]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+            <Icon name="search" className="w-4.5 h-4.5 text-[#434656]" />
             <input
               type="search"
               placeholder="Search products..."
@@ -138,9 +137,7 @@ export default function CashierScreen({
           >
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-white">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
+                <Icon name="cart" />
               </div>
               <span className="text-[13px] font-extrabold tracking-wider uppercase">
                 Review Order ({itemCount} {itemCount === 1 ? 'item' : 'items'})

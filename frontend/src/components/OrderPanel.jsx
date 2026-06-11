@@ -1,5 +1,6 @@
 import { money } from '../utils/format';
 import CartItem from './CartItem';
+import Icon from './ui/Icon';
 
 export default function OrderPanel({
   cart,
@@ -33,9 +34,7 @@ export default function OrderPanel({
               className="flex items-center gap-1 text-state-danger hover:text-state-danger/80 text-sm font-semibold cursor-pointer border-0 bg-transparent p-0 transition-colors"
               type="button"
             >
-              <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
+              <Icon name="delete" className="w-4.5 h-4.5" strokeWidth={2.2} />
               Clear All
             </button>
           )}
@@ -75,9 +74,7 @@ export default function OrderPanel({
             className="w-full mt-5 py-3.5 px-4 border border-dashed border-[#c3c5d9] rounded-xl flex items-center justify-center gap-2 text-[#1a1c1e] bg-transparent hover:bg-gray-50 active:scale-[0.99] font-bold text-base transition-all cursor-pointer"
             type="button"
           >
-            <svg className="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
-            </svg>
+            <Icon name="discount" className="w-5 h-5 text-gray-800" />
             Add Discount or Promo
           </button>
         )}
@@ -113,11 +110,7 @@ export default function OrderPanel({
             disabled={cart.length === 0}
             onClick={() => handleCheckout('CASH')}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-              <rect x="2" y="5" width="20" height="14" rx="2" />
-              <circle cx="12" cy="12" r="3" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 9h.01M18 9h.01M6 15h.01M18 15h.01" />
-            </svg>
+            <Icon name="cash" />
             Cash
           </button>
           <button
@@ -126,13 +119,7 @@ export default function OrderPanel({
             disabled={!isOnline || cart.length === 0}
             onClick={() => handleCheckout('KHQR')}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-              <rect x="3" y="3" width="7" height="7" rx="1" />
-              <rect x="14" y="3" width="7" height="7" rx="1" />
-              <rect x="3" y="14" width="7" height="7" rx="1" />
-              <rect x="14" y="14" width="7" height="7" rx="1" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M17 7h.01M7 17h.01" />
-            </svg>
+            <Icon name="khqr" />
             KHQR
           </button>
         </div>

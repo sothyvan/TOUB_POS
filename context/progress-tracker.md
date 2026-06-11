@@ -96,6 +96,11 @@ Update this file after every meaningful implementation change.
 - **Refactored Admin CRUD tables into reusable component**:
   - Expanded `AdminCRUDTable` to own shared admin list panel, add button, row action buttons, accessibility labels, and admin form modal sizing/scroll behavior.
   - Refactored `ProductAdmin`, `CategoryAdmin`, and `UserAdmin` to reuse `AdminCRUDTable` while keeping domain-specific row rendering and form fields inside each feature component.
+- **Extracted reusable frontend Icon component**:
+  - Added `src/components/ui/Icon.jsx` with shared POS/admin icon definitions and configurable `name`, `className`, and `strokeWidth` props.
+  - Replaced inline SVG markup across admin navigation, admin CRUD actions, cashier order controls, login selector, topbar logout/profile controls, cart controls, payment buttons, search, and receipt confirmation.
+  - Normalized admin CRUD table imports to match the actual `AdminCrudTable.jsx` filename casing.
+  - Verified lint and production build after the refactor.
 
 ## Next Up
 

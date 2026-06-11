@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { TONES } from '../data/seedData';
-import AdminCRUDTable from './common/AdminCRUDTable';
+import AdminCRUDTable from './common/AdminCrudTable';
 
 export default function CategoryAdmin({
   categoryForm,

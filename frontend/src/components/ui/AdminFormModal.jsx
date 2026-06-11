@@ -1,3 +1,4 @@
+import Icon from './Icon';
 import ModalShell from './ModalShell';
 
 export default function AdminFormModal({
@@ -24,9 +25,7 @@ export default function AdminFormModal({
         className="absolute top-5 right-5 w-8.5 h-8.5 rounded-full border border-brand-border bg-white text-[#4f483f] grid place-items-center hover:bg-gray-150 cursor-pointer transition-all active:scale-90"
         aria-label="Close form"
       >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
+        <Icon name="close" className="w-4 h-4" />
       </button>
       <h3 id={titleId} className="m-0 text-brand-dark text-lg font-black tracking-tight border-b border-gray-100 pb-3 mb-4.5 pr-10">
         {title}
