@@ -44,6 +44,7 @@ Toub POS is a lightweight POS system designed for small merchant teams that comb
 - Real-time notification system (WebSockets/Polling).
 - JWT Authentication and Role management (Cashier vs. Manager).
 - Basic product/preset item management.
+- Service Fee (3%) and Estimated Tax (8%) calculation on orders.
 
 ### Out of Scope
 
