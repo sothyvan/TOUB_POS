@@ -1,50 +1,113 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSavedState } from '../hooks/useSavedState';
 import { DEFAULT_USERS } from '../data/seedData';
-import { defaultPinForRole } from '../utils/permissions';
+import { mapUsersWithDefaultPins } from '../utils/permissions';
+import { STORAGE_KEYS } from '../services/api';
 import LoginScreen from '../components/LoginScreen';
 
 export default function LoginPage() {
   const navigate = useNavigate();
 
-  const [rawUsers] = useSavedState('sabay-pos-users', DEFAULT_USERS);
-  const [loginUserId, setLoginUserId] = useState(() => rawUsers.find((u) => u.active)?.id || '');
-  const [loginPin, setLoginPin] = useState('');
+  const [rawUsers] = useSavedState(STORAGE_KEYS.USERS, DEFAULT_USERS);
+  const [deviceRegistered, setDeviceRegistered] = useSavedState('toub-device-registered', false);
+
+  const [loginMode, setLoginMode] = useState(deviceRegistered ? 'cashier' : 'admin');
+  const [flowStep, setFlowStep] = useState(deviceRegistered ? 'select-profile' : 'register');
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [typedPin, setTypedPin] = useState('');
   const [loginError, setLoginError] = useState('');
 
   const users = useMemo(
-    () => rawUsers.map((u) => ({ ...u, pin: u.pin || defaultPinForRole(u.role) })),
-    [rawUsers],
+    () => mapUsersWithDefaultPins(rawUsers),
+    [rawUsers]
   );
 
   const activeUsers = users.filter((u) => u.active);
+  const activeCashiers = activeUsers.filter((u) => u.role === 'Cashier');
 
-  const effectiveLoginUserId =
-    users.some((u) => u.id === loginUserId && u.active) ? loginUserId : activeUsers[0]?.id || '';
+  // Sync flow step if registration status changes
+  useEffect(() => {
+    if (loginMode === 'cashier') {
+      setFlowStep(deviceRegistered ? 'select-profile' : 'register');
+    }
+  }, [deviceRegistered, loginMode]);
 
-  const handleLogin = (event) => {
-    event.preventDefault();
-    const user = users.find((u) => u.id === effectiveLoginUserId && u.active);
+  // Handle standard login or admin registration
+  const handleAdminLogin = (username, password, isRegistering = false) => {
+    setLoginError('');
+    const user = activeUsers.find(
+      (u) =>
+        u.name.toLowerCase() === username.trim().toLowerCase() &&
+        u.pin === password.trim() &&
+        (u.role === 'Admin' || u.role === 'Manager')
+    );
 
-    if (!user || user.pin !== loginPin.trim()) {
-      setLoginError('Invalid user or PIN.');
-      return;
+    if (!user) {
+      setLoginError('Invalid Administrator credentials or PIN.');
+      return false;
     }
 
-    // Pass the authenticated user into the cashier route via router state.
-    navigate('/cashier', { state: { currentUser: user }, replace: true });
+    if (isRegistering) {
+      setDeviceRegistered(true);
+      setLoginMode('cashier');
+      setFlowStep('select-profile');
+    } else {
+      // Pass the authenticated user to back-office
+      navigate('/cashier', { state: { currentUser: user }, replace: true });
+    }
+    return true;
+  };
+
+  // Cashier profile tap in Step 2
+  const handleSelectProfile = (user) => {
+    setSelectedUser(user);
+    setTypedPin('');
+    setLoginError('');
+    setFlowStep('pin-pad');
+  };
+
+  // Cashier PIN pad input key handler
+  const handlePinKeyPress = (num) => {
+    if (typedPin.length >= 4) return;
+    setLoginError('');
+    const newPin = typedPin + num;
+    setTypedPin(newPin);
+
+    if (newPin.length === 4) {
+      if (selectedUser && selectedUser.pin === newPin) {
+        // Log in cashier successfully
+        navigate('/cashier', { state: { currentUser: selectedUser }, replace: true });
+      } else {
+        setLoginError('Incorrect PIN. Please try again.');
+        setTypedPin(''); // Clear pin entry
+      }
+    }
+  };
+
+  // Cashier PIN pad backspace
+  const handlePinErase = () => {
+    setTypedPin((prev) => prev.slice(0, -1));
   };
 
   return (
     <LoginScreen
-      activeUsers={activeUsers}
-      effectiveLoginUserId={effectiveLoginUserId}
-      loginPin={loginPin}
+      loginMode={loginMode}
+      setLoginMode={setLoginMode}
+      flowStep={flowStep}
+      setFlowStep={setFlowStep}
+      deviceRegistered={deviceRegistered}
+      setDeviceRegistered={setDeviceRegistered}
+      activeCashiers={activeCashiers}
+      selectedUser={selectedUser}
+      setSelectedUser={setSelectedUser}
+      typedPin={typedPin}
+      onKeyPress={handlePinKeyPress}
+      onErase={handlePinErase}
       loginError={loginError}
-      onLogin={handleLogin}
-      onPinChange={setLoginPin}
-      onUserChange={setLoginUserId}
+      setLoginError={setLoginError}
+      onAdminLogin={handleAdminLogin}
+      onSelectProfile={handleSelectProfile}
     />
   );
 }

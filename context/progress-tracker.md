@@ -123,7 +123,22 @@ Update this file after every meaningful implementation change.
   - Centralized `SERVICE_RATE` (0.03) and `TAX_RATE` (0.08) in `seedData.js` and imported them in `useCart.js`.
   - Deduplicated `initials` and `suggestedCode` in `format.js` using a shared `nameAcronym` helper.
   - Extracted higher-order wrapper `withCartSync` in `CashierPage.jsx` to deduplicate cart synchronization handlers.
-  - Verified production build and linting to ensure zero syntax or compilation errors.
+- **Refactored codebase for maintainability and DRY principles based on architectural audit**:
+  - Created centralized `storage` utility (`src/utils/storage.js`) to unify JSON read/write operations for `localStorage`.
+  - Refactored `api.js` and `useSavedState.js` to import and utilize the unified `storage` helpers.
+  - Centralized storage key definitions in `api.js` and updated `LoginPage.jsx` to consume `STORAGE_KEYS.USERS` instead of hardcoded strings.
+  - Created `mapUsersWithDefaultPins` utility in `permissions.js` to deduplicate roles-to-PIN mapping logic across `useUsers.js` hook and `LoginPage.jsx` page.
+  - Extracted stateless `<Logo />` UI component (`src/components/ui/Logo.jsx`) supporting `topbar` and `login` variants to unify brand mark layouts in `LoginScreen.jsx` and `Topbar.jsx`.
+  - Configured external QR code generator API URL base constant `QR_CODE_API_BASE` in `KhqrPaymentModal.jsx`.
+  - Verified client compilation builds successfully.
+- **Implemented Cashier Terminal persistent login & PIN pad flow vs Admin Portal Login**:
+  - Implemented secure, persistent device registration (`toub-device-registered` key in `localStorage`) so terminals are authorized once by admins and bypass the screen thereafter.
+  - Implemented Roster Profile Selection step in `LoginPage.jsx` and `LoginScreen.jsx`, displaying only cashiers (`role === 'Cashier'`) with visual colored outline rings.
+  - Implemented 35/65 Split View Cashier PIN pad validation step, rendering a blue select-cashier detail top banner with a "Switch User" back button, and a bottom white numeric touch-pad grid (keys 1-9, 0, backspace arrow with X symbol).
+  - Implemented traditional username/password form for Admin/Manager Login portal.
+  - Added toggle links to swap between cashier terminal view and admin portal credentials page.
+  - Added new vector outline outline assets (`backspace` and `arrowLeft`) to `Icon.jsx`.
+  - Verified client compilation builds successfully.
 
 ## Next Up
 

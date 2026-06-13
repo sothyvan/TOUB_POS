@@ -1,19 +1,11 @@
 import { useEffect, useState } from 'react';
-
-function readSaved(key, fallback) {
-  try {
-    const saved = localStorage.getItem(key);
-    return saved ? JSON.parse(saved) : fallback;
-  } catch {
-    return fallback;
-  }
-}
+import { getStorageItem, setStorageItem } from '../utils/storage';
 
 export function useSavedState(key, fallback) {
-  const [value, setValue] = useState(() => readSaved(key, fallback));
+  const [value, setValue] = useState(() => getStorageItem(key, fallback));
 
   useEffect(() => {
-    localStorage.setItem(key, JSON.stringify(value));
+    setStorageItem(key, value);
   }, [key, value]);
 
   return [value, setValue];

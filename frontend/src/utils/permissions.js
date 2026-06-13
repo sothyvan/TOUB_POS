@@ -18,3 +18,10 @@ export function getPermissions(user) {
     canViewOrders: isAdmin || isManager,
   };
 }
+
+export function mapUsersWithDefaultPins(users) {
+  return users.map((u) => ({
+    ...u,
+    pin: u.pin || defaultPinForRole(u.role),
+  }));
+}

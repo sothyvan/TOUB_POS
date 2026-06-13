@@ -1,29 +1,13 @@
 import { DEFAULT_CATEGORIES, DEFAULT_PRODUCTS, DEFAULT_USERS } from '../data/seedData';
 import { makeId } from '../utils/ids';
+import { getStorageItem, setStorageItem } from '../utils/storage';
 
-const STORAGE_KEYS = {
+export const STORAGE_KEYS = {
   CATEGORIES: 'sabay-pos-categories-v3',
   PRODUCTS: 'sabay-pos-products-v3',
   USERS: 'sabay-pos-users',
   ORDERS: 'sabay-pos-orders',
 };
-
-function getStorageItem(key, fallback) {
-  try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function setStorageItem(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (error) {
-    console.error(`Error setting localStorage key "${key}":`, error);
-  }
-}
 
 function createCrudResource(storageKey, defaultData, prefix) {
   return {
