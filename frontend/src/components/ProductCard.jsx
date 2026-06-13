@@ -10,7 +10,7 @@ export default function ProductCard({
   setCartItemQuantity,
 }) {
   return (
-    <article className="group relative bg-white border border-[#c3c5d9]/60 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:translate-y-0.5 transition-all duration-200 flex flex-col justify-between">
+    <article className={`group relative bg-white border rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:translate-y-0.5 transition-all duration-200 flex flex-col justify-between ${cartItem ? 'border-state-success border-3' : 'border-[#c3c5d9]/60'}`}>
       {/* Background Tap Target to Add to Cart */}
       <button
         className="absolute inset-0 w-full h-full border-0 bg-transparent z-10 cursor-pointer rounded-2xl"
@@ -54,29 +54,13 @@ export default function ProductCard({
           </strong>
 
           {cartItem ? (
-            <div
-              className="relative z-20 pointer-events-auto h-8 rounded-full bg-[#1a1a1a] text-[#fff9ee] inline-flex items-center overflow-hidden shadow-sm"
-              aria-label={`${product.name} quantity`}
-            >
-              <button
-                className="w-8 h-8 border-0 bg-transparent text-inherit text-md leading-none font-bold cursor-pointer hover:bg-white/10 active:scale-75 transition-all"
-                type="button"
-                onClick={() => updateQuantity(product.id, -1)}
-              >
-                -
-              </button>
-              <QuantityInput
-                value={cartItem.quantity}
-                onChange={(val) => setCartItemQuantity(product.id, val)}
-              />
-              <button
-                className="w-8 h-8 border-0 bg-transparent text-inherit text-md leading-none font-bold cursor-pointer hover:bg-white/10 active:scale-75 transition-all"
-                type="button"
-                onClick={() => updateQuantity(product.id, 1)}
-              >
-                +
-              </button>
-            </div>
+            <QuantityInput
+              value={cartItem.quantity}
+              onDecrease={() => updateQuantity(product.id, -1)}
+              onIncrease={() => updateQuantity(product.id, 1)}
+              onChange={(val) => setCartItemQuantity(product.id, val)}
+              className="text-gray-900 font-bold"
+            />
           ) : (
             <button
               className="relative z-20 pointer-events-auto h-8 px-4 rounded-full bg-brand-action hover:bg-brand-action/90 active:scale-95 text-white text-xs font-bold transition-all cursor-pointer shadow-sm"

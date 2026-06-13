@@ -1,7 +1,8 @@
 import { money } from '../utils/format';
 import Icon from './ui/Icon';
+import QuantityInput from './QuantityInput';
 
-export default function CartItem({ item, updateQuantity }) {
+export default function CartItem({ item, updateQuantity, setCartItemQuantity }) {
   return (
     <div className="py-4.5 border-b border-gray-100 flex items-center justify-between gap-4">
       <div className="min-w-0 flex-1">
@@ -14,26 +15,13 @@ export default function CartItem({ item, updateQuantity }) {
       </div>
 
       <div className="flex items-center gap-4 shrink-0">
-        {/* Quantity Pill */}
-        <div className="flex items-center h-8 px-1 rounded-full bg-[#eeeef0] border border-gray-150">
-          <button
-            className={`w-6 h-6 rounded-full bg-green-800 text-white flex items-center justify-center font-bold text-xs cursor-pointer hover:brightness-110 active:scale-95 transition-all border-0`}
-            type="button"
-            onClick={() => updateQuantity(item.id, -1)}
-          >
-            <Icon name="minus" className="w-3.5 h-3.5" strokeWidth={3.5} />
-          </button>
-          <span className="w-7 text-center text-sm font-bold text-gray-900 select-none">
-            {item.quantity}
-          </span>
-          <button
-            className={`w-6 h-6 rounded-full bg-green-800 text-white flex items-center justify-center font-bold text-xs cursor-pointer hover:brightness-110 active:scale-95 transition-all border-0`}
-            type="button"
-            onClick={() => updateQuantity(item.id, 1)}
-          >
-            <Icon name="plus" className="w-3.5 h-3.5" strokeWidth={3.5} />
-          </button>
-        </div>
+        <QuantityInput
+          value={item.quantity}
+          onDecrease={() => updateQuantity(item.id, -1)}
+          onIncrease={() => updateQuantity(item.id, 1)}
+          onChange={(val) => setCartItemQuantity(item.id, val)}
+          className="text-gray-900 font-bold"
+        />
 
         {/* Line Total */}
         <strong className="w-16 text-right text-[#1a1c1e] text-[17px] font-bold">

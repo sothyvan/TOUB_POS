@@ -31,7 +31,7 @@ export default function Topbar({ currentUser, isCashier, itemCount, onCartOpen, 
             aria-label={`Open cart with ${itemCount} items`}
             onClick={onCartOpen}
           >
-            <span className="relative w-4.75 h-4 border-2 border-t-0 border-brand-text rounded-b before:content-[''] before:absolute before:left-0.75 before:top-2 before:w-2.5 before:h-2.25 before:border-2 before:border-b-0 before:border-brand-text before:rounded-t-full" aria-hidden="true" />
+            <Icon name="cart" className="w-4.5 h-4.5" />
             <strong className="min-w-4.5 h-4.5 rounded-full bg-[#8f3c28] text-[#fffdf8] grid place-items-center text-[11px] leading-none font-black">
               {itemCount}
             </strong>

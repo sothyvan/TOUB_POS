@@ -6,8 +6,17 @@ Update this file after every meaningful implementation change.
 
 - Phase 1: Project Scaffolding — **COMPLETE**
 
-## Completed
-
+- **Consolidated and Reused QuantityInput component**:
+  - Rewrote `QuantityInput.jsx` to encapsulate the entire quantity pill control—housing the outer pill wrapper, the minus/plus button handlers with their icons, and the text input field.
+  - Removed duplicate adjuster layouts, button classes, and `Icon` imports from both `CartItem.jsx` and `ProductCard.jsx`, replacing them with simple, clean `<QuantityInput>` components.
+  - Implemented dynamic green border highlight (`border-state-success`) for selected `ProductCard` components that have active items added in the cart.
+- **Refactored icon rendering system to `lucide-react`**:
+  - Installed `lucide-react` package in the frontend.
+  - Updated centralized `Icon.jsx` component to dynamically render Lucide React components using prop mapping.
+  - Replaced remaining inline SVGs inside `AdminDashboard.jsx` and `QuickActions.jsx` with `<Icon>` components.
+  - Replaced custom HTML/CSS basket representation in `Topbar.jsx` and mobile checkout button in `CashierScreen.jsx` with unified `<Icon name="cart" />` component (mapping to `ShoppingBag`).
+  - Fixed pre-existing ESLint warnings in `LoginScreen.jsx` and `LoginPage.jsx` (synchronous `setState` inside effect).
+  - Verified a clean production build compile and zero-lint-warning output.
 - Defined all context files.
 - Drafted SE deliverables in `context/software-engineering.md`.
 - **Scaffolded full backend structure** (`backend/src/{routes,controllers,services,repositories,middleware,config}`).
