@@ -1,5 +1,7 @@
 import ModalShell from './ui/ModalShell';
 
+const QR_CODE_API_BASE = 'https://api.qrserver.com/v1/create-qr-code/';
+
 export default function KhqrPaymentModal({ isOpen, total, onCancel, onConfirm }) {
   return (
     <ModalShell
@@ -27,7 +29,7 @@ export default function KhqrPaymentModal({ isOpen, total, onCancel, onConfirm })
           {/* QR Code Graphic */}
           <div className="border border-gray-150 rounded-2xl p-4 my-5 bg-white relative shadow-sm">
             <img
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=pay-to-toub-pos-amount-${total}`}
+              src={`${QR_CODE_API_BASE}?size=180x180&data=pay-to-toub-pos-amount-${total}`}
               alt="KHQR Code"
               className="w-45 h-45 block"
             />

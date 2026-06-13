@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { initials } from '../utils/format';
 import ConfirmDialog from './ui/ConfirmDialog';
 import Icon from './ui/Icon';
+import Logo from './ui/Logo';
 
 export default function Topbar({ currentUser, isCashier, itemCount, onCartOpen, onLogout }) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -10,9 +11,7 @@ export default function Topbar({ currentUser, isCashier, itemCount, onCartOpen, 
   return (
     <header className="min-h-19 py-3.5 px-[clamp(18px,3vw,34px)] bg-[#fffcf6]/90 border-b border-brand-border flex items-center justify-between gap-4.5 max-sm:flex-col max-sm:items-start">
       <div className="flex items-center gap-3.5">
-        <div className="w-11 h-11 rounded-lg bg-[#23211f] text-[#f8d36b] grid place-items-center text-2xl font-extrabold shadow-[inset_0_-4px_0_rgba(255,255,255,0.08)]">
-          T
-        </div>
+        <Logo />
         <div>
           <p className="m-0 mb-0.75 text-[#776f63] text-[11px] font-extrabold tracking-wider uppercase">
             {currentUser.role} session

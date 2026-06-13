@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { defaultPinForRole } from '../utils/permissions';
+import { mapUsersWithDefaultPins } from '../utils/permissions';
 import { api } from '../services/api';
 
 const blankUserForm = () => ({
@@ -16,7 +16,7 @@ export function useUsers(canManageUsers, currentUserId) {
   const [userForm, setUserForm] = useState(blankUserForm);
 
   const users = useMemo(
-    () => rawUsers.map((u) => ({ ...u, pin: u.pin || defaultPinForRole(u.role) })),
+    () => mapUsersWithDefaultPins(rawUsers),
     [rawUsers]
   );
 
