@@ -107,6 +107,9 @@ Update this file after every meaningful implementation change.
   - Created `src/components/ui/FormCheckbox.jsx` — reusable labeled checkbox with accent color styling.
   - Refactored `ProductAdmin.jsx`, `CategoryAdmin.jsx`, and `UserAdmin.jsx` to use `FormInput`, `FormSelect`, and `FormCheckbox` instead of raw HTML elements with repeated Tailwind class strings.
   - Refactored `LoginScreen.jsx` to use `FormInput` and `FormSelect` with custom `wrapperClassName`/`className` overrides to preserve its unique login-page styling (brand-blue focus, gray-200 borders, block label layout with chevron icon overlay).
+  - **Implemented Admin Dashboard**:
+    - Created `frontend/src/components/dashboard` with reusable `MetricCard`, `RevenueChart`, `LiveEvents`, and `QuickActions` components.
+    - Integrated `AdminDashboard` into `AdminWorkspace` as the default landing view.
 - **Refactored codebase to eliminate repetitive code and improve maintainability**:
   - Created custom hook `useAdminForm` (`src/hooks/useAdminForm.js`) to unify duplicate state management (`isAddingNew`, `isFormOpen`, `handleSubmit`, `handleCancel`, `handleAddNewClick`) shared across all back-office admin forms.
   - Created `FormActions` (`src/components/ui/FormActions.jsx`) component to consolidate duplicated save/cancel actions styling and layout in admin forms.

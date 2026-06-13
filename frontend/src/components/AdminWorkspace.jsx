@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import AdminDashboard from './AdminDashboard';
 import ProductAdmin from './ProductAdmin';
 import CategoryAdmin from './CategoryAdmin';
 import OrderHistory from './OrderHistory';
@@ -7,6 +8,7 @@ import ConfirmDialog from './ui/ConfirmDialog';
 import Icon from './ui/Icon';
 
 const adminTabIcons = {
+  dashboard: 'dashboard',
   products: 'product',
   categories: 'category',
   orders: 'orders',
@@ -165,6 +167,10 @@ export default function AdminWorkspace({
 
         {/* Tab Subcomponents */}
         <div className="flex-1">
+          {visibleAdminTab === 'dashboard' ? (
+            <AdminDashboard />
+          ) : null}
+
           {visibleAdminTab === 'products' ? (
             <ProductAdmin
               productForm={productForm}

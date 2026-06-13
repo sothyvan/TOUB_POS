@@ -76,7 +76,7 @@ export default function CashierPage() {
 
   // ── UI state ──────────────────────────────────────────────────────────────
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [adminTab, setAdminTab] = useState('products');
+  const [adminTab, setAdminTab] = useState('dashboard');
 
   // ── Cart-sync wrappers ────────────────────────────────────────────────────
   const withCartSync = (action) => (...args) => {
@@ -97,6 +97,7 @@ export default function CashierPage() {
 
   // ── Admin tab visibility ──────────────────────────────────────────────────
   const allowedAdminTabs = [
+    'dashboard',
     canManageMenu    ? 'products'   : null,
     canManageMenu    ? 'categories' : null,
     canViewOrders    ? 'orders'     : null,
