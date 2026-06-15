@@ -163,3 +163,38 @@ Update this file after every meaningful implementation change.
 
 - What specific payment gateway API (e.g., Bakong KHQR) will be used to build the real-time listener webhook?
 - Will the frontend use `react-router-dom` for routing, or a custom auth-guard pattern?
+- Confirm KHR exchange rate strategy: hardcoded `.env` constant (recommended) or live API?
+
+---
+
+## Decision Log
+
+Record of key architectural and product decisions made, with rationale.
+
+| # | Decision | Rationale |
+|---|----------|-----------|
+| 1 | **Tailwind CSS v4** (not v3 or plain CSS) | v4 offers native CSS variable-based theming, no config file needed, and better performance at build time. Chosen early to avoid migration cost later. |
+| 2 | **Device token in `localStorage`** (not server session) | Terminals are semi-permanent physical devices. A persistent browser token survives page refreshes without a server round-trip on every load. Simpler for offline resilience future work. |
+| 3 | **Controller-Service-Repository pattern** | Industry-standard separation for Express backends. Keeps route handlers thin, business logic testable in isolation, and DB queries swappable. |
+| 4 | **KHR rate hardcoded as `.env` constant** | Live exchange rate APIs add an external dependency, failure point, and cost. Rate changes infrequently in practice. Admin can update `.env` and restart. |
+| 5 | **JWT expiry set to 8h** | Matches a typical shift length. Balances security (short-lived token) vs. UX (cashier doesn't get logged out mid-shift). |
+| 6 | **Cart state in `localStorage`** (not server) | Reduces backend round-trips during item selection. Cart is ephemeral — only persisted to DB at checkout. Acceptable trade-off for speed. |
+| 7 | **PIN validated client-side** (Phase 1) | Pragmatic shortcut for the initial build. Fast UX, no extra API call per login. Flagged as tech debt — must move server-side before production. |
+| 8 | **Telegram Bot for kitchen display** (not custom screen) | Eliminates the need for a dedicated kitchen hardware/display build. Cooks already use Telegram. Saves significant scope while delivering real-time order relay. |
+
+---
+
+## Tech Debt
+
+Intentional shortcuts taken during development that must be resolved before production.
+
+| # | Item | Location | Priority |
+|---|------|----------|----------|
+| 1 | **PIN validated client-side** | `LoginPage.jsx` | 🔴 High — move PIN verification to `POST /api/auth/pin` before any real deployment |
+| 2 | **Frontend hooks use `localStorage` mock** | `useProducts`, `useOrders`, `useUsers` | 🔴 High — must be migrated to real API calls (in progress) |
+| 3 | **No input sanitization on order modifiers** | `order_items.notes` | 🟡 Medium — add max-length enforcement and strip dangerous characters before DB write |
+| 4 | **CORS is open (`app.use(cors())`)** | `backend/src/app.js` | 🟡 Medium — lock down to specific frontend origin before production |
+| 5 | **Seed admin password is a placeholder hash** | `docs/database/schema.sql` | 🔴 High — generate real bcrypt hash and store securely before any live deployment |
+| 6 | **No rate limiting on auth endpoints** | `POST /api/auth/login` | 🟡 Medium — add `express-rate-limit` to prevent brute-force attacks |
+| 7 | **WebSocket server not yet implemented** | `backend/services/` | 🔴 High — required for KHQR payment confirmation routing |
+
