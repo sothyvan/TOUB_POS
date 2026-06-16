@@ -9,7 +9,6 @@ export default function LoginScreen({
   setLoginMode,
   flowStep,
   setFlowStep,
-  deviceRegistered,
   setDeviceRegistered,
   activeCashiers,
   selectedUser,

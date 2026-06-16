@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSavedState } from '../hooks/useSavedState';
 import { DEFAULT_USERS } from '../data/seedData';
@@ -25,13 +25,6 @@ export default function LoginPage() {
 
   const activeUsers = users.filter((u) => u.active);
   const activeCashiers = activeUsers.filter((u) => u.role === 'Cashier');
-
-  // Sync flow step if registration status changes
-  useEffect(() => {
-    if (loginMode === 'cashier') {
-      setFlowStep(deviceRegistered ? 'select-profile' : 'register');
-    }
-  }, [deviceRegistered, loginMode]);
 
   // Handle standard login or admin registration
   const handleAdminLogin = (username, password, isRegistering = false) => {

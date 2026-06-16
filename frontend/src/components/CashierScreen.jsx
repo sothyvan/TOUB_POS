@@ -113,6 +113,7 @@ export default function CashierScreen({
         setIsCartOpen={setIsCartOpen}
         clearCart={clearCart}
         updateQuantity={updateQuantity}
+        setCartItemQuantity={setCartItemQuantity}
         handleCheckout={handleCheckout}
         isOnline={isOnline}
       />

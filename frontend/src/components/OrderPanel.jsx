@@ -12,6 +12,7 @@ export default function OrderPanel({
   setIsCartOpen,
   clearCart,
   updateQuantity,
+  setCartItemQuantity,
   handleCheckout,
   isOnline,
 }) {
@@ -64,6 +65,7 @@ export default function OrderPanel({
               key={item.id}
               item={item}
               updateQuantity={updateQuantity}
+              setCartItemQuantity={setCartItemQuantity}
             />
           ))
         )}
