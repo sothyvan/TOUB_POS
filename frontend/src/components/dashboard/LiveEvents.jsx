@@ -35,7 +35,7 @@ export default function LiveEvents() {
   ];
 
   return (
-    <div className="flex-1 h-auto min-h-[452.95px] bg-white rounded-2xl shadow-[0px_1px_4px_0px_rgba(0,0,0,0.04)] outline outline-[0.80px] outline-offset-[-0.80px] outline-gray-200 flex flex-col justify-start items-start overflow-hidden">
+    <div className="flex-1 h-auto min-h-[452.95px] bg-white rounded-2xl shadow-[0px_1px_4px_0px_rgba(0,0,0,0.04)] outline outline-offset-[-0.80px] outline-gray-200 flex flex-col justify-start items-start overflow-hidden">
       <div className="self-stretch px-5 py-4 border-b-[0.80px] border-gray-100 flex justify-between items-center">
         <div className="w-44 flex flex-col justify-start items-start">
           <div className="self-stretch flex flex-col justify-start items-start">
@@ -116,7 +116,7 @@ export default function LiveEvents() {
         ))}
       </div>
       <div className="self-stretch h-16 relative bg-neutral-50 border-t-[0.80px] border-gray-100 flex items-center justify-center">
-        <button className="w-[90%] max-w-sm h-9 bg-white rounded-lg outline outline-[0.80px] outline-offset-[-0.80px] outline-gray-200 text-center text-gray-500 text-xs font-semibold font-['Inter'] hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer">
+        <button className="w-[90%] max-w-sm h-9 bg-white rounded-lg outline outline-offset-[-0.80px] outline-gray-200 text-center text-gray-500 text-xs font-semibold font-['Inter'] hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer">
           View Full Audit Log →
         </button>
       </div>
