@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import AdminDashboard from './AdminDashboard';
-import ProductAdmin from './ProductAdmin';
-import CategoryAdmin from './CategoryAdmin';
+import MenuCatalog from './MenuCatalog';
+import StallAdmin from './StallAdmin';
 import OrderHistory from './OrderHistory';
 import UserAdmin from './UserAdmin';
 import ConfirmDialog from './ui/ConfirmDialog';
 import Icon from './ui/Icon';
+import AdminSidebar from './AdminSidebar';
+import AdminHeader from './AdminHeader';
 
 const adminTabIcons = {
   dashboard: 'dashboard',
@@ -76,28 +78,17 @@ export default function AdminWorkspace({
 
   return (
     <div className="flex-1 flex overflow-hidden max-[768px]:flex-col">
-      {/* Left Sidebar Navigation (Desktop) */}
-      <aside className="w-60 border-r border-brand-border bg-brand-card flex flex-col p-6 gap-5 shrink-0 max-[768px]:hidden">
-        <div className="text-[11px] font-extrabold tracking-wider text-gray-400 uppercase select-none">
-          Back Office Menu
-        </div>
-        <nav className="flex flex-col gap-1.5">
-          {allowedAdminTabs.map((tab) => {
-            const isActive = visibleAdminTab === tab;
-            return (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setAdminTab(tab)}
-                className={navButtonClass(isActive)}
-              >
-                <Icon name={adminTabIcons[tab]} className="w-5 h-5 shrink-0" />
-                <span>{tab}</span>
-              </button>
-            );
-          })}
-        </nav>
-      </aside>
+      {/* Left Sidebar Navigation (Desktop) — Figma: Admin Dashboard - Computer */}
+      <div className="max-[768px]:hidden">
+        <AdminSidebar
+          activeTab={visibleAdminTab}
+          allowedTabs={allowedAdminTabs}
+          onTabChange={setAdminTab}
+          userName={users.find((u) => u.role === 'Admin')?.name ?? 'Owner Account'}
+          userRole={users.find((u) => u.role === 'Admin') ? 'Administrator' : 'Manager'}
+          onLogout={() => window.location.reload()}
+        />
+      </div>
 
       {/* Mobile Hamburger Header Bar (Phone) */}
       <div className="hidden max-[768px]:flex flex-col bg-brand-card border-b border-brand-border z-30 shrink-0">
@@ -146,68 +137,51 @@ export default function AdminWorkspace({
       </div>
 
       {/* Right Main Content area */}
-      <main className="flex-1 p-[clamp(18px,2.4vw,30px)] overflow-y-auto max-[768px]:p-4 bg-brand-bg flex flex-col gap-6">
-        {/* Dashboard Title & Quick Stats Info Banner */}
-        <section className="p-6 border border-brand-border rounded-3xl bg-brand-card flex items-center justify-between gap-4.5 shadow-[0_10px_24px_rgba(52,45,35,0.04)] max-[768px]:flex-col max-[768px]:items-start shrink-0">
-          <div>
-            <p className="m-0 mb-0.75 text-[#776f63] text-[11px] font-extrabold tracking-wider uppercase">Back office</p>
-            <h2 className="m-0 text-brand-dark text-[26px] leading-[1.1] font-black tracking-tight">
-              {users.some((u) => u.role === 'Admin') ? 'Admin management' : 'Manager workspace'}
-            </h2>
-          </div>
-          <div className="flex flex-wrap gap-2 justify-end max-[768px]:justify-start">
-            <span className="min-h-8.5 py-1.75 px-3.5 rounded-full bg-[#f5f2eb] border border-[#e6e0d4] text-[#23211f] text-[13px] font-bold flex items-center">{products.length} items</span>
-            <span className="min-h-8.5 py-1.75 px-3.5 rounded-full bg-[#f5f2eb] border border-[#e6e0d4] text-[#23211f] text-[13px] font-bold flex items-center">{categories.length} categories</span>
-            <span className="min-h-8.5 py-1.75 px-3.5 rounded-full bg-[#f5f2eb] border border-[#e6e0d4] text-[#23211f] text-[13px] font-bold flex items-center">{orders.length} orders</span>
-            {users.some((u) => u.role === 'Admin') ? (
-              <span className="min-h-8.5 py-1.75 px-3.5 rounded-full bg-[#f5f2eb] border border-[#e6e0d4] text-[#23211f] text-[13px] font-bold flex items-center">{users.length} users</span>
-            ) : null}
-          </div>
-        </section>
+      <div className="flex-1 flex flex-col overflow-hidden bg-[#f8fafc]">
+        {/* Figma-spec admin topbar (desktop only) */}
+        <div className="max-[768px]:hidden">
+          <AdminHeader activeTab={visibleAdminTab} />
+        </div>
 
+        <main className="flex-1 p-[clamp(18px,2.4vw,30px)] overflow-y-auto max-[768px]:p-4 flex flex-col gap-6">
         {/* Tab Subcomponents */}
         <div className="flex-1">
-          {visibleAdminTab === 'dashboard' ? (
-            <AdminDashboard />
-          ) : null}
+          {visibleAdminTab === 'dashboard' && <AdminDashboard />}
 
-          {visibleAdminTab === 'products' ? (
-            <ProductAdmin
+          {visibleAdminTab === 'products' && (
+            <MenuCatalog
+              products={products}
               productForm={productForm}
               setProductForm={setProductForm}
+              onSaveProduct={onSaveProduct}
+              onEditProduct={onEditProduct}
+              onToggleProductAvailability={onToggleProductAvailability}
+              onDeleteProduct={(id) => handlePromptDelete('product', id)}
+              onCancelProduct={onCancelProduct}
               categories={categories}
-              categoryById={categoryById}
-              products={products}
-              onSave={onSaveProduct}
-              onEdit={onEditProduct}
-              onToggleAvailability={onToggleProductAvailability}
-              onDelete={(id) => handlePromptDelete('product', id)}
-              onCancel={onCancelProduct}
-            />
-          ) : null}
-
-          {visibleAdminTab === 'categories' ? (
-            <CategoryAdmin
               categoryForm={categoryForm}
               setCategoryForm={setCategoryForm}
-              categories={categories}
-              products={products}
-              onSave={onSaveCategory}
-              onEdit={onEditCategory}
-              onDelete={(id) => handlePromptDelete('category', id)}
-              onCancel={onCancelCategory}
+              onSaveCategory={onSaveCategory}
+              onEditCategory={onEditCategory}
+              onDeleteCategory={(id) => handlePromptDelete('category', id)}
+              onCancelCategory={onCancelCategory}
+              categoryById={categoryById}
             />
-          ) : null}
+          )}
 
-          {visibleAdminTab === 'orders' ? (
+          {visibleAdminTab === 'stalls' && (
+            <StallAdmin users={users} />
+          )}
+
+          {visibleAdminTab === 'orders' && (
             <OrderHistory
               orders={orders}
               todaysOrders={todaysOrders}
               todaysTotal={todaysTotal}
             />
-          ) : null}
+          )}
 
-          {visibleAdminTab === 'users' ? (
+          {visibleAdminTab === 'users' && (
             <UserAdmin
               userForm={userForm}
               setUserForm={setUserForm}
@@ -218,9 +192,10 @@ export default function AdminWorkspace({
               onDelete={(id) => handlePromptDelete('user', id)}
               onCancel={onCancelUser}
             />
-          ) : null}
+          )}
         </div>
       </main>
+      </div>
 
       <ConfirmDialog
         isOpen={Boolean(pendingDelete)}

@@ -140,14 +140,28 @@ Update this file after every meaningful implementation change.
   - Extracted stateless `<Logo />` UI component (`src/components/ui/Logo.jsx`) supporting `topbar` and `login` variants to unify brand mark layouts in `LoginScreen.jsx` and `Topbar.jsx`.
   - Configured external QR code generator API URL base constant `QR_CODE_API_BASE` in `KhqrPaymentModal.jsx`.
   - Verified client compilation builds successfully.
-- **Implemented Cashier Terminal persistent login & PIN pad flow vs Admin Portal Login**:
-  - Implemented secure, persistent device registration (`toub-device-registered` key in `localStorage`) so terminals are authorized once by admins and bypass the screen thereafter.
-  - Implemented Roster Profile Selection step in `LoginPage.jsx` and `LoginScreen.jsx`, displaying only cashiers (`role === 'Cashier'`) with visual colored outline rings.
-  - Implemented 35/65 Split View Cashier PIN pad validation step, rendering a blue select-cashier detail top banner with a "Switch User" back button, and a bottom white numeric touch-pad grid (keys 1-9, 0, backspace arrow with X symbol).
-  - Implemented traditional username/password form for Admin/Manager Login portal.
-  - Added toggle links to swap between cashier terminal view and admin portal credentials page.
-  - Added new vector outline outline assets (`backspace` and `arrowLeft`) to `Icon.jsx`.
-  - Verified client compilation builds successfully.
+- **DRY Code Refactoring & Component Abstraction**:
+  - Extracted duplicated sub-tab selector pills layout into a reusable `<TabPills>` UI component in `src/components/ui/TabPills.jsx`.
+  - Refactored `UserAdmin.jsx` and `MenuCatalog.jsx` to consume the new `TabPills` component, eliminating duplicated CSS/styling rules.
+  - Cleaned up `MenuCatalog.jsx` to replace private, hardcoded `FieldInput`, `FieldLabel`, and custom inline status badges with reusable shared primitives (`FormInput`, `FormSelect`, and `StatusBadge`).
+  - Refactored `UserModal` inside `StaffList.jsx` to use shared input, select, checkbox, and status badge primitives, unifying modal overlays.
+- **Implemented Cashier Workspace "My Orders" Tab**:
+  - Implemented active tab switcher in `CashierScreen.jsx` supporting Quick Sale (menu catalog) and My Orders.
+  - Configured cashier filtering (`order.cashierId === currentUser.id`) to restrict visible history to their own shift session.
+  - Added shift statistics indicators detailing Today's Orders and Today's Total revenue.
+  - Integrated "View Receipt" triggers connecting past transactions back to the high-fidelity receipt modal.
+- **Implemented Staff Management & Allocation Matrix**:
+  - Modularized `UserAdmin.jsx` into a two-tab dashboard panel hosting Staff List and Staff Allocation.
+  - Implemented `StaffList.jsx` directory list with detailed profile cards, role badges, active/inactive statuses, and modal overlays for CRUD.
+  - Implemented `StaffAllocation.jsx` cycle-based shift matrix supporting click-to-cycle shift assignments (AM/PM/FD/Unassigned) with local storage persistence.
+  - Added visual Coverage by Stall progress metrics and a Shift Key schedule helper.
+  - Renamed the sidebar navigation item and admin breadcrumbs to "Staff Management".
+- **Implemented Admin Sales Reports & Analytics**:
+  - Replaced the basic order list layout with a modern dual-tab `OrderHistory.jsx` (renamed crumb to "Sales Reports", title to "Revenue & Speed Analytics Ledger").
+  - Implemented high-fidelity Analytics Dashboard with custom SVG sparkline graphs, Active Stalls running visualizers, and Average Prep Time tracker gauges.
+  - Built Employee Efficiency Metrics ledger table detailing cashier orders completed, average prep speed in seconds, and shift statuses with sorting and export mock interactions.
+  - Added searchable Transaction Ledger sub-tab list for auditing historical receipts.
+- Verified client compilation builds successfully.
 
 ## Next Up
 
