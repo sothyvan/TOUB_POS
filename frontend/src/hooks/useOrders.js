@@ -3,13 +3,14 @@ import { api } from '../services/api';
 
 /**
  * Manages order history and checkout logic.
- * @param {boolean} isOnline
- * @param {Array}   cart
+ * @param {boolean}  isOnline
+ * @param {Array}    cart
  * @param {Function} clearCart
- * @param {Object}  currentUser
- * @param {Object}  totals - { subtotal, serviceFee, total }
+ * @param {Object}   currentUser
+ * @param {Object|null} assignedStall — stall the cashier is working at (null for admin/manager)
+ * @param {Object}   totals - { subtotal, serviceFee, estimatedTax, total }
  */
-export function useOrders(isOnline, cart, clearCart, currentUser, { subtotal, serviceFee, estimatedTax, total }) {
+export function useOrders(isOnline, cart, clearCart, currentUser, assignedStall, { subtotal, serviceFee, estimatedTax, total }) {
   const [orders, setOrders] = useState(() => api.orders.getAll());
 
   const todaysOrders = orders.filter(
@@ -28,9 +29,12 @@ export function useOrders(isOnline, cart, clearCart, currentUser, { subtotal, se
     }
 
     const order = {
-      cashierId: currentUser.id,
-      cashierName: currentUser.name,
-      station: currentUser.station,
+      cashierId:    currentUser.id,
+      cashierName:  currentUser.name,
+      station:      currentUser.station,
+      // Stall context — present for cashier sessions
+      stallId:      assignedStall?.id   ?? null,
+      stallName:    assignedStall ? `${assignedStall.name} — ${assignedStall.location}` : null,
       paymentMethod: method,
       status: 'Paid',
       items: cart.map(({ id, name, code, quantity, price }) => ({
@@ -50,3 +54,4 @@ export function useOrders(isOnline, cart, clearCart, currentUser, { subtotal, se
 
   return { orders, todaysOrders, todaysTotal, handleCheckout };
 }
+

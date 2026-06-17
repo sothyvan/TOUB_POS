@@ -12,14 +12,18 @@ export default function PageShell({
     <div
       className="h-svh max-h-svh flex flex-col bg-brand-bg text-brand-text overflow-hidden"
     >
-      <Topbar
-        currentUser={currentUser}
-        isCashier={isCashier}
-        itemCount={itemCount}
-        onCartOpen={onCartOpen}
-        onLogout={onLogout}
-      />
+      {/* Global topbar — cashier only. Admin has its own header inside AdminWorkspace */}
+      {isCashier && (
+        <Topbar
+          currentUser={currentUser}
+          isCashier={isCashier}
+          itemCount={itemCount}
+          onCartOpen={onCartOpen}
+          onLogout={onLogout}
+        />
+      )}
       {children}
     </div>
   );
 }
+

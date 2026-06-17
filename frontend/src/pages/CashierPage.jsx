@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getPermissions } from '../utils/permissions';
+import { getAssignedStall } from '../utils/stallUtils';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useCart } from '../hooks/useCart';
 import { useProducts } from '../hooks/useProducts';
@@ -12,6 +13,7 @@ import AdminWorkspace from '../components/AdminWorkspace';
 import ReceiptModal from '../components/ReceiptModal';
 import CashConfirmationModal from '../components/CashConfirmationModal';
 import KhqrPaymentModal from '../components/KhqrPaymentModal';
+import Icon from '../components/ui/Icon';
 
 export default function CashierPage() {
   const location = useLocation();
@@ -26,6 +28,10 @@ export default function CashierPage() {
 
   // ── Permissions ───────────────────────────────────────────────────────────
   const { isCashier, canManageMenu, canManageUsers, canViewOrders } = getPermissions(currentUser);
+
+  // ── Stall assignment (cashiers only) ──────────────────────────────────────
+  // Read once on mount; reflects the assignment set by admin in Stall Management
+  const assignedStall = isCashier ? getAssignedStall(currentUser?.id) : null;
 
   // ── Hooks ─────────────────────────────────────────────────────────────────
   const isOnline = useOnlineStatus();
@@ -47,7 +53,7 @@ export default function CashierPage() {
     useUsers(canManageUsers, currentUser?.id);
 
   const { orders, todaysOrders, todaysTotal, handleCheckout } =
-    useOrders(isOnline, cart, clearCart, currentUser, { subtotal, serviceFee, estimatedTax, total });
+    useOrders(isOnline, cart, clearCart, currentUser, assignedStall, { subtotal, serviceFee, estimatedTax, total });
 
   const [activeReceipt, setActiveReceipt] = useState(null);
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState(null);
@@ -98,16 +104,43 @@ export default function CashierPage() {
   // ── Admin tab visibility ──────────────────────────────────────────────────
   const allowedAdminTabs = [
     'dashboard',
-    canManageMenu    ? 'products'   : null,
-    canManageMenu    ? 'categories' : null,
-    canViewOrders    ? 'orders'     : null,
-    canManageUsers   ? 'users'      : null,
+    canManageMenu  ? 'products' : null,  // includes Categories sub-tab
+    canManageMenu  ? 'stalls'   : null,
+    canViewOrders  ? 'orders'   : null,
+    canManageUsers ? 'users'    : null,
   ].filter(Boolean);
 
   const visibleAdminTab = allowedAdminTabs.includes(adminTab) ? adminTab : allowedAdminTabs[0];
 
   // ── Guard ─────────────────────────────────────────────────────────────────
   if (!currentUser) return null;
+
+  // ── Guard: cashier with no stall assigned ─────────────────────────────────
+  if (isCashier && !assignedStall) {
+    return (
+      <div className="h-svh flex flex-col items-center justify-center gap-4 bg-[#f8fafc] text-center px-6">
+        <div className="w-16 h-16 rounded-full bg-[#fff1f2] flex items-center justify-center">
+          <Icon name="location" className="w-8 h-8" style={{ color: '#dc2626' }} strokeWidth={1.8} />
+        </div>
+        <div>
+          <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
+            No Stall Assigned
+          </h2>
+          <p style={{ margin: 0, fontSize: 14, color: '#9ca3af', fontFamily: 'Inter, sans-serif', maxWidth: 320 }}>
+            You haven't been assigned to a stall yet. Ask your admin to assign you in Stall Management.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="mt-2 px-6 py-2.5 rounded-xl border-0 cursor-pointer hover:opacity-80 transition-all"
+          style={{ background: '#fff1f2', fontSize: 13, fontWeight: 600, color: '#dc2626', fontFamily: 'Inter, sans-serif' }}
+        >
+          Back to Login
+        </button>
+      </div>
+    );
+  }
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -120,6 +153,9 @@ export default function CashierPage() {
     >
       {isCashier ? (
         <CashierScreen
+          currentUser={currentUser}
+          orders={orders}
+          onViewReceipt={setActiveReceipt}
           categories={categories}
           categoryById={categoryById}
           selectedCategory={selectedCategory}
@@ -142,6 +178,7 @@ export default function CashierPage() {
           clearCart={clearCart}
           handleCheckout={handleCheckoutWithReceipt}
           isOnline={isOnline}
+          assignedStall={assignedStall}
         />
       ) : (
         <AdminWorkspace
