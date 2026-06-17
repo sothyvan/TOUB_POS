@@ -52,15 +52,9 @@ erDiagram
         int cashier_id FK
         enum payment_method
         enum status
-        decimal subtotal_usd
-        decimal service_fee
-        decimal tax
         decimal total_usd
         text qr_payload
-        enum kitchen_status
-        bigint telegram_msg_id
         datetime created_at
-        datetime completed_at
     }
 
     order_items {
@@ -81,6 +75,16 @@ erDiagram
         varchar name
     }
 
+    kitchen_tickets {
+        int           id               PK
+        int           order_id         FK  
+        bigint        telegram_msg_id      
+        bigint        telegram_chat_id     
+        enum          status               
+        datetime      sent_at              
+        datetime      completed_at         
+    }
+
     users         ||--o{ stall_staff       : "assigned to"
     stalls        ||--o{ stall_staff       : "has staff"
     stalls        ||--o{ categories        : "owns"
@@ -91,6 +95,7 @@ erDiagram
     users         ||--o{ orders            : "cashier places"
     orders        ||--|{ order_items       : "contains"
     products      ||--o{ order_items       : "referenced by"
+    orders        ||--o{ kitchen_tickets   : "dispatched to"
 ```
 
 ## Notes
