@@ -1,8 +1,9 @@
 import { Router } from 'express';
-import { authenticate } from '../middleware/auth.middleware.js';
+import { authenticate, authorize } from '../middleware/auth.middleware.js';
 import {
   createOrder,
   getMyOrders,
+  getAllOrders,
 } from '../controllers/order.controller.js';
 
 const router = Router();
@@ -14,5 +15,8 @@ router.post('/', createOrder);
 
 // GET    /api/orders/mine  — cashier fetches their own orders
 router.get('/mine', getMyOrders);
+
+// GET    /api/orders       — admin/manager fetches all orders
+router.get('/', authorize('admin', 'manager'), getAllOrders);
 
 export default router;
