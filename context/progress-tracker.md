@@ -161,16 +161,20 @@ Update this file after every meaningful implementation change.
   - Implemented high-fidelity Analytics Dashboard with custom SVG sparkline graphs, Active Stalls running visualizers, and Average Prep Time tracker gauges.
   - Built Employee Efficiency Metrics ledger table detailing cashier orders completed, average prep speed in seconds, and shift statuses with sorting and export mock interactions.
   - Added searchable Transaction Ledger sub-tab list for auditing historical receipts.
+- **Integrated Order, Payment Webhook, and Reporting APIs** (current sprint):
+  - Rewrote `order.service.js` and `order.controller.js` to use Sequelize transactions. Added cashier stall validation checks.
+  - Rewrote `payment.service.js` to handle payment webhook validations and status transitions using Sequelize row locks (`FOR UPDATE`).
+  - Created `webhook.routes.js` and registered `/api/webhook` routes.
+  - Implemented `report.controller.js` to calculate sales statistics and daily revenue summaries using Sequelize groupings and date filters.
+  - Updated `docs/database/queries.sql` with exact raw SQL query conversions for orders, webhooks, row-locks, and report calculations.
+  - Tested and verified order creation, listing, webhook completion, and report metrics using curl scripts.
 - Verified client compilation builds successfully.
 
 ## Next Up
 
-- Unit 1: Implement the backend Express server end-to-end.
-  - Install dependencies (`npm install` in `backend/`).
-  - Create MySQL schema (users, products, orders, transactions tables).
-  - Implement `user.service.js` + `user.controller.js` (create user with bcrypt hash).
-  - Implement `product` repository/service/controller.
+- Unit 2: Connect frontend views to real backend APIs.
   - Wire frontend Login page and connect to `POST /api/auth/login`.
+  - Update frontend context hooks (`useProducts.js`, `useUsers.js`, `useOrders.js`) to consume the backend APIs rather than localStorage mocks.
   - Implement persistent session authentication (storing JWT/user context in `localStorage` or `sessionStorage`) to prevent F5/refresh logout.
 
 ## Open Questions

@@ -1,5 +1,7 @@
 -- ============================================================
 -- Toub POS — Canonical MySQL Schema
+-- WARNING: Any modifications to Sequelize models must also
+-- be reflected in this file to maintain 100% database schema parity.
 -- ============================================================
 
 CREATE DATABASE IF NOT EXISTS toub_pos;
@@ -67,9 +69,6 @@ CREATE TABLE orders (
   cashier_id     INT NOT NULL,                         -- which cashier
   payment_method ENUM('cash', 'khqr') NOT NULL,
   status         ENUM('pending', 'completed', 'cancelled') NOT NULL DEFAULT 'pending',
-  subtotal_usd   DECIMAL(10, 2) NOT NULL,
-  service_fee    DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
-  tax            DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
   total_usd      DECIMAL(10, 2) NOT NULL,
   qr_payload     TEXT DEFAULT NULL,                    -- raw KHQR string; NULL for cash
   kitchen_status   ENUM('pending', 'done') NOT NULL DEFAULT 'pending',
@@ -87,8 +86,10 @@ CREATE TABLE order_items (
   order_id   INT NOT NULL,
   product_id INT DEFAULT NULL,                         -- nullable: product may be deleted later
   name       VARCHAR(150) NOT NULL,                    -- snapshot at time of sale
-  price_usd  DECIMAL(10, 2) NOT NULL,                  -- snapshot at time of sale
-  price_khr  INT NOT NULL,                             -- snapshot at time of sale
+  price_usd    DECIMAL(10, 2) NOT NULL,                  -- snapshot at time of sale
+  price_khr    INT NOT NULL,                             -- snapshot at time of sale
+  subtotal_usd DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+  subtotal_khr INT NOT NULL DEFAULT 0,
   quantity   INT NOT NULL DEFAULT 1,
   notes      VARCHAR(500) DEFAULT NULL,                -- modifiers: "no ice", "extra spicy"
   FOREIGN KEY (order_id)   REFERENCES orders(id)   ON DELETE CASCADE,

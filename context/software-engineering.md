@@ -168,83 +168,106 @@ SE responsibility: ensure requirements, diagrams, and planning stay consistent w
 ```mermaid
 flowchart LR
   Cashier[Actor: Cashier]
-  Manager[Actor: Manager]
+  Manager[Actor: Admin/Owner]
+  Cook[Actor: Kitchen Staff]
+  Gateway[External: Payment Gateway]
 
-  subgraph System[Toub POS]
+  subgraph SystemBoundary[Toub POS System]
     %% Cashier Flow
-    UC1_Cashier((Log in to Cashier Session))
-    UC2((Create order))
-    UC3((Generate / show QR))
+    UC1((Login via Avatar & PIN))
+    UC2((Create Order & Modifiers))
+    UC3((Process KHQR / Cash))
+    UC4((Receive Real-time WS Ping))
     
     %% Manager Flow
-    UC1_Admin((Log in to Admin Dashboard))
-    UC5((View daily report))
-    UC6((Manage products))
+    UC5((Provision Stalls & Staff))
+    UC6((Manage Dual-Pricing Menu))
+    UC7((View Time-Series Analytics))
+
+    %% Kitchen Flow
+    UC8((View Telegram Queue))
+    UC9((Tap 'Done' to Update Status))
+
+    %% System Flow
+    UC10((Webhook Verification))
   end
 
-  %% Cashier Connections
+  %% Connections
+  Cashier --> UC1
   Cashier --> UC2
   Cashier --> UC3
-  UC2 .->|&lt;&lt;include&gt;&gt;| UC1_Cashier
-  UC3 .->|&lt;&lt;include&gt;&gt;| UC1_Cashier
+  Cashier --> UC4
 
-  %% Manager Connections
   Manager --> UC5
   Manager --> UC6
-  UC5 .->|&lt;&lt;include&gt;&gt;| UC1_Admin
-  UC6 .->|&lt;&lt;include&gt;&gt;| UC1_Admin
+  Manager --> UC7
+
+  Cook --> UC8
+  Cook --> UC9
+
+  Gateway --> UC10
+  UC10 -.->|Triggers| UC4
+  UC10 -.->|Triggers| UC8
 ```
 
 **Description**
 
-- Cashier focuses on creating orders and receiving payment confirmations.
-- Manager focuses on reporting and product management.
+- Expanded to include Kitchen Staff (Telegram) and Payment Gateway actors.
+- Highlights specific PRD requirements like Avatar/PIN login, Dual-Pricing, and WebSocket pings.
 
 ### 8.2 Activity Diagram 
-1. Main cashier flow
+
+1. Main Checkout & Kitchen Fulfillment Flow (with Swimlanes)
 
 ```mermaid
 flowchart TD
-  A([Start]) --> B[Cashier logs in]
-  B --> C[Create order]
-  C --> D[Generate QR]
-  D --> E[Show QR / Waiting]
-  E --> F{Payment confirmed?}
-  F -- No --> E
-  F -- Yes --> G[Mark order PAID/COMPLETED]
-  G --> H[Notify initiating cashier]
-  H --> I([End])
+  subgraph Cashier [Frontline Cashier Workspace]
+    A([Start]) --> B(Tap Avatar & Enter PIN)
+    B --> C(Build Order with Modifiers)
+    C --> D{Payment Channel?}
+    D -- Cash --> E(Verify Cash Guardrail)
+    D -- KHQR --> F(Generate Dynamic KHQR)
+    J(Receive Real-time WS Notification) --> O([Cashier Completes Sale])
+  end
+
+  subgraph System [Backend & Webhooks]
+    F --> G(Wait for Bank Callback)
+    G --> H(Process Webhook Event)
+    E --> I(Update DB to PAID)
+    H --> I
+    I --> J
+    I --> K(Push Payload to Telegram Bot)
+  end
+
+  subgraph Kitchen [Back-of-House Telegram]
+    K --> L(Display Digital Ticket in Sequence)
+    L --> M(Cook Order)
+    M --> N(Tap 'Done' inline button)
+    N --> P([Kitchen Order Closed])
+  end
 ```
 
 **Description**
 
-- Loops in “waiting” until a confirmation event is recorded.
+- Introduces swimlanes (subgraphs) to clearly separate responsibilities between the physical POS terminal, the backend system, and the Telegram kitchen display.
+- Visualizes the parallel execution of notifying the cashier (WebSockets) and dispatching to the kitchen (Telegram) immediately after the database is updated.
 
-2. Main manager flow 
+2. Main Administrative Flow
+
 ```mermaid
-graph TD
-  Start([Start]) --> Login[Manager logs in]
-  Login --> Dashboard[Access Admin Dashboard]
-  
-  %% Decision point for the Manager's intent
-  Dashboard --> Action{Choose Action}
-  
-  %% Branch 1: View Reports
-  Action -->|View Reports| ViewReport[Request daily report]
-  ViewReport --> FetchData[System fetches order data]
-  FetchData --> DisplayReport[Display daily report summary]
-  DisplayReport --> EndLoop1{Done?}
-  EndLoop1 -->|No| Dashboard
-  EndLoop1 -->|Yes| End
-  
-  %% Branch 2: Manage Products
-  Action -->|Manage Products| SelectProduct[View product list]
-  SelectProduct --> ModifyProduct{Add/Edit/Delete?}
-  ModifyProduct --> UpdateDB[Update product database]
-  UpdateDB --> DisplaySuccess[Show success message]
-  DisplaySuccess --> EndLoop2{Done?}
-  EndLoop2 -->|No| Dashboard
-  EndLoop2 -->|Yes| End
+flowchart TD
+  subgraph Admin [Administrative Portal]
+    A([Start]) --> B(Login via Credentials)
+    B --> C{Select Module}
+    
+    C -->|Staff Matrix| D(Provision Devices & Assign Avatars)
+    C -->|Package Manager| E(Upload Menu & Set Dual Prices)
+    C -->|Analytics| F(Toggle Granular Reports & View Charts)
+    
+    D --> Z([End Task])
+    E --> Z
+    F --> Z
+  end
 ```
 
 ### 8.3 Class Diagram (Domain model)
@@ -254,61 +277,97 @@ classDiagram
   class User {
     +int id
     +string username
-    +string passwordHash
+    +string password
+    +string pin
     +string role
-    +login(string username, string password) bool
-    +logout() void
+    +bool is_active
+    +dateTime created_at
   }
 
-  class Order {
+  class Stall {
     +int id
-    +int cashierId
-    +string status
-    +double totalAmount
-    +dateTime createdAt
-    +createOrder() Order
-    +updateStatus(string newStatus) void
-    +calculateTotal() double
+    +string name
+    +string device_token
+    +bigint telegram_chat_id
+    +dateTime created_at
   }
 
-  class OrderItem {
+  class Category {
     +int id
-    +int orderId
-    +int productId
-    +int qty
-    +double unitPrice
-    +calculateSubtotal() double
+    +int stall_id
+    +string name
+    +string tone
+    +dateTime created_at
   }
 
   class Product {
     +int id
+    +int stall_id
+    +int category_id
     +string name
-    +double price
-    +bool isActive
-    +updatePrice(double newPrice) void
-    +toggleActiveStatus() void
+    +double price_usd
+    +int price_khr
+    +string image_url
+    +bool is_visible
+    +dateTime created_at
   }
 
-  class PaymentConfirmation {
+  class Order {
     +int id
-    +int orderId
-    +string providerRef
-    +double amount
-    +dateTime confirmedAt
-    +verifyWithProvider() bool
-    +saveConfirmation() bool
+    +int stall_id
+    +int cashier_id
+    +string payment_method
+    +string status
+    +double total_usd
+    +string qr_payload
+    +string kitchen_status
+    +string telegram_status
+    +bigint telegram_msg_id
+    +dateTime created_at
+    +dateTime completed_at
+  }
+
+  class OrderItem {
+    +int id
+    +int order_id
+    +int product_id
+    +string name
+    +double price_usd
+    +int price_khr
+    +double subtotal_usd
+    +int subtotal_khr
+    +int quantity
+    +string notes
+  }
+
+  class TelegramSession {
+    +int id
+    +int stall_id
+    +bigint telegram_user_id
+    +string name
   }
 
   %% Relationships representing data flow and structural dependencies
-  User "1" --> "many" Order : creates
+  User "many" -- "many" Stall : stall_staff
+  Stall "1" --> "many" Category : has
+  Stall "1" --> "many" Product : has
+  Stall "1" --> "many" Order : processes
+  Stall "1" --> "many" TelegramSession : authorizes
+  
+  Category "1" --> "many" Product : groups
+  
+  User "1" --> "many" Order : acts_as_cashier
+  
   Order "1" *-- "many" OrderItem : contains
-  Product "1" --> "many" OrderItem : referenced by
-  Order "1" --> "0..1" PaymentConfirmation : has
+  
+  Product "1" --> "many" OrderItem : snapshotted_in
 ```
 
 **Description**
 
-- `PaymentConfirmation` is the audit record enabling the invariant “no paid without confirmation”.
+- The Class Diagram now accurately maps 1:1 with the physical `schema.sql` (Database-First approach).
+- `stall_staff` is represented as a many-to-many relationship between `User` and `Stall`.
+- `OrderItem` correctly relies on `Product` for its origin, but copies the `name` and `price` as snapshots.
 
 ### 8.4 Sequence Diagram (Payment confirmation + notification)
 

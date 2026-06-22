@@ -21,3 +21,8 @@ Build this project incrementally using a spec-driven workflow. Context files def
 1. The current unit works end to end within its defined scope.
 2. No invariant defined in `architecture.md` was violated.
 3. `progress-tracker.md` reflects the completed work.
+
+## Database & SQL Synchronization Rules
+
+- This project uses Sequelize ORM for backend database interactions, but also maintains raw SQL files in `docs/database/schema.sql` and `docs/database/queries.sql` for course validation.
+- **Strict Invariant**: Database changes require bidirectional (back-and-forth) synchronization. Any modification to a Sequelize model, association, or repository query **MUST** be reflected in the raw SQL files (`docs/database/schema.sql` and `docs/database/queries.sql`), and any change to the raw SQL files **MUST** be ported back to the Sequelize models and repositories to ensure 100% parity.
