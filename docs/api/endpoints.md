@@ -129,9 +129,7 @@ All routes require authentication.
     { "product_id": 1, "quantity": 2 }
   ],
   "payment_method": "khqr | cash",
-  "total": 7.00,
-  "service_fee": 0.21,
-  "tax": 0.56
+  "total": 7.00
 }
 ```
 
