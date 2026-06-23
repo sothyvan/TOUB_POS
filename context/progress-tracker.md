@@ -6,6 +6,13 @@ Update this file after every meaningful implementation change.
 
 - Phase 1: Project Scaffolding — **COMPLETE**
 
+- **Implemented routing for /admin-portal and isolated auth guards**:
+  - Defined `/admin-portal` route in `App.jsx` pointing to `AdminPortalPage`.
+  - Extracted admin-only workspace, services, and routing hooks from `CashierPage.jsx` into a dedicated page `AdminPortalPage.jsx`.
+  - Set up bidirectional auth guards on `/cashier` and `/admin-portal` to prevent cross-role access and auto-redirect users to their authorized workspace.
+  - Refactored `LoginPage.jsx` to navigate Admin/Manager users directly to `/admin-portal`.
+  - Updated `AdminWorkspace.jsx` to delegate logout callbacks to the page router, eliminating inline page reloads.
+
 - **Consolidated and Reused QuantityInput component**:
   - Rewrote `QuantityInput.jsx` to encapsulate the entire quantity pill control—housing the outer pill wrapper, the minus/plus button handlers with their icons, and the text input field.
   - Removed duplicate adjuster layouts, button classes, and `Icon` imports from both `CartItem.jsx` and `ProductCard.jsx`, replacing them with simple, clean `<QuantityInput>` components.

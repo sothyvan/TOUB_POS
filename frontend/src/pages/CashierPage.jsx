@@ -5,11 +5,9 @@ import { getAssignedStall } from '../utils/stallUtils';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useCart } from '../hooks/useCart';
 import { useProducts } from '../hooks/useProducts';
-import { useUsers } from '../hooks/useUsers';
 import { useOrders } from '../hooks/useOrders';
 import PageShell from '../components/PageShell';
 import CashierScreen from '../components/CashierScreen';
-import AdminWorkspace from '../components/AdminWorkspace';
 import ReceiptModal from '../components/ReceiptModal';
 import CashConfirmationModal from '../components/CashConfirmationModal';
 import KhqrPaymentModal from '../components/KhqrPaymentModal';
@@ -21,38 +19,33 @@ export default function CashierPage() {
 
   // ── Auth guard ────────────────────────────────────────────────────────────
   const currentUser = location.state?.currentUser || null;
+  const { isCashier } = getPermissions(currentUser);
 
   useEffect(() => {
-    if (!currentUser) navigate('/login', { replace: true });
-  }, [currentUser, navigate]);
-
-  // ── Permissions ───────────────────────────────────────────────────────────
-  const { isCashier, canManageMenu, canManageUsers, canViewOrders } = getPermissions(currentUser);
+    if (!currentUser) {
+      navigate('/login', { replace: true });
+    } else if (!isCashier) {
+      navigate('/admin-portal', { state: { currentUser }, replace: true });
+    }
+  }, [currentUser, isCashier, navigate]);
 
   // ── Stall assignment (cashiers only) ──────────────────────────────────────
-  // Read once on mount; reflects the assignment set by admin in Stall Management
   const assignedStall = isCashier ? getAssignedStall(currentUser?.id) : null;
 
   // ── Hooks ─────────────────────────────────────────────────────────────────
   const isOnline = useOnlineStatus();
 
   const {
-    categories, products, categoryById, filteredProducts,
-    productForm, setProductForm, categoryForm, setCategoryForm,
+    categories, categoryById, filteredProducts,
     selectedCategory, setSelectedCategory, searchQuery, setSearchQuery,
-    saveCategory, editCategory, deleteCategory, cancelCategoryEdit,
-    saveProduct, editProduct, toggleProductAvailability, deleteProduct, cancelProductEdit,
-  } = useProducts(canManageMenu);
+  } = useProducts(false);
 
   const {
     cart, cartById, itemCount, subtotal, serviceFee, estimatedTax, total,
-    addToCart, updateQuantity, setCartItemQuantity, clearCart, removeItemFromCart,
+    addToCart, updateQuantity, setCartItemQuantity, clearCart,
   } = useCart(categoryById);
 
-  const { users, userForm, setUserForm, saveUser, editUser, cancelUserEdit, toggleUserActive, deleteUser } =
-    useUsers(canManageUsers, currentUser?.id);
-
-  const { orders, todaysOrders, todaysTotal, handleCheckout } =
+  const { orders, handleCheckout } =
     useOrders(isOnline, cart, clearCart, currentUser, assignedStall, { subtotal, serviceFee, estimatedTax, total });
 
   const [activeReceipt, setActiveReceipt] = useState(null);
@@ -82,17 +75,6 @@ export default function CashierPage() {
 
   // ── UI state ──────────────────────────────────────────────────────────────
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [adminTab, setAdminTab] = useState('dashboard');
-
-  // ── Cart-sync wrappers ────────────────────────────────────────────────────
-  const withCartSync = (action) => (...args) => {
-    const removedId = action(...args);
-    if (removedId) removeItemFromCart(removedId);
-  };
-
-  const handleSaveProduct = withCartSync(saveProduct);
-  const handleToggleProductAvailability = withCartSync(toggleProductAvailability);
-  const handleDeleteProduct = withCartSync(deleteProduct);
 
   // ── Logout ────────────────────────────────────────────────────────────────
   const handleLogout = () => {
@@ -101,19 +83,8 @@ export default function CashierPage() {
     navigate('/login', { replace: true });
   };
 
-  // ── Admin tab visibility ──────────────────────────────────────────────────
-  const allowedAdminTabs = [
-    'dashboard',
-    canManageMenu  ? 'products' : null,  // includes Categories sub-tab
-    canManageMenu  ? 'stalls'   : null,
-    canViewOrders  ? 'orders'   : null,
-    canManageUsers ? 'users'    : null,
-  ].filter(Boolean);
-
-  const visibleAdminTab = allowedAdminTabs.includes(adminTab) ? adminTab : allowedAdminTabs[0];
-
   // ── Guard ─────────────────────────────────────────────────────────────────
-  if (!currentUser) return null;
+  if (!currentUser || !isCashier) return null;
 
   // ── Guard: cashier with no stall assigned ─────────────────────────────────
   if (isCashier && !assignedStall) {
@@ -151,69 +122,34 @@ export default function CashierPage() {
       onCartOpen={() => setIsCartOpen(true)}
       onLogout={handleLogout}
     >
-      {isCashier ? (
-        <CashierScreen
-          currentUser={currentUser}
-          orders={orders}
-          onViewReceipt={setActiveReceipt}
-          categories={categories}
-          categoryById={categoryById}
-          selectedCategory={selectedCategory}
-          setSelectedCategory={setSelectedCategory}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          filteredProducts={filteredProducts}
-          cart={cart}
-          cartById={cartById}
-          addToCart={addToCart}
-          updateQuantity={updateQuantity}
-          setCartItemQuantity={setCartItemQuantity}
-          isCartOpen={isCartOpen}
-          setIsCartOpen={setIsCartOpen}
-          itemCount={itemCount}
-          subtotal={subtotal}
-          serviceFee={serviceFee}
-          estimatedTax={estimatedTax}
-          total={total}
-          clearCart={clearCart}
-          handleCheckout={handleCheckoutWithReceipt}
-          isOnline={isOnline}
-          assignedStall={assignedStall}
-        />
-      ) : (
-        <AdminWorkspace
-          visibleAdminTab={visibleAdminTab}
-          setAdminTab={setAdminTab}
-          allowedAdminTabs={allowedAdminTabs}
-          products={products}
-          categories={categories}
-          orders={orders}
-          users={users}
-          categoryForm={categoryForm}
-          setCategoryForm={setCategoryForm}
-          productForm={productForm}
-          setProductForm={setProductForm}
-          userForm={userForm}
-          setUserForm={setUserForm}
-          onSaveProduct={handleSaveProduct}
-          onEditProduct={editProduct}
-          onToggleProductAvailability={handleToggleProductAvailability}
-          onDeleteProduct={handleDeleteProduct}
-          onSaveCategory={saveCategory}
-          onEditCategory={editCategory}
-          onDeleteCategory={deleteCategory}
-          onSaveUser={saveUser}
-          onEditUser={editUser}
-          onToggleUserActive={toggleUserActive}
-          onDeleteUser={deleteUser}
-          onCancelProduct={cancelProductEdit}
-          onCancelCategory={cancelCategoryEdit}
-          onCancelUser={cancelUserEdit}
-          categoryById={categoryById}
-          todaysOrders={todaysOrders}
-          todaysTotal={todaysTotal}
-        />
-      )}
+      <CashierScreen
+        currentUser={currentUser}
+        orders={orders}
+        onViewReceipt={setActiveReceipt}
+        categories={categories}
+        categoryById={categoryById}
+        selectedCategory={selectedCategory}
+        setSelectedCategory={setSelectedCategory}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        filteredProducts={filteredProducts}
+        cart={cart}
+        cartById={cartById}
+        addToCart={addToCart}
+        updateQuantity={updateQuantity}
+        setCartItemQuantity={setCartItemQuantity}
+        isCartOpen={isCartOpen}
+        setIsCartOpen={setIsCartOpen}
+        itemCount={itemCount}
+        subtotal={subtotal}
+        serviceFee={serviceFee}
+        estimatedTax={estimatedTax}
+        total={total}
+        clearCart={clearCart}
+        handleCheckout={handleCheckoutWithReceipt}
+        isOnline={isOnline}
+        assignedStall={assignedStall}
+      />
 
       <ReceiptModal
         activeReceipt={activeReceipt}

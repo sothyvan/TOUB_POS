@@ -47,7 +47,7 @@ export default function LoginPage() {
       setFlowStep('select-profile');
     } else {
       // Pass the authenticated user to back-office
-      navigate('/cashier', { state: { currentUser: user }, replace: true });
+      navigate('/admin-portal', { state: { currentUser: user }, replace: true });
     }
     return true;
   };

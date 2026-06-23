@@ -55,6 +55,7 @@ export default function AdminWorkspace({
   categoryById,
   todaysOrders,
   todaysTotal,
+  onLogout,
 }) {
   const [pendingDelete, setPendingDelete] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -86,7 +87,7 @@ export default function AdminWorkspace({
           onTabChange={setAdminTab}
           userName={users.find((u) => u.role === 'Admin')?.name ?? 'Owner Account'}
           userRole={users.find((u) => u.role === 'Admin') ? 'Administrator' : 'Manager'}
-          onLogout={() => window.location.reload()}
+          onLogout={onLogout}
         />
       </div>
 
