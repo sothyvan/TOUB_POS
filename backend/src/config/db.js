@@ -1,11 +1,11 @@
-import { Sequelize } from 'sequelize';
-import mysql from 'mysql2/promise';
+import { Sequelize } from 'sequelize'; // used for orm and sync model to db
+import mysql from 'mysql2/promise'; // used for raw query
 
-const host = process.env.DB_HOST || 'localhost';
-const port = Number(process.env.DB_PORT) || 3306;
-const user = process.env.DB_USER || 'root';
-const password = process.env.DB_PASSWORD || '';
-const database = process.env.DB_NAME || 'toub_pos';
+const host = process.env.DB_HOST;
+const port = Number(process.env.DB_PORT);
+const user = process.env.DB_USER;
+const password = process.env.DB_PASSWORD;
+const database = process.env.DB_NAME;
 
 /**
  * Ensures that the target database exists by creating it if necessary.
@@ -25,7 +25,7 @@ const sequelize = new Sequelize(database, user, password, {
   host,
   port,
   dialect: 'mysql',
-  logging: process.env.NODE_ENV === 'development' ? (msg) => console.log(`[sequelize] ${msg}`) : false,
+  logging: false,
   pool: {
     max: 10,
     min: 0,
@@ -40,22 +40,6 @@ const sequelize = new Sequelize(database, user, password, {
   },
 });
 
-//-----------Temporary create pool and will be get rid of when repos pseng pseng bos yg done migration to Sequelize all sen-------------------------------------------
 
-// Create a mysql2 pool for backward compatibility with raw query execute() calls
-const mysqlPool = mysql.createPool({
-  host,
-  port,
-  user,
-  password,
-  database,
-  waitForConnections: true,
-  connectionLimit: 10,
-});
-
-// Bind execute to sequelize so it can be imported as pool and call pool.execute()
-sequelize.execute = mysqlPool.execute.bind(mysqlPool);
-
-//----------------------------------------------------------------
 
 export default sequelize;

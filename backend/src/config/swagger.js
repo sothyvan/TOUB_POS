@@ -8,7 +8,12 @@ export const swaggerDocument = {
     },
     security: [{ bearerAuth: [] }],
     paths: {
-        '/api/health': { get: { summary: 'Server Health Check'} },
+        '/api/health': {
+            get: {
+                summary: 'Server Health Check',
+                security: []
+            }
+        },
         '/api/auth/login': {
             post: {
                 summary: 'Log in',
