@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import Icon from './ui/Icon';
 import CategoryAdmin from './CategoryAdmin';
 import { money } from '../utils/format';
@@ -6,22 +6,13 @@ import FormInput from './ui/FormInput';
 import FormSelect from './ui/FormSelect';
 import StatusBadge from './ui/StatusBadge';
 import TabPills from './ui/TabPills';
+import { getStalls } from '../utils/stallUtils';
 
 // KHR exchange rate (approx)
 const KHR_RATE = 4000;
 
 function toKHR(usd) {
   return Math.round(parseFloat(usd || 0) * KHR_RATE).toLocaleString();
-}
-
-// Load stalls from localStorage (same source as StallAdmin)
-function getStalls() {
-  const SEED = [
-    { id: 'stall-1', name: 'Stall 1', location: 'BKK1' },
-    { id: 'stall-2', name: 'Stall 2', location: 'Russian Market' },
-    { id: 'stall-3', name: 'Stall 3', location: 'Toul Tom Poung' },
-  ];
-  try { return JSON.parse(localStorage.getItem('toub_stalls')) || SEED; } catch { return SEED; }
 }
 
 // ── Toggle switch ─────────────────────────────────────────────────────────────
@@ -297,7 +288,6 @@ const TABS = [
 
 export default function MenuCatalog({
   products,
-  productForm,
   setProductForm,
   onSaveProduct,
   onEditProduct,
@@ -315,14 +305,12 @@ export default function MenuCatalog({
   const [subTab, setSubTab]         = useState('products');
   const [search, setSearch]         = useState('');
   const [editingProduct, setEditing] = useState(null); // null = no panel, object = form data
-  const stalls                       = useMemo(getStalls, []);
+  const stalls                       = useMemo(() => getStalls(), []);
 
   const filtered = useMemo(() =>
     products.filter(p => p.name.toLowerCase().includes(search.toLowerCase())),
     [products, search]
   );
-
-  const [pendingSave, setPendingSave] = useState(false);
 
   const openEditor = (product) => {
     setEditing({ ...product });
@@ -337,16 +325,9 @@ export default function MenuCatalog({
 
   const handleSave = (formData) => {
     setProductForm(formData);
-    setPendingSave(true);
+    onSaveProduct(formData);
+    setEditing(null);
   };
-
-  useEffect(() => {
-    if (pendingSave) {
-      onSaveProduct();
-      setPendingSave(false);
-      setEditing(null);
-    }
-  }, [pendingSave]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCancel = () => {
     setEditing(null);

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import Icon from '../ui/Icon';
 import { initials } from '../../utils/format';
+import { getStalls } from '../../utils/stallUtils';
 
 const AVATAR_COLORS = ['#eef2ff','#dcfce7','#f3e8ff','#fff1f2','#fef3c7','#e0f2fe'];
 const AVATAR_TEXT   = ['#3730a3','#166534','#7e22ce','#be123c','#92400e','#075985'];
@@ -13,15 +14,6 @@ const SHIFT_STYLE = {
   PM: { bg:'#eff6ff', color:'#1d4ed8', label:'PM' },
   FD: { bg:'#f3e8ff', color:'#7e22ce', label:'FD' },
 };
-
-function getStalls() {
-  const S=[
-    {id:'stall-1',name:'Stall 1',location:'BKK1'},
-    {id:'stall-2',name:'Stall 2',location:'Russian Market'},
-    {id:'stall-3',name:'Stall 3',location:'Toul Tom Poung'},
-  ];
-  try { return JSON.parse(localStorage.getItem('toub_stalls'))||S; } catch { return S; }
-}
 
 function loadMatrix() {
   try { return JSON.parse(localStorage.getItem('toub_shift_matrix'))||{}; } catch { return {}; }
@@ -70,7 +62,7 @@ function CoverageBar({ stall, assigned, total }) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function StaffAllocation({ users }) {
-  const stalls = useMemo(getStalls, []);
+  const stalls = useMemo(() => getStalls(), []);
   const [matrix, setMatrix] = useState(loadMatrix); // { userId: { stallId: 'AM'|'PM'|'FD'|null } }
   const [saved, setSaved]   = useState(false);
 

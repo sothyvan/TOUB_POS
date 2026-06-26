@@ -6,6 +6,15 @@ Update this file after every meaningful implementation change.
 
 - Phase 1: Project Scaffolding — **COMPLETE**
 
+- **Fixed cashier stall assignment source mismatch**:
+  - Centralized default stall data and default stall assignments in `frontend/src/utils/stallUtils.js`.
+  - Updated Cashier, Stall Management, Staff Directory, and Sales Reports assignment reads to use the same shared helper.
+  - Resolved the issue where Cashier Dara could appear assigned in the admin portal but be blocked from the cashier portal until an admin refresh or save.
+
+- **Enforced one-stall-per-cashier assignment in Stall Management**:
+  - Updated roster drop assignment so assigning a cashier to a new stall first removes that cashier from every other stall roster.
+  - Prevented Cashier Dara from appearing assigned to multiple stalls at the same time.
+
 - **Implemented routing for /admin-portal and isolated auth guards**:
   - Defined `/admin-portal` route in `App.jsx` pointing to `AdminPortalPage`.
   - Extracted admin-only workspace, services, and routing hooks from `CashierPage.jsx` into a dedicated page `AdminPortalPage.jsx`.

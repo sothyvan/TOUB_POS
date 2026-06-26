@@ -6,18 +6,11 @@ import FormSelect from '../ui/FormSelect';
 import FormCheckbox from '../ui/FormCheckbox';
 import StatusBadge from '../ui/StatusBadge';
 import { initials } from '../../utils/format';
+import { getStalls, getStallAssignments } from '../../utils/stallUtils';
 
 const AVATAR_COLORS = ['#eef2ff','#dcfce7','#f3e8ff','#fff1f2','#fef3c7','#e0f2fe'];
 const AVATAR_TEXT   = ['#3730a3','#166534','#7e22ce','#be123c','#92400e','#075985'];
 function avatarStyle(i) { const j=i%6; return {background:AVATAR_COLORS[j],color:AVATAR_TEXT[j]}; }
-
-function getStalls() {
-  const S=[{id:'stall-1',name:'Stall 1',location:'BKK1'},{id:'stall-2',name:'Stall 2',location:'Russian Market'},{id:'stall-3',name:'Stall 3',location:'Toul Tom Poung'}];
-  try { return JSON.parse(localStorage.getItem('toub_stalls'))||S; } catch { return S; }
-}
-function getAssignments() {
-  try { return JSON.parse(localStorage.getItem('toub_stall_assignments'))||{}; } catch { return {}; }
-}
 
 function StatCard({ iconName, iconBg, value, label }) {
   return (
@@ -105,8 +98,8 @@ export default function StaffList({ userForm, setUserForm, users, onSave, onEdit
   const [isNew, setIsNew]         = useState(false);
   const [search, setSearch]       = useState('');
 
-  const stalls      = useMemo(getStalls,[]);
-  const assignments = useMemo(getAssignments,[]);
+  const stalls      = useMemo(() => getStalls(),[]);
+  const assignments = useMemo(() => getStallAssignments(),[]);
   const userStallMap = useMemo(()=>{
     const m={};
     stalls.forEach(s=>(assignments[s.id]??[]).forEach(uid=>{ m[uid]=`${s.name} — ${s.location}`; }));

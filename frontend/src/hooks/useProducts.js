@@ -104,27 +104,27 @@ export function useProducts(canManageMenu) {
    * Returns the saved product id if it was an edit (so caller can sync cart),
    * or null if it was a new product.
    */
-  const saveProduct = () => {
-    const name = productForm.name.trim();
-    const price = Number(productForm.price);
-    if (!canManageMenu || !name || !productForm.categoryId || isNaN(price) || price <= 0) {
+  const saveProduct = (form = productForm) => {
+    const name = form.name.trim();
+    const price = Number(form.price);
+    if (!canManageMenu || !name || !form.categoryId || isNaN(price) || price <= 0) {
       alert('Add a name, category, and valid price.');
       return null;
     }
     const product = {
-      id: productForm.id,
+      id: form.id,
       name,
-      code: (productForm.code.trim() || suggestedCode(name)).toUpperCase(),
+      code: (form.code.trim() || suggestedCode(name)).toUpperCase(),
       price,
-      categoryId: productForm.categoryId,
-      tone: productForm.tone,
-      available: productForm.available,
-      image: productForm.image || '',
+      categoryId: form.categoryId,
+      tone: form.tone,
+      available: form.available,
+      image: form.image || '',
     };
     const saved = api.products.save(product);
     setProducts(api.products.getAll());
-    setProductForm(blankProductForm(productForm.categoryId));
-    return productForm.id ? saved.id : null;
+    setProductForm(blankProductForm(form.categoryId));
+    return form.id ? saved.id : null;
   };
 
   const editProduct = (product) =>

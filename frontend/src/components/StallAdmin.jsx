@@ -1,14 +1,14 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import Icon from './ui/Icon';
 import { initials } from '../utils/format';
+import {
+  getStalls,
+  getStallAssignments,
+  saveStalls,
+  saveStallAssignments,
+} from '../utils/stallUtils';
 
 // ── Seed data ─────────────────────────────────────────────────────────────────
-const SEED_STALLS = [
-  { id: 'stall-1', name: 'Stall 1', location: 'BKK1',           online: true  },
-  { id: 'stall-2', name: 'Stall 2', location: 'Russian Market',  online: true  },
-  { id: 'stall-3', name: 'Stall 3', location: 'Toul Tom Poung',  online: false },
-];
-
 const AVATAR_COLORS = ['#eef2ff','#dcfce7','#f3e8ff','#fff1f2','#fef3c7','#e0f2fe'];
 const AVATAR_TEXT   = ['#3730a3','#166534','#7e22ce','#be123c','#92400e','#075985'];
 
@@ -16,15 +16,6 @@ function avatarStyle(idx) {
   const i = idx % AVATAR_COLORS.length;
   return { background: AVATAR_COLORS[i], color: AVATAR_TEXT[i] };
 }
-
-function getStalls() {
-  try { return JSON.parse(localStorage.getItem('toub_stalls')) || SEED_STALLS; } catch { return SEED_STALLS; }
-}
-function saveStalls(s)      { localStorage.setItem('toub_stalls', JSON.stringify(s)); }
-function getAssignments()   {
-  try { return JSON.parse(localStorage.getItem('toub_stall_assignments')) || { 'stall-1': ['user-cashier'] }; } catch { return {}; }
-}
-function saveAssignments(a) { localStorage.setItem('toub_stall_assignments', JSON.stringify(a)); }
 
 // ── Add Stall modal ───────────────────────────────────────────────────────────
 function AddStallModal({ onClose, onAdd }) {
@@ -184,13 +175,13 @@ function DropZone({ onDrop, isDragOver, setIsDragOver }) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function StallAdmin({ users = [] }) {
   const [stalls, setStalls]             = useState(getStalls);
-  const [assignments, setAssignments]   = useState(getAssignments);
+  const [assignments, setAssignments]   = useState(getStallAssignments);
   const [selectedStallId, setSelectedStallId] = useState(() => getStalls()[0]?.id ?? null);
   const [staffSearch, setStaffSearch]   = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [isDropZoneOver, setIsDropZoneOver] = useState(false);
   // For unassign-by-drag-back: highlight pool as drop zone when dragging from roster
-  const [isDraggingFromRoster, setIsDraggingFromRoster] = useState(false);
+  const [, setIsDraggingFromRoster] = useState(false);
   const [isPoolOver, setIsPoolOver] = useState(false);
 
   const selectedStall  = stalls.find(s => s.id === selectedStallId) ?? null;
@@ -201,11 +192,18 @@ export default function StallAdmin({ users = [] }) {
     u.name.toLowerCase().includes(staffSearch.toLowerCase())
   );
 
-  const updateAssignments = (next) => { setAssignments(next); saveAssignments(next); };
+  const updateAssignments = (next) => { setAssignments(next); saveStallAssignments(next); };
 
   const handleAssign = (userId) => {
     if (!selectedStallId || assignedIds.includes(userId)) return;
-    updateAssignments({ ...assignments, [selectedStallId]: [...assignedIds, userId] });
+    const next = Object.fromEntries(
+      Object.entries(assignments).map(([stallId, userIds]) => [
+        stallId,
+        userIds.filter(id => id !== userId),
+      ])
+    );
+    next[selectedStallId] = [...(next[selectedStallId] ?? []), userId];
+    updateAssignments(next);
   };
 
   const handleUnassign = (userId) => {
@@ -343,7 +341,6 @@ export default function StallAdmin({ users = [] }) {
         className="flex flex-col bg-white rounded-2xl overflow-hidden"
         style={{ width: 280, minWidth: 240, flexShrink: 0 }}
         onDragOver={(e) => {
-          const source = e.dataTransfer.types.includes('text/plain') ? null : null;
           e.preventDefault();
           setIsPoolOver(true);
         }}

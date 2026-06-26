@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { money } from '../utils/format';
 import Icon from './ui/Icon';
+import { getStalls, getStallAssignments } from '../utils/stallUtils';
 
 // Mock/Seed data for reports if orders are empty, to populate charts beautifully
 const SEED_ORDERS_HISTORY = [
@@ -25,28 +26,6 @@ const SEED_ORDERS_HISTORY = [
   { id: 'mo-15', orderNo: 'ORD-0085', cashierName: 'Dara', stallName: 'Stall 2 — Russian Market', paymentMethod: 'KHQR', total: 4.5, prepTimeSecs: 180, createdAt: new Date(Date.now() - 20 * 86400000).toISOString() },
 ];
 
-function getStalls() {
-  const DEFAULT = [
-    { id: 'stall-1', name: 'Stall 1', location: 'BKK1' },
-    { id: 'stall-2', name: 'Stall 2', location: 'Russian Market' },
-    { id: 'stall-3', name: 'Stall 3', location: 'Toul Tom Poung' },
-    { id: 'stall-4', name: 'Stall 4', location: 'Aeon Mall' }
-  ];
-  try {
-    return JSON.parse(localStorage.getItem('toub_stalls')) || DEFAULT;
-  } catch {
-    return DEFAULT;
-  }
-}
-
-function getAssignments() {
-  try {
-    return JSON.parse(localStorage.getItem('toub_stall_assignments')) || {};
-  } catch {
-    return {};
-  }
-}
-
 export default function OrderHistory({ orders: rawOrders }) {
   const [dateFilter, setDateFilter] = useState('today'); // 'today' | 'week' | 'month'
   const [activeSubTab, setActiveSubTab] = useState('analytics'); // 'analytics' | 'ledger'
@@ -63,8 +42,8 @@ export default function OrderHistory({ orders: rawOrders }) {
     return [...customOrders, ...SEED_ORDERS_HISTORY];
   }, [rawOrders]);
 
-  const stalls = useMemo(getStalls, []);
-  const assignments = useMemo(getAssignments, []);
+  const stalls = useMemo(() => getStalls(), []);
+  const assignments = useMemo(() => getStallAssignments(), []);
 
   // Filter orders by date range
   const filteredOrders = useMemo(() => {
