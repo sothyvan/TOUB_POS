@@ -8,9 +8,10 @@ const User = sequelize.define('User', {
     primaryKey: true,
   },
   username: {
+    // Note: 'unique' constraint is defined at the bottom in 'indexes' 
+    // to prevent the Sequelize alter:true duplication bug in MySQL
     type: DataTypes.STRING(50),
     allowNull: false,
-    unique: true,
   },
   password: {
     type: DataTypes.STRING(255),
@@ -31,6 +32,13 @@ const User = sequelize.define('User', {
     defaultValue: true,
     field: 'is_active',
   },
+}, {
+  indexes: [
+    {
+      unique: true,
+      fields: ['username']
+    }
+  ]
 });
 
 export default User;

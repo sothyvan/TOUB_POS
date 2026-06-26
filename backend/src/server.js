@@ -25,7 +25,7 @@ async function startServer() {
     // Auto-seed default admin user if none exist
     const userCount = await User.count();
     if (userCount === 0) {
-      const hashedPassword = await bcrypt.hash('admin123', 10);
+      const hashedPassword = await bcrypt.hash('admin123', 10); // ONLY FOR DEV // For PRODUCTION it must be changed and .env must be used instead
       await User.create({
         username: 'admin',
         password: hashedPassword,
