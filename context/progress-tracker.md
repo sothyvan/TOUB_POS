@@ -4,7 +4,17 @@ Update this file after every meaningful implementation change.
 
 ## Current Phase
 
-- Phase 1: Project Scaffolding — **COMPLETE**
+- Phase 1: Backend Auth/Security Hardening — **COMPLETE**
+- Phase 2: Frontend Authentication Integration — **COMPLETE**
+- Phase 3: Backend-Owned Products, Categories, Stalls, And Staff — **NEXT**
+
+- **Implemented Phase 2 frontend JWT authentication integration**:
+  - Added a Vite-compatible API client using `VITE_API_BASE_URL` with a `http://localhost:3000/api` fallback and automatic Bearer token attachment.
+  - Added an auth/session provider that stores the backend JWT and current user, restores sessions after refresh, and clears sessions on logout or `401` responses.
+  - Replaced localStorage-based admin credential checks with `POST /api/auth/login`; admin portal login now requires a backend-authenticated `admin` user.
+  - Replaced `location.state` route guards with protected route logic for `/admin-portal` (`admin`) and `/cashier` (`cashier`).
+  - Kept the cashier avatar/PIN UI visible as a temporary flow, but stopped creating fake cashier auth sessions until a backend PIN endpoint exists.
+  - Hid demo credentials outside development/demo mode and removed active frontend `manager` role options.
 
 - **Implemented Phase 1 backend auth/security hardening**:
   - Updated backend RBAC so `authorize()` supports string and array role inputs, while admin-only routes now use `authorize('admin')`.
@@ -196,10 +206,10 @@ Update this file after every meaningful implementation change.
 
 ## Next Up
 
-- Unit 2: Connect frontend views to real backend APIs.
-  - Wire frontend Login page and connect to `POST /api/auth/login`.
-  - Update frontend context hooks (`useProducts.js`, `useUsers.js`, `useOrders.js`) to consume the backend APIs rather than localStorage mocks.
-  - Implement persistent session authentication (storing JWT/user context in `localStorage` or `sessionStorage`) to prevent F5/refresh logout.
+- Unit 3: Connect products, categories, stalls, and staff management to real backend APIs.
+  - Update frontend context hooks (`useProducts.js`, `useUsers.js`, `useOrders.js`) to consume backend APIs incrementally rather than localStorage mocks.
+  - Add backend-backed cashier PIN/avatar login endpoint before enabling cashier terminal authentication.
+  - Keep enforcing `admin` / `cashier` only in frontend and backend role handling.
 
 ## Open Questions
 
@@ -232,7 +242,7 @@ Intentional shortcuts taken during development that must be resolved before prod
 
 | # | Item | Location | Priority |
 |---|------|----------|----------|
-| 1 | **PIN validated client-side** | `LoginPage.jsx` | 🔴 High — move PIN verification to `POST /api/auth/pin` before any real deployment |
+| 1 | **Cashier PIN backend login missing** | `LoginPage.jsx` / backend auth routes | 🔴 High — add `POST /api/auth/pin` before enabling cashier terminal login |
 | 2 | **Frontend hooks use `localStorage` mock** | `useProducts`, `useOrders`, `useUsers` | 🔴 High — must be migrated to real API calls (in progress) |
 | 3 | **No input sanitization on order modifiers** | `order_items.notes` | 🟡 Medium — add max-length enforcement and strip dangerous characters before DB write |
 | 4 | **No auth endpoint rate limiting** | `POST /api/auth/login` | 🟡 Medium — add `express-rate-limit` to prevent brute-force attacks |

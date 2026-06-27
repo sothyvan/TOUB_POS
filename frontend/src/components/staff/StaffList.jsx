@@ -169,7 +169,7 @@ export default function StaffList({ userForm, setUserForm, users, onSave, onEdit
                   </div>
                 </div>
                 <div style={{flex:'0 0 100px'}}>
-                  <span className="inline-flex rounded-full px-2.5 py-0.5" style={{fontSize:11,fontWeight:700,fontFamily:'Inter,sans-serif',background: user.role === 'Admin' ? '#f3e8ff' : user.role === 'Manager' ? '#dbeafe' : '#fffbeb',color: user.role === 'Admin' ? '#7e22ce' : user.role === 'Manager' ? '#1d4ed8' : '#92400e'}}>{user.role}</span>
+                  <span className="inline-flex rounded-full px-2.5 py-0.5" style={{fontSize:11,fontWeight:700,fontFamily:'Inter,sans-serif',background: user.role === 'Admin' ? '#f3e8ff' : '#fffbeb',color: user.role === 'Admin' ? '#7e22ce' : '#92400e'}}>{user.role}</span>
                 </div>
                 <div style={{flex:'0 0 120px'}}>
                   <span style={{fontSize:13,color:'#374151',fontFamily:'Inter,sans-serif'}}>{user.station||'—'}</span>

@@ -20,17 +20,24 @@ export default function LoginScreen({
   setLoginError,
   onAdminLogin,
   onSelectProfile,
+  showDemoCredentials = false,
 }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmitAdmin = (event) => {
+  const handleSubmitAdmin = async (event) => {
     event.preventDefault();
     const isRegisterStep = loginMode === 'cashier' && flowStep === 'register';
-    const success = onAdminLogin(username, password, isRegisterStep);
-    if (success) {
-      setUsername('');
-      setPassword('');
+    setIsSubmitting(true);
+    try {
+      const success = await onAdminLogin(username, password, isRegisterStep);
+      if (success) {
+        setUsername('');
+        setPassword('');
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -85,9 +92,10 @@ export default function LoginScreen({
 
         <button
           type="submit"
+          disabled={isSubmitting}
           className="w-full h-12 mt-1 bg-brand-blue text-white text-[15px] font-bold rounded-xl hover:bg-brand-blue/95 active:scale-[0.98] transition-all cursor-pointer shadow-[0_2px_4px_rgba(0,71,204,0.1)]"
         >
-          Login
+          {isSubmitting ? 'Logging in...' : 'Login'}
         </button>
       </form>
 
@@ -272,7 +280,7 @@ export default function LoginScreen({
       <div>
         <h2 className="m-0 text-xl font-bold text-gray-900 leading-snug">Admin Portal Login</h2>
         <p className="m-0 mt-1.5 text-gray-500 text-xs font-semibold leading-relaxed">
-          Log in with manager or administrator credentials
+          Log in with admin owner credentials
         </p>
       </div>
 
@@ -285,11 +293,11 @@ export default function LoginScreen({
           required
         />
         <FormInput
-          label="PIN / Password"
+          label="Password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Enter account PIN"
+          placeholder="Enter password"
           required
         />
 
@@ -297,9 +305,10 @@ export default function LoginScreen({
 
         <button
           type="submit"
+          disabled={isSubmitting}
           className="w-full h-12 mt-1 bg-brand-blue text-white text-[15px] font-bold rounded-xl hover:bg-brand-blue/95 active:scale-[0.98] transition-all cursor-pointer shadow-[0_2px_4px_rgba(0,71,204,0.1)]"
         >
-          Login
+          {isSubmitting ? 'Logging in...' : 'Login'}
         </button>
       </form>
 
@@ -323,13 +332,13 @@ export default function LoginScreen({
       {loginMode === 'cashier' && flowStep === 'select-profile' && renderSelectProfile()}
       {loginMode === 'cashier' && flowStep === 'pin-pad' && renderPinPad()}
 
-      {/* Floating Demo Credentials at page bottom */}
-      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex flex-wrap justify-center gap-3 bg-white/20 backdrop-blur-md px-4 py-2.5 rounded-full border border-white/25 text-[11px] font-semibold text-brand-blue shadow-sm">
-        <span className="opacity-80">Demo Credentials:</span>
-        <span className="bg-white/35 px-2 py-0.5 rounded-full">Admin (Dara: 1234)</span>
-        <span className="bg-white/35 px-2 py-0.5 rounded-full">Manager (Lina: 2222)</span>
-        <span className="bg-white/35 px-2 py-0.5 rounded-full">Cashier (Dara: 1111)</span>
-      </div>
+      {showDemoCredentials && (
+        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex flex-wrap justify-center gap-3 bg-white/20 backdrop-blur-md px-4 py-2.5 rounded-full border border-white/25 text-[11px] font-semibold text-brand-blue shadow-sm">
+          <span className="opacity-80">Development Credentials:</span>
+          <span className="bg-white/35 px-2 py-0.5 rounded-full">Admin (admin / admin123)</span>
+          <span className="bg-white/35 px-2 py-0.5 rounded-full">Cashier PIN login TODO</span>
+        </div>
+      )}
     </main>
   );
 }

@@ -1,13 +1,15 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSavedState } from '../hooks/useSavedState';
 import { DEFAULT_USERS } from '../data/seedData';
-import { mapUsersWithDefaultPins } from '../utils/permissions';
+import { getPermissions, mapUsersWithDefaultPins } from '../utils/permissions';
 import { STORAGE_KEYS } from '../services/api';
+import { useAuth } from '../auth/useAuth';
 import LoginScreen from '../components/LoginScreen';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { user: currentUser, login, logout, isAuthenticated } = useAuth();
 
   const [rawUsers] = useSavedState(STORAGE_KEYS.USERS, DEFAULT_USERS);
   const [deviceRegistered, setDeviceRegistered] = useSavedState('toub-device-registered', false);
@@ -25,31 +27,46 @@ export default function LoginPage() {
 
   const activeUsers = users.filter((u) => u.active);
   const activeCashiers = activeUsers.filter((u) => u.role === 'Cashier');
+  const showDemoCredentials = import.meta.env.DEV || import.meta.env.VITE_SHOW_DEMO_CREDENTIALS === 'true';
 
-  // Handle standard login or admin registration
-  const handleAdminLogin = (username, password, isRegistering = false) => {
+  useEffect(() => {
+    if (!isAuthenticated || !currentUser) return;
+
+    if (getPermissions(currentUser).isAdmin) {
+      navigate('/admin-portal', { replace: true });
+    } else if (getPermissions(currentUser).isCashier) {
+      navigate('/cashier', { replace: true });
+    }
+  }, [currentUser, isAuthenticated, navigate]);
+
+  // Handle standard admin login or temporary device registration gate.
+  const handleAdminLogin = async (username, password, isRegistering = false) => {
     setLoginError('');
-    const user = activeUsers.find(
-      (u) =>
-        u.name.toLowerCase() === username.trim().toLowerCase() &&
-        u.pin === password.trim() &&
-        (u.role === 'Admin' || u.role === 'Manager')
-    );
 
-    if (!user) {
-      setLoginError('Invalid Administrator credentials or PIN.');
+    try {
+      const authenticatedUser = await login(username.trim(), password.trim(), {
+        persist: !isRegistering,
+      });
+      const permissions = getPermissions(authenticatedUser);
+
+      if (!permissions.isAdmin) {
+        logout();
+        setLoginError('Only admin accounts can access the admin portal.');
+        return false;
+      }
+
+      if (isRegistering) {
+        setDeviceRegistered(true);
+        setLoginMode('cashier');
+        setFlowStep('select-profile');
+      } else {
+        navigate('/admin-portal', { replace: true });
+      }
+      return true;
+    } catch (error) {
+      setLoginError(error.message || 'Unable to log in. Please check your credentials.');
       return false;
     }
-
-    if (isRegistering) {
-      setDeviceRegistered(true);
-      setLoginMode('cashier');
-      setFlowStep('select-profile');
-    } else {
-      // Pass the authenticated user to back-office
-      navigate('/admin-portal', { state: { currentUser: user }, replace: true });
-    }
-    return true;
   };
 
   // Cashier profile tap in Step 2
@@ -68,13 +85,8 @@ export default function LoginPage() {
     setTypedPin(newPin);
 
     if (newPin.length === 4) {
-      if (selectedUser && selectedUser.pin === newPin) {
-        // Log in cashier successfully
-        navigate('/cashier', { state: { currentUser: selectedUser }, replace: true });
-      } else {
-        setLoginError('Incorrect PIN. Please try again.');
-        setTypedPin(''); // Clear pin entry
-      }
+      setLoginError('Cashier PIN login needs the backend PIN endpoint in Phase 2 follow-up.');
+      setTypedPin('');
     }
   };
 
@@ -101,6 +113,7 @@ export default function LoginPage() {
       setLoginError={setLoginError}
       onAdminLogin={handleAdminLogin}
       onSelectProfile={handleSelectProfile}
+      showDemoCredentials={showDemoCredentials}
     />
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
 import { getPermissions } from '../utils/permissions';
 import { getAssignedStall } from '../utils/stallUtils';
+import { useAuth } from '../auth/useAuth';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useCart } from '../hooks/useCart';
 import { useProducts } from '../hooks/useProducts';
@@ -14,20 +14,8 @@ import KhqrPaymentModal from '../components/KhqrPaymentModal';
 import Icon from '../components/ui/Icon';
 
 export default function CashierPage() {
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  // ── Auth guard ────────────────────────────────────────────────────────────
-  const currentUser = location.state?.currentUser || null;
+  const { user: currentUser, logout } = useAuth();
   const { isCashier } = getPermissions(currentUser);
-
-  useEffect(() => {
-    if (!currentUser) {
-      navigate('/login', { replace: true });
-    } else if (!isCashier) {
-      navigate('/admin-portal', { state: { currentUser }, replace: true });
-    }
-  }, [currentUser, isCashier, navigate]);
 
   // ── Stall assignment (cashiers only) ──────────────────────────────────────
   const assignedStall = isCashier ? getAssignedStall(currentUser?.id) : null;
@@ -80,7 +68,7 @@ export default function CashierPage() {
   const handleLogout = () => {
     clearCart();
     setIsCartOpen(false);
-    navigate('/login', { replace: true });
+    logout();
   };
 
   // ── Guard ─────────────────────────────────────────────────────────────────

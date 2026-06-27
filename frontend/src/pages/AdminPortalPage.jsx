@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { getPermissions } from '../utils/permissions';
+import { useAuth } from '../auth/useAuth';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useProducts } from '../hooks/useProducts';
 import { useUsers } from '../hooks/useUsers';
@@ -9,22 +9,10 @@ import PageShell from '../components/PageShell';
 import AdminWorkspace from '../components/AdminWorkspace';
 
 export default function AdminPortalPage() {
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  // ── Auth guard ────────────────────────────────────────────────────────────
-  const currentUser = location.state?.currentUser || null;
-
-  useEffect(() => {
-    if (!currentUser) {
-      navigate('/login', { replace: true });
-    } else if (getPermissions(currentUser).isCashier) {
-      navigate('/cashier', { state: { currentUser }, replace: true });
-    }
-  }, [currentUser, navigate]);
+  const { user: currentUser, logout } = useAuth();
 
   // ── Permissions ───────────────────────────────────────────────────────────
-  const { isCashier, canManageMenu, canManageUsers, canViewOrders } = getPermissions(currentUser);
+  const { canManageMenu, canManageUsers, canViewOrders } = getPermissions(currentUser);
 
   // ── Hooks ─────────────────────────────────────────────────────────────────
   const isOnline = useOnlineStatus();
@@ -50,7 +38,7 @@ export default function AdminPortalPage() {
 
   // ── Logout ────────────────────────────────────────────────────────────────
   const handleLogout = () => {
-    navigate('/login', { replace: true });
+    logout();
   };
 
   // ── Admin tab visibility ──────────────────────────────────────────────────
@@ -65,7 +53,7 @@ export default function AdminPortalPage() {
   const visibleAdminTab = allowedAdminTabs.includes(adminTab) ? adminTab : allowedAdminTabs[0];
 
   // ── Guard ─────────────────────────────────────────────────────────────────
-  if (!currentUser || isCashier) return null;
+  if (!currentUser) return null;
 
   return (
     <PageShell
@@ -74,6 +62,7 @@ export default function AdminPortalPage() {
       onLogout={handleLogout}
     >
       <AdminWorkspace
+        currentUser={currentUser}
         visibleAdminTab={visibleAdminTab}
         setAdminTab={setAdminTab}
         allowedAdminTabs={allowedAdminTabs}

@@ -1,6 +1,6 @@
 export const SERVICE_RATE = 0.03;
 export const TAX_RATE = 0.08;
-export const ROLES = ['Admin', 'Manager', 'Cashier'];
+export const ROLES = ['Admin', 'Cashier'];
 export const TONES = ['gold', 'green', 'blue', 'rose'];
 
 export const DEFAULT_CATEGORIES = [
@@ -22,6 +22,5 @@ export const DEFAULT_PRODUCTS = [
 
 export const DEFAULT_USERS = [
   { id: 'user-admin', name: 'Admin Dara', role: 'Admin', station: 'Back Office', pin: '1234', active: true },
-  { id: 'user-manager', name: 'Manager Lina', role: 'Manager', station: 'Back Office', pin: '2222', active: true },
   { id: 'user-cashier', name: 'Cashier Dara', role: 'Cashier', station: 'Station 01', pin: '1111', active: true },
 ];

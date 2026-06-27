@@ -56,6 +56,7 @@ export default function AdminWorkspace({
   todaysOrders,
   todaysTotal,
   onLogout,
+  currentUser,
 }) {
   const [pendingDelete, setPendingDelete] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -85,8 +86,8 @@ export default function AdminWorkspace({
           activeTab={visibleAdminTab}
           allowedTabs={allowedAdminTabs}
           onTabChange={setAdminTab}
-          userName={users.find((u) => u.role === 'Admin')?.name ?? 'Owner Account'}
-          userRole={users.find((u) => u.role === 'Admin') ? 'Administrator' : 'Manager'}
+          userName={currentUser?.name ?? 'Owner Account'}
+          userRole={currentUser?.role === 'Admin' ? 'Administrator' : currentUser?.role}
           onLogout={onLogout}
         />
       </div>
