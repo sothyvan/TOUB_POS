@@ -20,11 +20,13 @@ export function authenticate(req, res, next) {
 
 /**
  * Middleware factory: restrict access to one or more roles.
- * Usage: authorize('manager') or authorize('cashier', 'manager')
+ * Usage: authorize('admin') or authorize(['admin', 'cashier'])
  */
 export function authorize(...roles) {
+  const allowedRoles = roles.flat();
+
   return (req, res, next) => {
-    if (!roles.includes(req.user?.role)) {
+    if (!allowedRoles.includes(req.user?.role)) {
       return res.status(403).json({ success: false, message: 'Insufficient permissions.' });
     }
     next();

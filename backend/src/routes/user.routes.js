@@ -5,7 +5,7 @@ import { getUsers, createUser, updateUser, deleteUser } from '../controllers/use
 const router = Router();
 
 // Require authentication and restrict to admin role
-router.use(authenticate, authorize(['admin', 'manager']));
+router.use(authenticate, authorize('admin'));
 
 // GET    /api/users      — List all user accounts
 router.get('/', getUsers);

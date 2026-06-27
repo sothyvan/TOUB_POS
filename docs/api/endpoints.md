@@ -43,7 +43,7 @@ All protected routes require the `Authorization: Bearer <token>` header.
   "user": {
     "id": 1,
     "username": "admin",
-    "role": "manager"
+    "role": "admin"
   }
 }
 ```
@@ -62,9 +62,9 @@ All routes require authentication.
 | Method | Path               | Auth | Role    | Description            |
 |--------|--------------------|------|---------|------------------------|
 | GET    | `/products`        | ✅   | Any     | List all products      |
-| POST   | `/products`        | ✅   | Manager | Create a product       |
-| PUT    | `/products/:id`    | ✅   | Manager | Update a product       |
-| DELETE | `/products/:id`    | ✅   | Manager | Delete a product       |
+| POST   | `/products`        | ✅   | Admin   | Create a product       |
+| PUT    | `/products/:id`    | ✅   | Admin   | Update a product       |
+| DELETE | `/products/:id`    | ✅   | Admin   | Delete a product       |
 
 ### GET `/products`
 
@@ -159,12 +159,12 @@ All routes require authentication.
 
 ## Users — `/api/users`
 
-Requires `manager` role.
+Requires `admin` role.
 
 | Method | Path       | Auth | Role    | Description           |
 |--------|------------|------|---------|-----------------------|
-| GET    | `/users`   | ✅   | Manager | List all staff        |
-| POST   | `/users`   | ✅   | Manager | Create a staff account |
+| GET    | `/users`   | ✅   | Admin   | List all staff        |
+| POST   | `/users`   | ✅   | Admin   | Create a staff account |
 
 ### GET `/users`
 
@@ -185,7 +185,7 @@ Requires `manager` role.
 {
   "username": "string",
   "password": "string",
-  "role": "cashier | manager",
+  "role": "cashier | admin",
   "pin": "1234"
 }
 ```
@@ -194,11 +194,11 @@ Requires `manager` role.
 
 ## Reports — `/api/reports`
 
-Requires `manager` role.
+Requires `admin` role.
 
 | Method | Path              | Auth | Role    | Description              |
 |--------|-------------------|------|---------|--------------------------|
-| GET    | `/reports/daily`  | ✅   | Manager | Daily sales summary      |
+| GET    | `/reports/daily`  | ✅   | Admin   | Daily sales summary      |
 
 ### GET `/reports/daily?date=YYYY-MM-DD`
 

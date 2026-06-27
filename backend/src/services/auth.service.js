@@ -21,6 +21,12 @@ export async function loginUser(username, password) {
     throw err;
   }
 
+  if (user.is_active === false) {
+    const err = new Error('User account is inactive.');
+    err.status = 403;
+    throw err;
+  }
+
   const token = jwt.sign(
     { id: user.id, username: user.username, role: user.role },
     process.env.JWT_SECRET,

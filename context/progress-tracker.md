@@ -6,6 +6,14 @@ Update this file after every meaningful implementation change.
 
 - Phase 1: Project Scaffolding — **COMPLETE**
 
+- **Implemented Phase 1 backend auth/security hardening**:
+  - Updated backend RBAC so `authorize()` supports string and array role inputs, while admin-only routes now use `authorize('admin')`.
+  - Removed `manager` from the backend user role model and SQL schema; user API role validation accepts only `admin` or `cashier`.
+  - Added backend startup environment validation for `JWT_SECRET`, core DB settings, production `FRONTEND_ORIGIN`, and optional password-required DB setups.
+  - Hardened login to reject inactive users with `403` after credential validation and kept JWT payload limited to `id`, `username`, and `role`.
+  - Restricted CORS to `FRONTEND_ORIGIN`, with `http://localhost:5173` as the development fallback.
+  - Made default `admin/admin123` seeding non-production only and removed PIN/password exposure from user API responses.
+
 - **Fixed cashier stall assignment source mismatch**:
   - Centralized default stall data and default stall assignments in `frontend/src/utils/stallUtils.js`.
   - Updated Cashier, Stall Management, Staff Directory, and Sales Reports assignment reads to use the same shared helper.
@@ -227,8 +235,7 @@ Intentional shortcuts taken during development that must be resolved before prod
 | 1 | **PIN validated client-side** | `LoginPage.jsx` | 🔴 High — move PIN verification to `POST /api/auth/pin` before any real deployment |
 | 2 | **Frontend hooks use `localStorage` mock** | `useProducts`, `useOrders`, `useUsers` | 🔴 High — must be migrated to real API calls (in progress) |
 | 3 | **No input sanitization on order modifiers** | `order_items.notes` | 🟡 Medium — add max-length enforcement and strip dangerous characters before DB write |
-| 4 | **CORS is open (`app.use(cors())`)** | `backend/src/app.js` | 🟡 Medium — lock down to specific frontend origin before production |
+| 4 | **No auth endpoint rate limiting** | `POST /api/auth/login` | 🟡 Medium — add `express-rate-limit` to prevent brute-force attacks |
 | 5 | **Seed admin password is a placeholder hash** | `docs/database/schema.sql` | 🔴 High — generate real bcrypt hash and store securely before any live deployment |
-| 6 | **No rate limiting on auth endpoints** | `POST /api/auth/login` | 🟡 Medium — add `express-rate-limit` to prevent brute-force attacks |
-| 7 | **WebSocket server not yet implemented** | `backend/services/` | 🔴 High — required for KHQR payment confirmation routing |
+| 6 | **WebSocket server not yet implemented** | `backend/services/` | 🔴 High — required for KHQR payment confirmation routing |
 

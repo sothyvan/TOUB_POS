@@ -86,7 +86,7 @@ npm run dev
 
 | Role    | Username | Password   | PIN  |
 |---------|----------|------------|------|
-| Manager | `admin`  | `admin123` | —    |
+| Admin   | `admin`  | `admin123` | —    |
 
 ---
 

@@ -13,7 +13,7 @@ CREATE TABLE users (
   username   VARCHAR(50)  NOT NULL UNIQUE,
   password   VARCHAR(255) NOT NULL,                    -- bcrypt hash
   pin        VARCHAR(10)  DEFAULT NULL,                -- 4-digit cashier PIN
-  role       ENUM('admin', 'manager', 'cashier') NOT NULL DEFAULT 'cashier',
+  role       ENUM('admin', 'cashier') NOT NULL DEFAULT 'cashier',
   is_active  BOOLEAN NOT NULL DEFAULT TRUE,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

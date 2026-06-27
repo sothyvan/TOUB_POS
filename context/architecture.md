@@ -32,7 +32,7 @@
 - Every user signs in via a JWT-secured login endpoint.
 - The system uses Role-Based Access Control (RBAC).
 - Cashiers can only view and mutate transactions linked to their active session.
-- Managers have read access to all system transactions and reports.
+- Admins/owners have access to system management, transactions, and reports.
 
 ## Invariants
 
@@ -71,7 +71,7 @@
 
 ## Core Data Entities
 
-- **User / Staff**: Auth credentials, role (`admin` / `manager` / `cashier`), 4-digit PIN.
+- **User / Staff**: Auth credentials, role (`admin` / `cashier`), 4-digit PIN.
 - **Stall**: A physical booth location. Has a name, assigned menu profile, and registered device token.
 - **StallStaff**: Junction — maps `User` to `Stall` (a cashier can belong to one stall).
 - **Product**: Catalog item with `price_usd`, `price_khr`, category, image, visibility flag.
@@ -91,7 +91,7 @@
 |---|------|----------|------------|
 | 1 | **KHQR / Bakong webhook integration** | 🟡 Medium | Use Bakong's official **development API** environment for all testing. Register for dev credentials at the Bakong developer portal. Do not mock — integrate against the real dev sandbox from the start so behavior matches production exactly. |
 | 2 | **WebSocket routing — accidental broadcast to wrong cashier** | 🔴 High | Isolated per-cashier notification is a confirmed core feature. Risk is implementing it incorrectly. `websocket.service.js` must maintain a strict `Map<cashier_id, socket>` and emit only to the mapped socket. Never use `io.emit()` or room broadcasts. Validate `cashier_id` on every emit. |
-| 3 | **Telegram Bot async failures** | 🟡 Medium | Telegram failure must never block or rollback the order. Strategy: (1) Always log the error. (2) Store `telegram_status` (`pending` / `sent` / `failed`) on the `orders` table — set to `failed` on catch. (3) Show an admin dashboard badge for failed orders so manager can manually relay. Auto-retry queue is out of scope (Future). |
+| 3 | **Telegram Bot async failures** | 🟡 Medium | Telegram failure must never block or rollback the order. Strategy: (1) Always log the error. (2) Store `telegram_status` (`pending` / `sent` / `failed`) on the `orders` table — set to `failed` on catch. (3) Show an admin dashboard badge for failed orders so the admin/owner can manually relay. Auto-retry queue is out of scope (Future). |
 | 4 | **KHR exchange rate — hardcoded vs. live** | 🟡 Medium | Decision required before building the product form. Recommend: hardcode the rate as a `.env` constant (`KHR_RATE=4100`) for now. Add a note in the admin panel showing the current rate. Live rate API is out of scope. |
 | 5 | **Stall data isolation — cross-stall data leak** | 🔴 High | Every repository query that returns products, orders, or staff **must** include `WHERE stall_id = ?` scoped from the authenticated device token — never from a client-supplied query param. |
 | 6 | **Frontend ↔ Backend integration gap** | 🟡 Medium | Frontend currently runs entirely on `localStorage`. All hooks (`useProducts`, `useOrders`, `useUsers`) must be migrated to real API calls. Do this incrementally per feature, not all at once. |

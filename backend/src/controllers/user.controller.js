@@ -1,6 +1,12 @@
 import bcrypt from 'bcryptjs';
 import * as userRepository from '../repositories/user.repository.js';
 
+const WEB_APP_ROLES = ['admin', 'cashier'];
+
+function isValidWebAppRole(role) {
+  return WEB_APP_ROLES.includes(role);
+}
+
 /**
  * Get all users.
  */
@@ -22,9 +28,12 @@ export async function createUser(req, res, next) {
     if (!username || !password || !role) {
       return res.status(400).json({ success: false, message: 'username, password, and role are required.' });
     }
+    if (!isValidWebAppRole(role)) {
+      return res.status(400).json({ success: false, message: 'role must be either admin or cashier.' });
+    }
     const password_hash = await bcrypt.hash(password, 10);
     const userId = await userRepository.insertUser({ username, password_hash, pin, role });
-    res.status(201).json({ success: true, data: { id: userId, username, pin, role } });
+    res.status(201).json({ success: true, data: { id: userId, username, role } });
   } catch (err) {
     next(err);
   }
@@ -41,7 +50,12 @@ export async function updateUser(req, res, next) {
     const updateData = {};
     if (username !== undefined) {updateData.username = username;}
     if (pin !== undefined) {updateData.pin = pin;}
-    if (role !== undefined) {updateData.role = role;}
+    if (role !== undefined) {
+      if (!isValidWebAppRole(role)) {
+        return res.status(400).json({ success: false, message: 'role must be either admin or cashier.' });
+      }
+      updateData.role = role;
+    }
     if (is_active !== undefined) {updateData.is_active = is_active;}
     
     if (password) {

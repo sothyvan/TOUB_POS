@@ -32,7 +32,7 @@ export const swaggerDocument = {
             delete: { summary: 'Delete product' }
         },
         '/api/orders': {
-            get: { summary: 'List all orders (Admin/Manager only)' },
+            get: { summary: 'List all orders (Admin only)' },
             post: { summary: 'Create order' }
         },
         '/api/orders/mine': {

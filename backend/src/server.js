@@ -1,13 +1,17 @@
 import 'dotenv/config';
-import app from './app.js';
-import sequelize, { ensureDatabaseExists } from './config/db.js';
-import { User } from './models/index.js';
 import bcrypt from 'bcryptjs';
+import { validateEnvironment } from './config/env.js';
 
 const PORT = process.env.PORT || 3000;
 
 async function startServer() {
   try {
+    validateEnvironment();
+
+    const { default: app } = await import('./app.js');
+    const { default: sequelize, ensureDatabaseExists } = await import('./config/db.js');
+    const { User } = await import('./models/index.js');
+
     console.log('[server] Initializing database...');
     // Ensure database exists
     await ensureDatabaseExists();
@@ -22,10 +26,10 @@ async function startServer() {
     await sequelize.sync(syncOptions);
     console.log('[server] Database models synchronized successfully.');
 
-    // Auto-seed default admin user if none exist
+    // Auto-seed default admin user for local development only
     const userCount = await User.count();
-    if (userCount === 0) {
-      const hashedPassword = await bcrypt.hash('admin123', 10); // ONLY FOR DEV // For PRODUCTION it must be changed and .env must be used instead
+    if (process.env.NODE_ENV !== 'production' && userCount === 0) {
+      const hashedPassword = await bcrypt.hash('admin123', 10);
       await User.create({
         username: 'admin',
         password: hashedPassword,

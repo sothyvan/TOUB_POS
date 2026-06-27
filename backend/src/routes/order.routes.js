@@ -16,7 +16,7 @@ router.post('/', createOrder);
 // GET    /api/orders/mine  — cashier fetches their own orders
 router.get('/mine', getMyOrders);
 
-// GET    /api/orders       — admin/manager fetches all orders
-router.get('/', authorize('admin', 'manager'), getAllOrders);
+// GET    /api/orders       — admin fetches all orders
+router.get('/', authorize('admin'), getAllOrders);
 
 export default router;

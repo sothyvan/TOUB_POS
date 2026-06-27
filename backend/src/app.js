@@ -12,11 +12,12 @@ import { errorHandler } from './middleware/error.middleware.js';
 import { requestLogger } from './middleware/logger.middleware.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerDocument } from './config/swagger.js';
+import { getCorsOptions } from './config/env.js';
 
 const app = express();
 
 // ── Global Middleware ─────────────────────────────────────
-app.use(cors());
+app.use(cors(getCorsOptions()));
 app.use(express.json());
 app.use(requestLogger);
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));

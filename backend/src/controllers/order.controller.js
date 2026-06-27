@@ -20,7 +20,7 @@ export async function createOrder(req, res, next) {
 }
 
 /**
- * admin/manager fetches all orders list
+ * admin fetches all orders list
  */
 export async function getAllOrders(req, res, next) {
   try {

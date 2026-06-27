@@ -77,7 +77,7 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 - Core POS UI for tablet/mobile web browsers.
 - Multi-stall architecture with stall-isolated data.
 - Real-time WebSocket notification routing (cashier-specific).
-- JWT Authentication and RBAC (Cashier / Manager / Admin).
+- JWT Authentication and RBAC (Cashier / Admin).
 - Menu management with dual-currency pricing (USD / KHR).
 - Order modifiers/notes per item.
 - Service Fee (3%) and Estimated Tax (8%) calculation.
@@ -96,5 +96,5 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 
 1. A cashier can process a KHQR payment and receive automated confirmation **on their screen only**, without checking a separate bank app.
 2. A confirmed order is relayed to the Telegram kitchen channel within 2 seconds of payment.
-3. A manager/owner can view a consolidated financial report filtered by stall, cashier, and time window.
+3. An admin/owner can view a consolidated financial report filtered by stall, cashier, and time window.
 4. A device can only access the menu and staff roster of its registered stall.

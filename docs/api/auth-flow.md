@@ -10,7 +10,7 @@ Toub POS uses **JWT (JSON Web Token)** for stateless authentication and **Role-B
 
 | Role      | Description                                       |
 |-----------|---------------------------------------------------|
-| `manager` | Full access — users, products, reports, orders    |
+| `admin`   | Full access — users, products, reports, orders    |
 | `cashier` | Restricted — own orders only, read products       |
 
 ---
@@ -57,8 +57,8 @@ Client                          Server
 `authorize(role)` is applied as a second middleware after `authenticate`:
 
 ```js
-// Example: manager-only route
-router.use(authenticate, authorize('manager'));
+// Example: admin-only route
+router.use(authenticate, authorize('admin'));
 ```
 
 If `req.user.role !== requiredRole`, returns:
@@ -91,7 +91,7 @@ If `req.user.role !== requiredRole`, returns:
 
 Cashier terminals use a secondary PIN-based login on top of device registration:
 
-1. Device is registered once by a manager (`toub-device-registered = true`)
+1. Device is registered once by an admin (`toub-device-registered = true`)
 2. On terminal wake, cashier selects their profile from the roster
 3. Enters a 4-digit PIN — validated client-side against stored hash
 4. Session is scoped to that cashier's `user.id` for the duration

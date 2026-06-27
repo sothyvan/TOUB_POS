@@ -4,8 +4,8 @@ import { getCategories, createCategory, updateCategory, deleteCategory } from '.
 
 const router = Router();
 
-// Require authentication and restrict to admin or manager roles
-router.use(authenticate, authorize('admin', 'manager'));
+// Require authentication and restrict to admin role
+router.use(authenticate, authorize('admin'));
 
 // GET    /api/categories      — List all categories
 router.get('/', getCategories);

@@ -4,7 +4,7 @@
 
 - **Target Environments:** Smartphone and tablet form factors deployed in high-noise, crowded, and fast-paced merchant environments.
 - **UI Architecture:** Adaptive layouts utilizing high-contrast visual cues and oversized touch targets.
-- **State Normalization:** All user actions are bounded by role privileges (`manager` vs `cashier`) encoded within the central JWT session.
+- **State Normalization:** All user actions are bounded by role privileges (`admin` vs `cashier`) encoded within the central JWT session.
 
 ## Colors
 

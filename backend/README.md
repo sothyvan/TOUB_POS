@@ -119,13 +119,13 @@ All endpoints are prefixed with `/api`.
 | Method | Path                | Role    | Description              |
 |--------|---------------------|---------|--------------------------|
 | GET    | `/api/products`     | Any     | List all products        |
-| POST   | `/api/products`     | Manager | Create a product         |
-| PUT    | `/api/products/:id` | Manager | Update a product         |
-| DELETE | `/api/products/:id` | Manager | Delete a product         |
+| POST   | `/api/products`     | Admin   | Create a product         |
+| PUT    | `/api/products/:id` | Admin   | Update a product         |
+| DELETE | `/api/products/:id` | Admin   | Delete a product         |
 
 ---
 
-### Users *(requires Manager role)*
+### Users *(requires Admin role)*
 
 | Method | Path          | Description              |
 |--------|---------------|--------------------------|
@@ -134,7 +134,7 @@ All endpoints are prefixed with `/api`.
 
 ---
 
-### Reports *(requires Manager role)*
+### Reports *(requires Admin role)*
 
 | Method | Path                         | Description                         |
 |--------|------------------------------|-------------------------------------|
@@ -158,4 +158,4 @@ All endpoints return:
 1. Client `POST /api/auth/login` → receives JWT.
 2. All subsequent requests include: `Authorization: Bearer <jwt>`.
 3. `authenticate` middleware verifies the token.
-4. `authorize('manager')` middleware checks the role claim.
+4. `authorize('admin')` middleware checks the role claim.

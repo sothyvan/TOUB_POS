@@ -7,12 +7,12 @@ const router = Router();
 // Require authentication for all product endpoints
 router.use(authenticate);
 
-// GET    /api/products        — Anyone authenticated (cashier, manager, admin) can list
+// GET    /api/products        — Any authenticated web-app user can list
 router.get('/', getProducts);
 
-// Mutation routes require admin or manager authorization
-router.post('/', authorize('admin', 'manager'), createProduct);
-router.put('/:id', authorize('admin', 'manager'), updateProduct);
-router.delete('/:id', authorize('admin', 'manager'), deleteProduct);
+// Mutation routes require admin authorization
+router.post('/', authorize('admin'), createProduct);
+router.put('/:id', authorize('admin'), updateProduct);
+router.delete('/:id', authorize('admin'), deleteProduct);
 
 export default router;

@@ -22,7 +22,7 @@ export async function findUserByUsername(username) {
  */
 export async function findUserById(id) {
   return User.findByPk(id, {
-    attributes: { exclude: ['password'] },
+    attributes: { exclude: ['password', 'pin'] },
   });
 }
 
@@ -40,11 +40,11 @@ export async function insertUser({ username, password_hash, pin, role }) {
 }
 
 /**
- * Fetch all users (excluding password).
+ * Fetch all users (excluding sensitive credentials).
  */
 export async function findAllUsers() {
   return User.findAll({
-    attributes: { exclude: ['password'] },
+    attributes: { exclude: ['password', 'pin'] },
     order: [['created_at', 'DESC']],
   });
 }
