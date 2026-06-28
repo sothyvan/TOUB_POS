@@ -17,11 +17,17 @@ export async function getStalls(req, res, next) {
  */
 export async function createStall(req, res, next) {
   try {
-    const { name, device_token, telegram_chat_id } = req.body;
+    const { owner_id, name, location, device_token, telegram_chat_id } = req.body;
     if (!name) {
       return res.status(400).json({ success: false, message: 'Stall name is required.' });
     }
-    const stall = await stallRepository.insertStall({ name, device_token, telegram_chat_id });
+    const stall = await stallRepository.insertStall({
+      owner_id: owner_id ?? (req.user?.role === 'owner' ? req.user.id : null),
+      name,
+      location,
+      device_token,
+      telegram_chat_id,
+    });
     res.status(201).json({ success: true, data: stall });
   } catch (err) {
     next(err);
@@ -34,10 +40,12 @@ export async function createStall(req, res, next) {
 export async function updateStall(req, res, next) {
   try {
     const { id } = req.params;
-    const { name, device_token, telegram_chat_id } = req.body;
+    const { owner_id, name, location, device_token, telegram_chat_id } = req.body;
     
     const updateData = {};
+    if (owner_id !== undefined) {updateData.owner_id = owner_id;}
     if (name !== undefined) {updateData.name = name;}
+    if (location !== undefined) {updateData.location = location;}
     if (device_token !== undefined) {updateData.device_token = device_token;}
     if (telegram_chat_id !== undefined) {updateData.telegram_chat_id = telegram_chat_id;}
 

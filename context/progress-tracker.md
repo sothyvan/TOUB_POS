@@ -8,6 +8,19 @@ Update this file after every meaningful implementation change.
 - Phase 2: Frontend Authentication Integration — **COMPLETE**
 - Phase 3: Backend-Owned Products, Categories, Stalls, And Staff — **NEXT**
 
+- **Refactored backend models to match the ERD kitchen/stall structure**:
+  - Added `TelegramTicket` Sequelize model and `orders -> telegram_tickets` association so kitchen dispatch state is tracked separately from payment order state.
+  - Added `stalls.owner_id` and `stalls.location` to the Sequelize model, controller inputs, canonical SQL schema, and raw SQL reference queries.
+  - Removed order-level Telegram/kitchen status fields from active order creation and Sequelize order model usage.
+  - Updated payment confirmation side effect to queue a `telegram_tickets` row after an order is completed, without rolling back successful payment completion on ticket queue failure.
+  - Synchronized `docs/database/schema.sql`, `docs/database/queries.sql`, and architecture risk notes with the model refactor.
+
+- **Renamed Telegram kitchen dispatch model**:
+  - Replaced the temporary `KitchenTicket` model/file with `TelegramTicket` backed by the `telegram_tickets` table.
+  - Removed the old `TelegramSession` model/file from the Sequelize model graph.
+  - Added Sequelize and SQL indexes for `telegram_tickets.order_id`, `telegram_tickets.telegram_chat_id`, `telegram_tickets.status`, and the Telegram chat/message lookup pair.
+  - Updated order reads, payment ticket queueing, ERD, SQL references, and architecture context to use `TelegramTicket`.
+
 - **Implemented Owner / Manager / Cashier RBAC migration**:
   - Replaced active backend role enum and validation with `owner`, `manager`, and `cashier`.
   - Updated management API route guards so Owner and Manager can access operational management APIs, while Cashier remains blocked from management endpoints.

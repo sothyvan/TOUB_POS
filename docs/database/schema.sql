@@ -15,16 +15,21 @@ CREATE TABLE users (
   pin        VARCHAR(10)  DEFAULT NULL,                -- 4-digit cashier PIN
   role       ENUM('owner', 'manager', 'cashier') NOT NULL DEFAULT 'cashier',
   is_active  BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- ── Stalls (Physical Booth Locations) ─────────────────────
 CREATE TABLE stalls (
   id              INT AUTO_INCREMENT PRIMARY KEY,
+  owner_id        INT DEFAULT NULL,                    -- business owner responsible for the stall
   name            VARCHAR(100) NOT NULL,               -- e.g., "Stall A - Drinks"
+  location        VARCHAR(150) DEFAULT NULL,           -- physical location label
   device_token    VARCHAR(255) DEFAULT NULL UNIQUE,    -- registered terminal token
   telegram_chat_id BIGINT DEFAULT NULL,               -- kitchen Telegram channel ID
-  created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- ── Stall ↔ Staff Assignment ──────────────────────────────
@@ -44,6 +49,7 @@ CREATE TABLE categories (
   name       VARCHAR(100) NOT NULL,
   tone       ENUM('gold', 'green', 'blue', 'rose') NOT NULL DEFAULT 'gold',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (stall_id) REFERENCES stalls(id) ON DELETE SET NULL
 );
 
@@ -58,6 +64,7 @@ CREATE TABLE products (
   image_url   VARCHAR(500) DEFAULT NULL,
   is_visible  BOOLEAN NOT NULL DEFAULT TRUE,
   created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (stall_id)    REFERENCES stalls(id)      ON DELETE SET NULL,
   FOREIGN KEY (category_id) REFERENCES categories(id)  ON DELETE SET NULL
 );
@@ -71,10 +78,8 @@ CREATE TABLE orders (
   status         ENUM('pending', 'completed', 'cancelled') NOT NULL DEFAULT 'pending',
   total_usd      DECIMAL(10, 2) NOT NULL,
   qr_payload     TEXT DEFAULT NULL,                    -- raw KHQR string; NULL for cash
-  kitchen_status   ENUM('pending', 'done') NOT NULL DEFAULT 'pending',
-  telegram_status  ENUM('pending', 'sent', 'failed') NOT NULL DEFAULT 'pending',
-  telegram_msg_id  BIGINT DEFAULT NULL,                 -- Telegram message ID for edits
   created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   completed_at   DATETIME DEFAULT NULL,
   FOREIGN KEY (stall_id)   REFERENCES stalls(id),
   FOREIGN KEY (cashier_id) REFERENCES users(id)
@@ -96,15 +101,21 @@ CREATE TABLE order_items (
   FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
 );
 
--- ── Telegram Kitchen Sessions ─────────────────────────────
--- Authorized Telegram user IDs allowed to interact with kitchen bot per stall
-CREATE TABLE telegram_sessions (
-  id              INT AUTO_INCREMENT PRIMARY KEY,
-  stall_id        INT NOT NULL,
-  telegram_user_id BIGINT NOT NULL,                    -- Telegram from.id
-  name            VARCHAR(100) DEFAULT NULL,           -- cook display name
-  UNIQUE KEY uq_stall_tg (stall_id, telegram_user_id),
-  FOREIGN KEY (stall_id) REFERENCES stalls(id) ON DELETE CASCADE
+-- ── Telegram Tickets ──────────────────────────────────────
+-- Telegram kitchen ticket state is tracked independently from payment order state
+CREATE TABLE telegram_tickets (
+  id               INT AUTO_INCREMENT PRIMARY KEY,
+  order_id         INT NOT NULL,
+  telegram_msg_id  BIGINT DEFAULT NULL,
+  telegram_chat_id BIGINT DEFAULT NULL,
+  status           ENUM('pending', 'sent', 'failed', 'done') NOT NULL DEFAULT 'pending',
+  sent_at          DATETIME DEFAULT NULL,
+  completed_at     DATETIME DEFAULT NULL,
+  KEY idx_telegram_tickets_order_id (order_id),
+  KEY idx_telegram_tickets_chat_id (telegram_chat_id),
+  KEY idx_telegram_tickets_status (status),
+  UNIQUE KEY uq_telegram_ticket_message (telegram_chat_id, telegram_msg_id),
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
 
 -- ── Seed: default owner account ───────────────────────────
@@ -113,4 +124,4 @@ INSERT INTO users (username, password, role) VALUES
   ('owner', '$2b$10$examplehashreplaceme', 'owner');
 
 -- ── Seed: example stall ───────────────────────────────────
-INSERT INTO stalls (name) VALUES ('Stall A - Drinks');
+INSERT INTO stalls (owner_id, name, location) VALUES (1, 'Stall A - Drinks', 'Main Booth');

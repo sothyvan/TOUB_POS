@@ -37,23 +37,6 @@ const Order = sequelize.define('Order', {
     defaultValue: null,
     field: 'qr_payload',
   },
-  kitchen_status: {
-    type: DataTypes.ENUM('pending', 'done'),
-    allowNull: false,
-    defaultValue: 'pending',
-    field: 'kitchen_status',
-  },
-  telegram_status: {
-    type: DataTypes.ENUM('pending', 'sent', 'failed'),
-    allowNull: false,
-    defaultValue: 'pending',
-    field: 'telegram_status',
-  },
-  telegram_msg_id: {
-    type: DataTypes.BIGINT,
-    defaultValue: null,
-    field: 'telegram_msg_id',
-  },
   completed_at: {
     type: DataTypes.DATE,
     defaultValue: null,

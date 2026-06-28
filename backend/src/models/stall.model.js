@@ -7,9 +7,18 @@ const Stall = sequelize.define('Stall', {
     autoIncrement: true,
     primaryKey: true,
   },
+  owner_id: {
+    type: DataTypes.INTEGER,
+    defaultValue: null,
+    field: 'owner_id',
+  },
   name: {
     type: DataTypes.STRING(100),
     allowNull: false,
+  },
+  location: {
+    type: DataTypes.STRING(150),
+    defaultValue: null,
   },
   device_token: {
     type: DataTypes.STRING(255),

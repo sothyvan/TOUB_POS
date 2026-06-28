@@ -14,7 +14,9 @@ erDiagram
 
     stalls {
         int id PK
+        int owner_id FK
         varchar name
+        varchar location
         varchar device_token
         bigint telegram_chat_id
         datetime created_at
@@ -68,14 +70,7 @@ erDiagram
         varchar notes
     }
 
-    telegram_sessions {
-        int id PK
-        int stall_id FK
-        bigint telegram_user_id
-        varchar name
-    }
-
-    kitchen_tickets {
+    telegram_tickets {
         int           id               PK
         int           order_id         FK  
         bigint        telegram_msg_id      
@@ -85,25 +80,27 @@ erDiagram
         datetime      completed_at         
     }
 
+    users         ||--o{ stalls            : "owns"
     users         ||--o{ stall_staff       : "assigned to"
     stalls        ||--o{ stall_staff       : "has staff"
     stalls        ||--o{ categories        : "owns"
     stalls        ||--o{ products          : "scopes"
     stalls        ||--o{ orders            : "processes"
-    stalls        ||--o{ telegram_sessions : "authorizes cooks"
     categories    ||--o{ products          : "groups"
     users         ||--o{ orders            : "cashier places"
     orders        ||--|{ order_items       : "contains"
     products      ||--o{ order_items       : "referenced by"
-    orders        ||--o{ kitchen_tickets   : "dispatched to"
+    orders        ||--o{ telegram_tickets  : "dispatched to"
 ```
 
 ## Notes
 
 - `order_items.name`, `price_usd`, `price_khr` are **snapshots** — frozen at time of sale. Survives product edits or deletions.
 - `order_items.notes` stores free-text modifiers ("no ice", "extra spicy") per line item.
-- `orders.kitchen_status` tracks Telegram cook acknowledgement independently from payment `status`.
-- `orders.telegram_msg_id` stores the sent message ID so the bot can `editMessage` in-place when cook taps "Done".
+- `telegram_tickets.status` tracks the kitchen ticket progress independently from the order payment status.
+- `telegram_tickets.telegram_msg_id` stores the Telegram message ID so the bot can edit the existing message when the cook taps "Done".
+- `stalls.owner_id` identifies the business owner responsible for each stall.
+- `stalls.location` stores the physical location of the stall (e.g. AEON Mall, Night Market, University).
 - `stalls.device_token` is the permanent terminal registration key stored in browser `localStorage`.
 - `products.stall_id = NULL` means a global/shared item visible to all stalls.
 - `categories.stall_id = NULL` means a shared category across stalls.
