@@ -4,11 +4,11 @@ import { getCategories, createCategory, updateCategory, deleteCategory } from '.
 
 const router = Router();
 
-// Require authentication and restrict to management roles
-router.use(authenticate, authorize(['owner', 'manager']));
+// GET    /api/categories      — List all categories (Accessible by cashiers too)
+router.get('/', authenticate, getCategories);
 
-// GET    /api/categories      — List all categories
-router.get('/', getCategories);
+// Require authentication and restrict to management roles for mutations
+router.use(authenticate, authorize(['owner', 'manager']));
 
 // POST   /api/categories      — Create a new category
 router.post('/', createCategory);

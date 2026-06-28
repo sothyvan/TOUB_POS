@@ -25,8 +25,14 @@ export async function processConfirmation(orderId, amountPaid) {
     }
 
     // 3. Amount Validation
-    if (parseFloat(order.total_usd) !== parseFloat(amountPaid)) {
-      throw new Error(`Amount mismatch. Expected ${order.total_usd}, received ${amountPaid}`);
+    // Use an epsilon (0.01) to handle JS floating point precision and minor exchange rate rounding.
+    // We check if received is less than expected (allowing for a 1 cent margin of error).
+    // This inherently allows overpayments (like tips) while protecting against underpayments.
+    const expected = parseFloat(order.total_usd);
+    const received = parseFloat(amountPaid);
+
+    if (received < (expected - 0.01)) {
+      throw new Error(`Amount mismatch. Expected at least ${expected}, received ${received}`);
     }
 
     // 4. Update status and completion timestamp

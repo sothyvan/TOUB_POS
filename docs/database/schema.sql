@@ -76,7 +76,8 @@ CREATE TABLE orders (
   cashier_id     INT NOT NULL,                         -- which cashier
   payment_method ENUM('cash', 'khqr') NOT NULL,
   status         ENUM('pending', 'completed', 'cancelled') NOT NULL DEFAULT 'pending',
-  total_usd      DECIMAL(10, 2) NOT NULL,
+  subtotal_usd   DECIMAL(10, 2) NOT NULL DEFAULT 0.00, -- sum of line totals before promos
+  total_usd      DECIMAL(10, 2) NOT NULL,              -- final total after promos
   qr_payload     TEXT DEFAULT NULL,                    -- raw KHQR string; NULL for cash
   created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -91,12 +92,12 @@ CREATE TABLE order_items (
   order_id   INT NOT NULL,
   product_id INT DEFAULT NULL,                         -- nullable: product may be deleted later
   name       VARCHAR(150) NOT NULL,                    -- snapshot at time of sale
-  price_usd    DECIMAL(10, 2) NOT NULL,                  -- snapshot at time of sale
-  price_khr    INT NOT NULL,                             -- snapshot at time of sale
-  subtotal_usd DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
-  subtotal_khr INT NOT NULL DEFAULT 0,
-  quantity   INT NOT NULL DEFAULT 1,
-  notes      VARCHAR(500) DEFAULT NULL,                -- modifiers: "no ice", "extra spicy"
+  price_usd      DECIMAL(10, 2) NOT NULL,                  -- snapshot at time of sale
+  price_khr      INT NOT NULL,                             -- snapshot at time of sale
+  line_total_usd DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+  line_total_khr INT NOT NULL DEFAULT 0,
+  quantity       INT NOT NULL DEFAULT 1,
+  notes          VARCHAR(500) DEFAULT NULL,                -- modifiers: "no ice", "extra spicy"
   FOREIGN KEY (order_id)   REFERENCES orders(id)   ON DELETE CASCADE,
   FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
 );

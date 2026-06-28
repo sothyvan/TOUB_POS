@@ -27,6 +27,12 @@ const Order = sequelize.define('Order', {
     allowNull: false,
     defaultValue: 'pending',
   },
+  subtotal_usd: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false,
+    defaultValue: 0.00,
+    field: 'subtotal_usd',
+  },
   total_usd: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,

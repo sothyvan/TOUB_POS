@@ -25,18 +25,18 @@ export async function createOrder(cashierId, items, paymentMethod) {
       }
 
       const qty = item.quantity || 1;
-      const subtotalUsd = parseFloat((product.price_usd * qty).toFixed(2));
-      const subtotalKhr = product.price_khr * qty;
+      const lineTotalUsd = parseFloat((product.price_usd * qty).toFixed(2));
+      const lineTotalKhr = product.price_khr * qty;
 
-      totalUsd += subtotalUsd;
+      totalUsd += lineTotalUsd;
 
       orderItemsToCreate.push({
         product_id: product.id,
         name: product.name,
         price_usd: product.price_usd,
         price_khr: product.price_khr,
-        subtotal_usd: subtotalUsd,
-        subtotal_khr: subtotalKhr,
+        line_total_usd: lineTotalUsd,
+        line_total_khr: lineTotalKhr,
         quantity: qty,
         notes: item.notes || null,
       });
@@ -51,7 +51,8 @@ export async function createOrder(cashierId, items, paymentMethod) {
       cashier_id: cashierId,
       payment_method: normalizedPaymentMethod,
       status: 'pending',
-      total_usd: totalUsd,
+      subtotal_usd: totalUsd, // Save the pre-promotion subtotal
+      total_usd: totalUsd,    // Save the final total
     }, { transaction });
 
     // 4. Insert order items

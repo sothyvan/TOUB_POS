@@ -74,3 +74,36 @@ export async function deleteStall(req, res, next) {
     next(err);
   }
 }
+
+/**
+ * Assign a staff member to a stall.
+ */
+export async function assignStaff(req, res, next) {
+  try {
+    const { id } = req.params; // stall id
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).json({ success: false, message: 'userId is required.' });
+    }
+    await stallRepository.assignStaffToStall(id, userId);
+    res.json({ success: true, message: 'Staff assigned successfully.' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Remove a staff member from a stall.
+ */
+export async function unassignStaff(req, res, next) {
+  try {
+    const { id, userId } = req.params;
+    const success = await stallRepository.removeStaffFromStall(id, userId);
+    if (!success) {
+      return res.status(404).json({ success: false, message: 'Assignment not found.' });
+    }
+    res.json({ success: true, message: 'Staff unassigned successfully.' });
+  } catch (err) {
+    next(err);
+  }
+}

@@ -1,8 +1,11 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../middleware/auth.middleware.js';
-import { getUsers, createUser, updateUser, deleteUser } from '../controllers/user.controller.js';
+import { getUsers, createUser, updateUser, deleteUser, getAssignedStall } from '../controllers/user.controller.js';
 
 const router = Router();
+
+// GET /api/users/me/stall — Get stall assigned to current user (Accessible by cashiers)
+router.get('/me/stall', authenticate, authorize(['cashier', 'owner', 'manager']), getAssignedStall);
 
 // Require authentication and restrict user management to owner/manager roles.
 // Controllers enforce that managers can manage cashier users only.

@@ -3,8 +3,9 @@ import { Product, Category } from '../models/index.js';
 /**
  * Fetch all products, including their category association.
  */
-export async function findAllProducts() {
+export async function findAllProducts(whereClause = {}) {
   return Product.findAll({
+    where: whereClause,
     include: [
       {
         model: Category,
