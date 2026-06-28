@@ -1,15 +1,15 @@
 import { TONES } from '../data/seedData';
 import { money } from '../utils/format';
-import AdminCRUDTable from './common/AdminCrudTable';
+import OwnerCRUDTable from './common/OwnerCrudTable';
 import FormInput from './ui/FormInput';
 import FormSelect from './ui/FormSelect';
 import FormCheckbox from './ui/FormCheckbox';
 import FormActions from './ui/FormActions';
 import StatusBadge from './ui/StatusBadge';
-import useAdminForm from '../hooks/useAdminForm';
+import useOwnerForm from '../hooks/useOwnerForm';
 import { getToneBadgeClass } from '../utils/toneClasses';
 
-export default function ProductAdmin({
+export default function ProductOwner({
   productForm,
   setProductForm,
   categories,
@@ -22,7 +22,7 @@ export default function ProductAdmin({
   onCancel,
 }) {
   const { isFormOpen, handleSubmit, handleCancel, handleAddNewClick } =
-    useAdminForm(productForm, { onSave, onCancel });
+    useOwnerForm(productForm, { onSave, onCancel });
 
   const renderProduct = (product) => {
     const category = categoryById.get(product.categoryId);
@@ -153,7 +153,7 @@ export default function ProductAdmin({
   );
 
   return (
-    <AdminCRUDTable
+    <OwnerCRUDTable
       title="Items"
       items={products}
       renderItem={renderProduct}

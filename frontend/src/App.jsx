@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage.jsx';
 import CashierPage from './pages/CashierPage.jsx';
-import AdminPortalPage from './pages/AdminPortalPage.jsx';
+import OwnerPortalPage from './pages/OwnerPortalPage.jsx';
 import { AuthProvider } from './auth/AuthContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 
@@ -20,10 +20,10 @@ export default function App() {
             )}
           />
           <Route
-            path="/admin-portal"
+            path="/owner-portal"
             element={(
               <ProtectedRoute allowedRoles={['owner', 'manager']}>
-                <AdminPortalPage />
+                <OwnerPortalPage />
               </ProtectedRoute>
             )}
           />

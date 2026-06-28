@@ -1,5 +1,5 @@
 /**
- * Reusable labeled checkbox with the standard admin-form styling.
+ * Reusable labeled checkbox with the standard owner-form styling.
  *
  * Props:
  *  - label       – visible label text beside the checkbox

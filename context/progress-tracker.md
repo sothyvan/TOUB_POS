@@ -6,7 +6,15 @@ Update this file after every meaningful implementation change.
 
 - Phase 1: Backend Auth/Security Hardening — **COMPLETE**
 - Phase 2: Frontend Authentication Integration — **COMPLETE**
-- Phase 3: Backend-Owned Products, Categories, Stalls, And Staff — **NEXT**
+- Phase 3: Backend-Owned Products, Categories, Stalls, And Staff — **COMPLETE**
+- Phase 4: KDS & Live Payment WebSocket Integration — **NEXT**
+
+- **Implemented Phase 3 Backend & Frontend Integration**:
+  - Rewrote frontend React hooks (`useProducts.js`, `useUsers.js`, `useOrders.js`) to fetch from and persist to Express.js API endpoints instead of `localStorage`.
+  - Refactored `StallOwner.jsx` to fetch stalls dynamically (`api.stalls.getAll()`) and process staff assignments via the new `POST /api/stalls/:id/staff` and `DELETE` endpoints.
+  - Plumbed asynchronous `loading` and `error` states through `OwnerPortalPage.jsx` into nested workspace components.
+  - Implemented real-time loading spinners and error banners in `MenuCatalog`, `CategoryOwner`, and `StaffList` components to handle backend latency.
+  - Removed outdated localStorage fallback code in `api.js` for orders, products, stalls, and users.
 
 - **Refactored backend models to match the ERD kitchen/stall structure**:
   - Added `TelegramTicket` Sequelize model and `orders -> telegram_tickets` association so kitchen dispatch state is tracked separately from payment order state.
@@ -68,8 +76,8 @@ Update this file after every meaningful implementation change.
   - Prevented Cashier Dara from appearing assigned to multiple stalls at the same time.
 
 - **Implemented routing for /admin-portal and isolated auth guards**:
-  - Defined `/admin-portal` route in `App.jsx` pointing to `AdminPortalPage`.
-  - Extracted admin-only workspace, services, and routing hooks from `CashierPage.jsx` into a dedicated page `AdminPortalPage.jsx`.
+  - Defined `/admin-portal` route in `App.jsx` pointing to `OwnerPortalPage`.
+  - Extracted admin-only workspace, services, and routing hooks from `CashierPage.jsx` into a dedicated page `OwnerPortalPage.jsx`.
   - Set up bidirectional auth guards on `/cashier` and `/admin-portal` to prevent cross-role access and auto-redirect users to their authorized workspace.
   - Refactored `LoginPage.jsx` to navigate Admin/Manager users directly to `/admin-portal`.
   - Updated `AdminWorkspace.jsx` to delegate logout callbacks to the page router, eliminating inline page reloads.
@@ -240,10 +248,10 @@ Update this file after every meaningful implementation change.
 
 ## Next Up
 
-- Unit 3: Connect products, categories, stalls, and staff management to real backend APIs.
-  - Update frontend context hooks (`useProducts.js`, `useUsers.js`, `useOrders.js`) to consume backend APIs incrementally rather than localStorage mocks.
-  - Add backend-backed cashier PIN/avatar login endpoint before enabling cashier terminal authentication.
-  - Continue keeping Sequelize models and raw SQL files synchronized while connecting Phase 3 data APIs.
+- Unit 4: KDS and WebSocket Payment Webhooks.
+  - ~~Create the `POST /api/auth/pin` route to securely authenticate cashiers via their station PIN, completing the Phase 1 tech debt.~~ **COMPLETE**
+  - Set up a WebSocket server in Express for live KHQR payment success notifications.
+  - Implement a basic KDS (Kitchen Display System) view to listen to active orders from the backend.
 
 ## Open Questions
 
@@ -277,8 +285,8 @@ Intentional shortcuts taken during development that must be resolved before prod
 
 | # | Item | Location | Priority |
 |---|------|----------|----------|
-| 1 | **Cashier PIN backend login missing** | `LoginPage.jsx` / backend auth routes | 🔴 High — add `POST /api/auth/pin` before enabling cashier terminal login |
-| 2 | **Frontend hooks use `localStorage` mock** | `useProducts`, `useOrders`, `useUsers` | 🔴 High — must be migrated to real API calls (in progress) |
+| 1 | **Cashier PIN backend login missing** | `LoginPage.jsx` / backend auth routes | ✅ Resolved — integrated via `/api/auth/pin` |
+| 2 | **Frontend hooks use `localStorage` mock** | `useProducts`, `useOrders`, `useUsers` | ✅ Resolved — fully integrated with backend endpoints |
 | 3 | **No input sanitization on order modifiers** | `order_items.notes` | 🟡 Medium — add max-length enforcement and strip dangerous characters before DB write |
 | 4 | **No auth endpoint rate limiting** | `POST /api/auth/login` | 🟡 Medium — add `express-rate-limit` to prevent brute-force attacks |
 | 5 | **Seed owner password is a placeholder hash** | `docs/database/schema.sql` | 🔴 High — generate real bcrypt hash and store securely before any live deployment |

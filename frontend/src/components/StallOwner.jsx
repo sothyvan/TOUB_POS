@@ -1,13 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Icon from './ui/Icon';
 import { initials } from '../utils/format';
 import { roleToApiRole } from '../utils/permissions';
-import {
-  getStalls,
-  getStallAssignments,
-  saveStalls,
-  saveStallAssignments,
-} from '../utils/stallUtils';
+import { api } from '../services/api';
 
 // ── Seed data ─────────────────────────────────────────────────────────────────
 const AVATAR_COLORS = ['#eef2ff','#dcfce7','#f3e8ff','#fff1f2','#fef3c7','#e0f2fe'];
@@ -20,11 +15,11 @@ function avatarStyle(idx) {
 
 // ── Add Stall modal ───────────────────────────────────────────────────────────
 function AddStallModal({ onClose, onAdd }) {
-  const [form, setForm] = useState({ name: '', location: '' });
+  const [form, setForm] = useState({ name: '' });
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.location.trim()) return;
-    onAdd({ id: `stall-${Date.now()}`, name: form.name.trim(), location: form.location.trim(), online: true });
+    if (!form.name.trim()) return;
+    onAdd({ name: form.name.trim() });
     onClose();
   };
   return (
@@ -38,13 +33,6 @@ function AddStallModal({ onClose, onAdd }) {
             <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', fontFamily: 'Inter, sans-serif' }}>Stall Name</label>
             <input type="text" required placeholder="Stall 4" value={form.name}
               onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              className="mt-1 w-full rounded-lg border border-[#e5e7eb] px-3 py-2 outline-none"
-              style={{ fontSize: 13, fontFamily: 'Inter, sans-serif' }} />
-          </div>
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', fontFamily: 'Inter, sans-serif' }}>Location</label>
-            <input type="text" required placeholder="Diamond Island" value={form.location}
-              onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
               className="mt-1 w-full rounded-lg border border-[#e5e7eb] px-3 py-2 outline-none"
               style={{ fontSize: 13, fontFamily: 'Inter, sans-serif' }} />
           </div>
@@ -86,7 +74,6 @@ function DraggablePill({ user, idx, onDragStart }) {
       onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'; }}
       onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; }}
     >
-      {/* Drag handle dots */}
       <svg width="10" height="16" viewBox="0 0 10 16" fill="none" style={{ flexShrink: 0, opacity: 0.3 }}>
         <circle cx="3" cy="4"  r="1.5" fill="#374151" />
         <circle cx="7" cy="4"  r="1.5" fill="#374151" />
@@ -95,14 +82,10 @@ function DraggablePill({ user, idx, onDragStart }) {
         <circle cx="3" cy="12" r="1.5" fill="#374151" />
         <circle cx="7" cy="12" r="1.5" fill="#374151" />
       </svg>
-
-      {/* Avatar */}
       <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-black shrink-0"
         style={avatarStyle(idx)}>
         {initials(user.name)}
       </div>
-
-      {/* Info */}
       <div className="min-w-0">
         <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
           {user.name}
@@ -174,17 +157,45 @@ function DropZone({ onDrop, isDragOver, setIsDragOver }) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-export default function StallAdmin({ users = [] }) {
+export default function StallOwner({ users = [] }) {
   const cashierUsers = users.filter((user) => roleToApiRole(user.role) === 'cashier');
-  const [stalls, setStalls]             = useState(getStalls);
-  const [assignments, setAssignments]   = useState(getStallAssignments);
-  const [selectedStallId, setSelectedStallId] = useState(() => getStalls()[0]?.id ?? null);
-  const [staffSearch, setStaffSearch]   = useState('');
+  
+  const [stalls, setStalls] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedStallId, setSelectedStallId] = useState(null);
+  
+  const [staffSearch, setStaffSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [isDropZoneOver, setIsDropZoneOver] = useState(false);
-  // For unassign-by-drag-back: highlight pool as drop zone when dragging from roster
   const [, setIsDraggingFromRoster] = useState(false);
   const [isPoolOver, setIsPoolOver] = useState(false);
+
+  useEffect(() => {
+    let ignore = false;
+    async function loadStalls() {
+      try {
+        const data = await api.stalls.getAll();
+        if (!ignore) {
+          setStalls(data);
+          if (data.length > 0) setSelectedStallId(data[0].id);
+        }
+      } catch (err) {
+        if (!ignore) console.error(err);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    }
+    loadStalls();
+    return () => { ignore = true; };
+  }, []);
+
+  const assignments = useMemo(() => {
+    const map = {};
+    stalls.forEach(s => {
+      map[s.id] = s.staff ? s.staff.map(u => u.id) : [];
+    });
+    return map;
+  }, [stalls]);
 
   const selectedStall  = stalls.find(s => s.id === selectedStallId) ?? null;
   const assignedIds    = assignments[selectedStallId] ?? [];
@@ -194,46 +205,66 @@ export default function StallAdmin({ users = [] }) {
     u.name.toLowerCase().includes(staffSearch.toLowerCase())
   );
 
-  const updateAssignments = (next) => { setAssignments(next); saveStallAssignments(next); };
+  const updateAssignmentsLocally = (stallId, addUserId, removeUserId) => {
+    setStalls(prev => prev.map(s => {
+      if (s.id === stallId) {
+        let newStaff = s.staff || [];
+        if (removeUserId) newStaff = newStaff.filter(u => u.id !== removeUserId);
+        if (addUserId) {
+          const user = users.find(u => u.id === addUserId);
+          if (user) newStaff = [...newStaff, { id: user.id, name: user.name, role: user.role }];
+        }
+        return { ...s, staff: newStaff };
+      }
+      if (addUserId && s.id !== stallId) {
+        return { ...s, staff: (s.staff || []).filter(u => u.id !== addUserId) };
+      }
+      return s;
+    }));
+  };
 
-  const handleAssign = (userId) => {
+  const handleAssign = async (userId) => {
     if (!selectedStallId || assignedIds.includes(userId)) return;
-    const next = Object.fromEntries(
-      Object.entries(assignments).map(([stallId, userIds]) => [
-        stallId,
-        userIds.filter(id => id !== userId),
-      ])
-    );
-    next[selectedStallId] = [...(next[selectedStallId] ?? []), userId];
-    updateAssignments(next);
+    try {
+      await api.stalls.assignStaff(selectedStallId, userId);
+      updateAssignmentsLocally(selectedStallId, userId, null);
+    } catch (err) {
+      alert(err.message || 'Failed to assign staff');
+    }
   };
 
-  const handleUnassign = (userId) => {
-    updateAssignments({ ...assignments, [selectedStallId]: assignedIds.filter(id => id !== userId) });
+  const handleUnassign = async (userId) => {
+    try {
+      await api.stalls.unassignStaff(selectedStallId, userId);
+      updateAssignmentsLocally(selectedStallId, null, userId);
+    } catch (err) {
+      alert(err.message || 'Failed to unassign staff');
+    }
   };
 
-  const handleAddStall = (stall) => {
-    const next = [...stalls, stall];
-    setStalls(next); saveStalls(next);
-    setSelectedStallId(stall.id);
+  const handleAddStall = async (stallData) => {
+    try {
+      const saved = await api.stalls.save(stallData);
+      setStalls([...stalls, saved]);
+      setSelectedStallId(saved.id);
+    } catch (err) {
+      alert(err.message || 'Failed to create stall');
+    }
   };
 
-  // Pool drop: unassign from current stall (drag back from roster)
   const handlePoolDrop = (e) => {
     e.preventDefault();
     setIsPoolOver(false);
     const userId = e.dataTransfer.getData('userId');
     const source = e.dataTransfer.getData('source');
-    if (source === 'roster') handleUnassign(userId);
+    if (source === 'roster') handleUnassign(Number(userId));
   };
 
   return (
     <div
       className="flex gap-4 h-full min-h-0 overflow-hidden"
-      // Global drag-end cleanup
       onDragEnd={() => { setIsDraggingFromRoster(false); setIsDropZoneOver(false); setIsPoolOver(false); }}
     >
-      {/* ── Col 1: Stall selector ──────────────────────────────────────────── */}
       <div className="flex flex-col bg-white rounded-2xl overflow-hidden" style={{ width: 280, minWidth: 240, flexShrink: 0 }}>
         <div className="flex flex-col gap-1 px-5 pt-5 pb-3.5 border-b border-[#f3f4f6]">
           <div className="flex items-center gap-2">
@@ -243,6 +274,7 @@ export default function StallAdmin({ users = [] }) {
             <span style={{ fontSize: 14, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
               Active Locations
             </span>
+            {loading && <span className="text-xs text-[#6b7280] animate-pulse ml-2">...</span>}
           </div>
           <p style={{ fontSize: 12, color: '#9ca3af', fontFamily: 'Inter, sans-serif', margin: 0, paddingLeft: 36 }}>
             {stalls.length} stalls configured
@@ -263,7 +295,7 @@ export default function StallAdmin({ users = [] }) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: isActive ? '#1d4ed8' : '#374151', fontFamily: 'Inter, sans-serif' }}>
-                    {stall.name} — {stall.location}
+                    {stall.name}
                   </p>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <span className="w-1.5 h-1.5 rounded-full" style={{ background: stall.online ? '#22c55e' : '#d1d5db' }} />
@@ -291,13 +323,11 @@ export default function StallAdmin({ users = [] }) {
         </div>
       </div>
 
-      {/* ── Col 2: Assigned roster + drop zone ─────────────────────────────── */}
       <div className="flex-1 bg-white rounded-2xl flex flex-col overflow-hidden min-w-0">
-        {/* Header */}
         <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-4 border-b border-[#f3f4f6]">
           <div>
             <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
-              {selectedStall ? `Roster: ${selectedStall.name} — ${selectedStall.location}` : 'Select a stall'}
+              {selectedStall ? `Roster: ${selectedStall.name}` : 'Select a stall'}
             </h2>
             <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}>
               {assignedUsers.length} staff assigned · drag from pool to assign
@@ -313,43 +343,27 @@ export default function StallAdmin({ users = [] }) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
-          {/* Roster cards */}
           {assignedUsers.length > 0 && (
             <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))' }}>
               {assignedUsers.map((user, idx) => (
-                <RosterCard
-                  key={user.id}
-                  user={user}
-                  idx={idx}
-                  onUnassign={handleUnassign}
-                />
+                <RosterCard key={user.id} user={user} idx={idx} onUnassign={handleUnassign} />
               ))}
             </div>
           )}
 
-          {/* Drop zone — always visible when a stall is selected */}
           {selectedStall && (
-            <DropZone
-              onDrop={handleAssign}
-              isDragOver={isDropZoneOver}
-              setIsDragOver={setIsDropZoneOver}
-            />
+            <DropZone onDrop={(userId) => handleAssign(Number(userId))} isDragOver={isDropZoneOver} setIsDragOver={setIsDropZoneOver} />
           )}
         </div>
       </div>
 
-      {/* ── Col 3: Staff pool (draggable) ──────────────────────────────────── */}
       <div
         className="flex flex-col bg-white rounded-2xl overflow-hidden"
         style={{ width: 280, minWidth: 240, flexShrink: 0 }}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setIsPoolOver(true);
-        }}
+        onDragOver={(e) => { e.preventDefault(); setIsPoolOver(true); }}
         onDragLeave={() => setIsPoolOver(false)}
         onDrop={handlePoolDrop}
       >
-        {/* Header */}
         <div className="px-5 pt-5 pb-3.5 border-b border-[#f3f4f6]"
           style={{ background: isPoolOver ? '#f0fdf4' : 'white', transition: 'background 0.15s' }}>
           <div className="flex items-center justify-between mb-1">
@@ -367,7 +381,6 @@ export default function StallAdmin({ users = [] }) {
           </p>
         </div>
 
-        {/* Search */}
         <div className="px-3.5 py-3 border-b border-[#f3f4f6]">
           <div className="flex items-center gap-2 rounded-[9px] px-3 py-2" style={{ background: '#f8fafc' }}>
             <Icon name="search" className="w-3.5 h-3.5 text-[#9ca3af]" strokeWidth={2} />
@@ -381,7 +394,6 @@ export default function StallAdmin({ users = [] }) {
           </div>
         </div>
 
-        {/* Draggable pills */}
         <div className="flex-1 overflow-y-auto p-3">
           {poolUsers.length === 0 ? (
             <p className="text-center py-8" style={{ fontSize: 12, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}>
@@ -394,12 +406,7 @@ export default function StallAdmin({ users = [] }) {
               </p>
               <div className="flex flex-col gap-2">
                 {poolUsers.map((user, idx) => (
-                  <DraggablePill
-                    key={user.id}
-                    user={user}
-                    idx={idx}
-                    onDragStart={() => setIsDraggingFromRoster(false)}
-                  />
+                  <DraggablePill key={user.id} user={user} idx={idx} onDragStart={() => setIsDraggingFromRoster(false)} />
                 ))}
               </div>
             </>

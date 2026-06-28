@@ -6,9 +6,9 @@ import { useProducts } from '../hooks/useProducts';
 import { useUsers } from '../hooks/useUsers';
 import { useOrders } from '../hooks/useOrders';
 import PageShell from '../components/PageShell';
-import AdminWorkspace from '../components/AdminWorkspace';
+import OwnerWorkspace from '../components/OwnerWorkspace';
 
-export default function AdminPortalPage() {
+export default function OwnerPortalPage() {
   const { user: currentUser, logout } = useAuth();
 
   // ── Permissions ───────────────────────────────────────────────────────────
@@ -22,11 +22,13 @@ export default function AdminPortalPage() {
     productForm, setProductForm, categoryForm, setCategoryForm,
     saveCategory, editCategory, deleteCategory, cancelCategoryEdit,
     saveProduct, editProduct, toggleProductAvailability, deleteProduct, cancelProductEdit,
+    loading: productsLoading, error: productsError,
   } = useProducts(canManageMenu);
 
   const {
     users, userForm, setUserForm,
-    saveUser, editUser, cancelUserEdit, toggleUserActive, deleteUser
+    saveUser, editUser, cancelUserEdit, toggleUserActive, deleteUser,
+    loading: usersLoading, error: usersError
   } = useUsers(canManageUsers, currentUser);
 
   const { orders, todaysOrders, todaysTotal } =
@@ -34,15 +36,15 @@ export default function AdminPortalPage() {
       subtotal: 0, serviceFee: 0, estimatedTax: 0, total: 0
     });
 
-  const [adminTab, setAdminTab] = useState('dashboard');
+  const [ownerTab, setOwnerTab] = useState('dashboard');
 
   // ── Logout ────────────────────────────────────────────────────────────────
   const handleLogout = () => {
     logout();
   };
 
-  // ── Admin tab visibility ──────────────────────────────────────────────────
-  const allowedAdminTabs = [
+  // ── Owner tab visibility ──────────────────────────────────────────────────
+  const allowedOwnerTabs = [
     'dashboard',
     canManageMenu  ? 'products' : null,  // includes Categories sub-tab
     canManageMenu  ? 'stalls'   : null,
@@ -50,7 +52,7 @@ export default function AdminPortalPage() {
     canManageUsers ? 'users'    : null,
   ].filter(Boolean);
 
-  const visibleAdminTab = allowedAdminTabs.includes(adminTab) ? adminTab : allowedAdminTabs[0];
+  const visibleOwnerTab = allowedOwnerTabs.includes(ownerTab) ? ownerTab : allowedOwnerTabs[0];
 
   // ── Guard ─────────────────────────────────────────────────────────────────
   if (!currentUser) return null;
@@ -61,11 +63,11 @@ export default function AdminPortalPage() {
       isCashier={false}
       onLogout={handleLogout}
     >
-      <AdminWorkspace
+      <OwnerWorkspace
         currentUser={currentUser}
-        visibleAdminTab={visibleAdminTab}
-        setAdminTab={setAdminTab}
-        allowedAdminTabs={allowedAdminTabs}
+        visibleOwnerTab={visibleOwnerTab}
+        setOwnerTab={setOwnerTab}
+        allowedOwnerTabs={allowedOwnerTabs}
         products={products}
         categories={categories}
         orders={orders}
@@ -91,6 +93,10 @@ export default function AdminPortalPage() {
         onCancelCategory={cancelCategoryEdit}
         onCancelUser={cancelUserEdit}
         categoryById={categoryById}
+        productsLoading={productsLoading}
+        productsError={productsError}
+        usersLoading={usersLoading}
+        usersError={usersError}
         todaysOrders={todaysOrders}
         todaysTotal={todaysTotal}
         onLogout={handleLogout}

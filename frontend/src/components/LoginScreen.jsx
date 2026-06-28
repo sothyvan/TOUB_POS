@@ -26,7 +26,7 @@ export default function LoginScreen({
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmitAdmin = async (event) => {
+  const handleSubmitManagement = async (event) => {
     event.preventDefault();
     const isRegisterStep = loginMode === 'cashier' && flowStep === 'register';
     setIsSubmitting(true);
@@ -71,7 +71,7 @@ export default function LoginScreen({
         </p>
       </div>
 
-      <form className="flex flex-col gap-5" onSubmit={handleSubmitAdmin}>
+      <form className="flex flex-col gap-5" onSubmit={handleSubmitManagement}>
         <FormInput
           label="Username"
           value={username}
@@ -267,7 +267,7 @@ export default function LoginScreen({
     );
   };
 
-  const renderAdminLogin = () => (
+  const renderManagementLogin = () => (
     <section className="w-[min(380px,calc(100%-1.5rem))] p-8 rounded-3xl bg-white shadow-[0_24px_64px_-16px_rgba(0,0,0,0.12)] flex flex-col gap-6 animate-in fade-in duration-200">
       <div className="flex items-center gap-4">
         <Logo variant="login" />
@@ -284,7 +284,7 @@ export default function LoginScreen({
         </p>
       </div>
 
-      <form className="flex flex-col gap-5" onSubmit={handleSubmitAdmin}>
+      <form className="flex flex-col gap-5" onSubmit={handleSubmitManagement}>
         <FormInput
           label="Username"
           value={username}
@@ -327,7 +327,7 @@ export default function LoginScreen({
 
   return (
     <main className="relative min-h-svh p-6 grid place-items-center bg-brand-yellow text-gray-800 selection:bg-brand-blue/20">
-      {loginMode === 'management' && renderAdminLogin()}
+      {loginMode === 'management' && renderManagementLogin()}
       {loginMode === 'cashier' && flowStep === 'register' && renderRegister()}
       {loginMode === 'cashier' && flowStep === 'select-profile' && renderSelectProfile()}
       {loginMode === 'cashier' && flowStep === 'pin-pad' && renderPinPad()}

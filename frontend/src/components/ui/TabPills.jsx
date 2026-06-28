@@ -1,5 +1,5 @@
 /**
- * Reusable Tab switcher pills with the standard POS admin styling.
+ * Reusable Tab switcher pills with the standard POS owner styling.
  *
  * Props:
  *  - tabs     – Array of { id, label }

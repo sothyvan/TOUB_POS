@@ -103,7 +103,7 @@ function UserModal({ form, setForm, onSave, onClose, isNew, roleOptions }) {
 
 const EMPTY = { id:null,name:'',role:'Cashier',station:'',pin:'',active:true };
 
-export default function StaffList({ userForm, setUserForm, users, onSave, onEdit, onToggleActive, onDelete, onCancel, currentUser }) {
+export default function StaffList({ userForm, setUserForm, users, onSave, onEdit, onToggleActive, onDelete, onCancel, currentUser, loading, error }) {
   const [showModal, setShowModal] = useState(false);
   const [isNew, setIsNew]         = useState(false);
   const [search, setSearch]       = useState('');
@@ -143,7 +143,11 @@ export default function StaffList({ userForm, setUserForm, users, onSave, onEdit
         <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-[#f3f4f6] shrink-0">
           <div>
             <h3 style={{margin:0,fontSize:15,fontWeight:700,color:'#111827',fontFamily:'Inter,sans-serif'}}>Employee Directory</h3>
-            <p style={{margin:'2px 0 0',fontSize:12,color:'#9ca3af',fontFamily:'Inter,sans-serif'}}>{filtered.length} employees</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p style={{margin:0,fontSize:12,color:'#9ca3af',fontFamily:'Inter,sans-serif'}}>{filtered.length} employees</p>
+              {loading && <span className="text-xs text-[#6b7280] animate-pulse">Loading...</span>}
+              {error && <span className="text-xs text-[#ef4444]">{error}</span>}
+            </div>
           </div>
           <div className="flex items-center gap-2.5">
             <div className="relative">
@@ -171,7 +175,15 @@ export default function StaffList({ userForm, setUserForm, users, onSave, onEdit
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {filtered.map((user,idx)=>{
+          {loading ? (
+             <div className="flex flex-col items-center justify-center h-40 gap-2 text-[#9ca3af]">
+                <span style={{ fontSize: 13, fontFamily: 'Inter, sans-serif' }} className="animate-pulse">Loading staff...</span>
+             </div>
+          ) : filtered.length === 0 ? (
+             <div className="flex flex-col items-center justify-center h-40 gap-2 text-[#9ca3af]">
+                <span style={{ fontSize: 13, fontFamily: 'Inter, sans-serif' }}>No staff found</span>
+             </div>
+          ) : filtered.map((user,idx)=>{
             return (
               <div key={user.id} className="flex items-center gap-4 border-b border-[#f9fafb] hover:bg-[#fafafa] transition-colors"
                 style={{padding:'12px 24px',minHeight:69}}>
