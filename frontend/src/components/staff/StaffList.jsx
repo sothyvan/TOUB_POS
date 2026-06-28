@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { ROLES } from '../../data/seedData';
+import { canManageUserRole, getManageableDisplayRoles } from '../../utils/permissions';
 import Icon from '../ui/Icon';
 import FormInput from '../ui/FormInput';
 import FormSelect from '../ui/FormSelect';
@@ -11,6 +12,15 @@ import { getStalls, getStallAssignments } from '../../utils/stallUtils';
 const AVATAR_COLORS = ['#eef2ff','#dcfce7','#f3e8ff','#fff1f2','#fef3c7','#e0f2fe'];
 const AVATAR_TEXT   = ['#3730a3','#166534','#7e22ce','#be123c','#92400e','#075985'];
 function avatarStyle(i) { const j=i%6; return {background:AVATAR_COLORS[j],color:AVATAR_TEXT[j]}; }
+
+function roleBadgeStyle(role) {
+  const styles = {
+    Owner: { background: '#f3e8ff', color: '#7e22ce' },
+    Manager: { background: '#dbeafe', color: '#1d4ed8' },
+    Cashier: { background: '#fffbeb', color: '#92400e' },
+  };
+  return styles[role] ?? styles.Cashier;
+}
 
 function StatCard({ iconName, iconBg, value, label }) {
   return (
@@ -26,7 +36,7 @@ function StatCard({ iconName, iconBg, value, label }) {
   );
 }
 
-function UserModal({ form, setForm, onSave, onClose, isNew }) {
+function UserModal({ form, setForm, onSave, onClose, isNew, roleOptions }) {
   const handleSubmit = e => { e.preventDefault(); onSave(); onClose(); };
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
@@ -53,7 +63,7 @@ function UserModal({ form, setForm, onSave, onClose, isNew }) {
               value={form.role}
               onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
             >
-              {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+              {roleOptions.map(r => <option key={r} value={r}>{r}</option>)}
             </FormSelect>
             <FormInput
               label={`PIN ${!isNew ? '(blank = keep)' : ''}`}
@@ -93,10 +103,14 @@ function UserModal({ form, setForm, onSave, onClose, isNew }) {
 
 const EMPTY = { id:null,name:'',role:'Cashier',station:'',pin:'',active:true };
 
-export default function StaffList({ userForm, setUserForm, users, onSave, onEdit, onToggleActive, onDelete, onCancel }) {
+export default function StaffList({ userForm, setUserForm, users, onSave, onEdit, onToggleActive, onDelete, onCancel, currentUser }) {
   const [showModal, setShowModal] = useState(false);
   const [isNew, setIsNew]         = useState(false);
   const [search, setSearch]       = useState('');
+  const roleOptions = useMemo(() => {
+    const manageableRoles = getManageableDisplayRoles(currentUser);
+    return manageableRoles.length > 0 ? manageableRoles : ROLES;
+  }, [currentUser]);
 
   const stalls      = useMemo(() => getStalls(),[]);
   const assignments = useMemo(() => getStallAssignments(),[]);
@@ -110,7 +124,7 @@ export default function StaffList({ userForm, setUserForm, users, onSave, onEdit
   const activeCount = users.filter(u=>u.active).length;
   const assignedCount = Object.keys(userStallMap).length;
 
-  const openNew  = ()=>{ setUserForm(EMPTY); setIsNew(true);  setShowModal(true); };
+  const openNew  = ()=>{ setUserForm({ ...EMPTY, role: roleOptions[0] ?? 'Cashier' }); setIsNew(true);  setShowModal(true); };
   const openEdit = u=>{ onEdit(u); setIsNew(false); setShowModal(true); };
   const close    = ()=>{ setShowModal(false); onCancel(); };
 
@@ -138,11 +152,13 @@ export default function StaffList({ userForm, setUserForm, users, onSave, onEdit
                 className="border border-[#e5e7eb] rounded-[9px] outline-none"
                 style={{height:36,paddingLeft:34,paddingRight:12,fontSize:13,fontFamily:'Inter,sans-serif',width:180}}/>
             </div>
-            <button type="button" onClick={openNew} className="flex items-center gap-1.5 rounded-[9px] border-0 cursor-pointer hover:opacity-90"
-              style={{height:36,padding:'0 16px',background:'#003ec7'}}>
-              <Icon name="plus" className="w-3.5 h-3.5 text-white" strokeWidth={2.5}/>
-              <span style={{fontSize:13,fontWeight:600,color:'#ffffff',fontFamily:'Inter,sans-serif',whiteSpace: 'nowrap'}}>Add Employee</span>
-            </button>
+            {roleOptions.length > 0 && (
+              <button type="button" onClick={openNew} className="flex items-center gap-1.5 rounded-[9px] border-0 cursor-pointer hover:opacity-90"
+                style={{height:36,padding:'0 16px',background:'#003ec7'}}>
+                <Icon name="plus" className="w-3.5 h-3.5 text-white" strokeWidth={2.5}/>
+                <span style={{fontSize:13,fontWeight:600,color:'#ffffff',fontFamily:'Inter,sans-serif',whiteSpace: 'nowrap'}}>Add Employee</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -169,7 +185,7 @@ export default function StaffList({ userForm, setUserForm, users, onSave, onEdit
                   </div>
                 </div>
                 <div style={{flex:'0 0 100px'}}>
-                  <span className="inline-flex rounded-full px-2.5 py-0.5" style={{fontSize:11,fontWeight:700,fontFamily:'Inter,sans-serif',background: user.role === 'Admin' ? '#f3e8ff' : '#fffbeb',color: user.role === 'Admin' ? '#7e22ce' : '#92400e'}}>{user.role}</span>
+                  <span className="inline-flex rounded-full px-2.5 py-0.5" style={{fontSize:11,fontWeight:700,fontFamily:'Inter,sans-serif',...roleBadgeStyle(user.role)}}>{user.role}</span>
                 </div>
                 <div style={{flex:'0 0 120px'}}>
                   <span style={{fontSize:13,color:'#374151',fontFamily:'Inter,sans-serif'}}>{user.station||'—'}</span>
@@ -183,19 +199,23 @@ export default function StaffList({ userForm, setUserForm, users, onSave, onEdit
                   <StatusBadge active={user.active} activeLabel="Active" inactiveLabel="Off" />
                 </div>
                 <div className="flex items-center gap-1 shrink-0" style={{flex:'0 0 190px'}}>
-                  {[
-                    {label:'Edit',  color:'#003ec7', icon:'edit',   fn:()=>openEdit(user)},
-                    {label:user.active?'Disable':'Enable', color:'#6b7280', icon:user.active?'disable':'enable', fn:()=>onToggleActive(user.id)},
-                    {label:'Del',   color:'#ef4444', icon:'delete', fn:()=>onDelete(user.id)},
-                  ].map((a,i)=>(
-                    <span key={a.label} className="flex items-center gap-0.5">
-                      {i>0&&<span style={{color:'#e5e7eb',fontSize:14,margin:'0 2px'}}>|</span>}
-                      <button type="button" onClick={a.fn} className="flex items-center gap-1 cursor-pointer border-0 bg-transparent hover:opacity-70 px-1 py-0.5">
-                        <Icon name={a.icon} className="w-3.5 h-3.5" style={{color:a.color}} strokeWidth={2}/>
-                        <span style={{fontSize:12,fontWeight:600,color:a.color,fontFamily:'Inter,sans-serif'}}>{a.label}</span>
-                      </button>
-                    </span>
-                  ))}
+                  {canManageUserRole(currentUser, user.role) ? (
+                    [
+                      {label:'Edit',  color:'#003ec7', icon:'edit',   fn:()=>openEdit(user)},
+                      {label:user.active?'Disable':'Enable', color:'#6b7280', icon:user.active?'disable':'enable', fn:()=>onToggleActive(user.id)},
+                      {label:'Del',   color:'#ef4444', icon:'delete', fn:()=>onDelete(user.id)},
+                    ].map((a,i)=>(
+                      <span key={a.label} className="flex items-center gap-0.5">
+                        {i>0&&<span style={{color:'#e5e7eb',fontSize:14,margin:'0 2px'}}>|</span>}
+                        <button type="button" onClick={a.fn} className="flex items-center gap-1 cursor-pointer border-0 bg-transparent hover:opacity-70 px-1 py-0.5">
+                          <Icon name={a.icon} className="w-3.5 h-3.5" style={{color:a.color}} strokeWidth={2}/>
+                          <span style={{fontSize:12,fontWeight:600,color:a.color,fontFamily:'Inter,sans-serif'}}>{a.label}</span>
+                        </button>
+                      </span>
+                    ))
+                  ) : (
+                    <span style={{fontSize:12,color:'#9ca3af',fontFamily:'Inter,sans-serif'}}>Owner-only</span>
+                  )}
                 </div>
               </div>
             );
@@ -207,7 +227,7 @@ export default function StaffList({ userForm, setUserForm, users, onSave, onEdit
         </div>
       </div>
 
-      {showModal && <UserModal form={userForm} setForm={setUserForm} onSave={onSave} onClose={close} isNew={isNew}/>}
+      {showModal && <UserModal form={userForm} setForm={setUserForm} onSave={onSave} onClose={close} isNew={isNew} roleOptions={roleOptions}/>}
     </div>
   );
 }

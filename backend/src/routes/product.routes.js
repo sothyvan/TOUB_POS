@@ -10,9 +10,9 @@ router.use(authenticate);
 // GET    /api/products        — Any authenticated web-app user can list
 router.get('/', getProducts);
 
-// Mutation routes require admin authorization
-router.post('/', authorize('admin'), createProduct);
-router.put('/:id', authorize('admin'), updateProduct);
-router.delete('/:id', authorize('admin'), deleteProduct);
+// Mutation routes require management authorization
+router.post('/', authorize(['owner', 'manager']), createProduct);
+router.put('/:id', authorize(['owner', 'manager']), updateProduct);
+router.delete('/:id', authorize(['owner', 'manager']), deleteProduct);
 
 export default router;

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Icon from './ui/Icon';
 import { initials } from '../utils/format';
+import { roleToApiRole } from '../utils/permissions';
 import {
   getStalls,
   getStallAssignments,
@@ -174,6 +175,7 @@ function DropZone({ onDrop, isDragOver, setIsDragOver }) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function StallAdmin({ users = [] }) {
+  const cashierUsers = users.filter((user) => roleToApiRole(user.role) === 'cashier');
   const [stalls, setStalls]             = useState(getStalls);
   const [assignments, setAssignments]   = useState(getStallAssignments);
   const [selectedStallId, setSelectedStallId] = useState(() => getStalls()[0]?.id ?? null);
@@ -186,8 +188,8 @@ export default function StallAdmin({ users = [] }) {
 
   const selectedStall  = stalls.find(s => s.id === selectedStallId) ?? null;
   const assignedIds    = assignments[selectedStallId] ?? [];
-  const assignedUsers  = users.filter(u => assignedIds.includes(u.id));
-  const poolUsers      = users.filter(u =>
+  const assignedUsers  = cashierUsers.filter(u => assignedIds.includes(u.id));
+  const poolUsers      = cashierUsers.filter(u =>
     !assignedIds.includes(u.id) &&
     u.name.toLowerCase().includes(staffSearch.toLowerCase())
   );

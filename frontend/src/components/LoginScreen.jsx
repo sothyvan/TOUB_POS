@@ -18,7 +18,7 @@ export default function LoginScreen({
   onErase,
   loginError,
   setLoginError,
-  onAdminLogin,
+  onManagementLogin,
   onSelectProfile,
   showDemoCredentials = false,
 }) {
@@ -31,7 +31,7 @@ export default function LoginScreen({
     const isRegisterStep = loginMode === 'cashier' && flowStep === 'register';
     setIsSubmitting(true);
     try {
-      const success = await onAdminLogin(username, password, isRegisterStep);
+    const success = await onManagementLogin(username, password, isRegisterStep);
       if (success) {
         setUsername('');
         setPassword('');
@@ -42,7 +42,7 @@ export default function LoginScreen({
   };
 
   const handleDeregister = () => {
-    if (confirm('Are you sure you want to deregister this terminal? You will need admin credentials to register it again.')) {
+    if (confirm('Are you sure you want to deregister this terminal? You will need owner or manager credentials to register it again.')) {
       setDeviceRegistered(false);
       setFlowStep('register');
       setSelectedUser(null);
@@ -67,7 +67,7 @@ export default function LoginScreen({
       <div>
         <h2 className="m-0 text-xl font-bold text-gray-900 leading-snug">Register Device for Cashier</h2>
         <p className="m-0 mt-1.5 text-gray-500 text-xs font-semibold leading-relaxed">
-          First time register needs admin credentials
+          First time registration needs owner or manager credentials
         </p>
       </div>
 
@@ -102,12 +102,12 @@ export default function LoginScreen({
       <button
         type="button"
         onClick={() => {
-          setLoginMode('admin');
+          setLoginMode('management');
           setLoginError('');
         }}
         className="text-xs font-bold text-brand-action/90 hover:underline cursor-pointer border-0 bg-transparent text-center"
       >
-        Admin Portal Login
+        Management Portal Login
       </button>
     </section>
   );
@@ -131,7 +131,7 @@ export default function LoginScreen({
 
       {activeCashiers.length === 0 ? (
         <div className="py-8 px-4 border border-dashed border-brand-border rounded-2xl text-center text-gray-400 text-sm font-bold">
-          No cashier accounts available. Please configure them in the Admin Portal.
+          No cashier accounts available. Please configure them in the Management Portal.
         </div>
       ) : (
         <div className="flex flex-wrap justify-center gap-5 my-2">
@@ -169,12 +169,12 @@ export default function LoginScreen({
         <button
           type="button"
           onClick={() => {
-            setLoginMode('admin');
+            setLoginMode('management');
             setLoginError('');
           }}
           className="text-xs font-bold text-brand-action/90 hover:underline cursor-pointer border-0 bg-transparent"
         >
-          Admin Portal Login
+          Management Portal Login
         </button>
         <button
           type="button"
@@ -278,9 +278,9 @@ export default function LoginScreen({
       </div>
 
       <div>
-        <h2 className="m-0 text-xl font-bold text-gray-900 leading-snug">Admin Portal Login</h2>
+        <h2 className="m-0 text-xl font-bold text-gray-900 leading-snug">Management Portal Login</h2>
         <p className="m-0 mt-1.5 text-gray-500 text-xs font-semibold leading-relaxed">
-          Log in with admin owner credentials
+          Log in with owner or manager credentials
         </p>
       </div>
 
@@ -327,7 +327,7 @@ export default function LoginScreen({
 
   return (
     <main className="relative min-h-svh p-6 grid place-items-center bg-brand-yellow text-gray-800 selection:bg-brand-blue/20">
-      {loginMode === 'admin' && renderAdminLogin()}
+      {loginMode === 'management' && renderAdminLogin()}
       {loginMode === 'cashier' && flowStep === 'register' && renderRegister()}
       {loginMode === 'cashier' && flowStep === 'select-profile' && renderSelectProfile()}
       {loginMode === 'cashier' && flowStep === 'pin-pad' && renderPinPad()}
@@ -335,7 +335,7 @@ export default function LoginScreen({
       {showDemoCredentials && (
         <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex flex-wrap justify-center gap-3 bg-white/20 backdrop-blur-md px-4 py-2.5 rounded-full border border-white/25 text-[11px] font-semibold text-brand-blue shadow-sm">
           <span className="opacity-80">Development Credentials:</span>
-          <span className="bg-white/35 px-2 py-0.5 rounded-full">Admin (admin / admin123)</span>
+          <span className="bg-white/35 px-2 py-0.5 rounded-full">Owner (owner / owner123)</span>
           <span className="bg-white/35 px-2 py-0.5 rounded-full">Cashier PIN login TODO</span>
         </div>
       )}

@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSavedState } from '../hooks/useSavedState';
 import { DEFAULT_USERS } from '../data/seedData';
-import { getPermissions, mapUsersWithDefaultPins } from '../utils/permissions';
+import { getPermissions, mapUsersWithDefaultPins, roleToApiRole } from '../utils/permissions';
 import { STORAGE_KEYS } from '../services/api';
 import { useAuth } from '../auth/useAuth';
 import LoginScreen from '../components/LoginScreen';
@@ -14,7 +14,7 @@ export default function LoginPage() {
   const [rawUsers] = useSavedState(STORAGE_KEYS.USERS, DEFAULT_USERS);
   const [deviceRegistered, setDeviceRegistered] = useSavedState('toub-device-registered', false);
 
-  const [loginMode, setLoginMode] = useState(deviceRegistered ? 'cashier' : 'admin');
+  const [loginMode, setLoginMode] = useState(deviceRegistered ? 'cashier' : 'management');
   const [flowStep, setFlowStep] = useState(deviceRegistered ? 'select-profile' : 'register');
   const [selectedUser, setSelectedUser] = useState(null);
   const [typedPin, setTypedPin] = useState('');
@@ -26,21 +26,21 @@ export default function LoginPage() {
   );
 
   const activeUsers = users.filter((u) => u.active);
-  const activeCashiers = activeUsers.filter((u) => u.role === 'Cashier');
+  const activeCashiers = activeUsers.filter((u) => roleToApiRole(u.role) === 'cashier');
   const showDemoCredentials = import.meta.env.DEV || import.meta.env.VITE_SHOW_DEMO_CREDENTIALS === 'true';
 
   useEffect(() => {
     if (!isAuthenticated || !currentUser) return;
 
-    if (getPermissions(currentUser).isAdmin) {
+    if (getPermissions(currentUser).isManagement) {
       navigate('/admin-portal', { replace: true });
     } else if (getPermissions(currentUser).isCashier) {
       navigate('/cashier', { replace: true });
     }
   }, [currentUser, isAuthenticated, navigate]);
 
-  // Handle standard admin login or temporary device registration gate.
-  const handleAdminLogin = async (username, password, isRegistering = false) => {
+  // Handle standard management login or temporary device registration gate.
+  const handleManagementLogin = async (username, password, isRegistering = false) => {
     setLoginError('');
 
     try {
@@ -49,9 +49,9 @@ export default function LoginPage() {
       });
       const permissions = getPermissions(authenticatedUser);
 
-      if (!permissions.isAdmin) {
+      if (!permissions.isManagement) {
         logout();
-        setLoginError('Only admin accounts can access the admin portal.');
+        setLoginError('Only owner or manager accounts can access the management portal.');
         return false;
       }
 
@@ -111,7 +111,7 @@ export default function LoginPage() {
       onErase={handlePinErase}
       loginError={loginError}
       setLoginError={setLoginError}
-      onAdminLogin={handleAdminLogin}
+      onManagementLogin={handleManagementLogin}
       onSelectProfile={handleSelectProfile}
       showDemoCredentials={showDemoCredentials}
     />

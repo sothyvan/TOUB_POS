@@ -11,12 +11,12 @@ const router = Router();
 router.use(authenticate);
 
 // POST   /api/orders       — cashier creates a new order / QR session
-router.post('/', createOrder);
+router.post('/', authorize('cashier'), createOrder);
 
 // GET    /api/orders/mine  — cashier fetches their own orders
-router.get('/mine', getMyOrders);
+router.get('/mine', authorize('cashier'), getMyOrders);
 
-// GET    /api/orders       — admin fetches all orders
-router.get('/', authorize('admin'), getAllOrders);
+// GET    /api/orders       — owner/manager fetches all orders
+router.get('/', authorize(['owner', 'manager']), getAllOrders);
 
 export default router;

@@ -4,8 +4,9 @@ import { getUsers, createUser, updateUser, deleteUser } from '../controllers/use
 
 const router = Router();
 
-// Require authentication and restrict to admin role
-router.use(authenticate, authorize('admin'));
+// Require authentication and restrict user management to owner/manager roles.
+// Controllers enforce that managers can manage cashier users only.
+router.use(authenticate, authorize(['owner', 'manager']));
 
 // GET    /api/users      — List all user accounts
 router.get('/', getUsers);

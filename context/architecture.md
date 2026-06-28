@@ -31,8 +31,11 @@
 
 - Every user signs in via a JWT-secured login endpoint.
 - The system uses Role-Based Access Control (RBAC).
+- The primary roles are `owner`, `manager`, and `cashier`.
+- Owners have full business and system control, including creating Owner, Manager, and Cashier users.
+- Managers handle day-to-day operations and may create/manage Cashier users only.
 - Cashiers can only view and mutate transactions linked to their active session.
-- Admins/owners have access to system management, transactions, and reports.
+- Owners and Managers have access to the management portal, transactions, reports, and operational tools according to their permission level.
 
 ## Invariants
 
@@ -71,7 +74,7 @@
 
 ## Core Data Entities
 
-- **User / Staff**: Auth credentials, role (`admin` / `cashier`), 4-digit PIN.
+- **User / Staff**: Auth credentials, role (`owner` / `manager` / `cashier`), 4-digit PIN.
 - **Stall**: A physical booth location. Has a name, assigned menu profile, and registered device token.
 - **StallStaff**: Junction — maps `User` to `Stall` (a cashier can belong to one stall).
 - **Product**: Catalog item with `price_usd`, `price_khr`, category, image, visibility flag.
@@ -91,12 +94,12 @@
 |---|------|----------|------------|
 | 1 | **KHQR / Bakong webhook integration** | 🟡 Medium | Use Bakong's official **development API** environment for all testing. Register for dev credentials at the Bakong developer portal. Do not mock — integrate against the real dev sandbox from the start so behavior matches production exactly. |
 | 2 | **WebSocket routing — accidental broadcast to wrong cashier** | 🔴 High | Isolated per-cashier notification is a confirmed core feature. Risk is implementing it incorrectly. `websocket.service.js` must maintain a strict `Map<cashier_id, socket>` and emit only to the mapped socket. Never use `io.emit()` or room broadcasts. Validate `cashier_id` on every emit. |
-| 3 | **Telegram Bot async failures** | 🟡 Medium | Telegram failure must never block or rollback the order. Strategy: (1) Always log the error. (2) Store `telegram_status` (`pending` / `sent` / `failed`) on the `orders` table — set to `failed` on catch. (3) Show an admin dashboard badge for failed orders so the admin/owner can manually relay. Auto-retry queue is out of scope (Future). |
+| 3 | **Telegram Bot async failures** | 🟡 Medium | Telegram failure must never block or rollback the order. Strategy: (1) Always log the error. (2) Store `telegram_status` (`pending` / `sent` / `failed`) on the `orders` table — set to `failed` on catch. (3) Show a management dashboard badge for failed orders so an Owner/Manager can manually relay. Auto-retry queue is out of scope (Future). |
 | 4 | **KHR exchange rate — hardcoded vs. live** | 🟡 Medium | Decision required before building the product form. Recommend: hardcode the rate as a `.env` constant (`KHR_RATE=4100`) for now. Add a note in the admin panel showing the current rate. Live rate API is out of scope. |
 | 5 | **Stall data isolation — cross-stall data leak** | 🔴 High | Every repository query that returns products, orders, or staff **must** include `WHERE stall_id = ?` scoped from the authenticated device token — never from a client-supplied query param. |
 | 6 | **Frontend ↔ Backend integration gap** | 🟡 Medium | Frontend currently runs entirely on `localStorage`. All hooks (`useProducts`, `useOrders`, `useUsers`) must be migrated to real API calls. Do this incrementally per feature, not all at once. |
 | 7 | **Webhook duplicate events** | 🔴 High | Bakong/ABA may retry the same webhook multiple times (network timeouts). Processing it twice marks an order complete twice or creates duplicate records. Mitigation: at the start of the webhook handler, check `if order.status === 'completed' → return 200 immediately` (idempotency guard) before any DB write. |
 | 8 | **QR amount mismatch** | 🔴 High | A webhook may arrive for the wrong amount or wrong merchant. Never auto-confirm just because a payment event arrived. Webhook handler must assert `webhook.amount === order.total_usd` and `webhook.merchant_id === env.MERCHANT_ID` before marking the order complete. Reject mismatches with a `400` and log them. |
 | 9 | **JWT expiry mid-shift** | 🟡 Medium | Cashier's 8h token can expire while they are mid-order. The next API call returns `401`, the cart is lost, and the cashier is confused. Mitigation: frontend must intercept all `401` responses, store the current cart in `sessionStorage`, redirect to PIN re-entry, and restore the cart after re-authentication. |
-| 10 | **Device token revocation** | 🟡 Medium | No current mechanism to remotely deregister a terminal (e.g., stolen tablet). The device token in `stalls.device_token` remains valid indefinitely. Mitigation: admin portal must include a "Revoke Terminal" action that clears `stalls.device_token = NULL`, immediately invalidating that device's access. |
+| 10 | **Device token revocation** | 🟡 Medium | No current mechanism to remotely deregister a terminal (e.g., stolen tablet). The device token in `stalls.device_token` remains valid indefinitely. Mitigation: management portal must include an Owner-controlled "Revoke Terminal" action that clears `stalls.device_token = NULL`, immediately invalidating that device's access. |
 

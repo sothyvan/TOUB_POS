@@ -2,17 +2,18 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { authApi, setUnauthorizedHandler } from '../services/apiClient';
 import { clearStoredSession, readStoredSession, writeStoredSession } from './authStorage';
 import { AuthContext } from './authContext';
-import { toDisplayRole } from '../utils/permissions';
+import { getPermissions, toDisplayRole } from '../utils/permissions';
 
 function normalizeAuthUser(user) {
   const role = toDisplayRole(user?.role);
+  const permissions = getPermissions({ role });
 
   return {
     ...user,
     role,
     apiRole: String(user?.role || '').toLowerCase(),
     name: user?.name || user?.username || 'User',
-    station: user?.station || (role === 'Admin' ? 'Back Office' : 'Station 01'),
+    station: user?.station || (permissions.isManagement ? 'Back Office' : 'Station 01'),
     active: user?.active ?? true,
   };
 }

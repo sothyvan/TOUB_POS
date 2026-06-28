@@ -9,26 +9,41 @@
 -- Find user by username (used for Login authentication)
 SELECT id, username, password AS password_hash, role, is_active 
 FROM users 
-WHERE username = 'admin';
+WHERE username = 'owner';
 
--- Find user by ID
-SELECT id, username, pin, role, is_active, created_at, updated_at 
+-- Find user by ID (excluding password and PIN)
+SELECT id, username, role, is_active, created_at, updated_at
 FROM users 
 WHERE id = 1;
 
--- List all users (excluding passwords)
-SELECT id, username, pin, role, is_active, created_at, updated_at 
+-- List all users (excluding password and PIN)
+SELECT id, username, role, is_active, created_at, updated_at
 FROM users 
 ORDER BY created_at DESC;
 
 -- Insert a new user account
-INSERT INTO users (username, password, pin, role, is_active) 
+INSERT INTO users (username, password, pin, role, is_active)
+VALUES ('manager1', '$2b$10$hashedpasswordstring...', NULL, 'manager', TRUE);
+
+-- Insert a cashier account
+INSERT INTO users (username, password, pin, role, is_active)
 VALUES ('cashier1', '$2b$10$hashedpasswordstring...', '1111', 'cashier', TRUE);
 
 -- Update user details by ID
 UPDATE users 
 SET username = 'cashier1_updated', pin = '2222', role = 'cashier', is_active = TRUE
 WHERE id = 2;
+
+-- Development-only legacy RBAC migration used before Sequelize sync
+ALTER TABLE users
+MODIFY role ENUM('admin', 'owner', 'manager', 'cashier') NOT NULL DEFAULT 'cashier';
+
+UPDATE users
+SET role = 'owner'
+WHERE role = 'admin';
+
+ALTER TABLE users
+MODIFY role ENUM('owner', 'manager', 'cashier') NOT NULL DEFAULT 'cashier';
 
 -- Delete user account by ID
 DELETE FROM users 

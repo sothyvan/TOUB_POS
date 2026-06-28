@@ -1,5 +1,6 @@
 export function defaultPinForRole(role) {
-  if (roleToApiRole(role) === 'admin') return '1234';
+  if (roleToApiRole(role) === 'owner') return '1234';
+  if (roleToApiRole(role) === 'manager') return '2222';
   return '1111';
 }
 
@@ -9,22 +10,41 @@ export function roleToApiRole(role) {
 
 export function toDisplayRole(role) {
   const normalizedRole = roleToApiRole(role);
-  if (normalizedRole === 'admin') return 'Admin';
+  if (normalizedRole === 'owner') return 'Owner';
+  if (normalizedRole === 'manager') return 'Manager';
   if (normalizedRole === 'cashier') return 'Cashier';
   return role || '';
 }
 
+export function getManageableDisplayRoles(user) {
+  const role = roleToApiRole(user?.role);
+  if (role === 'owner') return ['Owner', 'Manager', 'Cashier'];
+  if (role === 'manager') return ['Cashier'];
+  return [];
+}
+
+export function canManageUserRole(actor, targetRole) {
+  const allowedRoles = getManageableDisplayRoles(actor).map(roleToApiRole);
+  return allowedRoles.includes(roleToApiRole(targetRole));
+}
+
 export function getPermissions(user) {
   const role = roleToApiRole(user?.role);
-  const isAdmin = role === 'admin';
+  const isOwner = role === 'owner';
+  const isManager = role === 'manager';
   const isCashier = role === 'cashier';
+  const isManagement = isOwner || isManager;
 
   return {
-    isAdmin,
+    isOwner,
+    isManager,
     isCashier,
-    canManageMenu: isAdmin,
-    canManageUsers: isAdmin,
-    canViewOrders: isAdmin,
+    isManagement,
+    canManageMenu: isManagement,
+    canManageUsers: isManagement,
+    canManageOwnerActions: isOwner,
+    canViewOrders: isManagement,
+    manageableUserRoles: getManageableDisplayRoles(user),
   };
 }
 

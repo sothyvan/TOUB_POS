@@ -87,7 +87,7 @@ export default function AdminWorkspace({
           allowedTabs={allowedAdminTabs}
           onTabChange={setAdminTab}
           userName={currentUser?.name ?? 'Owner Account'}
-          userRole={currentUser?.role === 'Admin' ? 'Administrator' : currentUser?.role}
+          userRole={currentUser?.role ?? 'Owner'}
           onLogout={onLogout}
         />
       </div>
@@ -193,6 +193,7 @@ export default function AdminWorkspace({
               onToggleActive={onToggleUserActive}
               onDelete={(id) => handlePromptDelete('user', id)}
               onCancel={onCancelUser}
+              currentUser={currentUser}
             />
           )}
         </div>

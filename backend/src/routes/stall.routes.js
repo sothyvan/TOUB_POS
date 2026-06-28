@@ -4,8 +4,8 @@ import { getStalls, createStall, updateStall, deleteStall } from '../controllers
 
 const router = Router();
 
-// Require authentication and restrict to admin role
-router.use(authenticate, authorize('admin'));
+// Require authentication and restrict to management roles
+router.use(authenticate, authorize(['owner', 'manager']));
 
 // GET    /api/stalls      — List all stalls
 router.get('/', getStalls);

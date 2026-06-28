@@ -4,7 +4,13 @@
 
 - **Target Environments:** Smartphone and tablet form factors deployed in high-noise, crowded, and fast-paced merchant environments.
 - **UI Architecture:** Adaptive layouts utilizing high-contrast visual cues and oversized touch targets.
-- **State Normalization:** All user actions are bounded by role privileges (`admin` vs `cashier`) encoded within the central JWT session.
+- **State Normalization:** All user actions are bounded by role privileges (`owner`, `manager`, `cashier`) encoded within the central JWT session.
+
+## Role UI Rules
+
+- Owner sees full management navigation, including user role management, terminal controls, payment settings, reports, menu, stalls, and staff allocation.
+- Manager sees operational management navigation, including cashier management, menu, stalls, orders, reports, and staff allocation, but cannot create or promote Owner/Manager users.
+- Cashier sees only the cashier terminal workspace and personal shift/order history for the active stall session.
 
 ## Colors
 

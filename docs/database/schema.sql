@@ -13,7 +13,7 @@ CREATE TABLE users (
   username   VARCHAR(50)  NOT NULL UNIQUE,
   password   VARCHAR(255) NOT NULL,                    -- bcrypt hash
   pin        VARCHAR(10)  DEFAULT NULL,                -- 4-digit cashier PIN
-  role       ENUM('admin', 'cashier') NOT NULL DEFAULT 'cashier',
+  role       ENUM('owner', 'manager', 'cashier') NOT NULL DEFAULT 'cashier',
   is_active  BOOLEAN NOT NULL DEFAULT TRUE,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -107,10 +107,10 @@ CREATE TABLE telegram_sessions (
   FOREIGN KEY (stall_id) REFERENCES stalls(id) ON DELETE CASCADE
 );
 
--- ── Seed: default admin account ───────────────────────────
--- Password: admin123 (replace bcrypt hash before production)
+-- ── Seed: default owner account ───────────────────────────
+-- Password: owner123 (replace bcrypt hash before production)
 INSERT INTO users (username, password, role) VALUES
-  ('admin', '$2b$10$examplehashreplaceme', 'admin');
+  ('owner', '$2b$10$examplehashreplaceme', 'owner');
 
 -- ── Seed: example stall ───────────────────────────────────
 INSERT INTO stalls (name) VALUES ('Stall A - Drinks');

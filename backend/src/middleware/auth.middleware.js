@@ -20,7 +20,7 @@ export function authenticate(req, res, next) {
 
 /**
  * Middleware factory: restrict access to one or more roles.
- * Usage: authorize('admin') or authorize(['admin', 'cashier'])
+ * Usage: authorize('owner') or authorize(['owner', 'manager'])
  */
 export function authorize(...roles) {
   const allowedRoles = roles.flat();

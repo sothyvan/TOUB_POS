@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { mapUsersWithDefaultPins } from '../utils/permissions';
+import { canManageUserRole, mapUsersWithDefaultPins } from '../utils/permissions';
 import { api } from '../services/api';
 
 const blankUserForm = () => ({
@@ -9,21 +9,26 @@ const blankUserForm = () => ({
 /**
  * Manages user accounts — persisted state and CRUD.
  * @param {boolean} canManageUsers
- * @param {string} currentUserId - prevents self-disable/delete
+ * @param {object} currentUser - prevents self-disable/delete and scopes role management
  */
-export function useUsers(canManageUsers, currentUserId) {
+export function useUsers(canManageUsers, currentUser) {
   const [rawUsers, setUsers] = useState(() => api.users.getAll());
   const [userForm, setUserForm] = useState(blankUserForm);
+  const currentUserId = currentUser?.id;
 
   const users = useMemo(
-    () => mapUsersWithDefaultPins(rawUsers),
-    [rawUsers]
+    () => mapUsersWithDefaultPins(rawUsers).filter((user) => canManageUserRole(currentUser, user.role)),
+    [currentUser, rawUsers]
   );
 
   const saveUser = () => {
     const name = userForm.name.trim();
     if (!canManageUsers || !name || (!userForm.id && !userForm.pin.trim())) {
       alert('Add a name and PIN.');
+      return;
+    }
+    if (!canManageUserRole(currentUser, userForm.role)) {
+      alert('You do not have permission to manage this role.');
       return;
     }
     const user = { ...userForm, name, pin: userForm.pin.trim() };
@@ -45,6 +50,10 @@ export function useUsers(canManageUsers, currentUserId) {
       return;
     }
     const target = rawUsers.find((u) => u.id === userId);
+    if (target && !canManageUserRole(currentUser, target.role)) {
+      alert('You do not have permission to manage this role.');
+      return;
+    }
     if (target) {
       api.users.save({ ...target, active: !target.active });
       setUsers(api.users.getAll());
@@ -55,6 +64,10 @@ export function useUsers(canManageUsers, currentUserId) {
     if (!canManageUsers) return;
     const target = users.find((u) => u.id === userId);
     const activeCount = users.filter((u) => u.active).length;
+    if (target && !canManageUserRole(currentUser, target.role)) {
+      alert('You do not have permission to manage this role.');
+      return;
+    }
     if (userId === currentUserId || (target?.active && activeCount <= 1)) {
       alert('Keep at least one active user, and do not delete the account currently logged in.');
       return;

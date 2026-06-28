@@ -4,6 +4,31 @@ import { validateEnvironment } from './config/env.js';
 
 const PORT = process.env.PORT || 3000;
 
+async function migrateLegacyAdminRoles(sequelize) {
+  if (process.env.NODE_ENV !== 'development') {
+    return;
+  }
+
+  const [tables] = await sequelize.query("SHOW TABLES LIKE 'users';");
+  if (tables.length === 0) {
+    return;
+  }
+
+  await sequelize.query(
+    "ALTER TABLE `users` MODIFY `role` ENUM('admin', 'owner', 'manager', 'cashier') NOT NULL DEFAULT 'cashier';"
+  );
+
+  const [, metadata] = await sequelize.query("UPDATE `users` SET `role` = 'owner' WHERE `role` = 'admin';");
+
+  await sequelize.query(
+    "ALTER TABLE `users` MODIFY `role` ENUM('owner', 'manager', 'cashier') NOT NULL DEFAULT 'cashier';"
+  );
+
+  if (metadata?.affectedRows > 0) {
+    console.log(`[server] Migrated ${metadata.affectedRows} legacy admin user role(s) to owner.`);
+  }
+}
+
 async function startServer() {
   try {
     validateEnvironment();
@@ -21,22 +46,24 @@ async function startServer() {
     await sequelize.authenticate();
     console.log('[server] Database connection established via Sequelize.');
 
+    await migrateLegacyAdminRoles(sequelize);
+
     // Sync schema in development
     const syncOptions = process.env.NODE_ENV === 'development' ? { alter: true } : {};
     await sequelize.sync(syncOptions);
     console.log('[server] Database models synchronized successfully.');
 
-    // Auto-seed default admin user for local development only
+    // Auto-seed default owner user for local development only
     const userCount = await User.count();
     if (process.env.NODE_ENV !== 'production' && userCount === 0) {
-      const hashedPassword = await bcrypt.hash('admin123', 10);
+      const hashedPassword = await bcrypt.hash('owner123', 10);
       await User.create({
-        username: 'admin',
+        username: 'owner',
         password: hashedPassword,
-        role: 'admin',
+        role: 'owner',
         is_active: true,
       });
-      console.log('[server] Seeded default admin user (username: admin, password: admin123).');
+      console.log('[server] Seeded default owner user (username: owner, password: owner123).');
     }
 
     // Start server

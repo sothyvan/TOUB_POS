@@ -7,7 +7,7 @@ import { api } from '../services/api';
  * @param {Array}    cart
  * @param {Function} clearCart
  * @param {Object}   currentUser
- * @param {Object|null} assignedStall — stall the cashier is working at (null for admin)
+ * @param {Object|null} assignedStall — stall the cashier is working at (null for management users)
  * @param {Object}   totals - { subtotal, serviceFee, estimatedTax, total }
  */
 export function useOrders(isOnline, cart, clearCart, currentUser, assignedStall, { subtotal, serviceFee, estimatedTax, total }) {

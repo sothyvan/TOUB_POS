@@ -8,6 +8,20 @@ Update this file after every meaningful implementation change.
 - Phase 2: Frontend Authentication Integration — **COMPLETE**
 - Phase 3: Backend-Owned Products, Categories, Stalls, And Staff — **NEXT**
 
+- **Implemented Owner / Manager / Cashier RBAC migration**:
+  - Replaced active backend role enum and validation with `owner`, `manager`, and `cashier`.
+  - Updated management API route guards so Owner and Manager can access operational management APIs, while Cashier remains blocked from management endpoints.
+  - Enforced backend user-management limits: Owner can manage Owner, Manager, and Cashier users; Manager can create/manage Cashier users only.
+  - Changed development default seed account from `admin/admin123` to `owner/owner123`.
+  - Updated frontend route guards, login redirects, permission helpers, demo credential copy, seed users, and staff-management role options for the three-role model.
+  - Kept `/admin-portal` as the existing management route while removing active app-role dependence on `admin`.
+  - Synchronized Sequelize role definitions with `docs/database/schema.sql` and `docs/database/queries.sql`.
+  - Verified `backend/npm run lint`, `frontend/npm run lint`, and `frontend/npm run build`.
+
+- **Fixed local backend startup after RBAC migration**:
+  - Added a development-only startup compatibility migration that converts existing legacy `admin` user roles to `owner` before Sequelize tightens the `users.role` enum.
+  - Documented the matching raw SQL migration steps in `docs/database/queries.sql`.
+
 - **Implemented Phase 2 frontend JWT authentication integration**:
   - Added a Vite-compatible API client using `VITE_API_BASE_URL` with a `http://localhost:3000/api` fallback and automatic Bearer token attachment.
   - Added an auth/session provider that stores the backend JWT and current user, restores sessions after refresh, and clears sessions on logout or `401` responses.
@@ -15,6 +29,13 @@ Update this file after every meaningful implementation change.
   - Replaced `location.state` route guards with protected route logic for `/admin-portal` (`admin`) and `/cashier` (`cashier`).
   - Kept the cashier avatar/PIN UI visible as a temporary flow, but stopped creating fake cashier auth sessions until a backend PIN endpoint exists.
   - Hid demo credentials outside development/demo mode and removed active frontend `manager` role options.
+
+- **Approved Owner / Manager / Cashier RBAC model**:
+  - Replaced the previous two-role product direction with three primary roles: Owner, Manager, and Cashier.
+  - Owner has full business/system control and can create Owner, Manager, and Cashier users.
+  - Manager handles day-to-day operations and can create/manage Cashier users only.
+  - Cashier remains limited to stall-scoped POS sales and personal shift/order history.
+  - Updated project, architecture, and UI context to make this the official access-control direction before implementation.
 
 - **Implemented Phase 1 backend auth/security hardening**:
   - Updated backend RBAC so `authorize()` supports string and array role inputs, while admin-only routes now use `authorize('admin')`.
@@ -209,7 +230,7 @@ Update this file after every meaningful implementation change.
 - Unit 3: Connect products, categories, stalls, and staff management to real backend APIs.
   - Update frontend context hooks (`useProducts.js`, `useUsers.js`, `useOrders.js`) to consume backend APIs incrementally rather than localStorage mocks.
   - Add backend-backed cashier PIN/avatar login endpoint before enabling cashier terminal authentication.
-  - Keep enforcing `admin` / `cashier` only in frontend and backend role handling.
+  - Continue keeping Sequelize models and raw SQL files synchronized while connecting Phase 3 data APIs.
 
 ## Open Questions
 
@@ -233,6 +254,7 @@ Record of key architectural and product decisions made, with rationale.
 | 6 | **Cart state in `localStorage`** (not server) | Reduces backend round-trips during item selection. Cart is ephemeral — only persisted to DB at checkout. Acceptable trade-off for speed. |
 | 7 | **PIN validated client-side** (Phase 1) | Pragmatic shortcut for the initial build. Fast UX, no extra API call per login. Flagged as tech debt — must move server-side before production. |
 | 8 | **Telegram Bot for kitchen display** (not custom screen) | Eliminates the need for a dedicated kitchen hardware/display build. Cooks already use Telegram. Saves significant scope while delivering real-time order relay. |
+| 9 | **Three-role RBAC: Owner / Manager / Cashier** | Separates full business control from day-to-day operations. Owner can manage all roles and sensitive settings; Manager can operate the store and manage Cashiers only; Cashier remains stall-scoped to POS sales. |
 
 ---
 
@@ -246,6 +268,6 @@ Intentional shortcuts taken during development that must be resolved before prod
 | 2 | **Frontend hooks use `localStorage` mock** | `useProducts`, `useOrders`, `useUsers` | 🔴 High — must be migrated to real API calls (in progress) |
 | 3 | **No input sanitization on order modifiers** | `order_items.notes` | 🟡 Medium — add max-length enforcement and strip dangerous characters before DB write |
 | 4 | **No auth endpoint rate limiting** | `POST /api/auth/login` | 🟡 Medium — add `express-rate-limit` to prevent brute-force attacks |
-| 5 | **Seed admin password is a placeholder hash** | `docs/database/schema.sql` | 🔴 High — generate real bcrypt hash and store securely before any live deployment |
+| 5 | **Seed owner password is a placeholder hash** | `docs/database/schema.sql` | 🔴 High — generate real bcrypt hash and store securely before any live deployment |
 | 6 | **WebSocket server not yet implemented** | `backend/services/` | 🔴 High — required for KHQR payment confirmation routing |
 

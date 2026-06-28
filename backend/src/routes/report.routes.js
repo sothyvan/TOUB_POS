@@ -4,7 +4,7 @@ import { getDailySummary } from '../controllers/report.controller.js';
 
 const router = Router();
 
-router.use(authenticate, authorize('admin'));
+router.use(authenticate, authorize(['owner', 'manager']));
 
 // GET /api/reports/daily?date=YYYY-MM-DD
 router.get('/daily', getDailySummary);

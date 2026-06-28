@@ -11,6 +11,7 @@ const TABS = [
 export default function UserAdmin({
   userForm, setUserForm, users,
   onSave, onEdit, onToggleActive, onDelete, onCancel,
+  currentUser,
 }) {
   const [tab, setTab] = useState('list');
 
@@ -30,6 +31,7 @@ export default function UserAdmin({
           onToggleActive={onToggleActive}
           onDelete={onDelete}
           onCancel={onCancel}
+          currentUser={currentUser}
         />
       ) : (
         <StaffAllocation users={users} />

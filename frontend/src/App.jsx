@@ -22,7 +22,7 @@ export default function App() {
           <Route
             path="/admin-portal"
             element={(
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={['owner', 'manager']}>
                 <AdminPortalPage />
               </ProtectedRoute>
             )}

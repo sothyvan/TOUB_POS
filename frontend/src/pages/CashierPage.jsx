@@ -86,7 +86,7 @@ export default function CashierPage() {
             No Stall Assigned
           </h2>
           <p style={{ margin: 0, fontSize: 14, color: '#9ca3af', fontFamily: 'Inter, sans-serif', maxWidth: 320 }}>
-            You haven't been assigned to a stall yet. Ask your admin to assign you in Stall Management.
+            You haven't been assigned to a stall yet. Ask an owner or manager to assign you in Stall Management.
           </p>
         </div>
         <button

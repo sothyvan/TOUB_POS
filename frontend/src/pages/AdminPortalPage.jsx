@@ -27,7 +27,7 @@ export default function AdminPortalPage() {
   const {
     users, userForm, setUserForm,
     saveUser, editUser, cancelUserEdit, toggleUserActive, deleteUser
-  } = useUsers(canManageUsers, currentUser?.id);
+  } = useUsers(canManageUsers, currentUser);
 
   const { orders, todaysOrders, todaysTotal } =
     useOrders(isOnline, [], () => {}, currentUser, null, {
