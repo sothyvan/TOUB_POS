@@ -71,4 +71,13 @@ export const authApi = {
       body: { username, password },
     });
   },
+  loginPin(userId, pin) {
+    return apiRequest('/auth/pin', {
+      method: 'POST',
+      body: { userId, pin },
+    });
+  },
+  getCashiers() {
+    return apiRequest('/auth/cashiers');
+  },
 };

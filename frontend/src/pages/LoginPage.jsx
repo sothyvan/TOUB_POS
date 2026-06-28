@@ -1,39 +1,52 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSavedState } from '../hooks/useSavedState';
-import { DEFAULT_USERS } from '../data/seedData';
-import { getPermissions, mapUsersWithDefaultPins, roleToApiRole } from '../utils/permissions';
-import { STORAGE_KEYS } from '../services/api';
+import { getPermissions } from '../utils/permissions';
+import { authApi } from '../services/apiClient';
 import { useAuth } from '../auth/useAuth';
 import LoginScreen from '../components/LoginScreen';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { user: currentUser, login, logout, isAuthenticated } = useAuth();
+  const { user: currentUser, login, loginPin, logout, isAuthenticated } = useAuth();
 
-  const [rawUsers] = useSavedState(STORAGE_KEYS.USERS, DEFAULT_USERS);
   const [deviceRegistered, setDeviceRegistered] = useSavedState('toub-device-registered', false);
-
   const [loginMode, setLoginMode] = useState(deviceRegistered ? 'cashier' : 'management');
   const [flowStep, setFlowStep] = useState(deviceRegistered ? 'select-profile' : 'register');
   const [selectedUser, setSelectedUser] = useState(null);
   const [typedPin, setTypedPin] = useState('');
   const [loginError, setLoginError] = useState('');
-
-  const users = useMemo(
-    () => mapUsersWithDefaultPins(rawUsers),
-    [rawUsers]
-  );
-
-  const activeUsers = users.filter((u) => u.active);
-  const activeCashiers = activeUsers.filter((u) => roleToApiRole(u.role) === 'cashier');
+  
+  const [activeCashiers, setActiveCashiers] = useState([]);
+  const [loadingCashiers, setLoadingCashiers] = useState(true);
   const showDemoCredentials = import.meta.env.DEV || import.meta.env.VITE_SHOW_DEMO_CREDENTIALS === 'true';
+
+  useEffect(() => {
+    let mounted = true;
+    authApi.getCashiers()
+      .then(res => {
+        if (mounted) {
+          const cashiersList = res?.data || res || [];
+          setActiveCashiers(cashiersList.map(u => ({
+            ...u,
+            name: u.username,
+            station: 'Station 01', // Fallback for UI
+            active: true
+          })));
+        }
+      })
+      .catch(console.error)
+      .finally(() => {
+        if (mounted) setLoadingCashiers(false);
+      });
+    return () => { mounted = false; };
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated || !currentUser) return;
 
     if (getPermissions(currentUser).isManagement) {
-      navigate('/admin-portal', { replace: true });
+      navigate('/owner-portal', { replace: true });
     } else if (getPermissions(currentUser).isCashier) {
       navigate('/cashier', { replace: true });
     }
@@ -60,7 +73,7 @@ export default function LoginPage() {
         setLoginMode('cashier');
         setFlowStep('select-profile');
       } else {
-        navigate('/admin-portal', { replace: true });
+        navigate('/owner-portal', { replace: true });
       }
       return true;
     } catch (error) {
@@ -78,15 +91,22 @@ export default function LoginPage() {
   };
 
   // Cashier PIN pad input key handler
-  const handlePinKeyPress = (num) => {
+  const handlePinKeyPress = async (num) => {
     if (typedPin.length >= 4) return;
     setLoginError('');
     const newPin = typedPin + num;
     setTypedPin(newPin);
 
     if (newPin.length === 4) {
-      setLoginError('Cashier PIN login needs the backend PIN endpoint in Phase 2 follow-up.');
-      setTypedPin('');
+      if (!selectedUser) return;
+      try {
+        await loginPin(selectedUser.id, newPin);
+        // On success, the useEffect at the top will automatically redirect 
+        // the user to /cashier because isAuthenticated becomes true.
+      } catch (err) {
+        setLoginError(err.message || 'Invalid PIN.');
+        setTypedPin('');
+      }
     }
   };
 

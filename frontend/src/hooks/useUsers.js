@@ -1,27 +1,51 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { canManageUserRole, mapUsersWithDefaultPins } from '../utils/permissions';
 import { api } from '../services/api';
 
 const blankUserForm = () => ({
-  id: null, name: '', role: 'Cashier', station: 'Station 01', pin: '', active: true,
+  id: null, name: '', role: 'cashier', station: 'Station 01', pin: '', active: true,
 });
 
 /**
- * Manages user accounts — persisted state and CRUD.
+ * Manages user accounts — fetched from backend.
  * @param {boolean} canManageUsers
  * @param {object} currentUser - prevents self-disable/delete and scopes role management
  */
 export function useUsers(canManageUsers, currentUser) {
-  const [rawUsers, setUsers] = useState(() => api.users.getAll());
+  const [rawUsers, setUsers] = useState([]);
   const [userForm, setUserForm] = useState(blankUserForm);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
   const currentUserId = currentUser?.id;
+
+  useEffect(() => {
+    let ignore = false;
+    async function init() {
+      if (canManageUsers) {
+        try {
+          if (!ignore) setLoading(true);
+          const data = await api.users.getAll();
+          if (!ignore) setUsers(data);
+        } catch (err) {
+          if (!ignore) setError(err.message || 'Failed to load users.');
+        } finally {
+          if (!ignore) setLoading(false);
+        }
+      } else {
+        if (!ignore) setLoading(false);
+      }
+    }
+    init();
+    return () => { ignore = true; };
+  }, [canManageUsers]);
 
   const users = useMemo(
     () => mapUsersWithDefaultPins(rawUsers).filter((user) => canManageUserRole(currentUser, user.role)),
     [currentUser, rawUsers]
   );
 
-  const saveUser = () => {
+  const saveUser = async () => {
     const name = userForm.name.trim();
     if (!canManageUsers || !name || (!userForm.id && !userForm.pin.trim())) {
       alert('Add a name and PIN.');
@@ -31,19 +55,20 @@ export function useUsers(canManageUsers, currentUser) {
       alert('You do not have permission to manage this role.');
       return;
     }
-    const user = { ...userForm, name, pin: userForm.pin.trim() };
-    api.users.save(user);
-    setUsers(api.users.getAll());
-    setUserForm(blankUserForm());
+    try {
+      const user = { ...userForm, name, pin: userForm.pin.trim() };
+      await api.users.save(user);
+      setUsers(await api.users.getAll());
+      setUserForm(blankUserForm());
+    } catch (err) {
+      alert(err.message || 'Failed to save user.');
+    }
   };
 
   const editUser = (user) => setUserForm(user);
+  const cancelUserEdit = () => setUserForm(blankUserForm());
 
-  const cancelUserEdit = () => {
-    setUserForm(blankUserForm());
-  };
-
-  const toggleUserActive = (userId) => {
+  const toggleUserActive = async (userId) => {
     if (!canManageUsers) return;
     if (userId === currentUserId) {
       alert('You cannot disable the account currently logged in.');
@@ -55,12 +80,16 @@ export function useUsers(canManageUsers, currentUser) {
       return;
     }
     if (target) {
-      api.users.save({ ...target, active: !target.active });
-      setUsers(api.users.getAll());
+      try {
+        await api.users.save({ ...target, active: !target.active });
+        setUsers(await api.users.getAll());
+      } catch(err) {
+        alert(err.message || 'Failed to toggle user status.');
+      }
     }
   };
 
-  const deleteUser = (userId) => {
+  const deleteUser = async (userId) => {
     if (!canManageUsers) return;
     const target = users.find((u) => u.id === userId);
     const activeCount = users.filter((u) => u.active).length;
@@ -72,9 +101,13 @@ export function useUsers(canManageUsers, currentUser) {
       alert('Keep at least one active user, and do not delete the account currently logged in.');
       return;
     }
-    api.users.delete(userId);
-    setUsers(api.users.getAll());
+    try {
+      await api.users.delete(userId);
+      setUsers(await api.users.getAll());
+    } catch(err) {
+      alert(err.message || 'Failed to delete user.');
+    }
   };
 
-  return { users, userForm, setUserForm, saveUser, editUser, cancelUserEdit, toggleUserActive, deleteUser };
+  return { users, userForm, setUserForm, saveUser, editUser, cancelUserEdit, toggleUserActive, deleteUser, loading, error };
 }

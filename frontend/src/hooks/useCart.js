@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { SERVICE_RATE, TAX_RATE } from '../data/seedData';
 
 const adjustQuantity = (current, id, getNewQty) =>
   current.reduce((acc, item) => {
@@ -45,9 +44,9 @@ export function useCart(categoryById) {
 
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const serviceFee = Math.round(subtotal * SERVICE_RATE * 100) / 100;
-  const estimatedTax = Math.round(subtotal * TAX_RATE * 100) / 100;
-  const total = subtotal + serviceFee + estimatedTax;
+  const serviceFee = 0;
+  const estimatedTax = 0;
+  const total = subtotal;
   const cartById = useMemo(() => new Map(cart.map((item) => [item.id, item])), [cart]);
 
   return {

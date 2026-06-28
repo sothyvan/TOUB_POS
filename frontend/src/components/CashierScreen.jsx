@@ -34,10 +34,11 @@ export default function CashierScreen({
 }) {
   const [activeTab, setActiveTab] = useState('sale'); // 'sale' | 'my-orders'
 
-  // Filter orders completed by the current logged-in cashier at their current assigned stall
+  // Backend /orders/mine already scopes to this cashier only.
+  // We still sort newest-first for display.
   const myOrders = useMemo(() => {
-    return orders.filter(o => o.cashierId === currentUser?.id && o.stallId === assignedStall?.id);
-  }, [orders, currentUser, assignedStall]);
+    return [...orders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }, [orders]);
 
   // Compute shift stats for this cashier
   const myShiftStats = useMemo(() => {
@@ -88,7 +89,7 @@ export default function CashierScreen({
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#dbeafe] bg-[#eff6ff]">
                 <Icon name="location" className="w-3.5 h-3.5" style={{ color: '#2563eb' }} strokeWidth={2} />
                 <span style={{ fontSize: 12, fontWeight: 600, color: '#1d4ed8', fontFamily: 'Inter, sans-serif', whiteSpace: 'nowrap' }}>
-                  {assignedStall.name} — {assignedStall.location}
+                  {assignedStall.name}{assignedStall.location ? ` — ${assignedStall.location}` : ''}
                 </span>
                 <span className="w-1.5 h-1.5 rounded-full" style={{ background: assignedStall.online ? '#22c55e' : '#d1d5db' }} />
               </div>
