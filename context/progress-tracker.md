@@ -10,6 +10,7 @@ Update this file after every meaningful implementation change.
 - Phase 4: KDS & Live Payment WebSocket Integration — **NEXT**
 
 - **Applied Phase 3 verification fixes**:
+  - Changed cashier user creation/update to use PIN-only authentication with `users.password = NULL`; owner/manager accounts still require password hashes, and SQL/model docs now allow nullable cashier passwords.
   - Hardened product create/update validation so prices must be numeric and positive, stall/category IDs must be valid, and invalid input returns clean `400`/`404` responses instead of database `500` errors.
   - Scoped cashier product reads to assigned-stall visible products and scoped cashier category reads to assigned-stall/global categories.
   - Restricted stall create/update inputs to normal editable fields (`name`, `location`) and stopped trusting request-body `owner_id`, `device_token`, or `telegram_chat_id`.

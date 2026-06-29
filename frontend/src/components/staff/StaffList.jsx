@@ -37,6 +37,7 @@ function StatCard({ iconName, iconBg, value, label }) {
 
 function UserModal({ form, setForm, onSave, onClose, isNew, roleOptions }) {
   const handleSubmit = e => { e.preventDefault(); onSave(); onClose(); };
+  const isCashier = String(form.role || '').trim().toLowerCase() === 'cashier';
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-[#e5e7eb]">
@@ -65,13 +66,13 @@ function UserModal({ form, setForm, onSave, onClose, isNew, roleOptions }) {
               {roleOptions.map(r => <option key={r} value={r}>{r}</option>)}
             </FormSelect>
             <FormInput
-              label={`PIN ${!isNew ? '(blank = keep)' : ''}`}
+              label={isCashier ? `PIN ${!isNew ? '(blank = keep)' : ''}` : `Password ${!isNew ? '(blank = keep)' : ''}`}
               type="password"
-              inputMode="numeric"
-              placeholder="4 digits"
-              value={form.pin}
+              inputMode={isCashier ? 'numeric' : undefined}
+              placeholder={isCashier ? '4 digits' : 'Password'}
+              value={isCashier ? form.pin : form.password}
               required={isNew}
-              onChange={e => setForm(f => ({ ...f, pin: e.target.value }))}
+              onChange={e => setForm(f => isCashier ? { ...f, pin: e.target.value } : { ...f, password: e.target.value })}
             />
           </div>
           <FormInput
@@ -100,7 +101,7 @@ function UserModal({ form, setForm, onSave, onClose, isNew, roleOptions }) {
   );
 }
 
-const EMPTY = { id:null,name:'',role:'Cashier',station:'',pin:'',active:true };
+const EMPTY = { id:null,name:'',role:'Cashier',station:'',pin:'',password:'',active:true };
 
 export default function StaffList({
   userForm,

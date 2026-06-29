@@ -126,9 +126,12 @@ export const api = {
     async save(item) {
       const payload = { username: item.name, role: item.role, is_active: item.active };
       const pin = String(item.pin || '').trim();
+      const password = String(item.password || '').trim();
       if (pin) {
-        payload.password = pin;
         payload.pin = pin;
+      }
+      if (password) {
+        payload.password = password;
       }
       if (item.id) {
         await apiRequest(`/users/${item.id}`, { method: 'PUT', body: payload });

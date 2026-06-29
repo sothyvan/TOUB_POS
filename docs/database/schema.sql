@@ -11,7 +11,7 @@ USE toub_pos;
 CREATE TABLE users (
   id         INT AUTO_INCREMENT PRIMARY KEY,
   username   VARCHAR(50)  NOT NULL UNIQUE,
-  password   VARCHAR(255) NOT NULL,                    -- bcrypt hash
+  password   VARCHAR(255) DEFAULT NULL,                -- bcrypt hash; NULL for PIN-only cashiers
   pin        VARCHAR(10)  DEFAULT NULL,                -- 4-digit cashier PIN
   role       ENUM('owner', 'manager', 'cashier') NOT NULL DEFAULT 'cashier',
   is_active  BOOLEAN NOT NULL DEFAULT TRUE,

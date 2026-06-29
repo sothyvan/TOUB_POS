@@ -27,7 +27,7 @@ VALUES ('manager1', '$2b$10$hashedpasswordstring...', NULL, 'manager', TRUE);
 
 -- Insert a cashier account
 INSERT INTO users (username, password, pin, role, is_active)
-VALUES ('cashier1', '$2b$10$hashedpasswordstring...', '1111', 'cashier', TRUE);
+VALUES ('cashier1', NULL, '1111', 'cashier', TRUE);
 
 -- Update user details by ID
 UPDATE users 
@@ -44,6 +44,10 @@ WHERE role = 'admin';
 
 ALTER TABLE users
 MODIFY role ENUM('owner', 'manager', 'cashier') NOT NULL DEFAULT 'cashier';
+
+-- Allow PIN-only cashier accounts to keep password NULL
+ALTER TABLE users
+MODIFY password VARCHAR(255) DEFAULT NULL;
 
 -- Delete user account by ID
 DELETE FROM users 

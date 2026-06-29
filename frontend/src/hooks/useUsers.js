@@ -3,7 +3,7 @@ import { canManageUserRole } from '../utils/permissions';
 import { api } from '../services/api';
 
 const blankUserForm = () => ({
-  id: null, name: '', role: 'cashier', station: 'Station 01', pin: '', active: true,
+  id: null, name: '', role: 'Cashier', station: 'Station 01', pin: '', password: '', active: true,
 });
 
 /**
@@ -49,8 +49,13 @@ export function useUsers(canManageUsers, currentUser) {
 
   const saveUser = async () => {
     const name = userForm.name.trim();
-    if (!canManageUsers || !name || (!userForm.id && !userForm.pin.trim())) {
-      alert('Add a name and PIN.');
+    const role = String(userForm.role || '').trim().toLowerCase();
+    const pin = userForm.pin.trim();
+    const password = String(userForm.password || '').trim();
+    const isCashier = role === 'cashier';
+    const missingNewCredential = !userForm.id && (isCashier ? !pin : !password);
+    if (!canManageUsers || !name || missingNewCredential) {
+      alert(isCashier ? 'Add a name and PIN.' : 'Add a name and password.');
       return;
     }
     if (!canManageUserRole(currentUser, userForm.role)) {
@@ -58,7 +63,7 @@ export function useUsers(canManageUsers, currentUser) {
       return;
     }
     try {
-      const user = { ...userForm, name, pin: userForm.pin.trim() };
+      const user = { ...userForm, name, pin, password };
       await api.users.save(user);
       setUsers(await api.users.getAll());
       setUserForm(blankUserForm());
@@ -67,7 +72,7 @@ export function useUsers(canManageUsers, currentUser) {
     }
   };
 
-  const editUser = (user) => setUserForm({ ...user, pin: '' });
+  const editUser = (user) => setUserForm({ ...user, pin: '', password: '' });
   const cancelUserEdit = () => setUserForm(blankUserForm());
 
   const toggleUserActive = async (userId) => {

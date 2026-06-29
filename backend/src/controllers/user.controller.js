@@ -3,7 +3,7 @@ import * as userRepository from '../repositories/user.repository.js';
 
 const WEB_APP_ROLES = ['owner', 'manager', 'cashier'];
 const ROLE_MANAGEMENT_RULES = {
-  owner: WEB_APP_ROLES,
+  owner: ['manager', 'cashier'],
   manager: ['cashier'],
   cashier: [],
 };
@@ -30,6 +30,10 @@ function rolePermissionMessage(actorRole) {
     : 'Insufficient permissions to manage this user role.';
 }
 
+function isCashierRole(role) {
+  return normalizeRole(role) === 'cashier';
+}
+
 /**
  * Get all users.
  */
@@ -52,17 +56,24 @@ export async function createUser(req, res, next) {
   try {
     const { username, password, pin, role } = req.body;
     const normalizedRole = normalizeRole(role);
-    if (!username || !password || !role) {
-      return res.status(400).json({ success: false, message: 'username, password, and role are required.' });
+    if (!username || !role) {
+      return res.status(400).json({ success: false, message: 'username and role are required.' });
     }
     if (!isValidWebAppRole(normalizedRole)) {
       return res.status(400).json({ success: false, message: roleValidationMessage() });
     }
+    if (isCashierRole(normalizedRole) && !pin) {
+      return res.status(400).json({ success: false, message: 'pin is required for cashier users.' });
+    }
+    if (!isCashierRole(normalizedRole) && !password) {
+      return res.status(400).json({ success: false, message: 'password is required for owner and manager users.' });
+    }
     if (!canManageRole(req.user?.role, normalizedRole)) {
       return res.status(403).json({ success: false, message: rolePermissionMessage(req.user?.role) });
     }
-    const password_hash = await bcrypt.hash(password, 10);
-    const userId = await userRepository.insertUser({ username, password_hash, pin, role: normalizedRole });
+    const password_hash = isCashierRole(normalizedRole) ? null : await bcrypt.hash(password, 10);
+    const pin_hash = isCashierRole(normalizedRole) ? await bcrypt.hash(pin, 10) : null;
+    const userId = await userRepository.insertUser({ username, password_hash, pin_hash, role: normalizedRole });
     res.status(201).json({ success: true, data: { id: userId, username, role: normalizedRole } });
   } catch (err) {
     next(err);
@@ -98,8 +109,13 @@ export async function updateUser(req, res, next) {
       updateData.role = normalizedRole;
     }
     if (is_active !== undefined) {updateData.is_active = is_active;}
+
+    const targetRole = normalizeRole(updateData.role ?? existingUser.role);
+    if (isCashierRole(targetRole)) {
+      updateData.password_hash = null;
+    }
     
-    if (password) {
+    if (password && !isCashierRole(targetRole)) {
       updateData.password_hash = await bcrypt.hash(password, 10);
     }
 

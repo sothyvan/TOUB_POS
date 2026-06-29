@@ -14,6 +14,12 @@ export async function loginUser(username, password) {
     throw err;
   }
 
+  if (!user.password_hash) {
+    const err = new Error('Invalid credentials.');
+    err.status = 401;
+    throw err;
+  }
+
   const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) {
     const err = new Error('Invalid credentials.');
@@ -52,7 +58,9 @@ export async function loginWithPin(userId, pin) {
   }
 
   // Validate PIN (currently stored as plain text, we check for string equality)
-  if (!user.pin || String(user.pin) !== String(pin)) {
+  const valid = await bcrypt.compare(pin, user.pin);
+
+  if (!user.pin || !valid) {
     const err = new Error('Invalid PIN.');
     err.status = 401;
     throw err;
