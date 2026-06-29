@@ -25,9 +25,10 @@ function roleValidationMessage() {
 }
 
 function rolePermissionMessage(actorRole) {
-  return normalizeRole(actorRole) === 'manager'
-    ? 'Managers can create and manage cashier users only.'
-    : 'Insufficient permissions to manage this user role.';
+  const normalized = normalizeRole(actorRole);
+  if (normalized === 'owner')   return 'Owners can create and manage manager and cashier users only.';
+  if (normalized === 'manager') return 'Managers can create and manage cashier users only.';
+  return 'Insufficient permissions to manage this user role.';
 }
 
 function isCashierRole(role) {

@@ -7,7 +7,7 @@ export default function KhqrPaymentModal({ isOpen, total, onCancel, onConfirm })
     <ModalShell
       isOpen={isOpen}
       labelledBy="khqr-payment-title"
-      panelClassName="bg-brand-yellow rounded-4xl w-115 max-w-full p-7 flex flex-col items-center text-center shadow-[0_24px_64px_rgba(0,0,0,0.24)] border-0"
+      panelClassName="bg-white/80 rounded-4xl w-115 max-w-full p-7 flex flex-col items-center text-center shadow-[0_24px_64px_rgba(0,0,0,0.24)] border-0"
     >
         <h3 id="khqr-payment-title" className="m-0 text-[26px] font-extrabold text-brand-dark mb-5 mt-1 tracking-tight">
           Scan QR Code to Pay!

@@ -9,7 +9,7 @@
   --color-brand-subtext: #756c61;
   --color-brand-dark: #191715;
   --color-brand-card: #fffdfa;
-  --color-brand-yellow: #ebc02b;
+  /* --color-brand-yellow: #ebc02b; */
   --color-brand-blue: #0047cc;
   --color-brand-action: #003ec7;
   --color-state-danger: #c70000;
@@ -62,12 +62,4 @@ button,
 input,
 select {
   font: inherit;
-}
-
-/* Custom focus outlines matching visual aesthetics */
-button:focus-visible,
-input:focus-visible,
-select:focus-visible {
-  outline: 3px solid rgba(248, 211, 107, 0.72);
-  outline-offset: 2px;
 }

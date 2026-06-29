@@ -1,4 +1,5 @@
 import Icon from './ui/Icon';
+import Logo from './ui/Logo';
 
 // Nav items matching Figma: Main Menu section
 const MAIN_MENU = [
@@ -45,17 +46,7 @@ export default function OwnerSidebar({
       <div className="px-5 pt-5 pb-4">
         <div className="flex items-center gap-3 px-2">
           {/* Logo box — dark blue square with "r" icon feel */}
-          <div className="w-10 h-10 rounded-[10px] bg-[#003ec7] flex items-center justify-center shrink-0">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <rect x="3" y="3" width="6" height="6" rx="1.5" fill="white" />
-              <rect x="11" y="3" width="6" height="6" rx="1.5" fill="white" fillOpacity="0.5" />
-              <rect x="3" y="11" width="6" height="6" rx="1.5" fill="white" fillOpacity="0.5" />
-              <rect x="11" y="11" width="6" height="6" rx="1.5" fill="white" />
-              {/* green check badge */}
-              <circle cx="15" cy="15" r="5" fill="#16a34a" />
-              <path d="M12.5 15l1.5 1.5 2.5-2.5" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
+          <Logo />
           <span
             className="text-[#191b23] font-bold leading-none"
             style={{ fontSize: 18, fontFamily: 'Inter, sans-serif', fontWeight: 700 }}

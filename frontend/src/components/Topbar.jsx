@@ -9,7 +9,7 @@ export default function Topbar({ currentUser, isCashier, itemCount, onCartOpen, 
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   return (
-    <header className="min-h-19 py-3.5 px-[clamp(18px,3vw,34px)] bg-[#fffcf6]/90 border-b border-brand-border flex items-center justify-between gap-4.5 max-sm:flex-col max-sm:items-start">
+    <header className="min-h-19 py-3.5 px-[clamp(18px,3vw,34px)] bg-[#fff] border-b border-brand-border flex items-center justify-between gap-4.5 max-sm:flex-col max-sm:items-start">
       <div className="flex items-center gap-3.5">
         <Logo />
         <div>

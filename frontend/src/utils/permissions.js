@@ -12,7 +12,7 @@ export function toDisplayRole(role) {
 
 export function getManageableDisplayRoles(user) {
   const role = roleToApiRole(user?.role);
-  if (role === 'owner') return ['Owner', 'Manager', 'Cashier'];
+  if (role === 'owner') return ['Manager', 'Cashier'];
   if (role === 'manager') return ['Cashier'];
   return [];
 }
