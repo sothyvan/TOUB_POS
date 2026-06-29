@@ -23,7 +23,6 @@ export default function CashierPage() {
 
   useEffect(() => {
     if (!isCashier) {
-      setLoadingStall(false);
       return;
     }
     let mounted = true;

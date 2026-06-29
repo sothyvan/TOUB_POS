@@ -126,8 +126,8 @@ export function useProducts(canManageMenu) {
   const saveProduct = async (form = productForm) => {
     const name = form.name.trim();
     const price = Number(form.price);
-    if (!canManageMenu || !name || !form.categoryId || isNaN(price) || price <= 0) {
-      alert('Add a name, category, and valid price.');
+    if (!canManageMenu || !name || !form.categoryId || !form.stallId || isNaN(price) || price <= 0) {
+      alert('Add a name, stall, category, and valid price.');
       return null;
     }
     const product = {

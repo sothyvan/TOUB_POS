@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import TabPills from './ui/TabPills';
 import StaffList from './staff/StaffList';
 import StaffAllocation from './staff/StaffAllocation';
+import { api } from '../services/api';
 
 const TABS = [
   { id: 'list',       label: 'Staff List'       },
@@ -16,6 +17,26 @@ export default function UserOwner({
   error,
 }) {
   const [tab, setTab] = useState('list');
+  const [stalls, setStalls] = useState([]);
+  const [stallsLoading, setStallsLoading] = useState(true);
+  const [stallsError, setStallsError] = useState('');
+
+  useEffect(() => {
+    let ignore = false;
+    async function loadStalls() {
+      try {
+        setStallsLoading(true);
+        const data = await api.stalls.getAll();
+        if (!ignore) setStalls(data);
+      } catch (err) {
+        if (!ignore) setStallsError(err.message || 'Failed to load stall assignments.');
+      } finally {
+        if (!ignore) setStallsLoading(false);
+      }
+    }
+    loadStalls();
+    return () => { ignore = true; };
+  }, []);
 
   return (
     <div className="flex flex-col gap-4 h-full min-h-0">
@@ -36,9 +57,12 @@ export default function UserOwner({
           currentUser={currentUser}
           loading={loading}
           error={error}
+          stalls={stalls}
+          stallsLoading={stallsLoading}
+          stallsError={stallsError}
         />
       ) : (
-        <StaffAllocation users={users} />
+        <StaffAllocation users={users} stalls={stalls} />
       )}
     </div>
   );

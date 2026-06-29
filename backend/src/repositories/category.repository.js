@@ -3,8 +3,9 @@ import { Category, Stall } from '../models/index.js';
 /**
  * Fetch all categories, including optional stall association.
  */
-export async function findAllCategories() {
+export async function findAllCategories(whereClause = {}) {
   return Category.findAll({
+    where: whereClause,
     include: [
       {
         model: Stall,

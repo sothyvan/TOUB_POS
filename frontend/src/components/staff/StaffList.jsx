@@ -7,7 +7,6 @@ import FormSelect from '../ui/FormSelect';
 import FormCheckbox from '../ui/FormCheckbox';
 import StatusBadge from '../ui/StatusBadge';
 import { initials } from '../../utils/format';
-import { getStalls, getStallAssignments } from '../../utils/stallUtils';
 
 const AVATAR_COLORS = ['#eef2ff','#dcfce7','#f3e8ff','#fff1f2','#fef3c7','#e0f2fe'];
 const AVATAR_TEXT   = ['#3730a3','#166534','#7e22ce','#be123c','#92400e','#075985'];
@@ -103,7 +102,22 @@ function UserModal({ form, setForm, onSave, onClose, isNew, roleOptions }) {
 
 const EMPTY = { id:null,name:'',role:'Cashier',station:'',pin:'',active:true };
 
-export default function StaffList({ userForm, setUserForm, users, onSave, onEdit, onToggleActive, onDelete, onCancel, currentUser, loading, error }) {
+export default function StaffList({
+  userForm,
+  setUserForm,
+  users,
+  onSave,
+  onEdit,
+  onToggleActive,
+  onDelete,
+  onCancel,
+  currentUser,
+  loading,
+  error,
+  stalls = [],
+  stallsLoading,
+  stallsError,
+}) {
   const [showModal, setShowModal] = useState(false);
   const [isNew, setIsNew]         = useState(false);
   const [search, setSearch]       = useState('');
@@ -112,13 +126,15 @@ export default function StaffList({ userForm, setUserForm, users, onSave, onEdit
     return manageableRoles.length > 0 ? manageableRoles : ROLES;
   }, [currentUser]);
 
-  const stalls      = useMemo(() => getStalls(),[]);
-  const assignments = useMemo(() => getStallAssignments(),[]);
   const userStallMap = useMemo(()=>{
     const m={};
-    stalls.forEach(s=>(assignments[s.id]??[]).forEach(uid=>{ m[uid]=`${s.name} — ${s.location}`; }));
+    stalls.forEach(stall => {
+      (stall.staff ?? []).forEach(user => {
+        m[user.id] = stall.location ? `${stall.name} — ${stall.location}` : stall.name;
+      });
+    });
     return m;
-  },[stalls,assignments]);
+  },[stalls]);
 
   const filtered = useMemo(()=>users.filter(u=>u.name.toLowerCase().includes(search.toLowerCase())),[users,search]);
   const activeCount = users.filter(u=>u.active).length;
@@ -146,7 +162,9 @@ export default function StaffList({ userForm, setUserForm, users, onSave, onEdit
             <div className="flex items-center gap-2 mt-0.5">
               <p style={{margin:0,fontSize:12,color:'#9ca3af',fontFamily:'Inter,sans-serif'}}>{filtered.length} employees</p>
               {loading && <span className="text-xs text-[#6b7280] animate-pulse">Loading...</span>}
-              {error && <span className="text-xs text-[#ef4444]">{error}</span>}
+            {error && <span className="text-xs text-[#ef4444]">{error}</span>}
+            {stallsLoading && <span className="text-xs text-[#6b7280] animate-pulse">Loading assignments...</span>}
+            {stallsError && <span className="text-xs text-[#ef4444]">{stallsError}</span>}
             </div>
           </div>
           <div className="flex items-center gap-2.5">

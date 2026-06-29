@@ -1,4 +1,10 @@
 import * as stallRepository from '../repositories/stall.repository.js';
+import * as userRepository from '../repositories/user.repository.js';
+
+function parsePositiveInteger(value) {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 ? number : null;
+}
 
 /**
  * Get all stalls.
@@ -17,16 +23,14 @@ export async function getStalls(req, res, next) {
  */
 export async function createStall(req, res, next) {
   try {
-    const { owner_id, name, location, device_token, telegram_chat_id } = req.body;
+    const { name, location } = req.body;
     if (!name) {
       return res.status(400).json({ success: false, message: 'Stall name is required.' });
     }
     const stall = await stallRepository.insertStall({
-      owner_id: owner_id ?? (req.user?.role === 'owner' ? req.user.id : null),
+      owner_id: req.user?.role === 'owner' ? req.user.id : null,
       name,
       location,
-      device_token,
-      telegram_chat_id,
     });
     res.status(201).json({ success: true, data: stall });
   } catch (err) {
@@ -40,14 +44,11 @@ export async function createStall(req, res, next) {
 export async function updateStall(req, res, next) {
   try {
     const { id } = req.params;
-    const { owner_id, name, location, device_token, telegram_chat_id } = req.body;
+    const { name, location } = req.body;
     
     const updateData = {};
-    if (owner_id !== undefined) {updateData.owner_id = owner_id;}
     if (name !== undefined) {updateData.name = name;}
     if (location !== undefined) {updateData.location = location;}
-    if (device_token !== undefined) {updateData.device_token = device_token;}
-    if (telegram_chat_id !== undefined) {updateData.telegram_chat_id = telegram_chat_id;}
 
     const success = await stallRepository.updateStallById(id, updateData);
     if (!success) {
@@ -82,10 +83,26 @@ export async function assignStaff(req, res, next) {
   try {
     const { id } = req.params; // stall id
     const { userId } = req.body;
-    if (!userId) {
-      return res.status(400).json({ success: false, message: 'userId is required.' });
+    const stallId = parsePositiveInteger(id);
+    const staffUserId = parsePositiveInteger(userId);
+    if (!stallId || !staffUserId) {
+      return res.status(400).json({ success: false, message: 'Valid stall id and userId are required.' });
     }
-    await stallRepository.assignStaffToStall(id, userId);
+
+    const stall = await stallRepository.findStallById(stallId);
+    if (!stall) {
+      return res.status(404).json({ success: false, message: 'Stall not found.' });
+    }
+
+    const user = await userRepository.findUserById(staffUserId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+    if (user.role !== 'cashier') {
+      return res.status(400).json({ success: false, message: 'Only cashier users can be assigned to stalls.' });
+    }
+
+    await stallRepository.assignStaffToStall(stallId, staffUserId);
     res.json({ success: true, message: 'Staff assigned successfully.' });
   } catch (err) {
     next(err);

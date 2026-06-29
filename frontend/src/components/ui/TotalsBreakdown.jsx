@@ -1,6 +1,6 @@
 import { money } from '../../utils/format';
 
-export default function TotalsBreakdown({ subtotal, serviceFee, estimatedTax, total, variant = 'panel' }) {
+export default function TotalsBreakdown({ subtotal, total, variant = 'panel' }) {
   const isReceipt = variant === 'receipt';
 
   if (isReceipt) {

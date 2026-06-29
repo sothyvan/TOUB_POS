@@ -1,9 +1,3 @@
-export function defaultPinForRole(role) {
-  if (roleToApiRole(role) === 'owner') return '1234';
-  if (roleToApiRole(role) === 'manager') return '2222';
-  return '1111';
-}
-
 export function roleToApiRole(role) {
   return String(role || '').trim().toLowerCase();
 }
@@ -46,11 +40,4 @@ export function getPermissions(user) {
     canViewOrders: isManagement,
     manageableUserRoles: getManageableDisplayRoles(user),
   };
-}
-
-export function mapUsersWithDefaultPins(users) {
-  return users.map((u) => ({
-    ...u,
-    pin: u.pin || defaultPinForRole(u.role),
-  }));
 }

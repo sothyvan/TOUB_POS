@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSavedState } from '../hooks/useSavedState';
 import { getPermissions } from '../utils/permissions';
@@ -18,7 +18,6 @@ export default function LoginPage() {
   const [loginError, setLoginError] = useState('');
   
   const [activeCashiers, setActiveCashiers] = useState([]);
-  const [loadingCashiers, setLoadingCashiers] = useState(true);
   const showDemoCredentials = import.meta.env.DEV || import.meta.env.VITE_SHOW_DEMO_CREDENTIALS === 'true';
 
   useEffect(() => {
@@ -36,9 +35,6 @@ export default function LoginPage() {
         }
       })
       .catch(console.error)
-      .finally(() => {
-        if (mounted) setLoadingCashiers(false);
-      });
     return () => { mounted = false; };
   }, []);
 

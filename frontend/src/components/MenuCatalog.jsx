@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Icon from './ui/Icon';
 import CategoryOwner from './CategoryOwner';
 import { money } from '../utils/format';
@@ -6,7 +6,7 @@ import FormInput from './ui/FormInput';
 import FormSelect from './ui/FormSelect';
 import StatusBadge from './ui/StatusBadge';
 import TabPills from './ui/TabPills';
-import { getStalls } from '../utils/stallUtils';
+import { api } from '../services/api';
 
 // KHR exchange rate (approx)
 const KHR_RATE = 4000;
@@ -114,19 +114,12 @@ function ProductRow({ product, categories, isSelected, onEdit, onDelete }) {
 }
 
 // ── Editor panel ──────────────────────────────────────────────────────────────
-function EditorPanel({ form, setForm, categories, stalls, onSave, onCancel, isNew }) {
+function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsError, onSave, onCancel, isNew }) {
   const liveKHR = toKHR(form.price);
-
-  // Per-stall availability — stored as Set of stallIds where item is visible
-  const [stallVisibility, setStallVisibility] = useState(() => {
-    const init = {};
-    stalls.forEach(s => { init[s.id] = form.stallVisibility?.[s.id] ?? true; });
-    return init;
-  });
 
   const handleSave = (e) => {
     e.preventDefault();
-    onSave({ ...form, stallVisibility });
+    onSave(form);
   };
 
   return (
@@ -182,6 +175,28 @@ function EditorPanel({ form, setForm, categories, stalls, onSave, onCancel, isNe
             required
           />
 
+          <FormSelect
+            label="Assigned Stall"
+            value={form.stallId || ''}
+            onChange={e => setForm(f => ({ ...f, stallId: e.target.value }))}
+            required
+            disabled={stallsLoading || stalls.length === 0}
+          >
+            <option value="" disabled>
+              {stallsLoading ? 'Loading stalls...' : '— Select stall —'}
+            </option>
+            {stalls.map(stall => (
+              <option key={stall.id} value={stall.id}>
+                {stall.name}{stall.location ? ` — ${stall.location}` : ''}
+              </option>
+            ))}
+          </FormSelect>
+          {stallsError && (
+            <p style={{ margin: 0, fontSize: 12, color: '#ef4444', fontFamily: 'Inter, sans-serif' }}>
+              {stallsError}
+            </p>
+          )}
+
           {/* Menu Category */}
           <FormSelect
             label="Menu Category"
@@ -215,38 +230,6 @@ function EditorPanel({ form, setForm, categories, stalls, onSave, onCancel, isNe
             </div>
           </div>
 
-          {/* Stall Allocation Matrix */}
-          <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: '#f1f5f9' }}>
-            <div className="flex items-center justify-between">
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', fontFamily: 'Inter, sans-serif' }}>
-                Stall Allocation &amp; Availability Matrix
-              </span>
-              <span style={{ fontSize: 11, color: '#64748b', fontFamily: 'Inter, sans-serif' }}>
-                {Object.values(stallVisibility).filter(Boolean).length}/{stalls.length} live
-              </span>
-            </div>
-            <p style={{ margin: 0, fontSize: 11, color: '#64748b', fontFamily: 'Inter, sans-serif', lineHeight: 1.5 }}>
-              Item shows on the POS only at stalls toggled on. Hidden stalls won't see it in the cashier workspace.
-            </p>
-            <div className="flex flex-col gap-2">
-              {stalls.map(stall => (
-                <div key={stall.id}
-                  className="flex items-center justify-between rounded-[9px] px-3 py-2.5 bg-white">
-                  <div className="flex items-center gap-2.5">
-                    <Icon name="location" className="w-3.5 h-3.5 text-[#9ca3af]" strokeWidth={2} />
-                    <span style={{ fontSize: 13, fontWeight: 500, color: '#374151', fontFamily: 'Inter, sans-serif' }}>
-                      {stall.name} — {stall.location}
-                    </span>
-                  </div>
-                  <Toggle
-                    checked={stallVisibility[stall.id] ?? true}
-                    onChange={v => setStallVisibility(prev => ({ ...prev, [stall.id]: v }))}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* Availability */}
           <div className="flex items-center justify-between py-1">
             <div>
@@ -277,7 +260,7 @@ function EditorPanel({ form, setForm, categories, stalls, onSave, onCancel, isNe
 
 // ── Empty form factory ────────────────────────────────────────────────────────
 function emptyForm() {
-  return { id: null, name: '', image: '', price: '', categoryId: '', tone: 'gold', available: true, code: '' };
+  return { id: null, name: '', image: '', price: '', categoryId: '', stallId: '', tone: 'gold', available: true, code: '' };
 }
 
 // ── Main MenuCatalog ──────────────────────────────────────────────────────────
@@ -307,7 +290,26 @@ export default function MenuCatalog({
   const [subTab, setSubTab]         = useState('products');
   const [search, setSearch]         = useState('');
   const [editingProduct, setEditing] = useState(null); // null = no panel, object = form data
-  const stalls                       = useMemo(() => getStalls(), []);
+  const [stalls, setStalls] = useState([]);
+  const [stallsLoading, setStallsLoading] = useState(true);
+  const [stallsError, setStallsError] = useState('');
+
+  useEffect(() => {
+    let ignore = false;
+    async function loadStalls() {
+      try {
+        setStallsLoading(true);
+        const data = await api.stalls.getAll();
+        if (!ignore) setStalls(data);
+      } catch (err) {
+        if (!ignore) setStallsError(err.message || 'Failed to load stalls.');
+      } finally {
+        if (!ignore) setStallsLoading(false);
+      }
+    }
+    loadStalls();
+    return () => { ignore = true; };
+  }, []);
 
   const filtered = useMemo(() =>
     products.filter(p => p.name.toLowerCase().includes(search.toLowerCase())),
@@ -358,6 +360,7 @@ export default function MenuCatalog({
           onCancel={onCancelCategory}
           loading={loading}
           error={error}
+          stalls={stalls}
         />
       </div>
     );
@@ -469,6 +472,8 @@ export default function MenuCatalog({
             setForm={setEditing}
             categories={categories}
             stalls={stalls}
+            stallsLoading={stallsLoading}
+            stallsError={stallsError}
             onSave={handleSave}
             onCancel={handleCancel}
             isNew={!editingProduct.id}

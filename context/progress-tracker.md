@@ -9,6 +9,16 @@ Update this file after every meaningful implementation change.
 - Phase 3: Backend-Owned Products, Categories, Stalls, And Staff — **COMPLETE**
 - Phase 4: KDS & Live Payment WebSocket Integration — **NEXT**
 
+- **Applied Phase 3 verification fixes**:
+  - Hardened product create/update validation so prices must be numeric and positive, stall/category IDs must be valid, and invalid input returns clean `400`/`404` responses instead of database `500` errors.
+  - Scoped cashier product reads to assigned-stall visible products and scoped cashier category reads to assigned-stall/global categories.
+  - Restricted stall create/update inputs to normal editable fields (`name`, `location`) and stopped trusting request-body `owner_id`, `device_token`, or `telegram_chat_id`.
+  - Validated staff assignment so only existing cashier users can be assigned to existing stalls.
+  - Removed active Phase 3 UI reads from old localStorage stall/assignment helpers; staff displays now use backend stall assignment data, and non-backed shift scheduling shows a temporary state.
+  - Removed fake/default PIN mapping from backend-fetched users and stopped sending password/PIN on user update unless a new PIN is typed.
+  - Removed frontend fallback `stallId = 1`; product creation now requires an explicit stall.
+  - Verified backend lint, frontend lint, frontend build, and API validation/scoping probes.
+
 - **Implemented Phase 3 Backend & Frontend Integration**:
   - Rewrote frontend React hooks (`useProducts.js`, `useUsers.js`, `useOrders.js`) to fetch from and persist to Express.js API endpoints instead of `localStorage`.
   - Refactored `StallOwner.jsx` to fetch stalls dynamically (`api.stalls.getAll()`) and process staff assignments via the new `POST /api/stalls/:id/staff` and `DELETE` endpoints.

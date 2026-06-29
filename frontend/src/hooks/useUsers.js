@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { canManageUserRole, mapUsersWithDefaultPins } from '../utils/permissions';
+import { canManageUserRole } from '../utils/permissions';
 import { api } from '../services/api';
 
 const blankUserForm = () => ({
@@ -41,7 +41,9 @@ export function useUsers(canManageUsers, currentUser) {
   }, [canManageUsers]);
 
   const users = useMemo(
-    () => mapUsersWithDefaultPins(rawUsers).filter((user) => canManageUserRole(currentUser, user.role)),
+    () => rawUsers
+      .map((user) => ({ ...user, pin: '' }))
+      .filter((user) => canManageUserRole(currentUser, user.role)),
     [currentUser, rawUsers]
   );
 
@@ -65,7 +67,7 @@ export function useUsers(canManageUsers, currentUser) {
     }
   };
 
-  const editUser = (user) => setUserForm(user);
+  const editUser = (user) => setUserForm({ ...user, pin: '' });
   const cancelUserEdit = () => setUserForm(blankUserForm());
 
   const toggleUserActive = async (userId) => {

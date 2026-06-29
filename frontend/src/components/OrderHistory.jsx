@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { money } from '../utils/format';
 import Icon from './ui/Icon';
-import { getStalls, getStallAssignments } from '../utils/stallUtils';
 
 // Mock/Seed data for reports if orders are empty, to populate charts beautifully
 const SEED_ORDERS_HISTORY = [
@@ -41,9 +40,6 @@ export default function OrderHistory({ orders: rawOrders }) {
     }));
     return [...customOrders, ...SEED_ORDERS_HISTORY];
   }, [rawOrders]);
-
-  const stalls = useMemo(() => getStalls(), []);
-  const assignments = useMemo(() => getStallAssignments(), []);
 
   // Filter orders by date range
   const filteredOrders = useMemo(() => {
@@ -86,21 +82,8 @@ export default function OrderHistory({ orders: rawOrders }) {
       .reduce((sum, o) => sum + o.total, 0);
   }, [allOrders]);
 
-  // Stalls Active status logic
-  const stallStatuses = useMemo(() => {
-    // A stall is considered active if it has cashiers assigned to it currently
-    return stalls.map(stall => {
-      const staffIds = assignments[stall.id] || [];
-      const isActive = staffIds.length > 0;
-      return {
-        ...stall,
-        active: isActive,
-      };
-    });
-  }, [stalls, assignments]);
-
-  const activeCartsCount = stallStatuses.filter(s => s.active).length;
-  const offlineCartsCount = stallStatuses.length - activeCartsCount;
+  const stallStatuses = [];
+  const activeCartsCount = 0;
 
   // Avg Prep Time logic
   const avgPrepTimeSecs = useMemo(() => {
@@ -285,7 +268,7 @@ export default function OrderHistory({ orders: rawOrders }) {
                 <div>
                   <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#6b7280', fontFamily: 'Inter' }}>Active Stalls Running</h4>
                   <span className="block mt-1" style={{ fontSize: 28, fontWeight: 800, color: '#111827', fontFamily: 'Inter' }}>
-                    {activeCartsCount} / {stalls.length}
+                    {activeCartsCount} / 0
                   </span>
                 </div>
                 <div className="w-9 h-9 rounded-xl bg-[#e0f2fe] flex items-center justify-center text-[#0284c7]">
@@ -312,7 +295,7 @@ export default function OrderHistory({ orders: rawOrders }) {
               </div>
               
               <div className="text-[12px] text-[#9ca3af] fontFamily-['Inter']">
-                {offlineCartsCount > 0 ? `${offlineCartsCount} cart currently offline` : 'All carts fully operational'}
+                Stall runtime status needs the Phase 4 live device/WebSocket flow.
               </div>
             </div>
 

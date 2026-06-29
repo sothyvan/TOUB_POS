@@ -5,7 +5,6 @@ import OrderPanel from './OrderPanel';
 import Icon from './ui/Icon';
 
 export default function CashierScreen({
-  currentUser,
   orders = [],
   onViewReceipt,
   categories,

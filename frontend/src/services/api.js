@@ -79,7 +79,7 @@ export const api = {
         price_usd: Number(item.price),
         price_khr: Number(item.price) * 4000,
         category_id: item.categoryId,
-        stall_id: item.stallId || 1,
+        stall_id: item.stallId ? Number(item.stallId) : undefined,
         image_url: item.image,
         is_visible: item.available
       };
@@ -101,7 +101,11 @@ export const api = {
       return res.data.map(mapCategoryToFrontend);
     },
     async save(item) {
-      const payload = { name: item.name, tone: item.tone, stall_id: item.stallId || 1 };
+      const payload = {
+        name: item.name,
+        tone: item.tone,
+        stall_id: item.stallId ? Number(item.stallId) : null
+      };
       if (item.id) {
         await apiRequest(`/categories/${item.id}`, { method: 'PUT', body: payload });
         return { ...item };
@@ -120,7 +124,12 @@ export const api = {
       return res.data.map(mapUserToFrontend);
     },
     async save(item) {
-      const payload = { username: item.name, password: item.pin, pin: item.pin, role: item.role, is_active: item.active };
+      const payload = { username: item.name, role: item.role, is_active: item.active };
+      const pin = String(item.pin || '').trim();
+      if (pin) {
+        payload.password = pin;
+        payload.pin = pin;
+      }
       if (item.id) {
         await apiRequest(`/users/${item.id}`, { method: 'PUT', body: payload });
         return { ...item };
