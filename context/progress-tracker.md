@@ -232,6 +232,11 @@ Update this file after every meaningful implementation change.
   - Add backend-backed cashier PIN/avatar login endpoint before enabling cashier terminal authentication.
   - Continue keeping Sequelize models and raw SQL files synchronized while connecting Phase 3 data APIs.
 
+- Future SaaS / Multi-Customer Platform Administration:
+  - Consider adding a separate `platform_admin` role for the TouB POS developer/operator team.
+  - Keep `platform_admin` outside customer business roles (`owner`, `manager`, `cashier`).
+  - Implement only when the system supports multiple customer businesses/tenants, subscription or license management, owner recovery, and audited support access.
+
 ## Open Questions
 
 - What specific payment gateway API (e.g., Bakong KHQR) will be used to build the real-time listener webhook?
@@ -255,6 +260,7 @@ Record of key architectural and product decisions made, with rationale.
 | 7 | **PIN validated client-side** (Phase 1) | Pragmatic shortcut for the initial build. Fast UX, no extra API call per login. Flagged as tech debt — must move server-side before production. |
 | 8 | **Telegram Bot for kitchen display** (not custom screen) | Eliminates the need for a dedicated kitchen hardware/display build. Cooks already use Telegram. Saves significant scope while delivering real-time order relay. |
 | 9 | **Three-role RBAC: Owner / Manager / Cashier** | Separates full business control from day-to-day operations. Owner can manage all roles and sensitive settings; Manager can operate the store and manage Cashiers only; Cashier remains stall-scoped to POS sales. |
+| 10 | **Future platform_admin is separate from store roles** | TouB POS may later need a developer/operator role for SaaS administration. This must be modeled outside customer RBAC so platform support access does not blur with Owner, Manager, or Cashier permissions. |
 
 ---
 

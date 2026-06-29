@@ -36,6 +36,7 @@
 - Managers handle day-to-day operations and may create/manage Cashier users only.
 - Cashiers can only view and mutate transactions linked to their active session.
 - Owners and Managers have access to the management portal, transactions, reports, and operational tools according to their permission level.
+- Future SaaS/multi-customer versions may add a separate `platform_admin` role for the TouB POS developer/operator team. This role is outside the customer business RBAC model and must be implemented with tenant isolation, audit logging, and support-only access rules.
 
 ## Invariants
 
@@ -102,4 +103,5 @@
 | 8 | **QR amount mismatch** | 🔴 High | A webhook may arrive for the wrong amount or wrong merchant. Never auto-confirm just because a payment event arrived. Webhook handler must assert `webhook.amount === order.total_usd` and `webhook.merchant_id === env.MERCHANT_ID` before marking the order complete. Reject mismatches with a `400` and log them. |
 | 9 | **JWT expiry mid-shift** | 🟡 Medium | Cashier's 8h token can expire while they are mid-order. The next API call returns `401`, the cart is lost, and the cashier is confused. Mitigation: frontend must intercept all `401` responses, store the current cart in `sessionStorage`, redirect to PIN re-entry, and restore the cart after re-authentication. |
 | 10 | **Device token revocation** | 🟡 Medium | No current mechanism to remotely deregister a terminal (e.g., stolen tablet). The device token in `stalls.device_token` remains valid indefinitely. Mitigation: management portal must include an Owner-controlled "Revoke Terminal" action that clears `stalls.device_token = NULL`, immediately invalidating that device's access. |
+| 11 | **Future platform admin data access** | 🔴 High | If TouB POS becomes a multi-customer SaaS product, the developer/operator `platform_admin` role must be separated from customer roles. Add tenant isolation, support-session auditing, and least-privilege access before enabling any cross-customer administration. |
 

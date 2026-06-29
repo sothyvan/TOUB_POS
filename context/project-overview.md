@@ -73,6 +73,12 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 - Client-side order caching when offline
 - Background sync queue on reconnect
 
+### Platform Administration *(Future SaaS / Multi-Customer Mode)*
+
+- A future `platform_admin` role may exist for the TouB POS developer/operator team, separate from customer business users.
+- Platform admins would manage customer businesses, subscriptions/licenses, owner account recovery, and technical support operations.
+- Platform admins must not be mixed with customer store roles (`owner`, `manager`, `cashier`) and should only access customer business data through audited support flows.
+
 ## Scope
 
 ### In Scope
@@ -94,6 +100,7 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 - Credit card or non-QR digital payment processing.
 - Offline-first caching and background sync *(Future)*.
 - Transaction parking *(Future)*.
+- Multi-customer SaaS administration and `platform_admin` tooling *(Future)*.
 
 ## Success Criteria
 
