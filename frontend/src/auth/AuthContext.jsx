@@ -53,14 +53,31 @@ export function AuthProvider({ children }) {
     return user;
   }, []);
 
+  const loginPin = useCallback(async (userId, pin, options = {}) => {
+    const response = await authApi.loginPin(userId, pin);
+    const authData = response?.data || response;
+
+    if (!authData?.token || !authData?.user) {
+      throw new Error('Login response did not include a token and user.');
+    }
+
+    const user = normalizeAuthUser(authData.user);
+    if (options.persist !== false) {
+      writeStoredSession(authData.token, user);
+      setSession({ token: authData.token, user });
+    }
+    return user;
+  }, []);
+
   const value = useMemo(() => ({
     token: session.token,
     user: session.user,
     isAuthenticated: Boolean(session.token && session.user),
     login,
+    loginPin,
     logout: clearSession,
     clearSession,
-  }), [session.token, session.user, login, clearSession]);
+  }), [session.token, session.user, login, loginPin, clearSession]);
 
   return (
     <AuthContext.Provider value={value}>

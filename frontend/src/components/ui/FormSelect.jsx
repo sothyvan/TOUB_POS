@@ -1,5 +1,5 @@
 /**
- * Reusable labeled <select> with the standard admin-form styling.
+ * Reusable labeled <select> with the standard owner-form styling.
  *
  * Props:
  *  - label       – visible label text (renders a wrapping <label>)

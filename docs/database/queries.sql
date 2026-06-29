@@ -53,22 +53,22 @@ WHERE id = 2;
 -- ── 2. STALLS CRUD (stall.repository.js) ───────────────────
 
 -- List all stalls
-SELECT id, name, device_token, telegram_chat_id, created_at, updated_at 
+SELECT id, owner_id, name, location, device_token, telegram_chat_id, created_at, updated_at 
 FROM stalls 
 ORDER BY created_at DESC;
 
 -- Find a stall by ID
-SELECT id, name, device_token, telegram_chat_id, created_at, updated_at 
+SELECT id, owner_id, name, location, device_token, telegram_chat_id, created_at, updated_at 
 FROM stalls 
 WHERE id = 1;
 
 -- Create a new stall
-INSERT INTO stalls (name, device_token, telegram_chat_id) 
-VALUES ('Stall A - Drinks', 'dev_tok_123', 987654321);
+INSERT INTO stalls (owner_id, name, location, device_token, telegram_chat_id) 
+VALUES (1, 'Stall A - Drinks', 'AEON Mall', 'dev_tok_123', 987654321);
 
 -- Update an existing stall by ID
 UPDATE stalls 
-SET name = 'Stall A - Hot Coffee', device_token = 'dev_tok_456', telegram_chat_id = 987654321
+SET owner_id = 1, name = 'Stall A - Hot Coffee', location = 'Night Market', device_token = 'dev_tok_456', telegram_chat_id = 987654321
 WHERE id = 1;
 
 -- Delete a stall by ID
@@ -148,8 +148,8 @@ FROM products
 WHERE id = 5;
 
 -- Insert a new Order (status defaults to 'pending')
-INSERT INTO orders (stall_id, cashier_id, payment_method, status, total_usd, kitchen_status, telegram_status)
-VALUES (1, 2, 'khqr', 'pending', 15.75, 'pending', 'pending');
+INSERT INTO orders (stall_id, cashier_id, payment_method, status, total_usd)
+VALUES (1, 2, 'khqr', 'pending', 15.75);
 
 -- Insert Order Item details (linked to order)
 INSERT INTO order_items (order_id, product_id, name, price_usd, price_khr, subtotal_usd, subtotal_khr, quantity, notes)
@@ -167,6 +167,12 @@ LEFT JOIN order_items i ON o.id = i.order_id
 WHERE o.cashier_id = 2
 ORDER BY o.created_at DESC;
 
+-- Fetch Telegram tickets for an order
+SELECT id, order_id, telegram_msg_id, telegram_chat_id, status, sent_at, completed_at
+FROM telegram_tickets
+WHERE order_id = 1
+ORDER BY id DESC;
+
 
 -- ── 6. PAYMENT WEBHOOKS (payment.service.js) ───────────────
 
@@ -179,6 +185,23 @@ FOR UPDATE;
 -- Complete order and store timestamp on successful webhook payment
 UPDATE orders 
 SET status = 'completed', completed_at = NOW() 
+WHERE id = 1;
+
+-- Queue a Telegram ticket after payment confirmation
+INSERT INTO telegram_tickets (order_id, telegram_chat_id, status)
+SELECT 1, s.telegram_chat_id, 'pending'
+FROM orders o
+LEFT JOIN stalls s ON o.stall_id = s.id
+WHERE o.id = 1;
+
+-- Mark a kitchen ticket sent once Telegram returns a message ID
+UPDATE telegram_tickets
+SET status = 'sent', telegram_msg_id = 123456789, sent_at = NOW()
+WHERE id = 1;
+
+-- Mark a kitchen ticket done from an authorized Telegram callback
+UPDATE telegram_tickets
+SET status = 'done', completed_at = NOW()
 WHERE id = 1;
 
 

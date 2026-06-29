@@ -4,7 +4,7 @@ import LiveEvents from './dashboard/LiveEvents';
 import QuickActions from './dashboard/QuickActions';
 import Icon from './ui/Icon';
 
-export default function AdminDashboard() {
+export default function OwnerDashboard() {
   return (
     <div className="flex-1 flex flex-col justify-start items-start gap-5">
       <div className="w-full flex justify-start items-stretch gap-3.5 flex-wrap max-[1024px]:flex-col">

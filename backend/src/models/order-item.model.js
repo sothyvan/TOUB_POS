@@ -31,17 +31,17 @@ const OrderItem = sequelize.define('OrderItem', {
     allowNull: false,
     field: 'price_khr',
   },
-  subtotal_usd: {
+  line_total_usd: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
     defaultValue: 0.00,
-    field: 'subtotal_usd',
+    field: 'line_total_usd',
   },
-  subtotal_khr: {
+  line_total_khr: {
     type: DataTypes.INTEGER,
     allowNull: false,
     defaultValue: 0,
-    field: 'subtotal_khr',
+    field: 'line_total_khr',
   },
   quantity: {
     type: DataTypes.INTEGER,

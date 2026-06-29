@@ -1,7 +1,7 @@
-import AdminFormModal from '../ui/AdminFormModal';
+import OwnerFormModal from '../ui/OwnerFormModal';
 import Icon from '../ui/Icon';
 
-export default function AdminCrudTable({
+export default function OwnerCrudTable({
   title,
   items,
   renderItem,
@@ -19,6 +19,8 @@ export default function AdminCrudTable({
   modalScroll = false,
   addButtonLabel,
   itemLabel = 'item',
+  loading,
+  error,
 }) {
   const defaultToggleLabel = (item) => {
     if (item.available !== undefined) return item.available ? 'Hide' : 'Show';
@@ -39,7 +41,11 @@ export default function AdminCrudTable({
     <div className="w-full">
       <div className="border border-brand-border rounded-3xl bg-brand-card shadow-[0_12px_36px_rgba(52,45,35,0.04)] p-6 grid gap-2">
         <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-2">
-          <h3 className="m-0 text-brand-dark text-lg font-black tracking-tight">{title}</h3>
+          <div className="flex items-center gap-3">
+            <h3 className="m-0 text-brand-dark text-lg font-black tracking-tight">{title}</h3>
+            {loading && <span className="text-sm text-gray-500 animate-pulse">Loading...</span>}
+            {error && <span className="text-sm text-red-500">{error}</span>}
+          </div>
           <button
             type="button"
             onClick={onAdd}
@@ -102,9 +108,14 @@ export default function AdminCrudTable({
             </div>
           </div>
         ))}
+        {!loading && items.length === 0 && (
+          <div className="py-8 text-center text-gray-400 font-medium">
+            No {title.toLowerCase()} found.
+          </div>
+        )}
       </div>
 
-      <AdminFormModal
+      <OwnerFormModal
         isOpen={isFormOpen}
         title={modalTitle}
         maxWidth={modalMaxWidth}
@@ -112,7 +123,7 @@ export default function AdminCrudTable({
         onClose={onFormClose}
       >
         {formContent({ onCancel: onFormClose })}
-      </AdminFormModal>
+      </OwnerFormModal>
     </div>
   );
 }

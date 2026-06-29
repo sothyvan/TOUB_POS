@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { getPermissions } from '../utils/permissions';
-import { getAssignedStall } from '../utils/stallUtils';
+import { api } from '../services/api';
 import { useAuth } from '../auth/useAuth';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useCart } from '../hooks/useCart';
@@ -18,7 +18,25 @@ export default function CashierPage() {
   const { isCashier } = getPermissions(currentUser);
 
   // ── Stall assignment (cashiers only) ──────────────────────────────────────
-  const assignedStall = isCashier ? getAssignedStall(currentUser?.id) : null;
+  const [assignedStall, setAssignedStall] = useState(null);
+  const [loadingStall, setLoadingStall] = useState(isCashier);
+
+  useEffect(() => {
+    if (!isCashier) {
+      setLoadingStall(false);
+      return;
+    }
+    let mounted = true;
+    api.auth.getMyStall()
+      .then(stall => {
+        if (mounted) setAssignedStall(stall);
+      })
+      .catch(console.error)
+      .finally(() => {
+        if (mounted) setLoadingStall(false);
+      });
+    return () => { mounted = false; };
+  }, [isCashier]);
 
   // ── Hooks ─────────────────────────────────────────────────────────────────
   const isOnline = useOnlineStatus();
@@ -43,10 +61,14 @@ export default function CashierPage() {
     setPendingPaymentMethod(method);
   };
 
-  const handleConfirmPayment = useCallback(() => {
+  const handleConfirmPayment = useCallback(async () => {
     if (!pendingPaymentMethod) return;
-    const order = handleCheckout(pendingPaymentMethod);
+    
+    // Store the method in a local variable before clearing the state to ensure the modal closes
+    const method = pendingPaymentMethod;
     setPendingPaymentMethod(null);
+    
+    const order = await handleCheckout(method);
     if (order) {
       setActiveReceipt(order);
     }
@@ -76,6 +98,14 @@ export default function CashierPage() {
 
   // ── Guard: cashier with no stall assigned ─────────────────────────────────
   if (isCashier && !assignedStall) {
+    if (loadingStall) {
+      return (
+        <div className="h-svh flex items-center justify-center bg-[#f8fafc]">
+          <div className="w-8 h-8 border-4 border-[#003ec7] border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      );
+    }
+
     return (
       <div className="h-svh flex flex-col items-center justify-center gap-4 bg-[#f8fafc] text-center px-6">
         <div className="w-16 h-16 rounded-full bg-[#fff1f2] flex items-center justify-center">

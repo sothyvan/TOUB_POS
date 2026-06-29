@@ -1,5 +1,7 @@
 export function money(value) {
-  return `$${value.toFixed(2)}`;
+  const num = parseFloat(value);
+  if (isNaN(num)) return '$0.00';
+  return `$${num.toFixed(2)}`;
 }
 
 function nameAcronym(name, maxLen) {

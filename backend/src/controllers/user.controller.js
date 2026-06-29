@@ -136,3 +136,19 @@ export async function deleteUser(req, res, next) {
     next(err);
   }
 }
+
+/**
+ * Get assigned stall for the current user.
+ */
+export async function getAssignedStall(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const stall = await userRepository.findAssignedStallByUserId(userId);
+    if (!stall) {
+      return res.status(404).json({ success: false, message: 'No stall assigned to this user.' });
+    }
+    res.json({ success: true, data: stall });
+  } catch (err) {
+    next(err);
+  }
+}

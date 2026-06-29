@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function useAdminForm(form, { onSave, onCancel }) {
+export default function useOwnerForm(form, { onSave, onCancel }) {
   const [isAddingNew, setIsAddingNew] = useState(false);
   const isFormOpen = Boolean(form.id) || isAddingNew;
 

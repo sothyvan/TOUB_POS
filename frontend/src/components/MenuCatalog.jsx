@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import Icon from './ui/Icon';
-import CategoryAdmin from './CategoryAdmin';
+import CategoryOwner from './CategoryOwner';
 import { money } from '../utils/format';
 import FormInput from './ui/FormInput';
 import FormSelect from './ui/FormSelect';
@@ -301,6 +301,8 @@ export default function MenuCatalog({
   onEditCategory,
   onDeleteCategory,
   onCancelCategory,
+  loading,
+  error,
 }) {
   const [subTab, setSubTab]         = useState('products');
   const [search, setSearch]         = useState('');
@@ -345,7 +347,7 @@ export default function MenuCatalog({
       <div className="flex flex-col gap-4">
         {/* Tab pills */}
         <TabPills tabs={TABS} activeId={subTab} onChange={setSubTab} className="w-fit" />
-        <CategoryAdmin
+        <CategoryOwner
           categoryForm={categoryForm}
           setCategoryForm={setCategoryForm}
           categories={categories}
@@ -354,6 +356,8 @@ export default function MenuCatalog({
           onEdit={onEditCategory}
           onDelete={onDeleteCategory}
           onCancel={onCancelCategory}
+          loading={loading}
+          error={error}
         />
       </div>
     );
@@ -398,9 +402,13 @@ export default function MenuCatalog({
         <div className="flex flex-col bg-white rounded-2xl overflow-hidden flex-1 min-w-0 border border-[#e5e7eb]">
           {/* Panel header */}
           <div className="px-5 py-4 border-b border-[#f3f4f6]" style={{ minHeight: 80 }}>
-            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
-              Menu Items
-            </h3>
+            <div className="flex items-center gap-3">
+              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
+                Menu Items
+              </h3>
+              {loading && <span className="text-xs text-[#6b7280] animate-pulse">Loading...</span>}
+              {error && <span className="text-xs text-[#ef4444]">{error}</span>}
+            </div>
             <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}>
               {filtered.length} product{filtered.length !== 1 ? 's' : ''} · click a row to edit
             </p>
@@ -429,7 +437,11 @@ export default function MenuCatalog({
 
           {/* Rows */}
           <div className="flex-1 overflow-y-auto">
-            {filtered.length === 0 ? (
+            {loading ? (
+              <div className="flex flex-col items-center justify-center h-40 gap-2 text-[#9ca3af]">
+                <span style={{ fontSize: 13, fontFamily: 'Inter, sans-serif' }} className="animate-pulse">Loading products...</span>
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-40 gap-2 text-[#9ca3af]">
                 <Icon name="product" className="w-8 h-8" strokeWidth={1.5} />
                 <span style={{ fontSize: 13, fontFamily: 'Inter, sans-serif' }}>No products found</span>

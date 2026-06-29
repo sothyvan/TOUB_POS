@@ -1,4 +1,4 @@
-import { User } from '../models/index.js';
+import { User, Stall } from '../models/index.js';
 
 /**
  * Find a user by username. Returns user object with password mapped to password_hash.
@@ -23,6 +23,15 @@ export async function findUserByUsername(username) {
 export async function findUserById(id) {
   return User.findByPk(id, {
     attributes: { exclude: ['password', 'pin'] },
+  });
+}
+
+/**
+ * Find a user by ID including their PIN (for auth).
+ */
+export async function findUserWithPinById(id) {
+  return User.findByPk(id, {
+    attributes: ['id', 'username', 'role', 'pin', 'is_active'],
   });
 }
 
@@ -68,4 +77,17 @@ export async function updateUserById(id, data) {
 export async function deleteUserById(id) {
   const affectedRows = await User.destroy({ where: { id } });
   return affectedRows > 0;
+}
+
+/**
+ * Find the stall assigned to a user.
+ */
+export async function findAssignedStallByUserId(userId) {
+  const user = await User.findByPk(userId, {
+    include: [{ model: Stall }],
+  });
+  if (user && user.Stalls && user.Stalls.length > 0) {
+    return user.Stalls[0];
+  }
+  return null;
 }

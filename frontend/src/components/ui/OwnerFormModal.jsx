@@ -1,7 +1,7 @@
 import Icon from './Icon';
 import ModalShell from './ModalShell';
 
-export default function AdminFormModal({
+export default function OwnerFormModal({
   children,
   isOpen,
   title,
@@ -9,7 +9,7 @@ export default function AdminFormModal({
   maxWidth = 'max-w-105',
   scroll = false,
 }) {
-  const titleId = `admin-form-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+  const titleId = `owner-form-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
 
   return (
     <ModalShell

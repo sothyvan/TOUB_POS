@@ -12,7 +12,7 @@ export default function PageShell({
     <div
       className="h-svh max-h-svh flex flex-col bg-brand-bg text-brand-text overflow-hidden"
     >
-      {/* Global topbar — cashier only. Admin has its own header inside AdminWorkspace */}
+      {/* Global topbar — cashier only. Owner has its own header inside OwnerWorkspace */}
       {isCashier && (
         <Topbar
           currentUser={currentUser}

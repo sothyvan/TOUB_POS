@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { TONES } from '../data/seedData';
-import AdminCRUDTable from './common/AdminCrudTable';
+import OwnerCRUDTable from './common/OwnerCrudTable';
 import FormInput from './ui/FormInput';
 import FormSelect from './ui/FormSelect';
 import FormActions from './ui/FormActions';
 import StatusBadge from './ui/StatusBadge';
 import Icon from './ui/Icon';
-import useAdminForm from '../hooks/useAdminForm';
+import useOwnerForm from '../hooks/useOwnerForm';
 import { getToneSwatchClass, getToneBadgeClass } from '../utils/toneClasses';
 import { money } from '../utils/format';
 
-export default function CategoryAdmin({
+export default function CategoryOwner({
   categoryForm,
   setCategoryForm,
   categories,
@@ -19,9 +19,11 @@ export default function CategoryAdmin({
   onEdit,
   onDelete,
   onCancel,
+  loading,
+  error,
 }) {
   const { isFormOpen, handleSubmit, handleCancel, handleAddNewClick } =
-    useAdminForm(categoryForm, { onSave, onCancel });
+    useOwnerForm(categoryForm, { onSave, onCancel });
 
   const [expandedCats, setExpandedCats] = useState({});
 
@@ -121,7 +123,7 @@ export default function CategoryAdmin({
   );
 
   return (
-    <AdminCRUDTable
+    <OwnerCRUDTable
       title="Categories"
       items={categories}
       renderItem={renderCategory}
@@ -134,6 +136,8 @@ export default function CategoryAdmin({
       modalTitle={categoryForm.id ? 'Edit category' : 'Create category'}
       onFormClose={handleCancel}
       formContent={renderForm}
+      loading={loading}
+      error={error}
     />
   );
 }

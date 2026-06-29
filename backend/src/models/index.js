@@ -6,7 +6,11 @@ import Category from './category.model.js';
 import Product from './product.model.js';
 import Order from './order.model.js';
 import OrderItem from './order-item.model.js';
-import TelegramSession from './telegram-session.model.js';
+import TelegramTicket from './telegram-ticket.model.js';
+
+// ── User ↔ Stall Ownership ──────────────────────────────────
+Stall.belongsTo(User, { as: 'Owner', foreignKey: 'owner_id', onDelete: 'SET NULL' });
+User.hasMany(Stall, { as: 'OwnedStalls', foreignKey: 'owner_id' });
 
 // ── Stall ↔ Staff (Many-to-Many via StallStaff) ──────────────
 Stall.belongsToMany(User, { through: StallStaff, foreignKey: 'stall_id', otherKey: 'user_id' });
@@ -42,9 +46,9 @@ Order.hasMany(OrderItem, { as: 'Items', foreignKey: 'order_id' });
 OrderItem.belongsTo(Product, { foreignKey: 'product_id', onDelete: 'SET NULL' });
 Product.hasMany(OrderItem, { foreignKey: 'product_id' });
 
-// ── TelegramSession Associations ─────────────────────────────
-TelegramSession.belongsTo(Stall, { foreignKey: 'stall_id', onDelete: 'CASCADE' });
-Stall.hasMany(TelegramSession, { foreignKey: 'stall_id' });
+// ── TelegramTicket Associations ──────────────────────────────
+TelegramTicket.belongsTo(Order, { foreignKey: 'order_id', onDelete: 'CASCADE' });
+Order.hasMany(TelegramTicket, { as: 'TelegramTickets', foreignKey: 'order_id' });
 
 export {
   sequelize,
@@ -55,5 +59,5 @@ export {
   Product,
   Order,
   OrderItem,
-  TelegramSession,
+  TelegramTicket,
 };

@@ -45,7 +45,7 @@
 3. A transaction cannot be marked as complete without a valid, verified webhook/listener event — except for cash, which is confirmed by explicit cashier dialog action.
 4. WebSocket payment notifications must only be pushed to the socket registered by the cashier who initiated that specific QR session. No broadcast.
 5. A terminal (device) may only load menu items and staff rosters scoped to its registered stall. Cross-stall data must never be returned.
-6. Only authorized Telegram user IDs (cook accounts) may trigger order state changes via bot callbacks.
+6. Telegram callback authorization needs a replacement cook-identity model before production; current Telegram persistence is limited to order ticket dispatch state.
 7. Order item modifiers/notes must be stored as a snapshot at time of order — not linked to a live config.
 
 ## Frontend State Management
@@ -69,7 +69,7 @@
 
 - **Outbound**: `telegram.service.js` uses the Bot API `sendMessage` with inline keyboard buttons after each confirmed order.
 - **Inbound**: A webhook endpoint (`POST /api/webhook/telegram`) receives callback queries from cook button taps.
-- **Security**: Each callback validates `from.id` against the authorized `TelegramSession` records for that stall.
+- **Security**: Telegram ticket state is stored in `TelegramTicket`; cook authorization rules still need a replacement model before production.
 - **State update**: Uses `editMessageText` + `editMessageReplyMarkup` to mutate the ticket in-place (no new messages).
 - **Format**: Ticket includes stall label, order ID, item list with modifiers, totals, and timestamp.
 
@@ -82,7 +82,7 @@
 - **Category**: Groups products. Belongs to a stall's menu profile.
 - **Order**: A transaction. Belongs to a `User` (cashier) and a `Stall`. Has payment method, status, and totals.
 - **OrderItem**: Links `Order` to `Product`. Stores quantity, price snapshot, and **`notes`** (modifiers like "no ice").
-- **TelegramSession**: Authorized Telegram user IDs per stall kitchen channel (cook identity lock).
+- **TelegramTicket**: Tracks Telegram kitchen dispatch state for an order, including Telegram message/chat IDs, send status, and cook completion timestamp.
 
 ## Error Handling Strategy
 
@@ -95,7 +95,7 @@
 |---|------|----------|------------|
 | 1 | **KHQR / Bakong webhook integration** | 🟡 Medium | Use Bakong's official **development API** environment for all testing. Register for dev credentials at the Bakong developer portal. Do not mock — integrate against the real dev sandbox from the start so behavior matches production exactly. |
 | 2 | **WebSocket routing — accidental broadcast to wrong cashier** | 🔴 High | Isolated per-cashier notification is a confirmed core feature. Risk is implementing it incorrectly. `websocket.service.js` must maintain a strict `Map<cashier_id, socket>` and emit only to the mapped socket. Never use `io.emit()` or room broadcasts. Validate `cashier_id` on every emit. |
-| 3 | **Telegram Bot async failures** | 🟡 Medium | Telegram failure must never block or rollback the order. Strategy: (1) Always log the error. (2) Store `telegram_status` (`pending` / `sent` / `failed`) on the `orders` table — set to `failed` on catch. (3) Show a management dashboard badge for failed orders so an Owner/Manager can manually relay. Auto-retry queue is out of scope (Future). |
+| 3 | **Telegram Bot async failures** | 🟡 Medium | Telegram failure must never block or rollback the order. Strategy: (1) Always log the error. (2) Store Telegram dispatch state in `telegram_tickets.status` (`pending` / `sent` / `failed` / `done`) instead of mutating payment state on `orders`. (3) Show a management dashboard badge for failed tickets so an Owner/Manager can manually relay. Auto-retry queue is out of scope (Future). |
 | 4 | **KHR exchange rate — hardcoded vs. live** | 🟡 Medium | Decision required before building the product form. Recommend: hardcode the rate as a `.env` constant (`KHR_RATE=4100`) for now. Add a note in the admin panel showing the current rate. Live rate API is out of scope. |
 | 5 | **Stall data isolation — cross-stall data leak** | 🔴 High | Every repository query that returns products, orders, or staff **must** include `WHERE stall_id = ?` scoped from the authenticated device token — never from a client-supplied query param. |
 | 6 | **Frontend ↔ Backend integration gap** | 🟡 Medium | Frontend currently runs entirely on `localStorage`. All hooks (`useProducts`, `useOrders`, `useUsers`) must be migrated to real API calls. Do this incrementally per feature, not all at once. |

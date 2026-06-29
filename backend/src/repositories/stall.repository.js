@@ -1,10 +1,17 @@
-import { Stall } from '../models/index.js';
+import { Stall, User, StallStaff } from '../models/index.js';
 
 /**
  * Fetch all stalls.
  */
 export async function findAllStalls() {
   return Stall.findAll({
+    include: [
+      { 
+        model: User, 
+        attributes: ['id', 'username', 'role'],
+        through: { attributes: [] } // omit the join table attributes
+      }
+    ],
     order: [['created_at', 'DESC']],
   });
 }
@@ -36,5 +43,23 @@ export async function updateStallById(id, data) {
  */
 export async function deleteStallById(id) {
   const affectedRows = await Stall.destroy({ where: { id } });
+  return affectedRows > 0;
+}
+
+/**
+ * Assign a staff member to a stall.
+ * Ensures the staff member is only assigned to one stall.
+ */
+export async function assignStaffToStall(stallId, userId) {
+  // First, remove the user from any other stall assignments
+  await StallStaff.destroy({ where: { user_id: userId } });
+  return StallStaff.create({ stall_id: stallId, user_id: userId });
+}
+
+/**
+ * Remove a staff member from a stall.
+ */
+export async function removeStaffFromStall(stallId, userId) {
+  const affectedRows = await StallStaff.destroy({ where: { stall_id: stallId, user_id: userId } });
   return affectedRows > 0;
 }

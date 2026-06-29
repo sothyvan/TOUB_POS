@@ -55,7 +55,7 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 - Structured digital order tickets (items, qty, modifiers, stall label)
 - Chronological queue by payment timestamp
 - Cook taps "Done" → bot edits message state in real time
-- Identity-locked: only authorized cook accounts can interact
+- Cook interaction authorization requires a replacement identity model before production
 
 ### Owner & Manager Portal
 

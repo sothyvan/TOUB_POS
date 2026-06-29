@@ -11,12 +11,12 @@ const PAGE_TITLES = {
 };
 
 /**
- * AdminHeader — pixel-spec from Figma "Admin Dashboard - Computer" > Header [1274x64]
+ * OwnerHeader — pixel-spec from Figma "Owner Dashboard - Computer" > Header [1274x64]
  *
  * Left:  breadcrumb (ToubPOS › [Page Name]) + page title h1
  * Right: notification bell (with red dot) + date label
  */
-export default function AdminHeader({ activeTab }) {
+export default function OwnerHeader({ activeTab }) {
   const { crumb, title } = PAGE_TITLES[activeTab] ?? { crumb: activeTab, title: activeTab };
 
   const today = new Date().toLocaleDateString('en-US', {

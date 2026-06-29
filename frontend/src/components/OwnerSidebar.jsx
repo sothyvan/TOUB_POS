@@ -15,22 +15,22 @@ const SYSTEM_MENU = [
 ];
 
 /**
- * AdminSidebar — pixel-perfect match of Figma "Admin Dashboard - Computer" sidebar
+ * OwnerSidebar — pixel-perfect match of Figma "Owner Dashboard - Computer" sidebar
  *
  * Props:
  *  activeTab     : string  — current active tab id
  *  allowedTabs   : string[] — tabs this user can see
  *  onTabChange   : (id) => void
  *  userName      : string  (default "Owner Account")
- *  userRole      : string  (default "Administrator")
+ *  userRole      : string  (default "Owneristrator")
  *  onLogout      : () => void
  */
-export default function AdminSidebar({
+export default function OwnerSidebar({
   activeTab,
   allowedTabs = [],
   onTabChange,
   userName = 'Owner Account',
-  userRole = 'Administrator',
+  userRole = 'Owneristrator',
   onLogout,
 }) {
   const visibleMain   = MAIN_MENU.filter((item) => allowedTabs.includes(item.id));
@@ -60,7 +60,7 @@ export default function AdminSidebar({
             className="text-[#191b23] font-bold leading-none"
             style={{ fontSize: 18, fontFamily: 'Inter, sans-serif', fontWeight: 700 }}
           >
-            POS ADMIN
+            POS OWNER
           </span>
         </div>
       </div>
