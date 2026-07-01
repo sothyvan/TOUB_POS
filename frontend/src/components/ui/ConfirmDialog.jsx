@@ -14,7 +14,7 @@ const actionClasses = {
 const sizeClasses = {
   compact: {
     panel:
-      'w-full max-w-100 rounded-3xl border border-brand-border bg-brand-card shadow-[0_20px_50px_rgba(52,45,35,0.15)] p-6 text-center',
+      'w-full bg-white/80 max-w-100 rounded-3xl border border-brand-border bg-brand-card shadow-[0_20px_50px_rgba(52,45,35,0.15)] p-6 text-center',
     title: 'text-xl font-black tracking-tight mb-2',
     message: 'text-[14px] leading-relaxed mb-6 font-semibold',
     actions: 'gap-3',
@@ -22,7 +22,7 @@ const sizeClasses = {
   },
   large: {
     panel:
-      'w-135 max-w-full rounded-4xl bg-brand-yellow shadow-[0_24px_64px_rgba(0,0,0,0.24)] p-8 text-center',
+      'w-135 bg-white/80 max-w-full rounded-4xl bg-brand-yellow shadow-[0_24px_64px_rgba(0,0,0,0.24)] p-8 text-center',
     title: 'text-3xl font-extrabold tracking-tight mb-8 mt-2',
     message: 'text-base leading-relaxed mb-6 font-semibold',
     actions: 'gap-6',

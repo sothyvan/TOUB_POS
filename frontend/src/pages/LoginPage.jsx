@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSavedState } from '../hooks/useSavedState';
 import { getPermissions } from '../utils/permissions';
@@ -110,6 +110,31 @@ export default function LoginPage() {
   const handlePinErase = () => {
     setTypedPin((prev) => prev.slice(0, -1));
   };
+
+  // Keep a ref that always points to the latest callbacks.
+  // The keydown listener below is registered once (when flowStep becomes 'pin-pad'),
+  // so without a ref it would capture a stale closure where typedPin is always ''
+  // — causing only the first digit to ever register.
+  const pinHandlersRef = useRef({ onKeyPress: handlePinKeyPress, onErase: handlePinErase });
+  useEffect(() => {
+    pinHandlersRef.current = { onKeyPress: handlePinKeyPress, onErase: handlePinErase };
+  });
+
+  // Allow physical keyboard input when the PIN pad is visible.
+  useEffect(() => {
+    if (flowStep !== 'pin-pad') return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Backspace') {
+        pinHandlersRef.current.onErase();
+      } else if (/^[0-9]$/.test(e.key)) {
+        pinHandlersRef.current.onKeyPress(e.key);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [flowStep]);
 
   return (
     <LoginScreen

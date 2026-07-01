@@ -62,6 +62,10 @@ WHERE role = 'admin';
 ALTER TABLE users
 MODIFY role ENUM('owner', 'manager', 'cashier') NOT NULL DEFAULT 'cashier';
 
+-- Allow PIN-only cashier accounts to keep password NULL
+ALTER TABLE users
+MODIFY password VARCHAR(255) DEFAULT NULL;
+
 -- Delete user account by ID
 DELETE FROM users 
 WHERE id = 2;

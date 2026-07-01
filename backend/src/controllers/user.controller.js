@@ -5,7 +5,7 @@ import { hashPin } from '../utils/pin.util.js';
 const WEB_APP_ROLES = ['owner', 'manager', 'cashier'];
 const PASSWORD_ROLES = ['owner', 'manager'];
 const ROLE_MANAGEMENT_RULES = {
-  owner: WEB_APP_ROLES,
+  owner: ['manager', 'cashier'],
   manager: ['cashier'],
   cashier: [],
 };
@@ -39,9 +39,14 @@ function roleValidationMessage() {
 }
 
 function rolePermissionMessage(actorRole) {
-  return normalizeRole(actorRole) === 'manager'
-    ? 'Managers can create and manage cashier users only.'
-    : 'Insufficient permissions to manage this user role.';
+  const normalized = normalizeRole(actorRole);
+  if (normalized === 'owner')   {return 'Owners can create and manage manager and cashier users only.'};
+  if (normalized === 'manager') {return 'Managers can create and manage cashier users only.'};
+  return 'Insufficient permissions to manage this user role.';
+}
+
+function isCashierRole(role) {
+  return normalizeRole(role) === 'cashier';
 }
 
 async function buildCreateCredentials(role, password, pin) {
@@ -124,6 +129,12 @@ export async function createUser(req, res, next) {
     }
     if (!isValidWebAppRole(normalizedRole)) {
       return res.status(400).json({ success: false, message: roleValidationMessage() });
+    }
+    if (isCashierRole(normalizedRole) && !pin) {
+      return res.status(400).json({ success: false, message: 'pin is required for cashier users.' });
+    }
+    if (!isCashierRole(normalizedRole) && !password) {
+      return res.status(400).json({ success: false, message: 'password is required for owner and manager users.' });
     }
     if (!canManageRole(req.user?.role, normalizedRole)) {
       return res.status(403).json({ success: false, message: rolePermissionMessage(req.user?.role) });
