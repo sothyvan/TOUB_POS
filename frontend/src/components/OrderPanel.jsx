@@ -14,6 +14,8 @@ export default function OrderPanel({
   updateQuantity,
   setCartItemQuantity,
   handleCheckout,
+  checkoutLoading,
+  checkoutError,
   isOnline,
 }) {
   return (
@@ -92,24 +94,30 @@ export default function OrderPanel({
           variant="panel"
         />
 
+        {checkoutError ? (
+          <p className="mt-3 mb-3 text-xs font-bold text-state-danger">
+            {checkoutError}
+          </p>
+        ) : null}
+
         <div className="flex items-center gap-3">
           <button
             className="flex-1 h-13 border-0 rounded-xl text-white text-base font-bold cursor-pointer bg-state-success hover:bg-state-success/90 disabled:cursor-not-allowed disabled:opacity-45 flex items-center justify-center gap-2 shadow-sm transition-all"
             type="button"
-            disabled={cart.length === 0}
+            disabled={cart.length === 0 || checkoutLoading}
             onClick={() => handleCheckout('CASH')}
           >
             <Icon name="cash" />
-            Cash
+            {checkoutLoading ? 'Processing...' : 'Cash'}
           </button>
           <button
             className="flex-1 h-13 border-0 rounded-xl text-white text-base font-bold cursor-pointer bg-state-danger hover:bg-state-danger/90 disabled:cursor-not-allowed disabled:opacity-45 flex items-center justify-center gap-2 shadow-sm transition-all"
             type="button"
-            disabled={!isOnline || cart.length === 0}
+            disabled={!isOnline || cart.length === 0 || checkoutLoading}
             onClick={() => handleCheckout('KHQR')}
           >
             <Icon name="khqr" />
-            KHQR
+            {checkoutLoading ? 'Processing...' : 'KHQR'}
           </button>
         </div>
       </div>

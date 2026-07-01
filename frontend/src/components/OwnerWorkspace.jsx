@@ -63,6 +63,7 @@ export default function OwnerWorkspace({
   usersError,
 }) {
   const [pendingDelete, setPendingDelete] = useState(null);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handlePromptDelete = (type, id) => {
@@ -71,15 +72,18 @@ export default function OwnerWorkspace({
       type === 'category' ? categories.find((c) => c.id === id)?.name :
       type === 'user' ? users.find((u) => u.id === id)?.name : '';
     setPendingDelete({ type, id, name });
+    setDeleteConfirmationText('');
   };
 
   const handleConfirmDelete = () => {
     if (!pendingDelete) return;
+    if (deleteConfirmationText.trim() !== 'DELETE') return;
     const { type, id } = pendingDelete;
     if (type === 'product') onDeleteProduct(id);
     else if (type === 'category') onDeleteCategory(id);
     else if (type === 'user') onDeleteUser(id);
     setPendingDelete(null);
+    setDeleteConfirmationText('');
   };
 
   return (
@@ -213,11 +217,22 @@ export default function OwnerWorkspace({
         size="compact"
         title="Are you sure?"
         message={pendingDelete ? (
-          <>
+          <div className="flex flex-col gap-3">
+            <span>
             You are about to delete the {pendingDelete.type}{' '}
             <strong className="text-brand-dark">"{pendingDelete.name}"</strong>.
             This action cannot be undone.
-          </>
+            </span>
+            <label className="text-left text-xs font-bold text-brand-subtext">
+              Type DELETE to confirm
+              <input
+                className="mt-2 w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-sm font-bold text-brand-dark outline-none focus:border-brand-action"
+                value={deleteConfirmationText}
+                onChange={(event) => setDeleteConfirmationText(event.target.value)}
+                autoComplete="off"
+              />
+            </label>
+          </div>
         ) : null}
         icon={(
           <div className="w-16 h-16 rounded-full bg-[#fdf5d6] flex items-center justify-center text-brand-yellow mb-4">
@@ -229,7 +244,11 @@ export default function OwnerWorkspace({
         confirmLabel="Delete"
         overlayClassName="bg-brand-dark/40"
         panelClassName="border-brand-yellow bg-[#fffcf0]"
-        onCancel={() => setPendingDelete(null)}
+        isConfirmDisabled={deleteConfirmationText.trim() !== 'DELETE'}
+        onCancel={() => {
+          setPendingDelete(null);
+          setDeleteConfirmationText('');
+        }}
         onConfirm={handleConfirmDelete}
       />
     </div>

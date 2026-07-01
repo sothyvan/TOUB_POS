@@ -28,6 +28,8 @@ export default function CashierScreen({
   total,
   clearCart,
   handleCheckout,
+  checkoutLoading,
+  checkoutError,
   isOnline,
   assignedStall,
 }) {
@@ -43,7 +45,8 @@ export default function CashierScreen({
   const myShiftStats = useMemo(() => {
     const todayStr = new Date().toDateString();
     const todayOrders = myOrders.filter(o => new Date(o.createdAt).toDateString() === todayStr);
-    const revenue = todayOrders.reduce((sum, o) => sum + o.total, 0);
+    const paidTodayOrders = todayOrders.filter((order) => order.status === 'paid');
+    const revenue = paidTodayOrders.reduce((sum, o) => sum + o.total, 0);
     return {
       revenue,
       count: todayOrders.length
@@ -185,7 +188,7 @@ export default function CashierScreen({
               {myOrders.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-[#9ca3af]">
                   <Icon name="orders" className="w-8 h-8 mb-2" />
-                  <span className="text-[13px] font-medium">You haven't completed any orders yet</span>
+                  <span className="text-[13px] font-medium">You haven't created any orders yet</span>
                 </div>
               ) : (
                 <div className="flex flex-col divide-y divide-[#f9fafb]">
@@ -212,6 +215,14 @@ export default function CashierScreen({
 
                         <span className="text-[14px] font-extrabold text-[#111827] min-w-[70px] text-right">
                           {money(order.total)}
+                        </span>
+
+                        <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wide border ${
+                          order.status === 'paid'
+                            ? 'bg-green-50 text-green-700 border-green-200'
+                            : 'bg-orange-50 text-orange-700 border-orange-200'
+                        }`}>
+                          {order.status}
                         </span>
 
                         <button
@@ -245,6 +256,8 @@ export default function CashierScreen({
           updateQuantity={updateQuantity}
           setCartItemQuantity={setCartItemQuantity}
           handleCheckout={handleCheckout}
+          checkoutLoading={checkoutLoading}
+          checkoutError={checkoutError}
           isOnline={isOnline}
         />
       )}

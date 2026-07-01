@@ -1,7 +1,5 @@
 import { apiRequest } from './apiClient';
-export const STORAGE_KEYS = {
-  ORDERS: 'sabay-pos-orders',
-};
+import { toDisplayRole } from '../utils/permissions';
 
 function mapProductToFrontend(p) {
   return {
@@ -41,28 +39,44 @@ function mapUserToFrontend(u) {
   return {
     id: u.id,
     name: u.username,
-    role: u.role,
+    role: toDisplayRole(u.role),
     active: u.is_active !== false,
+    password: '',
+    pin: '',
   };
 }
 
 function mapOrderToFrontend(o) {
+  const id = o.id ?? o.orderId;
+  const paymentMethod = String(o.payment_method || o.paymentMethod || '').toUpperCase();
+  const cashier = o.Cashier || o.cashier || {};
+  const stall = o.Stall || o.stall || {};
+  const items = o.Items || o.items || [];
+
   return {
-    id: o.id,
-    orderNo: `ORD-${String(o.id).padStart(4, '0')}`,
+    id,
+    orderNo: `ORD-${String(id).padStart(4, '0')}`,
     createdAt: o.created_at || o.createdAt,
     cashierId: o.cashier_id || o.cashierId,
+    cashierName: cashier.username || cashier.name || o.cashierName || 'Cashier',
     stallId: o.stall_id || o.stallId,
-    paymentMethod: o.payment_method || o.paymentMethod,
+    stallName: stall.location ? `${stall.name} — ${stall.location}` : (stall.name || o.stallName || 'Station'),
+    station: stall.location ? `${stall.name} — ${stall.location}` : (stall.name || o.station || 'Station'),
+    paymentMethod,
     status: o.status,
+    qrPayload: o.qr_payload || o.qrPayload || null,
     subtotal: parseFloat(o.subtotal_usd || o.total_usd || 0),
+    serviceFee: 0,
+    estimatedTax: 0,
     total: parseFloat(o.total_usd || 0),
-    items: (o.Items || []).map(i => ({
-      id: i.product_id,
+    items: items.map(i => ({
+      id: i.id,
+      productId: i.product_id,
       name: i.name,
       quantity: i.quantity,
       price: parseFloat(i.price_usd || 0),
       lineTotal: parseFloat(i.line_total_usd || 0),
+      notes: i.notes || '',
     }))
   };
 }
@@ -124,11 +138,14 @@ export const api = {
       return res.data.map(mapUserToFrontend);
     },
     async save(item) {
-      const payload = { username: item.name, role: item.role, is_active: item.active };
+      const role = String(item.role || '').trim().toLowerCase();
+      const payload = { username: item.name, role, is_active: item.active };
+      const password = String(item.password || '').trim();
       const pin = String(item.pin || '').trim();
-      if (pin) {
-        payload.password = pin;
-        payload.pin = pin;
+      if (role === 'cashier') {
+        if (pin) payload.pin = pin;
+      } else if (password) {
+        payload.password = password;
       }
       if (item.id) {
         await apiRequest(`/users/${item.id}`, { method: 'PUT', body: payload });
@@ -188,13 +205,18 @@ export const api = {
     async create(order) {
       const payload = {
         paymentMethod: order.paymentMethod,
-        items: order.items.map(i => ({ product_id: i.id, quantity: i.quantity }))
+        items: order.items.map(i => ({
+          product_id: i.id,
+          quantity: i.quantity,
+          ...(i.notes ? { notes: i.notes } : {}),
+        })),
       };
       const res = await apiRequest('/orders', { method: 'POST', body: payload });
-      // The create endpoint returns just { orderId, qrPayload, totalUsd, status }
-      // To keep things consistent, we should probably fetch the full order or just mock it locally based on the response.
-      // But let's assume `useOrders` will re-fetch orders after create anyway, so we just return the minimal response.
-      return res.data;
+      return mapOrderToFrontend(res.data);
+    },
+    async confirmCash(orderId) {
+      const res = await apiRequest(`/orders/${orderId}/confirm-cash`, { method: 'POST' });
+      return mapOrderToFrontend(res.data);
     },
   },
 };

@@ -2,43 +2,18 @@ import { useState, useMemo } from 'react';
 import { money } from '../utils/format';
 import Icon from './ui/Icon';
 
-// Mock/Seed data for reports if orders are empty, to populate charts beautifully
-const SEED_ORDERS_HISTORY = [
-  // Today's orders
-  { id: 'mo-1', orderNo: 'ORD-0099', cashierName: 'Dara', stallName: 'Stall 2 — Russian Market', paymentMethod: 'KHQR', total: 4.5, prepTimeSecs: 180, createdAt: new Date().toISOString() },
-  { id: 'mo-2', orderNo: 'ORD-0098', cashierName: 'Bopha', stallName: 'Stall 2 — Russian Market', paymentMethod: 'CASH', total: 12.95, prepTimeSecs: 120, createdAt: new Date(Date.now() - 3600000).toISOString() },
-  { id: 'mo-3', orderNo: 'ORD-0097', cashierName: 'Socheata', stallName: 'Stall 1 — BKK1', paymentMethod: 'KHQR', total: 10.0, prepTimeSecs: 210, createdAt: new Date(Date.now() - 7200000).toISOString() },
-  { id: 'mo-4', orderNo: 'ORD-0096', cashierName: 'Dara', stallName: 'Stall 2 — Russian Market', paymentMethod: 'CASH', total: 6.0, prepTimeSecs: 195, createdAt: new Date(Date.now() - 14400000).toISOString() },
-  { id: 'mo-5', orderNo: 'ORD-0095', cashierName: 'Bopha', stallName: 'Stall 2 — Russian Market', paymentMethod: 'KHQR', total: 2.75, prepTimeSecs: 130, createdAt: new Date(Date.now() - 21600000).toISOString() },
-  // Yesterday's orders
-  { id: 'mo-6', orderNo: 'ORD-0094', cashierName: 'Dara', stallName: 'Stall 2 — Russian Market', paymentMethod: 'KHQR', total: 11.5, prepTimeSecs: 190, createdAt: new Date(Date.now() - 86400000).toISOString() },
-  { id: 'mo-7', orderNo: 'ORD-0093', cashierName: 'Bopha', stallName: 'Stall 2 — Russian Market', paymentMethod: 'CASH', total: 12.95, prepTimeSecs: 115, createdAt: new Date(Date.now() - 86400000 - 3600000).toISOString() },
-  { id: 'mo-8', orderNo: 'ORD-0092', cashierName: 'Socheata', stallName: 'Stall 1 — BKK1', paymentMethod: 'KHQR', total: 5.5, prepTimeSecs: 220, createdAt: new Date(Date.now() - 86400000 - 7200000).toISOString() },
-  { id: 'mo-9', orderNo: 'ORD-0091', cashierName: 'Dara', stallName: 'Stall 2 — Russian Market', paymentMethod: 'CASH', total: 4.5, prepTimeSecs: 175, createdAt: new Date(Date.now() - 86400000 - 14400000).toISOString() },
-  // Older orders this week
-  { id: 'mo-10', orderNo: 'ORD-0090', cashierName: 'Bopha', stallName: 'Stall 2 — Russian Market', paymentMethod: 'KHQR', total: 10.0, prepTimeSecs: 125, createdAt: new Date(Date.now() - 3 * 86400000).toISOString() },
-  { id: 'mo-11', orderNo: 'ORD-0089', cashierName: 'Socheata', stallName: 'Stall 1 — BKK1', paymentMethod: 'KHQR', total: 12.95, prepTimeSecs: 205, createdAt: new Date(Date.now() - 4 * 86400000).toISOString() },
-  { id: 'mo-12', orderNo: 'ORD-0088', cashierName: 'Dara', stallName: 'Stall 2 — Russian Market', paymentMethod: 'CASH', total: 3.25, prepTimeSecs: 185, createdAt: new Date(Date.now() - 5 * 86400000).toISOString() },
-  // Older orders this month
-  { id: 'mo-13', orderNo: 'ORD-0087', cashierName: 'Bopha', stallName: 'Stall 2 — Russian Market', paymentMethod: 'KHQR', total: 6.0, prepTimeSecs: 110, createdAt: new Date(Date.now() - 10 * 86400000).toISOString() },
-  { id: 'mo-14', orderNo: 'ORD-0086', cashierName: 'Socheata', stallName: 'Stall 1 — BKK1', paymentMethod: 'CASH', total: 11.5, prepTimeSecs: 215, createdAt: new Date(Date.now() - 15 * 86400000).toISOString() },
-  { id: 'mo-15', orderNo: 'ORD-0085', cashierName: 'Dara', stallName: 'Stall 2 — Russian Market', paymentMethod: 'KHQR', total: 4.5, prepTimeSecs: 180, createdAt: new Date(Date.now() - 20 * 86400000).toISOString() },
-];
-
-export default function OrderHistory({ orders: rawOrders }) {
+export default function OrderHistory({ orders: rawOrders = [] }) {
   const [dateFilter, setDateFilter] = useState('today'); // 'today' | 'week' | 'month'
   const [activeSubTab, setActiveSubTab] = useState('analytics'); // 'analytics' | 'ledger'
   const [searchQuery, setSearchQuery] = useState('');
   const [exporting, setExporting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Combine real user orders and fallback mock seed orders
   const allOrders = useMemo(() => {
-    const customOrders = rawOrders.map(o => ({
+    return rawOrders.map(o => ({
       ...o,
-      prepTimeSecs: o.prepTimeSecs || (120 + (parseInt(o.id.replace(/\D/g, '') || '0') % 100)), // dynamic mock prep time
+      prepTimeSecs: o.prepTimeSecs || (120 + (parseInt(String(o.id).replace(/\D/g, '') || '0') % 100)),
     }));
-    return [...customOrders, ...SEED_ORDERS_HISTORY];
   }, [rawOrders]);
 
   // Filter orders by date range
@@ -68,9 +43,13 @@ export default function OrderHistory({ orders: rawOrders }) {
   }, [allOrders, dateFilter]);
 
   // Compute Revenue KPIs
-  const totalRevenue = useMemo(() => {
-    return filteredOrders.reduce((sum, o) => sum + o.total, 0);
+  const paidFilteredOrders = useMemo(() => {
+    return filteredOrders.filter((order) => order.status === 'paid');
   }, [filteredOrders]);
+
+  const totalRevenue = useMemo(() => {
+    return paidFilteredOrders.reduce((sum, o) => sum + o.total, 0);
+  }, [paidFilteredOrders]);
 
   const yesterdayRevenue = useMemo(() => {
     const now = new Date();
@@ -78,7 +57,7 @@ export default function OrderHistory({ orders: rawOrders }) {
     yesterday.setDate(now.getDate() - 1);
     const yesterdayStr = yesterday.toDateString();
     return allOrders
-      .filter(o => new Date(o.createdAt).toDateString() === yesterdayStr)
+      .filter(o => o.status === 'paid' && new Date(o.createdAt).toDateString() === yesterdayStr)
       .reduce((sum, o) => sum + o.total, 0);
   }, [allOrders]);
 
@@ -102,7 +81,7 @@ export default function OrderHistory({ orders: rawOrders }) {
   const employeeEfficiency = useMemo(() => {
     // Group orders by cashier name
     const cashierData = {};
-    filteredOrders.forEach(order => {
+    paidFilteredOrders.forEach(order => {
       const name = order.cashierName || 'Cashier';
       if (!cashierData[name]) {
         cashierData[name] = {
@@ -126,9 +105,9 @@ export default function OrderHistory({ orders: rawOrders }) {
         status: state,
       };
     });
-  }, [filteredOrders]);
+  }, [paidFilteredOrders]);
 
-  const totalCompletedOrders = filteredOrders.length;
+  const totalCompletedOrders = paidFilteredOrders.length;
   const activeEmployeesCount = employeeEfficiency.filter(e => e.status === 'Active').length;
 
   const handleExport = () => {
@@ -167,7 +146,7 @@ export default function OrderHistory({ orders: rawOrders }) {
   const ledgerOrders = useMemo(() => {
     return filteredOrders.filter(o => 
       o.orderNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      o.cashierName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (o.cashierName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (o.stallName && o.stallName.toLowerCase().includes(searchQuery.toLowerCase()))
     );
   }, [filteredOrders, searchQuery]);
@@ -346,7 +325,7 @@ export default function OrderHistory({ orders: rawOrders }) {
                   Employee Efficiency Metrics
                 </h3>
                 <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af', fontFamily: 'Inter' }}>
-                  {employeeEfficiency.length} active cashiers today · {totalCompletedOrders} completed orders
+                  {employeeEfficiency.length} active cashiers today · {totalCompletedOrders} paid orders
                 </p>
               </div>
 

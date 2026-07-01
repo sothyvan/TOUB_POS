@@ -23,9 +23,9 @@ const Order = sequelize.define('Order', {
     field: 'payment_method',
   },
   status: {
-    type: DataTypes.ENUM('pending', 'completed', 'cancelled'),
+    type: DataTypes.ENUM('pending_payment', 'paid', 'cancelled'),
     allowNull: false,
-    defaultValue: 'pending',
+    defaultValue: 'pending_payment',
   },
   subtotal_usd: {
     type: DataTypes.DECIMAL(10, 2),

@@ -7,6 +7,7 @@ import Product from './product.model.js';
 import Order from './order.model.js';
 import OrderItem from './order-item.model.js';
 import TelegramTicket from './telegram-ticket.model.js';
+import AuditLog from './audit-log.model.js';
 
 // ── User ↔ Stall Ownership ──────────────────────────────────
 Stall.belongsTo(User, { as: 'Owner', foreignKey: 'owner_id', onDelete: 'SET NULL' });
@@ -50,6 +51,13 @@ Product.hasMany(OrderItem, { foreignKey: 'product_id' });
 TelegramTicket.belongsTo(Order, { foreignKey: 'order_id', onDelete: 'CASCADE' });
 Order.hasMany(TelegramTicket, { as: 'TelegramTickets', foreignKey: 'order_id' });
 
+// ── AuditLog Associations ──────────────────────────────────
+AuditLog.belongsTo(User, { as: 'Actor', foreignKey: 'actor_user_id', onDelete: 'SET NULL' });
+User.hasMany(AuditLog, { as: 'AuditLogs', foreignKey: 'actor_user_id' });
+
+AuditLog.belongsTo(Order, { foreignKey: 'order_id', onDelete: 'SET NULL' });
+Order.hasMany(AuditLog, { as: 'AuditLogs', foreignKey: 'order_id' });
+
 export {
   sequelize,
   User,
@@ -60,4 +68,5 @@ export {
   Order,
   OrderItem,
   TelegramTicket,
+  AuditLog,
 };

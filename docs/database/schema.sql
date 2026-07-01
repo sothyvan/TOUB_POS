@@ -8,11 +8,14 @@ CREATE DATABASE IF NOT EXISTS toub_pos;
 USE toub_pos;
 
 -- ── Users / Staff ─────────────────────────────────────────
+-- Credential rules:
+--   owner/manager: password stores bcrypt hash, pin must be NULL
+--   cashier: password must be NULL, pin stores bcrypt hash of 4-digit PIN
 CREATE TABLE users (
   id         INT AUTO_INCREMENT PRIMARY KEY,
   username   VARCHAR(50)  NOT NULL UNIQUE,
-  password   VARCHAR(255) NOT NULL,                    -- bcrypt hash
-  pin        VARCHAR(10)  DEFAULT NULL,                -- 4-digit cashier PIN
+  password   VARCHAR(255) DEFAULT NULL,                -- bcrypt hash for owner/manager login
+  pin        VARCHAR(255) DEFAULT NULL,                -- bcrypt hash for cashier PIN login
   role       ENUM('owner', 'manager', 'cashier') NOT NULL DEFAULT 'cashier',
   is_active  BOOLEAN NOT NULL DEFAULT TRUE,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -75,7 +78,7 @@ CREATE TABLE orders (
   stall_id       INT NOT NULL,                         -- which stall processed this order
   cashier_id     INT NOT NULL,                         -- which cashier
   payment_method ENUM('cash', 'khqr') NOT NULL,
-  status         ENUM('pending', 'completed', 'cancelled') NOT NULL DEFAULT 'pending',
+  status         ENUM('pending_payment', 'paid', 'cancelled') NOT NULL DEFAULT 'pending_payment',
   subtotal_usd   DECIMAL(10, 2) NOT NULL DEFAULT 0.00, -- sum of line totals before promos
   total_usd      DECIMAL(10, 2) NOT NULL,              -- final total after promos
   qr_payload     TEXT DEFAULT NULL,                    -- raw KHQR string; NULL for cash
@@ -102,6 +105,22 @@ CREATE TABLE order_items (
   FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
 );
 
+-- ── Audit Logs ─────────────────────────────────────────────
+CREATE TABLE audit_logs (
+  id            INT AUTO_INCREMENT PRIMARY KEY,
+  actor_user_id INT DEFAULT NULL,
+  action        ENUM('order_created', 'cash_payment_confirmed', 'order_cancelled') NOT NULL,
+  order_id      INT DEFAULT NULL,
+  details       JSON DEFAULT NULL,
+  created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_audit_logs_actor_user_id (actor_user_id),
+  KEY idx_audit_logs_order_id (order_id),
+  KEY idx_audit_logs_action (action),
+  KEY idx_audit_logs_created_at (created_at),
+  FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL
+);
+
 -- ── Telegram Tickets ──────────────────────────────────────
 -- Telegram kitchen ticket state is tracked independently from payment order state
 CREATE TABLE telegram_tickets (
@@ -121,8 +140,8 @@ CREATE TABLE telegram_tickets (
 
 -- ── Seed: default owner account ───────────────────────────
 -- Password: owner123 (replace bcrypt hash before production)
-INSERT INTO users (username, password, role) VALUES
-  ('owner', '$2b$10$examplehashreplaceme', 'owner');
+INSERT INTO users (username, password, pin, role) VALUES
+  ('owner', '$2b$10$examplehashreplaceme', NULL, 'owner');
 
 -- ── Seed: example stall ───────────────────────────────────
 INSERT INTO stalls (owner_id, name, location) VALUES (1, 'Stall A - Drinks', 'Main Booth');

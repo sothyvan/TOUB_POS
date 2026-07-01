@@ -7,13 +7,13 @@ import { api } from '../services/api';
  * @param {Array}    cart
  * @param {Function} clearCart
  * @param {Object}   currentUser
- * @param {Object|null} assignedStall — stall the cashier is working at (null for management users)
- * @param {Object}   financials
  */
-export function useOrders(isOnline, cart, clearCart, currentUser, assignedStall, financials) {
+export function useOrders(isOnline, cart, clearCart, currentUser) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState(null);
 
   useEffect(() => {
     let ignore = false;
@@ -21,6 +21,7 @@ export function useOrders(isOnline, cart, clearCart, currentUser, assignedStall,
       if (currentUser) {
         try {
           if (!ignore) setLoading(true);
+          if (!ignore) setError(null);
           const data = await api.orders.getAll(currentUser?.role);
           if (!ignore) setOrders(data);
         } catch (err) {
@@ -36,15 +37,16 @@ export function useOrders(isOnline, cart, clearCart, currentUser, assignedStall,
     return () => { ignore = true; };
   }, [currentUser]);
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (showSpinner = true) => {
     try {
-      setLoading(true);
+      if (showSpinner) setLoading(true);
+      setError(null);
       const data = await api.orders.getAll(currentUser?.role);
       setOrders(data);
     } catch (err) {
       setError(err.message || 'Failed to load orders.');
     } finally {
-      setLoading(false);
+      if (showSpinner) setLoading(false);
     }
   };
 
@@ -55,52 +57,60 @@ export function useOrders(isOnline, cart, clearCart, currentUser, assignedStall,
     }
   );
   
-  const todaysTotal = todaysOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+  const todaysTotal = todaysOrders
+    .filter((order) => order.status === 'paid')
+    .reduce((sum, o) => sum + (o.total || 0), 0);
 
   const handleCheckout = async (method) => {
     if (!cart.length) {
       alert('Add at least one item before checkout.');
-      return;
+      return null;
     }
-    if (method === 'KHQR' && !isOnline) {
+    const normalizedMethod = String(method || '').toUpperCase();
+    if (normalizedMethod === 'KHQR' && !isOnline) {
       alert('KHQR needs an internet connection. Take cash or reconnect the terminal.');
-      return;
+      return null;
     }
 
     const orderPayload = {
-      paymentMethod: method,
-      items: cart.map(({ id, quantity }) => ({
-        id, quantity
+      paymentMethod: normalizedMethod,
+      items: cart.map(({ id, quantity, notes }) => ({
+        id,
+        quantity,
+        ...(notes ? { notes } : {}),
       })),
     };
 
     try {
+      setCheckoutLoading(true);
+      setCheckoutError(null);
       const createdOrder = await api.orders.create(orderPayload);
-      
-      const receipt = {
-        id: createdOrder.orderId || Date.now(),
-        orderNo: `ORD-${String(createdOrder.orderId || 0).padStart(4, '0')}`,
-        createdAt: new Date().toISOString(),
-        cashierId: currentUser?.id,
-        cashierName: currentUser?.name || 'Cashier',
-        station: assignedStall ? (assignedStall.location ? `${assignedStall.name} — ${assignedStall.location}` : assignedStall.name) : 'Station 01',
-        paymentMethod: method,
-        status: createdOrder.status || 'pending',
-        items: cart.map(i => ({ ...i, lineTotal: i.price * i.quantity })),
-        subtotal: financials?.subtotal || 0,
-        serviceFee: 0,
-        estimatedTax: 0,
-        total: createdOrder.totalUsd || financials?.total || 0,
-      };
 
-      // fetchOrders updates the list in the background
-      fetchOrders(false);
+      const finalOrder = normalizedMethod === 'CASH'
+        ? await api.orders.confirmCash(createdOrder.id)
+        : createdOrder;
+
+      await fetchOrders(false);
       clearCart();
-      return receipt;
+      return finalOrder;
     } catch(err) {
-      alert(err.message || 'Failed to checkout');
+      const message = err.message || 'Failed to checkout.';
+      setCheckoutError(message);
+      alert(message);
+      return null;
+    } finally {
+      setCheckoutLoading(false);
     }
   };
 
-  return { orders, todaysOrders, todaysTotal, handleCheckout, loading, error };
+  return {
+    orders,
+    todaysOrders,
+    todaysTotal,
+    handleCheckout,
+    loading,
+    error,
+    checkoutLoading,
+    checkoutError,
+  };
 }

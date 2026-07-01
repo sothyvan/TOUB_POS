@@ -36,7 +36,7 @@ export async function findUserWithPinById(id) {
 }
 
 /**
- * Insert a new user. password must already be hashed.
+ * Insert a new user. Role-specific credentials must already be hashed or null.
  */
 export async function insertUser({ username, password_hash, pin, role }) {
   const user = await User.create({
@@ -63,7 +63,7 @@ export async function findAllUsers() {
  */
 export async function updateUserById(id, data) {
   const updateData = { ...data };
-  if (data.password_hash) {
+  if (Object.prototype.hasOwnProperty.call(data, 'password_hash')) {
     updateData.password = data.password_hash;
     delete updateData.password_hash;
   }

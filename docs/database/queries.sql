@@ -6,7 +6,7 @@
 
 -- ── 1. USERS / STAFF CRUD (user.repository.js) ──────────────
 
--- Find user by username (used for Login authentication)
+-- Find owner/manager by username (used for password login authentication)
 SELECT id, username, password AS password_hash, role, is_active 
 FROM users 
 WHERE username = 'owner';
@@ -15,6 +15,11 @@ WHERE username = 'owner';
 SELECT id, username, role, is_active, created_at, updated_at
 FROM users 
 WHERE id = 1;
+
+-- Find user by ID including PIN hash (PIN login only)
+SELECT id, username, role, pin, is_active
+FROM users
+WHERE id = 2;
 
 -- List all users (excluding password and PIN)
 SELECT id, username, role, is_active, created_at, updated_at
@@ -27,12 +32,24 @@ VALUES ('manager1', '$2b$10$hashedpasswordstring...', NULL, 'manager', TRUE);
 
 -- Insert a cashier account
 INSERT INTO users (username, password, pin, role, is_active)
-VALUES ('cashier1', '$2b$10$hashedpasswordstring...', '1111', 'cashier', TRUE);
+VALUES ('cashier1', NULL, '$2b$10$hashedpinstring...', 'cashier', TRUE);
 
--- Update user details by ID
-UPDATE users 
-SET username = 'cashier1_updated', pin = '2222', role = 'cashier', is_active = TRUE
+-- Update owner/manager credentials by ID
+UPDATE users
+SET username = 'manager1_updated', password = '$2b$10$newhashedpassword...', pin = NULL, role = 'manager', is_active = TRUE
 WHERE id = 2;
+
+-- Update cashier details/PIN by ID
+UPDATE users 
+SET username = 'cashier1_updated', password = NULL, pin = '$2b$10$newhashedpinstring...', role = 'cashier', is_active = TRUE
+WHERE id = 2;
+
+-- Development-only credential storage migration
+ALTER TABLE users
+MODIFY password VARCHAR(255) DEFAULT NULL;
+
+ALTER TABLE users
+MODIFY pin VARCHAR(255) DEFAULT NULL;
 
 -- Development-only legacy RBAC migration used before Sequelize sync
 ALTER TABLE users
@@ -143,17 +160,32 @@ WHERE user_id = 2
 LIMIT 1;
 
 -- Get product details for transaction snapshots
-SELECT id, name, price_usd, price_khr 
-FROM products 
+SELECT id, stall_id, name, price_usd, price_khr, is_visible
+FROM products
 WHERE id = 5;
 
--- Insert a new Order (status defaults to 'pending')
-INSERT INTO orders (stall_id, cashier_id, payment_method, status, total_usd)
-VALUES (1, 2, 'khqr', 'pending', 15.75);
+-- Insert a new Order (status defaults to 'pending_payment')
+INSERT INTO orders (stall_id, cashier_id, payment_method, status, subtotal_usd, total_usd)
+VALUES (1, 2, 'cash', 'pending_payment', 15.75, 15.75);
 
 -- Insert Order Item details (linked to order)
-INSERT INTO order_items (order_id, product_id, name, price_usd, price_khr, subtotal_usd, subtotal_khr, quantity, notes)
+INSERT INTO order_items (order_id, product_id, name, price_usd, price_khr, line_total_usd, line_total_khr, quantity, notes)
 VALUES (1, 5, 'Latte', 2.50, 10000, 5.00, 20000, 2, 'No sugar');
+
+-- Audit order creation
+INSERT INTO audit_logs (actor_user_id, action, order_id, details)
+VALUES (2, 'order_created', 1, JSON_OBJECT('payment_method', 'cash', 'stall_id', 1, 'total_usd', 15.75));
+
+-- Confirm a cash order after physical cash is received
+UPDATE orders
+SET status = 'paid', completed_at = NOW()
+WHERE id = 1
+  AND payment_method = 'cash'
+  AND status = 'pending_payment';
+
+-- Audit cash confirmation
+INSERT INTO audit_logs (actor_user_id, action, order_id, details)
+VALUES (2, 'cash_payment_confirmed', 1, JSON_OBJECT('confirmed_by_role', 'cashier', 'total_usd', 15.75));
 
 -- Set KHQR payload after generating order
 UPDATE orders 
@@ -183,8 +215,8 @@ WHERE id = 1
 FOR UPDATE;
 
 -- Complete order and store timestamp on successful webhook payment
-UPDATE orders 
-SET status = 'completed', completed_at = NOW() 
+UPDATE orders
+SET status = 'paid', completed_at = NOW()
 WHERE id = 1;
 
 -- Queue a Telegram ticket after payment confirmation
@@ -207,10 +239,25 @@ WHERE id = 1;
 
 -- ── 7. DAILY REPORTING (report.controller.js) ─────────────
 
--- Fetch completed orders within date range (including stall names)
+-- Fetch paid orders within date range (including stall names)
 SELECT o.id, o.stall_id, o.payment_method, o.total_usd, o.created_at, s.name AS stall_name
 FROM orders o
 LEFT JOIN stalls s ON o.stall_id = s.id
-WHERE o.status = 'completed' 
+WHERE o.status = 'paid'
   AND o.created_at BETWEEN '2026-06-19 00:00:00' AND '2026-06-19 23:59:59';
+
+-- Development-only legacy order status migration used before Sequelize sync
+ALTER TABLE orders
+MODIFY status ENUM('pending', 'completed', 'pending_payment', 'paid', 'cancelled') NOT NULL DEFAULT 'pending';
+
+UPDATE orders
+SET status = 'pending_payment'
+WHERE status = 'pending';
+
+UPDATE orders
+SET status = 'paid'
+WHERE status = 'completed';
+
+ALTER TABLE orders
+MODIFY status ENUM('pending_payment', 'paid', 'cancelled') NOT NULL DEFAULT 'pending_payment';
 

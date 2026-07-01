@@ -19,7 +19,7 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 3. Cashier selects items from the stall-scoped menu (other stalls' items are hidden).
 4. Cashier optionally adds **order modifiers** (e.g., "no ice", "extra spicy") per item.
 5. Cashier selects **Cash** or **KHQR** checkout.
-   - Cash: confirmation dialog → order recorded as complete.
+   - Cash: confirmation dialog → order recorded as paid.
    - KHQR: dynamic QR generated → backend webhook detects payment → WebSocket pushes confirmation **only to that cashier's screen**.
 6. On payment confirmation, the order payload is forwarded to the **Telegram kitchen bot**, which posts a structured order ticket to the stall's kitchen channel.
 7. Cook taps "Done" in Telegram → bot edits the message to mark it complete.
@@ -29,8 +29,8 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 
 ### Authentication & Device Provisioning
 
-- Sub-path routing: `/admin-portal` (admin) vs `/` (cashier terminal)
-- Stall-locked device registration (admin one-time setup)
+- Sub-path routing: `/admin-portal` (owner/manager portal) vs `/` (cashier terminal)
+- Stall-locked device registration (owner/manager one-time setup)
 - Avatar-based staff quick-switching per stall roster
 - 4-digit PIN pad for shift unlock
 

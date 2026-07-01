@@ -1,19 +1,64 @@
 import * as orderService from '../services/order.service.js';
 
+const FORBIDDEN_ORDER_FIELDS = [
+  'id',
+  'orderId',
+  'stall_id',
+  'stallId',
+  'cashier_id',
+  'cashierId',
+  'subtotal',
+  'subtotal_usd',
+  'total',
+  'total_usd',
+  'paid',
+  'status',
+  'qr_payload',
+  'qrPayload',
+  'completed_at',
+  'completedAt',
+  'created_at',
+  'updated_at',
+];
+
+function hasOwn(object, key) {
+  return Object.prototype.hasOwnProperty.call(object, key);
+}
+
 /**
  * cashier creates a new order
  */
 export async function createOrder(req, res, next) {
   try {
-    const cashierId = req.user.id; 
-    const { items, paymentMethod } = req.body;
+    const forbiddenFields = FORBIDDEN_ORDER_FIELDS.filter((field) => hasOwn(req.body, field));
+    if (forbiddenFields.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Order request cannot include trusted fields: ${forbiddenFields.join(', ')}.`,
+      });
+    }
 
+    const cashierId = req.user.id;
+    const { items } = req.body;
+    const paymentMethod = req.body.paymentMethod ?? req.body.payment_method;
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ success: false, message: 'Order must contain items.' });
     }
 
     const result = await orderService.createOrder(cashierId, items, paymentMethod);
     res.status(201).json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * cashier or management confirms a cash order after cash was physically received.
+ */
+export async function confirmCashPayment(req, res, next) {
+  try {
+    const order = await orderService.confirmCashPayment(req.params.id, req.user);
+    res.json({ success: true, data: order });
   } catch (error) {
     next(error);
   }

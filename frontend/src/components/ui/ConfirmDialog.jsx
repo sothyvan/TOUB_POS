@@ -42,6 +42,8 @@ export default function ConfirmDialog({
   size = 'large',
   overlayClassName,
   panelClassName = '',
+  isBusy = false,
+  isConfirmDisabled = false,
   onCancel,
   onConfirm,
 }) {
@@ -61,24 +63,26 @@ export default function ConfirmDialog({
           {title}
         </h3>
         {message ? (
-          <p className={`m-0 text-brand-subtext ${styles.message}`}>
+          <div className={`m-0 text-brand-subtext ${styles.message}`}>
             {message}
-          </p>
+          </div>
         ) : null}
         <div className={`flex items-center justify-center w-full mb-2 ${styles.actions}`}>
           <button
-            className={`flex-1 transition-all cursor-pointer active:scale-[0.98] ${styles.button} ${actionClasses[cancelTone]}`}
+            className={`flex-1 transition-all cursor-pointer active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${styles.button} ${actionClasses[cancelTone]}`}
             type="button"
+            disabled={isBusy}
             onClick={onCancel}
           >
             {cancelLabel}
           </button>
           <button
-            className={`flex-1 transition-all cursor-pointer active:scale-[0.98] ${styles.button} ${actionClasses[confirmTone]}`}
+            className={`flex-1 transition-all cursor-pointer active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${styles.button} ${actionClasses[confirmTone]}`}
             type="button"
+            disabled={isBusy || isConfirmDisabled}
             onClick={onConfirm}
           >
-            {confirmLabel}
+            {isBusy ? 'Processing...' : confirmLabel}
           </button>
         </div>
       </div>

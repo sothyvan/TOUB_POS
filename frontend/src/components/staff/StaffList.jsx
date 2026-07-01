@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { ROLES } from '../../data/seedData';
-import { canManageUserRole, getManageableDisplayRoles } from '../../utils/permissions';
+import { canManageUserRole, getManageableDisplayRoles, roleToApiRole } from '../../utils/permissions';
 import Icon from '../ui/Icon';
 import FormInput from '../ui/FormInput';
 import FormSelect from '../ui/FormSelect';
@@ -36,7 +36,20 @@ function StatCard({ iconName, iconBg, value, label }) {
 }
 
 function UserModal({ form, setForm, onSave, onClose, isNew, roleOptions }) {
-  const handleSubmit = e => { e.preventDefault(); onSave(); onClose(); };
+  const isCashier = roleToApiRole(form.role) === 'cashier';
+  const [isSaving, setIsSaving] = useState(false);
+  const handleSubmit = async e => {
+    e.preventDefault();
+    if (isSaving) return;
+
+    setIsSaving(true);
+    try {
+      const saved = await onSave();
+      if (saved) onClose();
+    } finally {
+      setIsSaving(false);
+    }
+  };
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-[#e5e7eb]">
@@ -60,19 +73,31 @@ function UserModal({ form, setForm, onSave, onClose, isNew, roleOptions }) {
             <FormSelect
               label="Role"
               value={form.role}
-              onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
+              onChange={e => setForm(f => ({ ...f, role: e.target.value, password: '', pin: '' }))}
             >
               {roleOptions.map(r => <option key={r} value={r}>{r}</option>)}
             </FormSelect>
-            <FormInput
-              label={`PIN ${!isNew ? '(blank = keep)' : ''}`}
-              type="password"
-              inputMode="numeric"
-              placeholder="4 digits"
-              value={form.pin}
-              required={isNew}
-              onChange={e => setForm(f => ({ ...f, pin: e.target.value }))}
-            />
+            {isCashier ? (
+              <FormInput
+                label={`PIN ${!isNew ? '(blank = keep)' : ''}`}
+                type="password"
+                inputMode="numeric"
+                placeholder="4 digits"
+                value={form.pin}
+                required={isNew}
+                onChange={e => setForm(f => ({ ...f, pin: e.target.value }))}
+              />
+            ) : (
+              <FormInput
+                label={`Password ${!isNew ? '(blank = keep)' : ''}`}
+                type="password"
+                autoComplete="new-password"
+                placeholder="Enter password"
+                value={form.password}
+                required={isNew}
+                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+              />
+            )}
           </div>
           <FormInput
             label="Station"
@@ -89,9 +114,9 @@ function UserModal({ form, setForm, onSave, onClose, isNew, roleOptions }) {
           <div className="flex gap-2.5 mt-2">
             <button type="button" onClick={onClose} className="flex-1 rounded-[10px] border border-[#e5e7eb] cursor-pointer hover:bg-gray-50 font-bold"
               style={{height:40,fontSize:13,color:'#6b7280',fontFamily:'Inter,sans-serif',background:'#ffffff'}}>Cancel</button>
-            <button type="submit" className="flex-[2] rounded-[10px] border-0 cursor-pointer hover:opacity-90 font-bold"
+            <button type="submit" disabled={isSaving} className="flex-[2] rounded-[10px] border-0 cursor-pointer hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 font-bold"
               style={{height:40,fontSize:13,color:'#ffffff',background:'#003ec7',fontFamily:'Inter,sans-serif'}}>
-              {isNew ? 'Add Employee' : 'Save Changes'}
+              {isSaving ? 'Saving...' : (isNew ? 'Add Employee' : 'Save Changes')}
             </button>
           </div>
         </form>
@@ -100,7 +125,7 @@ function UserModal({ form, setForm, onSave, onClose, isNew, roleOptions }) {
   );
 }
 
-const EMPTY = { id:null,name:'',role:'Cashier',station:'',pin:'',active:true };
+const EMPTY = { id:null,name:'',role:'Cashier',station:'',password:'',pin:'',active:true };
 
 export default function StaffList({
   userForm,

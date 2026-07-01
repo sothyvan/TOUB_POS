@@ -8,14 +8,17 @@ Toub POS uses **JWT (JSON Web Token)** for stateless authentication and **Role-B
 
 ## Roles
 
-| Role      | Description                                       |
-|-----------|---------------------------------------------------|
-| `admin`   | Full access — users, products, reports, orders    |
-| `cashier` | Restricted — own orders only, read products       |
+| Role      | Description                                       | Credential |
+|-----------|---------------------------------------------------|------------|
+| `owner`   | Full business/system control, including all user roles | Username + password |
+| `manager` | Operational management, including Cashier user management | Username + password |
+| `cashier` | Stall-scoped POS sales and own order history      | Cashier profile + 4-digit PIN |
 
 ---
 
-## Login Flow
+## Management Login Flow
+
+Owner and Manager accounts use username/password login. Cashier accounts are rejected by this endpoint and must use the PIN flow.
 
 ```
 Client                          Server
@@ -23,9 +26,11 @@ Client                          Server
   │  POST /api/auth/login          │
   │  { username, password }       │
   │ ─────────────────────────────▶│
-  │                               │  1. Lookup user in DB
-  │                               │  2. bcrypt.compare(password, hash)
-  │                               │  3. Sign JWT { id, role } — 8h expiry
+  │                               │  1. Rate-limit login attempts
+  │                               │  2. Lookup user in DB
+  │                               │  3. Reject cashier accounts
+  │                               │  4. bcrypt.compare(password, hash)
+  │                               │  5. Sign JWT { id, username, role } — 8h expiry
   │◀──────────────────────────────│
   │  { token, user }              │
   │                               │
@@ -57,11 +62,11 @@ Client                          Server
 `authorize(role)` is applied as a second middleware after `authenticate`:
 
 ```js
-// Example: admin-only route
-router.use(authenticate, authorize('admin'));
+// Example: management route
+router.use(authenticate, authorize(['owner', 'manager']));
 ```
 
-If `req.user.role !== requiredRole`, returns:
+If `req.user.role` is not allowed, returns:
 
 ```json
 { "success": false, "code": 403, "message": "Forbidden" }
@@ -77,6 +82,22 @@ If `req.user.role !== requiredRole`, returns:
 | `toub-current-user`  | localStorage  | `{ id, username, role }` |
 | `toub-device-registered` | localStorage | `true` — terminal auth flag |
 
+TouB POS intentionally keeps the JWT access token in `localStorage` for this final project because the design is simple, already integrated, and easy for the team to explain. The backend remains the source of truth for authorization.
+
+Security tradeoff:
+
+- An XSS bug could steal a token from `localStorage`.
+- The token lifetime is limited to 8 hours to match a cashier shift.
+- Passwords and PINs are hashed, login endpoints are rate-limited, and request logs mask sensitive fields.
+
+Production upgrade path:
+
+- short-lived access token
+- HttpOnly refresh token cookie
+- refresh-token rotation
+- CSRF protection strategy
+- server-side session/device revocation
+
 ---
 
 ## Token Expiry
@@ -91,9 +112,32 @@ If `req.user.role !== requiredRole`, returns:
 
 Cashier terminals use a secondary PIN-based login on top of device registration:
 
-1. Device is registered once by an admin (`toub-device-registered = true`)
+1. Device is registered once by an Owner or Manager (`toub-device-registered = true`)
 2. On terminal wake, cashier selects their profile from the roster
-3. Enters a 4-digit PIN — validated client-side against stored hash
+3. Enters a 4-digit PIN — validated by the backend PIN login endpoint
 4. Session is scoped to that cashier's `user.id` for the duration
 
-> **Note**: PIN is currently validated client-side. Moving PIN validation server-side is a planned hardening step.
+PIN security:
+
+- PINs are stored as bcrypt hashes, not plain text.
+- PIN login uses `bcrypt.compare()`.
+- Old development-only plain PINs are upgraded to bcrypt hashes after a successful PIN login.
+- `POST /api/auth/pin` has a stricter rate limit than username/password login.
+- PINs and PIN hashes are never returned from normal API responses.
+- Owner and Manager accounts are rejected by the PIN login endpoint.
+
+Credential storage rules:
+
+- Owner/Manager: `password` contains a bcrypt hash, `pin` is `NULL`.
+- Cashier: `password` is `NULL`, `pin` contains a bcrypt hash.
+- Username remains required and unique for every user role.
+
+---
+
+## Security Hardening
+
+- `POST /api/auth/login` is rate-limited.
+- `POST /api/auth/pin` is rate-limited more strictly for 4-digit PIN safety.
+- Express uses Helmet security headers. Content Security Policy is disabled for now so local Swagger docs continue to work.
+- CORS is restricted to `FRONTEND_ORIGIN`, with `http://localhost:5173` as the development fallback.
+- Request logging masks sensitive fields such as password, PIN, token, authorization, and secrets, including nested fields.

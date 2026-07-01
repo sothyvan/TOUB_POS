@@ -50,37 +50,36 @@ export default function CashierPage() {
     addToCart, updateQuantity, setCartItemQuantity, clearCart,
   } = useCart(categoryById);
 
-  const { orders, handleCheckout } =
-    useOrders(isOnline, cart, clearCart, currentUser, assignedStall, { subtotal, serviceFee, estimatedTax, total });
+  const { orders, handleCheckout, checkoutLoading, checkoutError } =
+    useOrders(isOnline, cart, clearCart, currentUser);
 
   const [activeReceipt, setActiveReceipt] = useState(null);
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState(null);
+  const [pendingKhqrOrder, setPendingKhqrOrder] = useState(null);
 
-  const handleCheckoutWithReceipt = (method) => {
+  const handleCheckoutWithReceipt = async (method) => {
+    if (method === 'KHQR') {
+      const order = await handleCheckout(method);
+      if (order) {
+        setPendingKhqrOrder(order);
+        setPendingPaymentMethod(method);
+      }
+      return;
+    }
+
     setPendingPaymentMethod(method);
   };
 
   const handleConfirmPayment = useCallback(async () => {
     if (!pendingPaymentMethod) return;
     
-    // Store the method in a local variable before clearing the state to ensure the modal closes
     const method = pendingPaymentMethod;
-    setPendingPaymentMethod(null);
-    
     const order = await handleCheckout(method);
     if (order) {
+      setPendingPaymentMethod(null);
       setActiveReceipt(order);
     }
   }, [pendingPaymentMethod, handleCheckout, setActiveReceipt]);
-
-  useEffect(() => {
-    if (pendingPaymentMethod === 'KHQR') {
-      const timer = setTimeout(() => {
-        handleConfirmPayment();
-      }, 3500);
-      return () => clearTimeout(timer);
-    }
-  }, [pendingPaymentMethod, handleConfirmPayment]);
 
   // ── UI state ──────────────────────────────────────────────────────────────
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -164,6 +163,8 @@ export default function CashierPage() {
         total={total}
         clearCart={clearCart}
         handleCheckout={handleCheckoutWithReceipt}
+        checkoutLoading={checkoutLoading}
+        checkoutError={checkoutError}
         isOnline={isOnline}
         assignedStall={assignedStall}
       />
@@ -175,15 +176,23 @@ export default function CashierPage() {
 
       <CashConfirmationModal
         isOpen={pendingPaymentMethod === 'CASH'}
-        onCancel={() => setPendingPaymentMethod(null)}
+        isBusy={checkoutLoading}
+        error={checkoutError}
+        onCancel={() => {
+          if (!checkoutLoading) setPendingPaymentMethod(null);
+        }}
         onConfirm={handleConfirmPayment}
       />
 
       <KhqrPaymentModal
         isOpen={pendingPaymentMethod === 'KHQR'}
-        total={total}
-        onCancel={() => setPendingPaymentMethod(null)}
-        onConfirm={handleConfirmPayment}
+        total={pendingKhqrOrder?.total ?? total}
+        order={pendingKhqrOrder}
+        qrPayload={pendingKhqrOrder?.qrPayload}
+        onCancel={() => {
+          setPendingPaymentMethod(null);
+          setPendingKhqrOrder(null);
+        }}
       />
     </PageShell>
   );

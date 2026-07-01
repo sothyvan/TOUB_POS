@@ -5,8 +5,8 @@ erDiagram
     users {
         int id PK
         varchar username
-        varchar password
-        varchar pin
+        varchar password "nullable bcrypt hash for owner/manager"
+        varchar pin "nullable bcrypt hash for cashier"
         enum role
         boolean is_active
         datetime created_at
@@ -96,6 +96,9 @@ erDiagram
 ## Notes
 
 - `order_items.name`, `price_usd`, `price_khr` are **snapshots** — frozen at time of sale. Survives product edits or deletions.
+- `users.username` is required and unique for every role.
+- `users.password` is used only for Owner/Manager username-password login and is `NULL` for Cashiers.
+- `users.pin` is used only for Cashier PIN login and is `NULL` for Owners/Managers.
 - `order_items.notes` stores free-text modifiers ("no ice", "extra spicy") per line item.
 - `telegram_tickets.status` tracks the kitchen ticket progress independently from the order payment status.
 - `telegram_tickets.telegram_msg_id` stores the Telegram message ID so the bot can edit the existing message when the cook taps "Done".

@@ -19,7 +19,7 @@ export async function processConfirmation(orderId, amountPaid) {
     }
 
     // 2. Idempotency Check
-    if (order.status === 'completed' || order.status === 'cancelled') {
+    if (order.status === 'paid' || order.status === 'cancelled') {
       await transaction.rollback();
       return; // Already processed
     }
@@ -36,7 +36,7 @@ export async function processConfirmation(orderId, amountPaid) {
     }
 
     // 4. Update status and completion timestamp
-    order.status = 'completed';
+    order.status = 'paid';
     order.completed_at = new Date();
     await order.save({ transaction });
 

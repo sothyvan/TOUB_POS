@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import authRoutes from './routes/auth.routes.js';
 import orderRoutes from './routes/order.routes.js';
 import productRoutes from './routes/product.routes.js';
@@ -17,6 +18,9 @@ import { getCorsOptions } from './config/env.js';
 const app = express();
 
 // ── Global Middleware ─────────────────────────────────────
+app.use(helmet({
+  contentSecurityPolicy: false,
+}));
 app.use(cors(getCorsOptions()));
 app.use(express.json());
 app.use(requestLogger);

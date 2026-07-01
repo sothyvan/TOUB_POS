@@ -32,9 +32,7 @@ export default function OwnerPortalPage() {
   } = useUsers(canManageUsers, currentUser);
 
   const { orders, todaysOrders, todaysTotal } =
-    useOrders(isOnline, [], () => {}, currentUser, null, {
-      subtotal: 0, serviceFee: 0, estimatedTax: 0, total: 0
-    });
+    useOrders(isOnline, [], () => {}, currentUser);
 
   const [ownerTab, setOwnerTab] = useState('dashboard');
 

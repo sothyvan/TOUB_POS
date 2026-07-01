@@ -1,5 +1,7 @@
 # ToubPOS — Frontend Connection Guide & Completion Roadmap
 
+> Historical note: this roadmap predates the current backend-owned JWT auth flow. Current credential rules live in `docs/api/auth-flow.md`: Owner/Manager use username/password via the backend, Cashier uses backend PIN login, and local credential fallback must not be used as real authentication.
+
 This guide outlines the sprint plan for the frontend team to connect the React application to the Express backend APIs. It introduces a **hybrid fallback architecture** so that developers can build and run the client dashboard offline (using `localStorage`) while automatically switching to the real backend endpoints when they are online and available.
 
 **Stack:** React, Vite, Tailwind CSS v4, React Router, Custom Hooks.
@@ -171,9 +173,9 @@ export const api = {
       } catch (err) {
         // Unreachable/offline fallback check
         if (err.message.includes('Failed to fetch') || err.message.includes('API request failed')) {
-          const localUser = localFallback.users.getAll().find(
-            (u) => u.name.toLowerCase() === username.trim().toLowerCase() && u.pin === password.trim()
-          );
+          // Historical example only: local credential fallback has been removed.
+          // Current TouB POS auth must use backend username/password or PIN endpoints.
+          const localUser = null;
           if (localUser) {
             authStorage.setUser(localUser);
             return localUser;

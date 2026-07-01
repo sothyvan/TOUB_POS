@@ -2,7 +2,7 @@ import { Order, Stall } from '../models/index.js';
 import { Op } from 'sequelize';
 
 /**
- * Get daily summary report of completed transactions.
+ * Get daily summary report of paid transactions.
  */
 export async function getDailySummary(req, res, next) {
   try {
@@ -15,10 +15,10 @@ export async function getDailySummary(req, res, next) {
     const endOfDay = new Date(targetDate);
     endOfDay.setHours(23, 59, 59, 999);
 
-    // Get all completed orders for the specified date
+    // Get all paid orders for the specified date
     const orders = await Order.findAll({
       where: {
-        status: 'completed',
+        status: 'paid',
         created_at: {
           [Op.between]: [startOfDay, endOfDay],
         },

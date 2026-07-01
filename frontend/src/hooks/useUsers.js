@@ -1,9 +1,9 @@
 import { useMemo, useState, useEffect } from 'react';
-import { canManageUserRole } from '../utils/permissions';
+import { canManageUserRole, roleToApiRole } from '../utils/permissions';
 import { api } from '../services/api';
 
 const blankUserForm = () => ({
-  id: null, name: '', role: 'cashier', station: 'Station 01', pin: '', active: true,
+  id: null, name: '', role: 'cashier', station: 'Station 01', password: '', pin: '', active: true,
 });
 
 /**
@@ -42,32 +42,52 @@ export function useUsers(canManageUsers, currentUser) {
 
   const users = useMemo(
     () => rawUsers
-      .map((user) => ({ ...user, pin: '' }))
+      .map((user) => ({ ...user, password: '', pin: '' }))
       .filter((user) => canManageUserRole(currentUser, user.role)),
     [currentUser, rawUsers]
   );
 
   const saveUser = async () => {
     const name = userForm.name.trim();
-    if (!canManageUsers || !name || (!userForm.id && !userForm.pin.trim())) {
-      alert('Add a name and PIN.');
-      return;
+    const role = roleToApiRole(userForm.role);
+    const isCashier = role === 'cashier';
+    const password = String(userForm.password || '').trim();
+    const pin = String(userForm.pin || '').trim();
+
+    if (!canManageUsers || !name) {
+      alert('Add a name.');
+      return false;
+    }
+    if (!userForm.id && isCashier && !pin) {
+      alert('Add a name and PIN for the cashier.');
+      return false;
+    }
+    if (!userForm.id && !isCashier && !password) {
+      alert('Add a name and password for the owner or manager.');
+      return false;
     }
     if (!canManageUserRole(currentUser, userForm.role)) {
       alert('You do not have permission to manage this role.');
-      return;
+      return false;
     }
     try {
-      const user = { ...userForm, name, pin: userForm.pin.trim() };
+      const user = {
+        ...userForm,
+        name,
+        password: isCashier ? '' : password,
+        pin: isCashier ? pin : '',
+      };
       await api.users.save(user);
       setUsers(await api.users.getAll());
       setUserForm(blankUserForm());
+      return true;
     } catch (err) {
       alert(err.message || 'Failed to save user.');
+      return false;
     }
   };
 
-  const editUser = (user) => setUserForm({ ...user, pin: '' });
+  const editUser = (user) => setUserForm({ ...user, password: '', pin: '' });
   const cancelUserEdit = () => setUserForm(blankUserForm());
 
   const toggleUserActive = async (userId) => {

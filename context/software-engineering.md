@@ -168,7 +168,7 @@ SE responsibility: ensure requirements, diagrams, and planning stay consistent w
 ```mermaid
 flowchart LR
   Cashier[Actor: Cashier]
-  Manager[Actor: Admin/Owner]
+  Manager[Actor: Owner / Manager]
   Cook[Actor: Kitchen Staff]
   Gateway[External: Payment Gateway]
 

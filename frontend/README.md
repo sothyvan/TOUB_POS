@@ -1,6 +1,6 @@
-# Toub POS — Frontend
+# Toub POS Frontend
 
-React + Vite web application. Provides the cashier workspace and manager admin panel, optimized for tablet and mobile browsers.
+React + Vite web application for the TouB POS management portal and cashier workspace. The frontend talks to the Express API and keeps the backend as the source of truth for users, products, stalls, staff assignments, orders, and cash confirmation.
 
 ---
 
@@ -8,7 +8,7 @@ React + Vite web application. Provides the cashier workspace and manager admin p
 
 ### Prerequisites
 
-- Node.js ≥ 18
+- Node.js >= 18
 
 ### Install & Run
 
@@ -17,89 +17,96 @@ npm install
 npm run dev
 ```
 
-App runs at `http://localhost:5173` by default.
+The app runs at `http://localhost:5173` by default.
 
-> The frontend expects the backend API at `http://localhost:3000/api`. See [`backend/README.md`](../backend/README.md) to get the API running first.
+The frontend expects the backend API at:
+
+```text
+http://localhost:3000/api
+```
+
+Override it with `VITE_API_BASE_URL` if needed.
 
 ---
 
 ## Project Structure
 
-```
+```text
 frontend/src/
-├── main.jsx              → React DOM entry point
-├── App.jsx               → Router root (react-router-dom)
-├── index.css             → Global CSS reset and base styles
-├── App.css               → App-level layout styles
-│
-├── pages/                → Full-page view components (one per route)
-│   ├── LoginPage.jsx     → /login
-│   └── CashierPage.jsx   → /cashier  (cashier + admin workspace)
-│
-├── components/           → Reusable UI components
-│   ├── LoginScreen.jsx
-│   ├── Topbar.jsx
-│   ├── CashierScreen.jsx
-│   ├── OrderPanel.jsx
-│   ├── AdminWorkspace.jsx
-│   ├── ProductAdmin.jsx
-│   ├── CategoryAdmin.jsx
-│   ├── UserAdmin.jsx
-│   └── OrderHistory.jsx
-│
-├── hooks/                → Custom React hooks
-│   └── useSavedState.js  → localStorage-backed useState
-│
-├── utils/                → Pure utility functions (no React)
-│   ├── format.js         → Money formatting, initials, code generation
-│   ├── ids.js            → Unique ID generation
-│   └── permissions.js    → Role-based permission checks
-│
-├── styles/               → Component-scoped CSS files
-│   └── CashierWorkspace.css
-│
-└── data/
-    └── seedData.js       → Static seed data for dev/demo
+├── main.jsx               -> React DOM entry point
+├── App.jsx                -> Route definitions and protected routes
+├── auth/                  -> Auth provider, session storage, route guards
+├── pages/                 -> Login, cashier, and owner/manager portal pages
+├── components/            -> Reusable UI and feature components
+├── hooks/                 -> Custom hooks for products, users, orders, auth state
+├── services/api.js        -> Central API client with Bearer token attachment
+├── utils/                 -> Formatting, permissions, storage, helper functions
+└── index.css              -> Tailwind v4 theme and global styles
 ```
 
 ---
 
 ## Routing
 
-| Path       | Component     | Description                          |
-|------------|---------------|--------------------------------------|
-| `/login`   | `LoginPage`   | PIN-based login for cashiers/managers |
-| `/cashier` | `CashierPage` | Main POS workspace                   |
-| `*`        | Redirect      | Falls back to `/login`               |
+| Path | Access | Description |
+|------|--------|-------------|
+| `/login` | Public | Owner/manager username-password login and cashier PIN login |
+| `/admin-portal` | `owner`, `manager` | Management portal; kept under the existing route name |
+| `/cashier` | `cashier` | Assigned-stall cashier workspace |
+| `*` | Public | Redirects to `/login` or the correct protected workspace |
+
+Frontend route guards improve UX, but backend authorization remains the source of truth.
+
+---
+
+## Auth And Session Storage
+
+- The frontend stores the JWT access token and current user in localStorage.
+- `services/api.js` automatically attaches `Authorization: Bearer <token>` when a token exists.
+- Logout clears the token and current user.
+- `401` responses clear the session and redirect the user back to login.
+- HttpOnly refresh tokens are a future production improvement, not part of the current final-project implementation.
+
+Credential rules:
+
+- Owner/Manager use username + password.
+- Owner/Manager accounts have no PIN.
+- Cashier uses PIN login.
+- Cashier PINs are hashed in the backend.
+- Cashier accounts do not need a password.
+
+---
+
+## Order And Checkout Behavior
+
+- The cart can live in frontend state while the cashier is selecting items.
+- The frontend does not create paid orders by itself.
+- Checkout calls `POST /api/orders`.
+- The backend calculates trusted prices and totals from MySQL.
+- Cash orders start as `pending_payment`.
+- Cash confirmation calls `POST /api/orders/:id/confirm-cash`.
+- The backend changes cash orders to `paid` and writes audit logs.
+- Order history loads from the backend, so clearing browser localStorage does not erase saved orders.
+
+KHQR webhook success, live payment WebSocket updates, and Telegram kitchen dispatch are planned for Phase 5+.
 
 ---
 
 ## UI Guidelines
 
-- **Target devices**: Tablet and mobile browsers (touch-first).
-- **Design**: High-contrast, large tap targets, minimal cognitive load.
-- **Styling**: CSS custom properties for all design tokens — no hardcoded hex values.
-- **Components**: Functional components only, state managed via hooks.
-
-Key CSS variables defined in `index.css`:
-
-| Variable           | Role              |
-|--------------------|-------------------|
-| `--bg-base`        | Page background   |
-| `--bg-surface`     | Card / surface    |
-| `--text-primary`   | Primary text      |
-| `--text-muted`     | Secondary text    |
-| `--accent-primary` | Primary action    |
-| `--state-error`    | Error / alert     |
-| `--state-success`  | Success / confirm |
+- Target devices: tablet and mobile browsers first.
+- Design: high-contrast, large tap targets, and quick cashier workflows.
+- Styling: Tailwind CSS v4 with app tokens in `index.css`.
+- Components: functional React components with hooks.
+- Owner and Manager screens should keep management actions clear and confirm destructive changes.
 
 ---
 
 ## Available Scripts
 
-| Command           | Description                        |
-|-------------------|------------------------------------|
-| `npm run dev`     | Start Vite dev server with HMR     |
-| `npm run build`   | Build production bundle to `dist/` |
-| `npm run preview` | Preview the production build       |
-| `npm run lint`    | Run ESLint                         |
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start Vite dev server with HMR |
+| `npm run build` | Build production bundle to `dist/` |
+| `npm run preview` | Preview the production build |
+| `npm run lint` | Run ESLint |

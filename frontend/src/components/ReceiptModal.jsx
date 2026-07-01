@@ -4,6 +4,10 @@ import ModalShell from './ui/ModalShell';
 import TotalsBreakdown from './ui/TotalsBreakdown';
 
 export default function ReceiptModal({ activeReceipt, onClose }) {
+  const isPaid = activeReceipt?.status === 'paid';
+  const statusLabel = isPaid ? 'Payment Confirmed' : 'Order Pending Payment';
+  const badgeText = isPaid ? `Paid via ${activeReceipt?.paymentMethod}` : `${activeReceipt?.paymentMethod} · ${activeReceipt?.status}`;
+
   return (
     <ModalShell
       isOpen={Boolean(activeReceipt)}
@@ -14,17 +18,19 @@ export default function ReceiptModal({ activeReceipt, onClose }) {
         <>
         {/* Header */}
         <div className="bg-[#f8f9fa] border-b border-gray-100 p-5 text-center flex flex-col items-center">
-          <div className="w-12 h-12 rounded-full bg-[#e6f4eb] text-[#126149] flex items-center justify-center mb-3">
-            <Icon name="check" className="w-6 h-6" strokeWidth={3} />
+          <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${
+            isPaid ? 'bg-[#e6f4eb] text-[#126149]' : 'bg-[#fff7ed] text-[#c2410c]'
+          }`}>
+            <Icon name={isPaid ? 'check' : 'clock'} className="w-6 h-6" strokeWidth={3} />
           </div>
-          <h3 id="receipt-modal-title" className="m-0 text-xl font-bold text-gray-900 leading-snug">Payment Confirmed</h3>
+          <h3 id="receipt-modal-title" className="m-0 text-xl font-bold text-gray-900 leading-snug">{statusLabel}</h3>
           <p className="m-0 mt-1 text-gray-500 text-sm font-semibold">
             Receipt: {activeReceipt.orderNo}
           </p>
           <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-bold text-white ${
-            activeReceipt.paymentMethod === 'KHQR' ? 'bg-state-danger' : 'bg-state-success'
+            isPaid ? 'bg-state-success' : 'bg-brand-action'
           }`}>
-            Paid via {activeReceipt.paymentMethod}
+            {badgeText}
           </span>
         </div>
 

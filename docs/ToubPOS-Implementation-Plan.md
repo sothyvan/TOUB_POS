@@ -41,7 +41,8 @@ Timeline: 2-3 days
 ### Tasks
 
 1. Fix role authorization middleware usage.
-   - Change `authorize(['admin', 'manager'])` to the correct style, then simplify protected admin routes to `authorize('admin')` if the manager role is removed.
+   - Ensure `authorize()` supports the official `owner`, `manager`, and `cashier` roles consistently.
+   - Use `authorize(['owner', 'manager'])` for operational management APIs and `authorize('owner')` only for true owner-only actions.
    - Optionally update middleware to support both array and rest-argument styles.
 
 2. Add environment validation at server startup.
@@ -50,7 +51,7 @@ Timeline: 2-3 days
    - Require webhook secret before payment webhook is enabled.
 
 3. Remove unsafe default production behavior.
-   - Keep default `admin/admin123` only in development.
+   - Keep default `owner/owner123` only in development.
    - Do not log default credentials in non-development environments.
 
 4. Block inactive users during login.
@@ -65,8 +66,8 @@ Timeline: 2-3 days
 
 ### Acceptance Criteria
 
-- Admin and manager routes are actually accessible to both roles.
-- Admin/Owner routes are accessible only to the admin role.
+- Owner and manager routes are actually accessible to both roles where operational management is intended.
+- Owner-only routes are accessible only to the owner role.
 - Disabled users cannot log in.
 - JWT cannot run without `JWT_SECRET`.
 - API responses never expose password hashes or PINs.
@@ -81,7 +82,7 @@ Timeline: 2-3 days
 ### Tasks
 
 1. Replace localStorage login with `/api/auth/login`.
-   - Admin/Owner login should use username and password.
+   - Owner and Manager login should use username and password.
    - Cashier quick login can still use avatar plus PIN, but verification must happen through the backend.
 
 2. Add a frontend API client.
@@ -96,7 +97,7 @@ Timeline: 2-3 days
 
 4. Replace `location.state` route guards.
    - Use `ProtectedRoute`.
-   - Restrict `/admin-portal` to Admin/Owner.
+   - Restrict `/admin-portal` to Owner and Manager.
    - Restrict `/cashier` to cashier.
 
 5. Hide demo credentials outside demo mode.
@@ -106,7 +107,7 @@ Timeline: 2-3 days
 - Refreshing `/admin-portal` does not lose authentication.
 - Direct navigation to protected pages redirects unauthenticated users.
 - Cashiers cannot enter the admin portal.
-- Admin/Owner cannot accidentally enter cashier mode unless explicitly supported.
+- Owner/Manager cannot accidentally enter cashier mode unless explicitly supported.
 
 ---
 
@@ -169,10 +170,10 @@ Timeline: 3-4 days
 
 4. Add cash confirmation endpoint.
    - Example: `POST /api/orders/:id/confirm-cash`.
-   - Only the cashier who created the order or the Admin/Owner can confirm it.
+   - Only the cashier who created the order, the Owner, or a Manager can confirm it.
 
 5. Update order statuses.
-   - Use clear states such as `pending_payment`, `paid`, `cancelled`, `completed`.
+   - Use clear states such as `pending_payment`, `paid`, and `cancelled`.
 
 ### Acceptance Criteria
 

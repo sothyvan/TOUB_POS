@@ -7,7 +7,47 @@ Update this file after every meaningful implementation change.
 - Phase 1: Backend Auth/Security Hardening — **COMPLETE**
 - Phase 2: Frontend Authentication Integration — **COMPLETE**
 - Phase 3: Backend-Owned Products, Categories, Stalls, And Staff — **COMPLETE**
-- Phase 4: KDS & Live Payment WebSocket Integration — **NEXT**
+- Phase 4: Backend-Owned Orders, Cash Confirmation, And Audit Logs — **COMPLETE**
+- Phase 4.5: Security Hardening — **COMPLETE**
+- Phase 5: KDS & Live Payment WebSocket Integration — **NEXT**
+
+- **Refined role-specific user credential model**:
+  - Updated active backend validation so Owner/Manager accounts use username/password only and Cashier accounts use PIN login only.
+  - Made `users.password` nullable in Sequelize/SQL so Cashier accounts can store `password = NULL`.
+  - Enforced create/update cleanup so Owner/Manager accounts cannot store PINs and Cashier accounts cannot store passwords.
+  - Updated frontend staff forms to show password for Owner/Manager and PIN for Cashier, leaving edit credential fields blank unless a new credential is entered.
+  - Synchronized active auth docs, API docs, ERD notes, and SQL references with the role-specific credential rules.
+  - Marked the older frontend connection roadmap as historical so its old local credential fallback example is not treated as current auth guidance.
+  - Improved the staff modal submit flow so validation/backend errors keep the modal open and the modal closes only after a successful save.
+  - Added an opt-in live credential API test script (`npm run test:credentials` in `backend/`) for create/update/login credential rules.
+
+- **Implemented Phase 4.5 Security Hardening**:
+  - Changed Cashier PIN storage from plain text to bcrypt hashes and expanded the Sequelize/SQL `users.pin` field to hash-sized storage.
+  - Updated user create/update so PINs are hashed before saving and blank PIN edits do not overwrite the existing PIN.
+  - Updated PIN login to use bcrypt comparison and added a development-friendly fallback that upgrades old 4-digit plain PINs to bcrypt hashes after a successful login.
+  - Added `express-rate-limit` protections to username/password login and stricter Cashier PIN login.
+  - Added Helmet security headers while keeping Swagger documentation compatible.
+  - Improved request logging sanitization so nested password/PIN/token/authorization/secret fields are masked.
+  - Added typed `DELETE` confirmation to the centralized management delete modal.
+  - Documented localStorage JWT as an accepted final-project tradeoff and HttpOnly refresh tokens as the production upgrade path.
+
+- **Implemented Phase 4 Backend-Owned Orders**:
+  - Reworked order creation so cashier checkout sends only product IDs, quantities, optional notes, and payment method.
+  - Backend now derives cashier ID from JWT, stall ID from staff assignment, product prices from MySQL, and subtotal/total from database product snapshots.
+  - Enforced backend rejection for unassigned cashiers, invalid quantities, hidden products, products outside the cashier's assigned stall, and request-body trusted fields such as `total`, `stall_id`, `cashier_id`, and `status`.
+  - Updated order status vocabulary to `pending_payment`, `paid`, and `cancelled`, with a development migration for old `pending`/`completed` rows.
+  - Added `POST /api/orders/:id/confirm-cash` so explicit cash confirmation marks cash orders as `paid` and stores `completed_at`.
+  - Added database-backed `audit_logs` for `order_created` and `cash_payment_confirmed`.
+  - Updated cashier checkout/history to use backend order responses instead of building paid receipts from frontend cart totals.
+  - Removed fake order-history seed fallback from the management ledger so order history is backend-owned.
+  - Disabled the old mock KHQR webhook confirmation path for this phase; it now returns `501` until real gateway verification is implemented.
+  - Synchronized Sequelize models with `docs/database/schema.sql`, `docs/database/queries.sql`, API docs, and architecture context.
+
+- **Applied Phase 4 RBAC cleanup**:
+  - Confirmed cash payment can be confirmed by the creating Cashier, Owner, or Manager.
+  - Removed stale frontend order localStorage storage-key export from `frontend/src/services/api.js`.
+  - Updated active documentation wording from older two-role cash-confirmation language to the official Owner / Manager / Cashier model.
+  - Kept Manager user-management restrictions intact: Managers can manage Cashier users only, while Owner-only role creation remains blocked server-side.
 
 - **Applied Phase 3 verification fixes**:
   - Hardened product create/update validation so prices must be numeric and positive, stall/category IDs must be valid, and invalid input returns clean `400`/`404` responses instead of database `500` errors.
@@ -304,7 +344,7 @@ Intentional shortcuts taken during development that must be resolved before prod
 | 1 | **Cashier PIN backend login missing** | `LoginPage.jsx` / backend auth routes | ✅ Resolved — integrated via `/api/auth/pin` |
 | 2 | **Frontend hooks use `localStorage` mock** | `useProducts`, `useOrders`, `useUsers` | ✅ Resolved — fully integrated with backend endpoints |
 | 3 | **No input sanitization on order modifiers** | `order_items.notes` | 🟡 Medium — add max-length enforcement and strip dangerous characters before DB write |
-| 4 | **No auth endpoint rate limiting** | `POST /api/auth/login` | 🟡 Medium — add `express-rate-limit` to prevent brute-force attacks |
+| 4 | **No auth endpoint rate limiting** | `POST /api/auth/login` / `POST /api/auth/pin` | ✅ Resolved — added `express-rate-limit` |
 | 5 | **Seed owner password is a placeholder hash** | `docs/database/schema.sql` | 🔴 High — generate real bcrypt hash and store securely before any live deployment |
 | 6 | **WebSocket server not yet implemented** | `backend/services/` | 🔴 High — required for KHQR payment confirmation routing |
 

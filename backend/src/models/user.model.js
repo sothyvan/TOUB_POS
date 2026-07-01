@@ -15,10 +15,11 @@ const User = sequelize.define('User', {
   },
   password: {
     type: DataTypes.STRING(255),
-    allowNull: false,
+    allowNull: true,
   },
   pin: {
-    type: DataTypes.STRING(10),
+    type: DataTypes.STRING(255),
+    allowNull: true,
     defaultValue: null,
   },
   role: {

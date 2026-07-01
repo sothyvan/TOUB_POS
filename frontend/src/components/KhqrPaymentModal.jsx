@@ -2,7 +2,9 @@ import ModalShell from './ui/ModalShell';
 
 const QR_CODE_API_BASE = 'https://api.qrserver.com/v1/create-qr-code/';
 
-export default function KhqrPaymentModal({ isOpen, total, onCancel, onConfirm }) {
+export default function KhqrPaymentModal({ isOpen, total, order, qrPayload, onCancel }) {
+  const qrData = encodeURIComponent(qrPayload || `pay-to-toub-pos-amount-${total}`);
+
   return (
     <ModalShell
       isOpen={isOpen}
@@ -15,9 +17,7 @@ export default function KhqrPaymentModal({ isOpen, total, onCancel, onConfirm })
 
         {/* KHQR Poster Slip */}
         <div
-          className="bg-white rounded-3xl p-6 w-full shadow-lg flex flex-col items-center border border-gray-150 relative overflow-hidden cursor-pointer hover:scale-[1.01] transition-transform active:scale-[0.99]"
-          title="Click to simulate scan / payment success"
-          onClick={onConfirm}
+          className="bg-white rounded-3xl p-6 w-full shadow-lg flex flex-col items-center border border-gray-150 relative overflow-hidden"
         >
           <span className="text-[28px] font-black tracking-tight text-state-danger uppercase leading-none mt-1">
             TOUB PAY
@@ -29,7 +29,7 @@ export default function KhqrPaymentModal({ isOpen, total, onCancel, onConfirm })
           {/* QR Code Graphic */}
           <div className="border border-gray-150 rounded-2xl p-4 my-5 bg-white relative shadow-sm">
             <img
-              src={`${QR_CODE_API_BASE}?size=180x180&data=pay-to-toub-pos-amount-${total}`}
+              src={`${QR_CODE_API_BASE}?size=180x180&data=${qrData}`}
               alt="KHQR Code"
               className="w-45 h-45 block"
             />
@@ -43,7 +43,7 @@ export default function KhqrPaymentModal({ isOpen, total, onCancel, onConfirm })
             TOUB POS MERCHANT
           </span>
           <span className="text-[11px] font-bold text-gray-400 mt-1">
-            merchant@toubpos
+            {order ? `Order ${order.orderNo} · ${order.status}` : 'merchant@toubpos'}
           </span>
 
           {/* Member of KHQR footer */}
@@ -61,7 +61,7 @@ export default function KhqrPaymentModal({ isOpen, total, onCancel, onConfirm })
           Cancel
         </button>
         <span className="text-xs font-semibold text-gray-700 mt-3 animate-pulse">
-          Waiting for payment detection...
+          Order is pending payment. KHQR webhook confirmation is planned for a later phase.
         </span>
     </ModalShell>
   );
