@@ -29,7 +29,6 @@ export default function LoginPage() {
           setActiveCashiers(cashiersList.map(u => ({
             ...u,
             name: u.username,
-            station: 'Station 01', // Fallback for UI
             active: true
           })));
         }

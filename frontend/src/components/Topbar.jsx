@@ -4,7 +4,7 @@ import ConfirmDialog from './ui/ConfirmDialog';
 import Icon from './ui/Icon';
 import Logo from './ui/Logo';
 
-export default function Topbar({ currentUser, isCashier, itemCount, onCartOpen, onLogout }) {
+export default function Topbar({ currentUser, isCashier, itemCount, onCartOpen, onLogout, assignedStall }) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -54,7 +54,7 @@ export default function Topbar({ currentUser, isCashier, itemCount, onCartOpen, 
                 {currentUser.name}
               </strong>
               <small className="block whitespace-nowrap text-[#776f63] text-[11px] font-bold max-[1280px]:max-w-29 max-[1280px]:overflow-hidden max-[1280px]:text-ellipsis">
-                {currentUser.station}
+                {assignedStall ? (assignedStall.location ? `${assignedStall.name} — ${assignedStall.location}` : assignedStall.name) : 'No Stall'}
               </small>
             </div>
             <Icon

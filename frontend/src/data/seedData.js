@@ -21,7 +21,7 @@ export const DEFAULT_PRODUCTS = [
 ];
 
 export const DEFAULT_USERS = [
-  { id: 'user-owner', name: 'Owner Dara', role: 'Owner', station: 'Back Office', active: true },
-  { id: 'user-manager', name: 'Manager Bopha', role: 'Manager', station: 'Back Office', active: true },
-  { id: 'user-cashier', name: 'Cashier Dara', role: 'Cashier', station: 'Station 01', active: true },
+  { id: 'user-owner', name: 'Owner Dara', role: 'Owner', active: true },
+  { id: 'user-manager', name: 'Manager Bopha', role: 'Manager', active: true },
+  { id: 'user-cashier', name: 'Cashier Dara', role: 'Cashier', active: true },
 ];

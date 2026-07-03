@@ -7,6 +7,7 @@ export default function PageShell({
   itemCount,
   onCartOpen,
   onLogout,
+  assignedStall,
 }) {
   return (
     <div
@@ -20,6 +21,7 @@ export default function PageShell({
           itemCount={itemCount}
           onCartOpen={onCartOpen}
           onLogout={onLogout}
+          assignedStall={assignedStall}
         />
       )}
       {children}

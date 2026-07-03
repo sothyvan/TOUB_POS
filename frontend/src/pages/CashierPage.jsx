@@ -137,6 +137,7 @@ export default function CashierPage() {
       itemCount={itemCount}
       onCartOpen={() => setIsCartOpen(true)}
       onLogout={handleLogout}
+      assignedStall={assignedStall}
     >
       <CashierScreen
         currentUser={currentUser}

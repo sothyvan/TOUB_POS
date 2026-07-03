@@ -99,13 +99,6 @@ function UserModal({ form, setForm, onSave, onClose, isNew, roleOptions }) {
               />
             )}
           </div>
-          <FormInput
-            label="Station"
-            required
-            value={form.station}
-            placeholder="Station 02"
-            onChange={e => setForm(f => ({ ...f, station: e.target.value }))}
-          />
           <FormCheckbox
             label="Active account"
             checked={form.active}
@@ -125,7 +118,7 @@ function UserModal({ form, setForm, onSave, onClose, isNew, roleOptions }) {
   );
 }
 
-const EMPTY = { id:null,name:'',role:'Cashier',station:'',password:'',pin:'',active:true };
+const EMPTY = { id:null,name:'',role:'Cashier',password:'',pin:'',active:true };
 
 export default function StaffList({
   userForm,
@@ -212,7 +205,7 @@ export default function StaffList({
         {/* Column headers */}
         <div className="flex items-center gap-4 border-b border-[#f3f4f6] shrink-0"
           style={{padding:'8px 24px',background:'#f9fafb'}}>
-          {[['Employee','0 0 200px'],['Role','0 0 100px'],['Station','0 0 120px'],['Stall','1 1 140px'],['Status','0 0 80px'],['Actions','0 0 190px']].map(([l,f])=>(
+          {[['Employee','0 0 200px'],['Role','0 0 100px'],['Stall','1 1 260px'],['Status','0 0 80px'],['Actions','0 0 190px']].map(([l,f])=>(
             <span key={l} style={{flex:f,fontSize:11,fontWeight:700,color:'#9ca3af',fontFamily:'Inter,sans-serif',textTransform:'uppercase',letterSpacing:'0.05em'}}>{l}</span>
           ))}
         </div>
@@ -242,10 +235,7 @@ export default function StaffList({
                 <div style={{flex:'0 0 100px'}}>
                   <span className="inline-flex rounded-full px-2.5 py-0.5" style={{fontSize:11,fontWeight:700,fontFamily:'Inter,sans-serif',...roleBadgeStyle(user.role)}}>{user.role}</span>
                 </div>
-                <div style={{flex:'0 0 120px'}}>
-                  <span style={{fontSize:13,color:'#374151',fontFamily:'Inter,sans-serif'}}>{user.station||'—'}</span>
-                </div>
-                <div style={{flex:'1 1 140px',minWidth:0}}>
+                <div style={{flex:'1 1 260px',minWidth:0}}>
                   {userStallMap[user.id]
                     ? <div className="flex items-center gap-1.5"><Icon name="location" className="w-3 h-3 text-[#9ca3af]" strokeWidth={2}/><span style={{fontSize:13,color:'#374151',fontFamily:'Inter,sans-serif',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{userStallMap[user.id]}</span></div>
                     : <span style={{fontSize:13,color:'#d1d5db',fontFamily:'Inter,sans-serif'}}>—</span>}
