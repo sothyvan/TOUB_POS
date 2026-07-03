@@ -43,8 +43,7 @@ function Toggle({ checked, onChange }) {
   );
 }
 
-// ── Product row ───────────────────────────────────────────────────────────────
-function ProductRow({ product, categories, isSelected, onEdit, onDelete }) {
+function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete }) {
   const category = categories.find(c => c.id === product.categoryId);
 
   return (
@@ -71,6 +70,13 @@ function ProductRow({ product, categories, isSelected, onEdit, onDelete }) {
         <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111827', fontFamily: 'Inter, sans-serif', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {product.name}
         </p>
+        {stalls && stalls.length > 0 && (
+          <p style={{ margin: '2px 0 0', fontSize: 11, color: '#6b7280', fontFamily: 'Inter, sans-serif', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {product.stallIds && product.stallIds.length > 0
+              ? stalls.filter(s => product.stallIds.includes(s.id)).map(s => s.name).join(', ')
+              : 'No assigned stalls'}
+          </p>
+        )}
       </div>
 
       {/* Category */}
@@ -175,27 +181,59 @@ function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsE
             required
           />
 
-          <FormSelect
-            label="Assigned Stall"
-            value={form.stallId || ''}
-            onChange={e => setForm(f => ({ ...f, stallId: e.target.value }))}
-            required
-            disabled={stallsLoading || stalls.length === 0}
-          >
-            <option value="" disabled>
-              {stallsLoading ? 'Loading stalls...' : '— Select stall —'}
-            </option>
-            {stalls.map(stall => (
-              <option key={stall.id} value={stall.id}>
-                {stall.name}{stall.location ? ` — ${stall.location}` : ''}
-              </option>
-            ))}
-          </FormSelect>
-          {stallsError && (
-            <p style={{ margin: 0, fontSize: 12, color: '#ef4444', fontFamily: 'Inter, sans-serif' }}>
-              {stallsError}
+          <div className="grid gap-2">
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#374151', fontFamily: 'Inter, sans-serif' }}>
+              Assigned Stalls
+            </span>
+            {stallsLoading ? (
+              <p className="text-xs text-gray-500 animate-pulse">Loading stalls...</p>
+            ) : stallsError ? (
+              <p style={{ margin: 0, fontSize: 12, color: '#ef4444', fontFamily: 'Inter, sans-serif' }}>{stallsError}</p>
+            ) : stalls.length === 0 ? (
+              <p className="text-xs text-gray-500">No stalls created yet.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {stalls.map(stall => {
+                  const isSelected = (form.stallIds || []).includes(stall.id);
+                  return (
+                    <button
+                      key={stall.id}
+                      type="button"
+                      onClick={() => {
+                        setForm(f => {
+                          const currentIds = f.stallIds || [];
+                          const updatedIds = isSelected
+                            ? currentIds.filter(id => id !== stall.id)
+                            : [...currentIds, stall.id];
+                          return { ...f, stallIds: updatedIds };
+                        });
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-[13px] font-semibold transition-all cursor-pointer active:scale-95"
+                      style={{
+                        backgroundColor: isSelected ? '#eff6ff' : '#ffffff',
+                        borderColor: isSelected ? '#3b82f6' : '#e5e7eb',
+                        color: isSelected ? '#1d4ed8' : '#374151',
+                      }}
+                    >
+                      <span className={`w-3.5 h-3.5 rounded-md flex items-center justify-center border transition-all ${
+                        isSelected ? 'bg-[#3b82f6] border-[#3b82f6] text-white' : 'border-[#d1d5db] bg-white'
+                      }`}>
+                        {isSelected && (
+                          <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 20 20">
+                            <path d="M0 11l2-2 5 5L18 3l2 2L7 18z" />
+                          </svg>
+                        )}
+                      </span>
+                      <span>{stall.name}{stall.location ? ` (${stall.location})` : ''}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <p style={{ margin: 0, fontSize: 11, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}>
+              Assign this product to zero, one, or multiple stalls.
             </p>
-          )}
+          </div>
 
           {/* Menu Category */}
           <FormSelect
@@ -260,7 +298,7 @@ function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsE
 
 // ── Empty form factory ────────────────────────────────────────────────────────
 function emptyForm() {
-  return { id: null, name: '', image: '', price: '', categoryId: '', stallId: '', tone: 'gold', available: true, code: '' };
+  return { id: null, name: '', image: '', price: '', categoryId: '', stallId: '', stallIds: [], tone: 'gold', available: true, code: '' };
 }
 
 // ── Main MenuCatalog ──────────────────────────────────────────────────────────
@@ -317,7 +355,10 @@ export default function MenuCatalog({
   );
 
   const openEditor = (product) => {
-    setEditing({ ...product });
+    setEditing({
+      ...product,
+      stallIds: product.stallIds || (product.stallId ? [Number(product.stallId)] : [])
+    });
     onEditProduct(product);
   };
 
@@ -455,6 +496,7 @@ export default function MenuCatalog({
                   key={product.id}
                   product={product}
                   categories={categories}
+                  stalls={stalls}
                   isSelected={editingProduct?.id === product.id}
                   onEdit={openEditor}
                   onDelete={handleDelete}

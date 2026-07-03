@@ -9,6 +9,7 @@ function mapProductToFrontend(p) {
     price: p.price_usd,
     categoryId: p.category_id,
     stallId: p.stall_id,
+    stallIds: p.Stalls ? p.Stalls.map(s => s.id) : (p.stall_id ? [p.stall_id] : []),
     tone: p.Category ? p.Category.tone : 'gold',
     available: p.is_visible,
     image: p.image_url || ''
@@ -93,7 +94,7 @@ export const api = {
         price_usd: Number(item.price),
         price_khr: Number(item.price) * 4000,
         category_id: item.categoryId,
-        stall_id: item.stallId ? Number(item.stallId) : undefined,
+        stall_ids: item.stallIds || [],
         image_url: item.image,
         is_visible: item.available
       };

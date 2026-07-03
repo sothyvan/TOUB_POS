@@ -16,19 +16,23 @@ function parsePositiveInteger(value) {
   return Number.isInteger(number) && number > 0 ? number : null;
 }
 
-async function validateProductRefs(res, stallId, categoryId) {
-  const stall = await stallRepository.findStallById(stallId);
-  if (!stall) {
-    res.status(404).json({ success: false, message: 'Stall not found.' });
-    return false;
+async function validateProductStalls(res, stallIds) {
+  for (const id of stallIds) {
+    const stall = await stallRepository.findStallById(id);
+    if (!stall) {
+      res.status(404).json({ success: false, message: `Stall with ID ${id} not found.` });
+      return false;
+    }
   }
+  return true;
+}
 
+async function validateCategoryRef(res, categoryId) {
   const category = await categoryRepository.findCategoryById(categoryId);
   if (!category) {
     res.status(404).json({ success: false, message: 'Category not found.' });
     return false;
   }
-
   return true;
 }
 
@@ -37,16 +41,15 @@ async function validateProductRefs(res, stallId, categoryId) {
  */
 export async function getProducts(req, res, next) {
   try {
-    const whereClause = {};
     if (req.user?.role === 'cashier') {
       const stall = await userRepository.findAssignedStallByUserId(req.user.id);
       if (!stall) {
         return res.json({ success: true, data: [] });
       }
-      whereClause.stall_id = stall.id;
-      whereClause.is_visible = true;
+      const products = await productRepository.findAllProductsForStall(stall.id, { is_visible: true });
+      return res.json({ success: true, data: products });
     }
-    const products = await productRepository.findAllProducts(whereClause);
+    const products = await productRepository.findAllProducts({});
     res.json({ success: true, data: products });
   } catch (err) {
     next(err);
@@ -58,7 +61,7 @@ export async function getProducts(req, res, next) {
  */
 export async function createProduct(req, res, next) {
   try {
-    const { name, price_usd, price_khr, image_url, is_visible, stall_id, category_id } = req.body;
+    const { name, price_usd, price_khr, image_url, is_visible, stall_id, stall_ids, category_id } = req.body;
     if (!name || price_usd === undefined || price_khr === undefined) {
       return res.status(400).json({ success: false, message: 'name, price_usd, and price_khr are required.' });
     }
@@ -67,24 +70,42 @@ export async function createProduct(req, res, next) {
     if (parsedPriceUsd === null || parsedPriceKhr === null) {
       return res.status(400).json({ success: false, message: 'Prices must be positive numbers.' });
     }
-    const parsedStallId = parsePositiveInteger(stall_id);
     const parsedCategoryId = parsePositiveInteger(category_id);
-    if (!parsedStallId || !parsedCategoryId) {
-      return res.status(400).json({ success: false, message: 'stall_id and category_id are required.' });
+    if (!parsedCategoryId) {
+      return res.status(400).json({ success: false, message: 'category_id is required.' });
     }
-    const refsAreValid = await validateProductRefs(res, parsedStallId, parsedCategoryId);
-    if (!refsAreValid) {
+    const categoryValid = await validateCategoryRef(res, parsedCategoryId);
+    if (!categoryValid) {
       return;
     }
+
+    let validatedStallIds = [];
+    if (Array.isArray(stall_ids)) {
+      validatedStallIds = stall_ids.map(id => parsePositiveInteger(id)).filter(Boolean);
+    } else if (stall_id) {
+      const parsedStallId = parsePositiveInteger(stall_id);
+      if (parsedStallId) {
+        validatedStallIds = [parsedStallId];
+      }
+    }
+
+    const stallsValid = await validateProductStalls(res, validatedStallIds);
+    if (!stallsValid) {
+      return;
+    }
+
+    const legacyStallId = validatedStallIds.length > 0 ? validatedStallIds[0] : null;
+
     const product = await productRepository.insertProduct({
       name,
       price_usd: parsedPriceUsd,
       price_khr: parsedPriceKhr,
       image_url,
       is_visible,
-      stall_id: parsedStallId,
+      stall_id: legacyStallId,
       category_id: parsedCategoryId,
-    });
+    }, validatedStallIds);
+
     res.status(201).json({ success: true, data: product });
   } catch (err) {
     next(err);
@@ -97,7 +118,7 @@ export async function createProduct(req, res, next) {
 export async function updateProduct(req, res, next) {
   try {
     const { id } = req.params;
-    const { name, price_usd, price_khr, image_url, is_visible, stall_id, category_id } = req.body;
+    const { name, price_usd, price_khr, image_url, is_visible, stall_id, stall_ids, category_id } = req.body;
 
     const updateData = {};
     if (name !== undefined) {updateData.name = name;}
@@ -117,30 +138,35 @@ export async function updateProduct(req, res, next) {
     }
     if (image_url !== undefined) {updateData.image_url = image_url;}
     if (is_visible !== undefined) {updateData.is_visible = is_visible;}
-    if (stall_id !== undefined) {
-      const parsedStallId = parsePositiveInteger(stall_id);
-      if (!parsedStallId) {
-        return res.status(400).json({ success: false, message: 'stall_id must be a positive integer.' });
-      }
-      const stall = await stallRepository.findStallById(parsedStallId);
-      if (!stall) {
-        return res.status(404).json({ success: false, message: 'Stall not found.' });
-      }
-      updateData.stall_id = parsedStallId;
-    }
     if (category_id !== undefined) {
       const parsedCategoryId = parsePositiveInteger(category_id);
       if (!parsedCategoryId) {
         return res.status(400).json({ success: false, message: 'category_id must be a positive integer.' });
       }
-      const category = await categoryRepository.findCategoryById(parsedCategoryId);
-      if (!category) {
-        return res.status(404).json({ success: false, message: 'Category not found.' });
+      const categoryValid = await validateCategoryRef(res, parsedCategoryId);
+      if (!categoryValid) {
+        return;
       }
       updateData.category_id = parsedCategoryId;
     }
 
-    const success = await productRepository.updateProductById(id, updateData);
+    let validatedStallIds = undefined;
+    if (stall_ids !== undefined || stall_id !== undefined) {
+      let rawStallIds = [];
+      if (Array.isArray(stall_ids)) {
+        rawStallIds = stall_ids;
+      } else if (stall_id !== undefined) {
+        rawStallIds = stall_id ? [stall_id] : [];
+      }
+      validatedStallIds = rawStallIds.map(sid => parsePositiveInteger(sid)).filter(Boolean);
+      const stallsValid = await validateProductStalls(res, validatedStallIds);
+      if (!stallsValid) {
+        return;
+      }
+      updateData.stall_id = validatedStallIds.length > 0 ? validatedStallIds[0] : null;
+    }
+
+    const success = await productRepository.updateProductById(id, updateData, validatedStallIds);
     if (!success) {
       return res.status(404).json({ success: false, message: 'Product not found or no changes made.' });
     }

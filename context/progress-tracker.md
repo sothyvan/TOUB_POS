@@ -11,6 +11,7 @@ Update this file after every meaningful implementation change.
 - Phase 4.5: Security Hardening — **COMPLETE**
 - Phase 5: KDS & Live Payment WebSocket Integration — **IN PROGRESS**
   - Telegram KDS Bot (cash payment trigger) — **COMPLETE** ✅
+  - Multiple Stall Product Assignment (choose 0 to many stalls per item) — **COMPLETE** ✅
   - WebSocket server for KHQR live notification — **NEXT**
   - KHQR webhook → Telegram dispatch (2-line hook, after WebSocket) — **PENDING**
 

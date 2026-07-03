@@ -12,7 +12,9 @@ const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET;
  */
 function isValidTelegramRequest(req) {
   // If no secret is configured, skip validation (dev convenience)
-  if (!WEBHOOK_SECRET) return true;
+  if (!WEBHOOK_SECRET) {
+    return true;
+  }
   return req.headers['x-telegram-bot-api-secret-token'] === WEBHOOK_SECRET;
 }
 

@@ -8,6 +8,7 @@ import Order from './order.model.js';
 import OrderItem from './order-item.model.js';
 import TelegramTicket from './telegram-ticket.model.js';
 import AuditLog from './audit-log.model.js';
+import ProductStall from './product-stall.model.js';
 
 // ── User ↔ Stall Ownership ──────────────────────────────────
 Stall.belongsTo(User, { as: 'Owner', foreignKey: 'owner_id', onDelete: 'SET NULL' });
@@ -29,6 +30,15 @@ Stall.hasMany(Category, { foreignKey: 'stall_id' });
 // ── Product Associations ─────────────────────────────────────
 Product.belongsTo(Stall, { foreignKey: 'stall_id', onDelete: 'SET NULL' });
 Stall.hasMany(Product, { foreignKey: 'stall_id' });
+
+// Many-to-Many Product ↔ Stall
+Product.belongsToMany(Stall, { through: ProductStall, foreignKey: 'product_id', otherKey: 'stall_id', onDelete: 'CASCADE' });
+Stall.belongsToMany(Product, { through: ProductStall, foreignKey: 'stall_id', otherKey: 'product_id', onDelete: 'CASCADE' });
+
+ProductStall.belongsTo(Product, { foreignKey: 'product_id', onDelete: 'CASCADE' });
+ProductStall.belongsTo(Stall, { foreignKey: 'stall_id', onDelete: 'CASCADE' });
+Product.hasMany(ProductStall, { foreignKey: 'product_id' });
+Stall.hasMany(ProductStall, { foreignKey: 'stall_id' });
 
 Product.belongsTo(Category, { foreignKey: 'category_id', onDelete: 'SET NULL' });
 Category.hasMany(Product, { foreignKey: 'category_id' });
@@ -69,4 +79,5 @@ export {
   OrderItem,
   TelegramTicket,
   AuditLog,
+  ProductStall,
 };
