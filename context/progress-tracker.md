@@ -12,8 +12,17 @@ Update this file after every meaningful implementation change.
 - Phase 5: KDS & Live Payment WebSocket Integration — **IN PROGRESS**
   - Telegram KDS Bot (cash payment trigger) — **COMPLETE** ✅
   - Multiple Stall Product Assignment (choose 0 to many stalls per item) — **COMPLETE** ✅
+  - ImageKit product photo upload integration — **COMPLETE** ✅
   - WebSocket server for KHQR live notification — **NEXT**
   - KHQR webhook → Telegram dispatch (2-line hook, after WebSocket) — **PENDING**
+
+- **Implemented ImageKit product photo uploads**:
+  - Added ImageKit backend and frontend SDK dependencies.
+  - Added Owner/Manager-only `GET /api/products/imagekit-auth` for short-lived browser-direct upload auth parameters.
+  - Added ImageKit env placeholders in `backend/.env.example` and documented ImageKit as the product media storage boundary.
+  - Hardened product `image_url` create/update validation to require a URL/app-relative path with the existing 500-character DB limit.
+  - Added frontend product-photo upload controls with JPG/PNG/WebP validation, 5MB max size, progress state, error state, preview rendering, and manual URL fallback.
+  - Kept v1 persistence scoped to the existing `products.image_url` field; ImageKit `fileId` deletion/cleanup remains out of scope.
 
 - **Refined role-specific user credential model**:
   - Updated active backend validation so Owner/Manager accounts use username/password only and Cashier accounts use PIN login only.

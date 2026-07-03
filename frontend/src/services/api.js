@@ -1,5 +1,47 @@
 import { apiRequest } from './apiClient';
 import { toDisplayRole } from '../utils/permissions';
+import { upload as uploadImageKitFile } from '@imagekit/javascript';
+
+const PRODUCT_IMAGE_FOLDER = '/toub-pos/products';
+const MAX_PRODUCT_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_PRODUCT_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+function sanitizeFileNamePart(value) {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return normalized || 'product-photo';
+}
+
+function getFileExtension(file) {
+  const extension = String(file.name || '').split('.').pop()?.toLowerCase();
+  if (extension && ['jpg', 'jpeg', 'png', 'webp'].includes(extension)) {
+    return extension;
+  }
+
+  if (file.type === 'image/jpeg') return 'jpg';
+  if (file.type === 'image/png') return 'png';
+  if (file.type === 'image/webp') return 'webp';
+
+  return 'jpg';
+}
+
+function validateProductImageFile(file) {
+  if (!file) {
+    throw new Error('Choose an image file to upload.');
+  }
+
+  if (!ALLOWED_PRODUCT_IMAGE_TYPES.has(file.type)) {
+    throw new Error('Product photos must be JPG, PNG, or WebP images.');
+  }
+
+  if (file.size > MAX_PRODUCT_IMAGE_SIZE_BYTES) {
+    throw new Error('Product photos must be 5MB or smaller.');
+  }
+}
 
 function mapProductToFrontend(p) {
   return {
@@ -87,6 +129,27 @@ export const api = {
     async getAll() {
       const res = await apiRequest('/products');
       return res.data.map(mapProductToFrontend);
+    },
+    async getImageUploadAuth() {
+      const res = await apiRequest('/products/imagekit-auth');
+      return res.data;
+    },
+    async uploadImage(file, onProgress, productName = '') {
+      validateProductImageFile(file);
+      const auth = await this.getImageUploadAuth();
+      const fileName = `${sanitizeFileNamePart(productName)}-${Date.now()}.${getFileExtension(file)}`;
+
+      return uploadImageKitFile({
+        file,
+        fileName,
+        folder: PRODUCT_IMAGE_FOLDER,
+        useUniqueFileName: true,
+        publicKey: auth.publicKey,
+        token: auth.token,
+        expire: auth.expire,
+        signature: auth.signature,
+        onProgress,
+      });
     },
     async save(item) {
       const payload = {

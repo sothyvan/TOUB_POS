@@ -10,6 +10,7 @@
 | Auth         | JWT                     | Secure authentication and session management      |
 | Real-Time    | WebSocket (ws / socket.io) | Cashier-specific payment confirmation push     |
 | Kitchen Bot  | Telegram Bot API        | Order relay and cook acknowledgement system       |
+| Product Media | ImageKit              | Browser-direct product photo uploads and delivery |
 
 ## System Boundaries
 
@@ -25,6 +26,7 @@
 ## Storage Model
 
 - **MySQL Database**: Stores all relational data including Users, Stalls, Staff assignments, Orders, Order Items (with modifiers), and Payment Confirmations.
+- **ImageKit**: Stores product photo binary assets. The backend issues short-lived browser-upload authentication parameters to Owner/Manager users only, while MySQL stores only the delivered asset URL in `products.image_url`.
 - **localStorage (Frontend)**: Device registration token (`toub-device-registered`), auth JWT, active user session. Cleared on logout. This is accepted for the final project; production should move to short-lived access tokens plus HttpOnly refresh-token cookies.
 
 ## Auth and Access Model

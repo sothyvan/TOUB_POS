@@ -2,6 +2,9 @@ import * as productRepository from '../repositories/product.repository.js';
 import * as userRepository from '../repositories/user.repository.js';
 import * as stallRepository from '../repositories/stall.repository.js';
 import * as categoryRepository from '../repositories/category.repository.js';
+import * as imagekitService from '../services/imagekit.service.js';
+
+const MAX_IMAGE_URL_LENGTH = 500;
 
 function parsePositiveNumber(value) {
   const number = Number(value);
@@ -14,6 +17,31 @@ function parsePositiveInteger(value) {
   }
   const number = Number(value);
   return Number.isInteger(number) && number > 0 ? number : null;
+}
+
+function normalizeImageUrl(value) {
+  if (value === undefined) {
+    return { ok: true, value: undefined };
+  }
+
+  if (value === null || value === '') {
+    return { ok: true, value: null };
+  }
+
+  if (typeof value !== 'string') {
+    return { ok: false, message: 'image_url must be a string.' };
+  }
+
+  const trimmed = value.trim();
+  if (trimmed.length > MAX_IMAGE_URL_LENGTH) {
+    return { ok: false, message: `image_url must be ${MAX_IMAGE_URL_LENGTH} characters or fewer.` };
+  }
+
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://') && !trimmed.startsWith('/')) {
+    return { ok: false, message: 'image_url must be an absolute URL or an app-relative path.' };
+  }
+
+  return { ok: true, value: trimmed };
 }
 
 async function validateProductStalls(res, stallIds) {
@@ -57,6 +85,18 @@ export async function getProducts(req, res, next) {
 }
 
 /**
+ * Get short-lived ImageKit auth params for browser-direct uploads.
+ */
+export function getImageKitAuth(_req, res, next) {
+  try {
+    const authParams = imagekitService.getUploadAuthenticationParameters();
+    res.json({ success: true, data: authParams });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * Create a new product.
  */
 export async function createProduct(req, res, next) {
@@ -77,6 +117,10 @@ export async function createProduct(req, res, next) {
     const categoryValid = await validateCategoryRef(res, parsedCategoryId);
     if (!categoryValid) {
       return;
+    }
+    const normalizedImageUrl = normalizeImageUrl(image_url);
+    if (!normalizedImageUrl.ok) {
+      return res.status(400).json({ success: false, message: normalizedImageUrl.message });
     }
 
     let validatedStallIds = [];
@@ -100,7 +144,7 @@ export async function createProduct(req, res, next) {
       name,
       price_usd: parsedPriceUsd,
       price_khr: parsedPriceKhr,
-      image_url,
+      image_url: normalizedImageUrl.value,
       is_visible,
       stall_id: legacyStallId,
       category_id: parsedCategoryId,
@@ -136,7 +180,13 @@ export async function updateProduct(req, res, next) {
       }
       updateData.price_khr = parsedPriceKhr;
     }
-    if (image_url !== undefined) {updateData.image_url = image_url;}
+    if (image_url !== undefined) {
+      const normalizedImageUrl = normalizeImageUrl(image_url);
+      if (!normalizedImageUrl.ok) {
+        return res.status(400).json({ success: false, message: normalizedImageUrl.message });
+      }
+      updateData.image_url = normalizedImageUrl.value;
+    }
     if (is_visible !== undefined) {updateData.is_visible = is_visible;}
     if (category_id !== undefined) {
       const parsedCategoryId = parsePositiveInteger(category_id);

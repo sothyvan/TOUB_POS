@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@imagekit/javascript": "^5.4.1",
     "@tailwindcss/vite": "^4.3.0",
     "lucide-react": "^1.18.0",
     "react": "^19.2.6",

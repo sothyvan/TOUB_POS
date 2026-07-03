@@ -10,6 +10,7 @@ import { api } from '../services/api';
 
 // KHR exchange rate (approx)
 const KHR_RATE = 4000;
+const PRODUCT_IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp';
 
 function toKHR(usd) {
   return Math.round(parseFloat(usd || 0) * KHR_RATE).toLocaleString();
@@ -122,10 +123,40 @@ function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete 
 // ── Editor panel ──────────────────────────────────────────────────────────────
 function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsError, onSave, onCancel, isNew }) {
   const liveKHR = toKHR(form.price);
+  const [uploadProgress, setUploadProgress] = useState(null);
+  const [uploadError, setUploadError] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleSave = (e) => {
     e.preventDefault();
     onSave(form);
+  };
+
+  const handleImageUpload = async (file) => {
+    if (!file) return;
+
+    try {
+      setIsUploading(true);
+      setUploadError('');
+      setUploadProgress(0);
+      const response = await api.products.uploadImage(file, (event) => {
+        if (!event.lengthComputable) return;
+        setUploadProgress(Math.round((event.loaded / event.total) * 100));
+      }, form.name);
+
+      setForm(f => ({ ...f, image: response.url || '' }));
+      setUploadProgress(100);
+    } catch (err) {
+      setUploadError(err.message || 'Failed to upload image.');
+      setUploadProgress(null);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDrop = (event) => {
+    event.preventDefault();
+    handleImageUpload(event.dataTransfer.files?.[0]);
   };
 
   return (
@@ -154,20 +185,81 @@ function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsE
           {/* Product Photo */}
           <div className="grid gap-1.5">
             <span style={{ fontSize: 12, fontWeight: 700, color: '#374151', fontFamily: 'Inter, sans-serif' }}>Product Photo</span>
-            <div className="rounded-xl overflow-hidden border border-[#e5e7eb]" style={{ height: 180, background: '#fafafa' }}>
+            <div
+              className="rounded-xl overflow-hidden border border-[#e5e7eb]"
+              style={{ height: 180, background: '#fafafa' }}
+              onDragOver={event => event.preventDefault()}
+              onDrop={handleDrop}
+            >
               {form.image
                 ? <img src={form.image} alt="preview" className="w-full h-full object-cover" />
                 : (
                   <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-[#9ca3af]">
                     <Icon name="product" className="w-8 h-8" strokeWidth={1.5} />
-                    <span style={{ fontSize: 12, fontFamily: 'Inter, sans-serif' }}>No photo — paste URL below</span>
+                    <span style={{ fontSize: 12, fontFamily: 'Inter, sans-serif' }}>No photo - upload or paste URL below</span>
                   </div>
                 )
               }
             </div>
+            <div className="grid grid-cols-2 gap-2">
+              <label
+                className={`flex items-center justify-center gap-2 rounded-[10px] border border-[#dbe3f0] bg-white px-3 py-2 text-[12px] font-bold transition-all ${
+                  isUploading ? 'cursor-wait text-[#6b7280]' : 'cursor-pointer text-[#003ec7] hover:bg-[#f8fbff]'
+                }`}
+                style={{ fontFamily: 'Inter, sans-serif' }}
+              >
+                <Icon name={isUploading ? 'clock' : 'product'} className="w-3.5 h-3.5" strokeWidth={2} />
+                {isUploading ? 'Uploading...' : 'Upload Photo'}
+                <input
+                  type="file"
+                  accept={PRODUCT_IMAGE_ACCEPT}
+                  disabled={isUploading}
+                  className="sr-only"
+                  onChange={event => {
+                    handleImageUpload(event.target.files?.[0]);
+                    event.target.value = '';
+                  }}
+                />
+              </label>
+              <button
+                type="button"
+                disabled={!form.image || isUploading}
+                onClick={() => {
+                  setForm(f => ({ ...f, image: '' }));
+                  setUploadError('');
+                  setUploadProgress(null);
+                }}
+                className="rounded-[10px] border border-[#e5e7eb] bg-white px-3 py-2 text-[12px] font-bold text-[#6b7280] transition-all disabled:cursor-not-allowed disabled:opacity-50 hover:bg-gray-50"
+                style={{ fontFamily: 'Inter, sans-serif' }}
+              >
+                Clear Photo
+              </button>
+            </div>
+            {uploadProgress !== null && (
+              <div className="grid gap-1">
+                <div className="h-2 overflow-hidden rounded-full bg-[#e5e7eb]">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{ width: `${uploadProgress}%`, background: '#003ec7' }}
+                  />
+                </div>
+                <span style={{ fontSize: 11, color: '#6b7280', fontFamily: 'Inter, sans-serif' }}>
+                  {uploadProgress}% uploaded
+                </span>
+              </div>
+            )}
+            {uploadError && (
+              <p style={{ margin: 0, fontSize: 12, color: '#ef4444', fontFamily: 'Inter, sans-serif' }}>
+                {uploadError}
+              </p>
+            )}
             <FormInput
               value={form.image || ''}
-              onChange={e => setForm(f => ({ ...f, image: e.target.value }))}
+              onChange={e => {
+                setUploadError('');
+                setUploadProgress(null);
+                setForm(f => ({ ...f, image: e.target.value }));
+              }}
               placeholder="https://... or /images/photo.png"
             />
           </div>

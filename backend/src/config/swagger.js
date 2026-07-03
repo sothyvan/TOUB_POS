@@ -149,6 +149,39 @@ export const swaggerDocument = {
                 description: 'Owner/Manager only.'
             }
         },
+        '/api/products/imagekit-auth': {
+            get: {
+                summary: 'Get ImageKit upload authentication parameters',
+                description: 'Owner/Manager only. Returns short-lived token, signature, expire, publicKey, and urlEndpoint for browser-direct product image uploads.',
+                responses: {
+                    200: {
+                        description: 'ImageKit auth parameters generated',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        success: { type: 'boolean', example: true },
+                                        data: {
+                                            type: 'object',
+                                            properties: {
+                                                token: { type: 'string', example: 'uuid-token' },
+                                                expire: { type: 'integer', example: 1720000000 },
+                                                signature: { type: 'string', example: 'hmac-signature' },
+                                                publicKey: { type: 'string', example: 'public_xxx' },
+                                                urlEndpoint: { type: 'string', example: 'https://ik.imagekit.io/toub-pos' }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    401: { $ref: '#/components/responses/Unauthorized' },
+                    403: { $ref: '#/components/responses/Forbidden' }
+                }
+            }
+        },
         '/api/products/{id}': {
             put: {
                 summary: 'Update product',
