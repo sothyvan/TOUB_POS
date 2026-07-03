@@ -9,6 +9,7 @@ import {
   TelegramTicket,
   User,
 } from '../models/index.js';
+import { dispatchToTelegram } from './telegram.service.js';
 
 const ALLOWED_PAYMENT_METHODS = new Set(['cash', 'khqr']);
 const CASH_CONFIRMATION_ROLES = new Set(['owner', 'manager']);
@@ -106,7 +107,7 @@ function buildOrderInclude() {
     },
     {
       model: Stall,
-      attributes: ['id', 'name', 'location'],
+      attributes: ['id', 'name', 'location', 'telegram_chat_id'],
     },
     {
       model: User,
@@ -302,7 +303,15 @@ export async function confirmCashPayment(orderId, actor) {
     throw error;
   }
 
-  return getOrderById(confirmedOrderId);
+  const confirmedOrder = await getOrderById(confirmedOrderId);
+
+  // Fire-and-forget: Telegram dispatch must not affect the payment confirmation response.
+  // If the bot is down or the stall has no chat ID, the order is still paid successfully.
+  dispatchToTelegram(confirmedOrder).catch((err) => {
+    console.error('[Telegram] Unexpected dispatch error after cash confirm:', err);
+  });
+
+  return confirmedOrder;
 }
 
 /**

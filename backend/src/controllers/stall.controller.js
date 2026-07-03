@@ -44,11 +44,13 @@ export async function createStall(req, res, next) {
 export async function updateStall(req, res, next) {
   try {
     const { id } = req.params;
-    const { name, location } = req.body;
-    
+    const { name, location, telegram_chat_id } = req.body;
+
     const updateData = {};
-    if (name !== undefined) {updateData.name = name;}
-    if (location !== undefined) {updateData.location = location;}
+    if (name !== undefined) { updateData.name = name; }
+    if (location !== undefined) { updateData.location = location; }
+    // Allow owner/manager to configure the kitchen Telegram channel for this stall
+    if (telegram_chat_id !== undefined) { updateData.telegram_chat_id = telegram_chat_id || null; }
 
     const success = await stallRepository.updateStallById(id, updateData);
     if (!success) {

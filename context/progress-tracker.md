@@ -9,7 +9,10 @@ Update this file after every meaningful implementation change.
 - Phase 3: Backend-Owned Products, Categories, Stalls, And Staff — **COMPLETE**
 - Phase 4: Backend-Owned Orders, Cash Confirmation, And Audit Logs — **COMPLETE**
 - Phase 4.5: Security Hardening — **COMPLETE**
-- Phase 5: KDS & Live Payment WebSocket Integration — **NEXT**
+- Phase 5: KDS & Live Payment WebSocket Integration — **IN PROGRESS**
+  - Telegram KDS Bot (cash payment trigger) — **COMPLETE** ✅
+  - WebSocket server for KHQR live notification — **NEXT**
+  - KHQR webhook → Telegram dispatch (2-line hook, after WebSocket) — **PENDING**
 
 - **Refined role-specific user credential model**:
   - Updated active backend validation so Owner/Manager accounts use username/password only and Cashier accounts use PIN login only.

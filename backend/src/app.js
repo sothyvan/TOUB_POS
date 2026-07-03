@@ -9,6 +9,7 @@ import reportRoutes from './routes/report.routes.js';
 import stallRoutes from './routes/stall.routes.js';
 import categoryRoutes from './routes/category.routes.js';
 import webhookRoutes from './routes/webhook.routes.js';
+import telegramRoutes from './routes/telegram.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { requestLogger } from './middleware/logger.middleware.js';
 import swaggerUi from 'swagger-ui-express';
@@ -35,6 +36,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/stalls', stallRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/webhook', webhookRoutes);
+app.use('/api/telegram', telegramRoutes);
 
 // ── Health Check ──────────────────────────────────────────
 app.get('/api/health', (_req, res) => {
