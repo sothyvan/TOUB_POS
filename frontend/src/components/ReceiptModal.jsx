@@ -69,8 +69,8 @@ export default function ReceiptModal({ activeReceipt, onClose }) {
               <span>{activeReceipt.cashierName}</span>
             </div>
             <div className="flex justify-between">
-              <span>Station:</span>
-              <span>{activeReceipt.station}</span>
+              <span>Stall:</span>
+              <span>{activeReceipt.stallName}</span>
             </div>
             <div className="flex justify-between">
               <span>Date/Time:</span>

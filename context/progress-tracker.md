@@ -34,6 +34,24 @@ Update this file after every meaningful implementation change.
   - Moved raw development migration SQL out of `server.js` into `backend/src/services/development-migration.service.js` so the server entry point only orchestrates startup.
   - Documented the matching raw SQL migration/debug steps in `docs/database/queries.sql`.
 
+- **Enhanced Stall Roster & Employee Pool Layout with Transfer Confirmation**:
+  - Split the employee pool into **Available** (unassigned) and **Assigned** categories.
+  - Added a visual badge on assigned employee pills indicating their active stall name (or "This stall").
+  - Implemented a clean, compact `ConfirmDialog` warning if an owner/manager drags or clicks to assign an employee already assigned to another stall.
+  - Added a detailed footer tracking how many employees are assigned/unassigned relative to the current location.
+
+- **Added filters to Menu Items in Menu & Catalog**:
+  - Implemented dropdown select filters for **Category**, **Stall**, and **Availability/Status** in the back-office product catalog.
+  - Positioned the filters in the panel header of the Menu Items list to optimize screen space and align with Figma layout aesthetics.
+  - Updated the products search memo logic to combine text search with the selected category, stall, and stock status filters.
+
+- **Removed legacy Station concept**:
+  - Eliminated mock `station` field from frontend seed data, user model normalization, login page mapping, and blank form templates.
+  - Removed "Station" column from the Staff Directory table and removed the "Station" input field from the add/edit employee modal.
+  - Adjusted layout widths in the Staff Directory to expand the "Stall" column.
+  - Replaced the "Station" metadata label in the Receipt Modal with "Stall", mapping to the backend-owned `stallName` field.
+  - Configured `PageShell` and `Topbar` to receive and display the cashier's active assigned stall/location in the top bar session header.
+
 - **Implemented ImageKit product photo uploads**:
   - Added ImageKit backend and frontend SDK dependencies.
   - Added Owner/Manager-only `GET /api/products/imagekit-auth` for short-lived browser-direct upload auth parameters.

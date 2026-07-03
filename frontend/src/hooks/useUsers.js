@@ -3,7 +3,7 @@ import { canManageUserRole, roleToApiRole } from '../utils/permissions';
 import { api } from '../services/api';
 
 const blankUserForm = () => ({
-  id: null, name: '', role: 'cashier', station: 'Station 01', password: '', pin: '', active: true,
+  id: null, name: '', role: 'cashier', password: '', pin: '', active: true,
 });
 
 /**

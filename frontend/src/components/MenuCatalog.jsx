@@ -424,6 +424,11 @@ export default function MenuCatalog({
   const [stallsLoading, setStallsLoading] = useState(true);
   const [stallsError, setStallsError] = useState('');
 
+  // Filtering states
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [stallFilter, setStallFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+
   useEffect(() => {
     let ignore = false;
     async function loadStalls() {
@@ -441,10 +446,24 @@ export default function MenuCatalog({
     return () => { ignore = true; };
   }, []);
 
-  const filtered = useMemo(() =>
-    products.filter(p => p.name.toLowerCase().includes(search.toLowerCase())),
-    [products, search]
-  );
+  const filtered = useMemo(() => {
+    return products.filter(p => {
+      // 1. Text search
+      const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
+      
+      // 2. Category filter
+      const matchesCategory = !categoryFilter || p.categoryId === Number(categoryFilter) || p.categoryId === categoryFilter;
+      
+      // 3. Stall filter
+      const matchesStall = !stallFilter || (p.stallIds || []).includes(Number(stallFilter));
+      
+      // 4. Status filter
+      const matchesStatus = !statusFilter || 
+        (statusFilter === 'available' ? p.available : !p.available);
+        
+      return matchesSearch && matchesCategory && matchesStall && matchesStatus;
+    });
+  }, [products, search, categoryFilter, stallFilter, statusFilter]);
 
   const openEditor = (product) => {
     setEditing({
@@ -536,17 +555,54 @@ export default function MenuCatalog({
         {/* Left — product list */}
         <div className="flex flex-col bg-white rounded-2xl overflow-hidden flex-1 min-w-0 border border-[#e5e7eb]">
           {/* Panel header */}
-          <div className="px-5 py-4 border-b border-[#f3f4f6]" style={{ minHeight: 80 }}>
-            <div className="flex items-center gap-3">
-              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
-                Menu Items
-              </h3>
-              {loading && <span className="text-xs text-[#6b7280] animate-pulse">Loading...</span>}
-              {error && <span className="text-xs text-[#ef4444]">{error}</span>}
+          <div className="px-5 py-4 border-b border-[#f3f4f6] flex items-center justify-between gap-4 flex-wrap" style={{ minHeight: 80 }}>
+            <div>
+              <div className="flex items-center gap-3">
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
+                  Menu Items
+                </h3>
+                {loading && <span className="text-xs text-[#6b7280] animate-pulse">Loading...</span>}
+                {error && <span className="text-xs text-[#ef4444]">{error}</span>}
+              </div>
+              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}>
+                {filtered.length} product{filtered.length !== 1 ? 's' : ''} · click a row to edit
+              </p>
             </div>
-            <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}>
-              {filtered.length} product{filtered.length !== 1 ? 's' : ''} · click a row to edit
-            </p>
+
+            {/* Filters */}
+            <div className="flex items-center gap-2">
+              <select
+                value={categoryFilter}
+                onChange={e => setCategoryFilter(e.target.value)}
+                className="border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 bg-white h-8 px-2 cursor-pointer focus:border-[#003ec7] outline-none"
+              >
+                <option value="">All Categories</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+
+              <select
+                value={stallFilter}
+                onChange={e => setStallFilter(e.target.value)}
+                className="border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 bg-white h-8 px-2 cursor-pointer focus:border-[#003ec7] outline-none"
+              >
+                <option value="">All Stalls</option>
+                {stalls.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+
+              <select
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value)}
+                className="border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 bg-white h-8 px-2 cursor-pointer focus:border-[#003ec7] outline-none"
+              >
+                <option value="">All Statuses</option>
+                <option value="available">In Stock</option>
+                <option value="unavailable">Out of Stock</option>
+              </select>
+            </div>
           </div>
 
           {/* Column headers */}

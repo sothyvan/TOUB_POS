@@ -3,6 +3,7 @@ import Icon from './ui/Icon';
 import { initials } from '../utils/format';
 import { roleToApiRole } from '../utils/permissions';
 import { api } from '../services/api';
+import ConfirmDialog from './ui/ConfirmDialog';
 
 // ── Seed data ─────────────────────────────────────────────────────────────────
 const AVATAR_COLORS = ['#eef2ff','#dcfce7','#f3e8ff','#fff1f2','#fef3c7','#e0f2fe'];
@@ -55,38 +56,45 @@ function AddStallModal({ onClose, onAdd }) {
 }
 
 // ── Draggable staff pill (pool) ───────────────────────────────────────────────
-function DraggablePill({ user, idx, onDragStart }) {
+function PoolPill({ user, idx, assignedStall, selectedStallId, onDragStart, onClick }) {
+  const isAssigned = !!assignedStall;
+  const isThisStall = isAssigned && assignedStall.id === selectedStallId;
+
   return (
     <div
-      draggable
+      draggable={!isThisStall}
       onDragStart={(e) => {
+        if (isThisStall) return;
         e.dataTransfer.setData('userId', user.id);
         e.dataTransfer.setData('source', 'pool');
         e.dataTransfer.effectAllowed = 'move';
         onDragStart?.();
       }}
-      className="flex items-center gap-2.5 rounded-[10px] px-3 py-2.5 border border-[#f3f4f6] select-none"
-      style={{
-        background: '#ffffff',
-        cursor: 'grab',
-        transition: 'box-shadow 0.15s, opacity 0.15s',
+      onClick={() => {
+        if (!isThisStall) onClick?.();
       }}
-      onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'; }}
-      onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; }}
+      className={`flex items-center gap-2.5 rounded-[10px] px-3 py-2.5 border border-[#f3f4f6] select-none transition-all duration-150 ${
+        isThisStall ? 'opacity-40 cursor-not-allowed bg-white/50' : 'cursor-grab bg-white hover:shadow-md'
+      }`}
     >
-      <svg width="10" height="16" viewBox="0 0 10 16" fill="none" style={{ flexShrink: 0, opacity: 0.3 }}>
-        <circle cx="3" cy="4"  r="1.5" fill="#374151" />
-        <circle cx="7" cy="4"  r="1.5" fill="#374151" />
-        <circle cx="3" cy="8"  r="1.5" fill="#374151" />
-        <circle cx="7" cy="8"  r="1.5" fill="#374151" />
-        <circle cx="3" cy="12" r="1.5" fill="#374151" />
-        <circle cx="7" cy="12" r="1.5" fill="#374151" />
-      </svg>
+      {!isThisStall && (
+        <svg width="10" height="16" viewBox="0 0 10 16" fill="none" style={{ flexShrink: 0, opacity: 0.3 }}>
+          <circle cx="3" cy="4"  r="1.5" fill="#374151" />
+          <circle cx="7" cy="4"  r="1.5" fill="#374151" />
+          <circle cx="3" cy="8"  r="1.5" fill="#374151" />
+          <circle cx="7" cy="8"  r="1.5" fill="#374151" />
+          <circle cx="3" cy="12" r="1.5" fill="#374151" />
+          <circle cx="7" cy="12" r="1.5" fill="#374151" />
+        </svg>
+      )}
+      {isThisStall && (
+        <div className="w-[10px] shrink-0" />
+      )}
       <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-black shrink-0"
         style={avatarStyle(idx)}>
         {initials(user.name)}
       </div>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
           {user.name}
         </p>
@@ -94,6 +102,14 @@ function DraggablePill({ user, idx, onDragStart }) {
           {user.role}
         </p>
       </div>
+
+      {isAssigned && (
+        <div className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+          isThisStall ? 'bg-[#eff6ff] text-[#1e40af]' : 'bg-[#f3f4f6] text-[#4b5563]'
+        }`}>
+          {isThisStall ? 'This stall' : assignedStall.name}
+        </div>
+      )}
     </div>
   );
 }
@@ -156,9 +172,10 @@ function DropZone({ onDrop, isDragOver, setIsDragOver }) {
   );
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
 export default function StallOwner({ users = [] }) {
-  const cashierUsers = users.filter((user) => roleToApiRole(user.role) === 'cashier');
+  const cashierUsers = useMemo(() => {
+    return users.filter((user) => roleToApiRole(user.role) === 'cashier');
+  }, [users]);
   
   const [stalls, setStalls] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -200,10 +217,38 @@ export default function StallOwner({ users = [] }) {
   const selectedStall  = stalls.find(s => s.id === selectedStallId) ?? null;
   const assignedIds    = assignments[selectedStallId] ?? [];
   const assignedUsers  = cashierUsers.filter(u => assignedIds.includes(u.id));
-  const poolUsers      = cashierUsers.filter(u =>
-    !assignedIds.includes(u.id) &&
-    u.name.toLowerCase().includes(staffSearch.toLowerCase())
-  );
+
+  const userStallMap = useMemo(() => {
+    const map = {};
+    stalls.forEach(s => {
+      if (s.staff) {
+        s.staff.forEach(u => {
+          map[u.id] = s;
+        });
+      }
+    });
+    return map;
+  }, [stalls]);
+
+  const filteredPoolUsers = useMemo(() => {
+    return cashierUsers.filter(u =>
+      u.name.toLowerCase().includes(staffSearch.toLowerCase())
+    );
+  }, [cashierUsers, staffSearch]);
+
+  const availablePool = useMemo(() => {
+    return filteredPoolUsers.filter(u => !userStallMap[u.id]);
+  }, [filteredPoolUsers, userStallMap]);
+
+  const assignedPool = useMemo(() => {
+    return filteredPoolUsers.filter(u => !!userStallMap[u.id]);
+  }, [filteredPoolUsers, userStallMap]);
+
+  const availableCount = useMemo(() => {
+    return cashierUsers.filter(u => !userStallMap[u.id]).length;
+  }, [cashierUsers, userStallMap]);
+
+  const [transferConfirm, setTransferConfirm] = useState(null);
 
   const updateAssignmentsLocally = (stallId, addUserId, removeUserId) => {
     setStalls(prev => prev.map(s => {
@@ -225,12 +270,35 @@ export default function StallOwner({ users = [] }) {
 
   const handleAssign = async (userId) => {
     if (!selectedStallId || assignedIds.includes(userId)) return;
+    
+    // Check if user is already assigned to another stall
+    const oldStall = userStallMap[userId];
+    if (oldStall && oldStall.id !== selectedStallId) {
+      setTransferConfirm({
+        userId,
+        oldStall,
+        newStall: stalls.find(s => s.id === selectedStallId)
+      });
+      return;
+    }
+
+    await performAssign(userId, selectedStallId);
+  };
+
+  const performAssign = async (userId, toStallId) => {
     try {
-      await api.stalls.assignStaff(selectedStallId, userId);
-      updateAssignmentsLocally(selectedStallId, userId, null);
+      await api.stalls.assignStaff(toStallId, userId);
+      updateAssignmentsLocally(toStallId, userId, null);
     } catch (err) {
       alert(err.message || 'Failed to assign staff');
     }
+  };
+
+  const handleConfirmTransfer = async () => {
+    if (!transferConfirm) return;
+    const { userId, newStall } = transferConfirm;
+    setTransferConfirm(null);
+    await performAssign(userId, newStall.id);
   };
 
   const handleUnassign = async (userId) => {
@@ -327,15 +395,15 @@ export default function StallOwner({ users = [] }) {
         <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-4 border-b border-[#f3f4f6]">
           <div>
             <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
-              {selectedStall ? `Roster: ${selectedStall.name}` : 'Select a stall'}
+              {selectedStall ? `Current Roster: ${selectedStall.name}${selectedStall.location ? ` — ${selectedStall.location}` : ''}` : 'Select a Location'}
             </h2>
             <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}>
-              {assignedUsers.length} staff assigned · drag from pool to assign
+              {selectedStall ? `${assignedUsers.length} staff currently assigned · click a card to manage` : 'Choose a location from the left'}
             </p>
           </div>
           {selectedStall && (
-            <div className="px-3 py-1 rounded-full shrink-0" style={{ background: '#dbeafe' }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#1d4ed8', fontFamily: 'Inter, sans-serif' }}>
+            <div className="px-3 py-1 rounded-full shrink-0" style={{ background: '#eff6ff' }}>
+              <span className="text-[13px] font-bold text-[#1d4ed8] font-sans">
                 {assignedUsers.length} / 12
               </span>
             </div>
@@ -368,16 +436,16 @@ export default function StallOwner({ users = [] }) {
           style={{ background: isPoolOver ? '#f0fdf4' : 'white', transition: 'background 0.15s' }}>
           <div className="flex items-center justify-between mb-1">
             <span style={{ fontSize: 14, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
-              Employee Pool
+              All Employee Pool
             </span>
             <div className="px-2.5 py-0.5 rounded-full" style={{ background: '#eef2ff' }}>
               <span style={{ fontSize: 12, fontWeight: 700, color: '#003ec7', fontFamily: 'Inter, sans-serif' }}>
-                {poolUsers.length}
+                {cashierUsers.length}
               </span>
             </div>
           </div>
           <p style={{ margin: 0, fontSize: 12, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}>
-            {isPoolOver ? '↩ Drop here to unassign' : 'Drag a card to assign to the selected stall'}
+            {availableCount} available · drag to assign
           </p>
         </div>
 
@@ -394,28 +462,82 @@ export default function StallOwner({ users = [] }) {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3">
-          {poolUsers.length === 0 ? (
-            <p className="text-center py-8" style={{ fontSize: 12, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}>
-              {staffSearch ? 'No results' : 'All staff are assigned'}
-            </p>
-          ) : (
-            <>
-              <p className="px-1 pb-2" style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'Inter, sans-serif', margin: 0 }}>
+        <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-4">
+          {/* AVAILABLE SECTION */}
+          {availablePool.length > 0 && (
+            <div>
+              <p className="px-1 pb-2 font-sans" style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', letterSpacing: '0.06em', textTransform: 'uppercase', margin: 0 }}>
                 Available
               </p>
               <div className="flex flex-col gap-2">
-                {poolUsers.map((user, idx) => (
-                  <DraggablePill key={user.id} user={user} idx={idx} onDragStart={() => setIsDraggingFromRoster(false)} />
+                {availablePool.map((user, idx) => (
+                  <PoolPill
+                    key={user.id}
+                    user={user}
+                    idx={idx}
+                    assignedStall={userStallMap[user.id]}
+                    selectedStallId={selectedStallId}
+                    onDragStart={() => setIsDraggingFromRoster(false)}
+                    onClick={() => handleAssign(user.id)}
+                  />
                 ))}
               </div>
-            </>
+            </div>
           )}
+
+          {/* ASSIGNED SECTION */}
+          {assignedPool.length > 0 && (
+            <div>
+              <p className="px-1 pb-2 font-sans" style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', letterSpacing: '0.06em', textTransform: 'uppercase', margin: 0 }}>
+                Assigned Here
+              </p>
+              <div className="flex flex-col gap-2">
+                {assignedPool.map((user, idx) => (
+                  <PoolPill
+                    key={user.id}
+                    user={user}
+                    idx={idx}
+                    assignedStall={userStallMap[user.id]}
+                    selectedStallId={selectedStallId}
+                    onDragStart={() => setIsDraggingFromRoster(false)}
+                    onClick={() => handleAssign(user.id)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {filteredPoolUsers.length === 0 && (
+            <p className="text-center py-8" style={{ fontSize: 12, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}>
+              {staffSearch ? 'No results' : 'All staff are assigned'}
+            </p>
+          )}
+        </div>
+
+        {/* Footer info */}
+        <div className="flex justify-between items-center px-4 py-3 bg-[#fafafa] border-t border-[#f3f4f6] text-[11px] font-bold text-gray-400 font-sans select-none">
+          <span>{cashierUsers.length - assignedUsers.length} not assigned here</span>
+          <span>{assignedUsers.length} assigned</span>
         </div>
       </div>
 
       {showAddModal && (
         <AddStallModal onClose={() => setShowAddModal(false)} onAdd={handleAddStall} />
+      )}
+
+      {transferConfirm && (
+        <ConfirmDialog
+          isOpen={!!transferConfirm}
+          title="Move Staff?"
+          message={`${users.find(u => u.id === transferConfirm.userId)?.name} is already assigned to ${transferConfirm.oldStall.name}. Are you sure you want to move them to ${transferConfirm.newStall.name}?`}
+          cancelLabel="Cancel"
+          confirmLabel="Move Staff"
+          cancelTone="secondary"
+          confirmTone="primary"
+          size="compact"
+          onCancel={() => setTransferConfirm(null)}
+          onConfirm={handleConfirmTransfer}
+        />
       )}
     </div>
   );
