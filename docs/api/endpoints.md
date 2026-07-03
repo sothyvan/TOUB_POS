@@ -129,10 +129,17 @@ All routes require authentication.
     {
       "id": 1,
       "name": "Iced Latte",
-      "price": 3.5,
       "category_id": 2,
       "image_url": "https://...",
-      "is_visible": true
+      "Category": { "id": 2, "name": "Coffee", "tone": "gold" },
+      "ProductStalls": [
+        {
+          "stall_id": 1,
+          "price_usd": "3.50",
+          "price_khr": 14000,
+          "is_visible": true
+        }
+      ]
     }
   ]
 }
@@ -144,13 +151,16 @@ All routes require authentication.
 ```json
 {
   "name": "string",
-  "price": 0.00,
-  "stall_id": 1,
   "category_id": 1,
+  "stall_ids": [1, 2],
+  "price_usd": 3.50,
+  "price_khr": 14000,
   "image_url": "string",
   "is_visible": true
 }
 ```
+
+`category_id` belongs to the shared product record. `stall_ids`, `price_usd`, `price_khr`, and `is_visible` create or update the product's `stall_products` assignments.
 
 ### PUT `/products/:id`
 

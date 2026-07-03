@@ -30,7 +30,6 @@ erDiagram
 
     categories {
         int id PK
-        int stall_id FK
         varchar name
         enum tone
         datetime created_at
@@ -38,14 +37,19 @@ erDiagram
 
     products {
         int id PK
-        int stall_id FK
         int category_id FK
         varchar name
+        varchar image_url
+        datetime created_at
+    }
+
+    stall_products {
+        int id PK
+        int stall_id FK
+        int product_id FK
         decimal price_usd
         int price_khr
-        varchar image_url
         boolean is_visible
-        datetime created_at
     }
 
     orders {
@@ -71,27 +75,28 @@ erDiagram
     }
 
     telegram_tickets {
-        int           id               PK
-        int           order_id         FK  
-        bigint        telegram_msg_id      
-        bigint        telegram_chat_id     
-        enum          status               
-        datetime      sent_at              
-        datetime      completed_at         
+        int id PK
+        int order_id FK
+        bigint telegram_msg_id
+        bigint telegram_chat_id
+        enum status
+        datetime sent_at
+        datetime completed_at
     }
 
-    users         ||--o{ stalls            : "owns"
-    users         ||--o{ stall_staff       : "assigned to"
-    stalls        ||--o{ stall_staff       : "has staff"
-    stalls        ||--o{ categories        : "owns"
-    stalls        ||--o{ products          : "scopes"
-    stalls        ||--o{ orders            : "processes"
-    categories    ||--o{ products          : "groups"
-    users         ||--o{ orders            : "cashier places"
-    orders        ||--|{ order_items       : "contains"
-    products      ||--o{ order_items       : "referenced by"
-    orders        ||--o{ telegram_tickets  : "dispatched to"
+    users ||--o{ stalls : "owns"
+    users ||--o{ stall_staff : "assigned to"
+    stalls ||--o{ stall_staff : "has staff"
+    categories ||--o{ products : "groups"
+    stalls ||--o{ stall_products : "sells"
+    products ||--o{ stall_products : "available in"
+    stalls ||--o{ orders : "processes"
+    users ||--o{ orders : "cashier places"
+    orders ||--|{ order_items : "contains"
+    products ||--o{ order_items : "referenced by"
+    orders ||--o{ telegram_tickets : "dispatched to"
 ```
+
 
 ## Notes
 
@@ -105,5 +110,7 @@ erDiagram
 - `stalls.owner_id` identifies the business owner responsible for each stall.
 - `stalls.location` stores the physical location of the stall (e.g. AEON Mall, Night Market, University).
 - `stalls.device_token` is the permanent terminal registration key stored in browser `localStorage`.
-- `products.stall_id = NULL` means a global/shared item visible to all stalls.
-- `categories.stall_id = NULL` means a shared category across stalls.
+- `categories` are global menu groups shared across stalls.
+- `products` stores shared catalog metadata and its global category.
+- Per-stall price and visibility live in `stall_products`.
+- A product is visible to a stall only when a matching `stall_products` row exists with `is_visible = TRUE`.

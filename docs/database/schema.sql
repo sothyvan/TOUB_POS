@@ -48,28 +48,35 @@ CREATE TABLE stall_staff (
 -- ── Categories ────────────────────────────────────────────
 CREATE TABLE categories (
   id         INT AUTO_INCREMENT PRIMARY KEY,
-  stall_id   INT DEFAULT NULL,                         -- NULL = shared across stalls
   name       VARCHAR(100) NOT NULL,
   tone       ENUM('gold', 'green', 'blue', 'rose') NOT NULL DEFAULT 'gold',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (stall_id) REFERENCES stalls(id) ON DELETE SET NULL
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- ── Products ──────────────────────────────────────────────
 CREATE TABLE products (
   id          INT AUTO_INCREMENT PRIMARY KEY,
-  stall_id    INT DEFAULT NULL,                        -- scoped to stall; NULL = global
-  category_id INT DEFAULT NULL,
+  category_id INT NOT NULL,
   name        VARCHAR(150) NOT NULL,
-  price_usd   DECIMAL(10, 2) NOT NULL,
-  price_khr   INT NOT NULL,                            -- KHR stored as integer (no decimals)
   image_url   VARCHAR(500) DEFAULT NULL,
-  is_visible  BOOLEAN NOT NULL DEFAULT TRUE,
   created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (stall_id)    REFERENCES stalls(id)      ON DELETE SET NULL,
-  FOREIGN KEY (category_id) REFERENCES categories(id)  ON DELETE SET NULL
+  FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT
+);
+
+-- ── Stall Products (Per-Stall Catalog Assignment) ─────────
+CREATE TABLE stall_products (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  stall_id    INT NOT NULL,
+  product_id  INT NOT NULL,
+  price_usd   DECIMAL(10, 2) NOT NULL,
+  price_khr   INT NOT NULL,                            -- KHR stored as integer (no decimals)
+  is_visible  BOOLEAN NOT NULL DEFAULT TRUE,
+  UNIQUE KEY uq_stall_product (stall_id, product_id),
+  KEY idx_stall_products_product_id (product_id),
+  FOREIGN KEY (stall_id)    REFERENCES stalls(id)     ON DELETE CASCADE,
+  FOREIGN KEY (product_id)  REFERENCES products(id)   ON DELETE CASCADE
 );
 
 -- ── Orders ────────────────────────────────────────────────

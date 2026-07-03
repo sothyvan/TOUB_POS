@@ -16,6 +16,24 @@ Update this file after every meaningful implementation change.
   - WebSocket server for KHQR live notification — **NEXT**
   - KHQR webhook → Telegram dispatch (2-line hook, after WebSocket) — **PENDING**
 
+- **Refactored product database structure to match the current ERD**:
+  - Converted `categories` into global menu groups shared across stalls.
+  - Converted `products` into shared catalog metadata with `category_id`, `name`, and `image_url`.
+  - Replaced the partial `product_stalls` assignment table with ERD-aligned `stall_products`.
+  - Moved per-stall `price_usd`, `price_khr`, and `is_visible` into `stall_products`.
+  - Updated Sequelize associations so `Category` groups `Product`, while `Product` and `Stall` connect through `ProductStall`.
+  - Updated product create/update/list repository logic to create and return stall-specific assignments.
+  - Updated order creation to load trusted sale prices from the cashier's assigned `stall_products` row.
+  - Kept frontend product mapping compatible with the existing admin UI shape while reading the new assignment response.
+  - Synchronized `docs/database/schema.sql`, `docs/database/queries.sql`, `docs/database/erd.md`, and architecture context with the refactor.
+  - Verified backend lint, frontend lint, and frontend production build; backend lint still has pre-existing warnings in unrelated files.
+
+- **Fixed local backend startup after product ERD refactor**:
+  - Added a development-only pre-sync migration that creates a fallback category when needed and backfills legacy `products.category_id` values before Sequelize adds the non-null foreign key.
+  - Added duplicate unique-index cleanup for repeated Sequelize `alter` syncs on `stalls.device_token`.
+  - Moved raw development migration SQL out of `server.js` into `backend/src/services/development-migration.service.js` so the server entry point only orchestrates startup.
+  - Documented the matching raw SQL migration/debug steps in `docs/database/queries.sql`.
+
 - **Implemented ImageKit product photo uploads**:
   - Added ImageKit backend and frontend SDK dependencies.
   - Added Owner/Manager-only `GET /api/products/imagekit-auth` for short-lived browser-direct upload auth parameters.

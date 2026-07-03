@@ -26,6 +26,14 @@ export function getCorsOptions() {
 
   return {
     origin(origin, callback) {
+      // In development mode, allow any localhost or 127.0.0.1 origin (on any port)
+      if (currentNodeEnv() === 'development') {
+        if (!origin || /^https?:\/\/localhost(:\d+)?$/.test(origin) || /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) {
+          callback(null, true);
+          return;
+        }
+      }
+
       if (!allowedOrigin) {
         callback(new Error('FRONTEND_ORIGIN is required when NODE_ENV is production.'));
         return;

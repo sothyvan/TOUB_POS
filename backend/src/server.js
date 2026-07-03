@@ -1,64 +1,9 @@
 import 'dotenv/config';
 import bcrypt from 'bcryptjs';
 import { validateEnvironment } from './config/env.js';
+import { runDevelopmentMigrations } from './services/development-migration.service.js';
 
 const PORT = process.env.PORT || 3000;
-
-async function migrateLegacyAdminRoles(sequelize) {
-  if (process.env.NODE_ENV !== 'development') {
-    return;
-  }
-
-  const [tables] = await sequelize.query("SHOW TABLES LIKE 'users';");
-  if (tables.length === 0) {
-    return;
-  }
-
-  await sequelize.query(
-    "ALTER TABLE `users` MODIFY `role` ENUM('admin', 'owner', 'manager', 'cashier') NOT NULL DEFAULT 'cashier';"
-  );
-
-  const [, metadata] = await sequelize.query("UPDATE `users` SET `role` = 'owner' WHERE `role` = 'admin';");
-
-  await sequelize.query(
-    "ALTER TABLE `users` MODIFY `role` ENUM('owner', 'manager', 'cashier') NOT NULL DEFAULT 'cashier';"
-  );
-
-  if (metadata?.affectedRows > 0) {
-    console.log(`[server] Migrated ${metadata.affectedRows} legacy admin user role(s) to owner.`);
-  }
-}
-
-async function migrateLegacyOrderStatuses(sequelize) {
-  if (process.env.NODE_ENV !== 'development') {
-    return;
-  }
-
-  const [tables] = await sequelize.query("SHOW TABLES LIKE 'orders';");
-  if (tables.length === 0) {
-    return;
-  }
-
-  await sequelize.query(
-    "ALTER TABLE `orders` MODIFY `status` ENUM('pending', 'completed', 'pending_payment', 'paid', 'cancelled') NOT NULL DEFAULT 'pending';"
-  );
-
-  const [, pendingMetadata] = await sequelize.query(
-    "UPDATE `orders` SET `status` = 'pending_payment' WHERE `status` = 'pending';"
-  );
-  const [, completedMetadata] = await sequelize.query(
-    "UPDATE `orders` SET `status` = 'paid' WHERE `status` = 'completed';"
-  );
-
-  await sequelize.query(
-    "ALTER TABLE `orders` MODIFY `status` ENUM('pending_payment', 'paid', 'cancelled') NOT NULL DEFAULT 'pending_payment';"
-  );
-
-  const migratedCount = (pendingMetadata?.affectedRows || 0) + (completedMetadata?.affectedRows || 0);
-  if (migratedCount > 0) {
-    console.log(`[server] Migrated ${migratedCount} legacy order status value(s).`);
-  }
-}
 
 async function startServer() {
   try {
@@ -77,8 +22,7 @@ async function startServer() {
     await sequelize.authenticate();
     console.log('[server] Database connection established via Sequelize.');
 
-    await migrateLegacyAdminRoles(sequelize);
-    await migrateLegacyOrderStatuses(sequelize);
+    await runDevelopmentMigrations(sequelize);
 
     // Sync schema in development
     const syncOptions = process.env.NODE_ENV === 'development' ? { alter: true } : {};

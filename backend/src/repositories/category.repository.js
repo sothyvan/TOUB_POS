@@ -1,17 +1,11 @@
-import { Category, Stall } from '../models/index.js';
+import { Category } from '../models/index.js';
 
 /**
- * Fetch all categories, including optional stall association.
+ * Fetch all global categories.
  */
-export async function findAllCategories(whereClause = {}) {
+export function findAllCategories(whereClause = {}) {
   return Category.findAll({
     where: whereClause,
-    include: [
-      {
-        model: Stall,
-        attributes: ['id', 'name'],
-      },
-    ],
     order: [['created_at', 'DESC']],
   });
 }
@@ -19,21 +13,14 @@ export async function findAllCategories(whereClause = {}) {
 /**
  * Find a category by ID.
  */
-export async function findCategoryById(id) {
-  return Category.findByPk(id, {
-    include: [
-      {
-        model: Stall,
-        attributes: ['id', 'name'],
-      },
-    ],
-  });
+export function findCategoryById(id) {
+  return Category.findByPk(id);
 }
 
 /**
  * Create a new category.
  */
-export async function insertCategory(data) {
+export function insertCategory(data) {
   return Category.create(data);
 }
 

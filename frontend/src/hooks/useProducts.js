@@ -3,10 +3,10 @@ import { suggestedCode } from '../utils/format';
 import { api } from '../services/api';
 
 export const blankProductForm = (categoryId = '') => ({
-  id: null, name: '', code: '', price: '', categoryId, tone: 'gold', available: true, image: '', stallId: ''
+  id: null, name: '', code: '', price: '', categoryId, tone: 'gold', available: true, image: '', stallId: '', stallIds: []
 });
 
-const blankCategoryForm = () => ({ id: null, name: '', tone: 'gold', stallId: '' });
+const blankCategoryForm = () => ({ id: null, name: '', tone: 'gold' });
 
 /**
  * Manages products and categories — state, filters, and CRUD using backend APIs.
@@ -78,9 +78,9 @@ export function useProducts(canManageMenu) {
     }
     try {
       if (categoryForm.id) {
-        await api.categories.save({ id: categoryForm.id, name, tone: categoryForm.tone, stallId: categoryForm.stallId });
+        await api.categories.save({ id: categoryForm.id, name, tone: categoryForm.tone });
       } else {
-        const newCat = await api.categories.save({ name, tone: categoryForm.tone, stallId: categoryForm.stallId });
+        const newCat = await api.categories.save({ name, tone: categoryForm.tone });
         setProductForm((cur) => ({ ...cur, categoryId: newCat.id, tone: newCat.tone }));
       }
       

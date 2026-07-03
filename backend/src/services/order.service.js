@@ -4,6 +4,7 @@ import {
   Order,
   OrderItem,
   Product,
+  ProductStall,
   Stall,
   StallStaff,
   TelegramTicket,
@@ -91,8 +92,8 @@ function getProductIdFromItem(item) {
   return parsePositiveInteger(productId, 'product_id');
 }
 
-function isVisibleProduct(product) {
-  return product.is_visible === true || product.is_visible === 1;
+function isVisibleStallProduct(stallProduct) {
+  return stallProduct.is_visible === true || stallProduct.is_visible === 1;
 }
 
 function buildOrderInclude() {
@@ -160,21 +161,31 @@ export async function createOrder(cashierId, items, paymentMethod) {
       const quantity = parsePositiveInteger(item.quantity, 'quantity');
       const notes = normalizeNotes(item.notes);
 
-      const product = await Product.findByPk(productId, { transaction });
-      if (!product) {
+      const stallProduct = await ProductStall.findOne({
+        where: {
+          product_id: productId,
+          stall_id: stallId,
+        },
+        include: [
+          {
+            model: Product,
+          },
+        ],
+        transaction,
+      });
+
+      if (!stallProduct?.Product) {
         throw httpError(`Product with ID ${productId} not found.`, 404);
       }
 
-      if (Number(product.stall_id) !== Number(stallId)) {
-        throw httpError('Product does not belong to this cashier stall.', 403);
-      }
+      const product = stallProduct.Product;
 
-      if (!isVisibleProduct(product)) {
+      if (!isVisibleStallProduct(stallProduct)) {
         throw httpError('Product is hidden or unavailable.', 400);
       }
 
-      const priceUsd = Number(product.price_usd);
-      const priceKhr = Number(product.price_khr);
+      const priceUsd = Number(stallProduct.price_usd);
+      const priceKhr = Number(stallProduct.price_khr);
       const lineTotalUsd = Number((priceUsd * quantity).toFixed(2));
       const lineTotalKhr = priceKhr * quantity;
 

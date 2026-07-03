@@ -17,13 +17,29 @@ const ProductStall = sequelize.define('ProductStall', {
     allowNull: false,
     field: 'stall_id',
   },
+  price_usd: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false,
+    field: 'price_usd',
+  },
+  price_khr: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    field: 'price_khr',
+  },
+  is_visible: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true,
+    field: 'is_visible',
+  },
 }, {
-  tableName: 'product_stalls',
+  tableName: 'stall_products',
   timestamps: false,
   indexes: [
     {
       unique: true,
-      fields: ['product_id', 'stall_id'],
+      fields: ['stall_id', 'product_id'],
     },
   ],
 });

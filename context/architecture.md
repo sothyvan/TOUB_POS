@@ -97,8 +97,9 @@
 - **User / Staff**: Unique username, role (`owner` / `manager` / `cashier`), and exactly one role-appropriate credential: Owner/Manager use a bcrypt password hash; Cashier uses a bcrypt hash of the 4-digit PIN.
 - **Stall**: A physical booth location. Has a name, assigned menu profile, and registered device token.
 - **StallStaff**: Junction — maps `User` to `Stall` (a cashier can belong to one stall).
-- **Product**: Catalog item with `price_usd`, `price_khr`, category, image, visibility flag.
-- **Category**: Groups products. Belongs to a stall's menu profile.
+- **Category**: Global menu group shared across stalls.
+- **Product**: Shared catalog item metadata with name, category, and image.
+- **StallProduct**: Junction that maps a `Product` to a `Stall` and stores that stall's `price_usd`, `price_khr`, and visibility.
 - **Order**: A transaction. Belongs to a `User` (cashier) and a `Stall`. Has payment method, status, and totals.
 - **OrderItem**: Links `Order` to `Product`. Stores quantity, price snapshot, and **`notes`** (modifiers like "no ice").
 - **AuditLog**: Records sensitive POS actions such as order creation and cash payment confirmation, including the actor, action, order, details, and timestamp.

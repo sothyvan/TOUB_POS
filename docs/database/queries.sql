@@ -99,25 +99,23 @@ WHERE id = 1;
 
 -- ── 3. CATEGORIES CRUD (category.repository.js) ────────────
 
--- List all categories (with associated stall details)
-SELECT c.id, c.name, c.tone, c.stall_id, c.created_at, c.updated_at, s.name AS stall_name 
-FROM categories c
-LEFT JOIN stalls s ON c.stall_id = s.id
-ORDER BY c.created_at DESC;
+-- List all global categories
+SELECT id, name, tone, created_at, updated_at
+FROM categories
+ORDER BY created_at DESC;
 
--- Find a category by ID (with associated stall details)
-SELECT c.id, c.name, c.tone, c.stall_id, c.created_at, c.updated_at, s.name AS stall_name 
-FROM categories c
-LEFT JOIN stalls s ON c.stall_id = s.id
-WHERE c.id = 1;
+-- Find a category by ID
+SELECT id, name, tone, created_at, updated_at
+FROM categories
+WHERE id = 1;
 
 -- Create a new category
-INSERT INTO categories (name, tone, stall_id) 
-VALUES ('Coffee', 'gold', 1);
+INSERT INTO categories (name, tone)
+VALUES ('Coffee', 'gold');
 
 -- Update an existing category by ID
 UPDATE categories 
-SET name = 'Iced Coffee', tone = 'rose', stall_id = 1 
+SET name = 'Iced Coffee', tone = 'rose'
 WHERE id = 1;
 
 -- Delete a category by ID
@@ -127,28 +125,83 @@ WHERE id = 1;
 
 -- ── 4. PRODUCTS CRUD (product.repository.js) ───────────────
 
--- List all products (with category tone/name details)
-SELECT p.id, p.name, p.price_usd, p.price_khr, p.image_url, p.is_visible, p.stall_id, p.category_id, p.created_at, p.updated_at, 
-       c.name AS category_name, c.tone AS category_tone
+-- List all products with global category and stall-specific price/visibility assignments
+SELECT p.id, p.category_id, p.name, p.image_url, p.created_at, p.updated_at,
+       sp.id AS stall_product_id,
+       sp.stall_id,
+       sp.price_usd,
+       sp.price_khr,
+       sp.is_visible,
+       s.name AS stall_name,
+       s.location AS stall_location,
+       c.name AS category_name,
+       c.tone AS category_tone
 FROM products p
+LEFT JOIN stall_products sp ON sp.product_id = p.id
+LEFT JOIN stalls s ON sp.stall_id = s.id
 LEFT JOIN categories c ON p.category_id = c.id
 ORDER BY p.created_at DESC;
 
--- Find a single product by ID (with category details)
-SELECT p.id, p.name, p.price_usd, p.price_khr, p.image_url, p.is_visible, p.stall_id, p.category_id, p.created_at, p.updated_at, 
-       c.name AS category_name, c.tone AS category_tone
+-- List visible products sold by a cashier's assigned stall
+SELECT p.id, p.category_id, p.name, p.image_url, p.created_at, p.updated_at,
+       sp.id AS stall_product_id,
+       sp.stall_id,
+       sp.price_usd,
+       sp.price_khr,
+       sp.is_visible,
+       c.name AS category_name,
+       c.tone AS category_tone
 FROM products p
+INNER JOIN stall_products sp ON sp.product_id = p.id
+LEFT JOIN categories c ON p.category_id = c.id
+WHERE sp.stall_id = 1
+  AND sp.is_visible = TRUE
+ORDER BY p.created_at DESC;
+
+-- Find a single product by ID with all stall-specific assignments
+SELECT p.id, p.category_id, p.name, p.image_url, p.created_at, p.updated_at,
+       sp.id AS stall_product_id,
+       sp.stall_id,
+       sp.price_usd,
+       sp.price_khr,
+       sp.is_visible,
+       s.name AS stall_name,
+       s.location AS stall_location,
+       c.name AS category_name,
+       c.tone AS category_tone
+FROM products p
+LEFT JOIN stall_products sp ON sp.product_id = p.id
+LEFT JOIN stalls s ON sp.stall_id = s.id
 LEFT JOIN categories c ON p.category_id = c.id
 WHERE p.id = 1;
 
 -- Create a new product
-INSERT INTO products (name, price_usd, price_khr, image_url, is_visible, stall_id, category_id) 
-VALUES ('Latte', 2.50, 10000, '/images/latte.png', TRUE, 1, 1);
+INSERT INTO products (category_id, name, image_url)
+VALUES (1, 'Latte', '/images/latte.png');
+
+-- Assign product to a stall with stall-specific prices and visibility
+INSERT INTO stall_products (stall_id, product_id, price_usd, price_khr, is_visible)
+VALUES (1, LAST_INSERT_ID(), 2.50, 10000, TRUE);
 
 -- Update a product by ID
 UPDATE products 
-SET name = 'Iced Latte', price_usd = 2.75, price_khr = 11000, image_url = '/images/iced_latte.png', is_visible = TRUE, stall_id = 1, category_id = 1
+SET category_id = 1, name = 'Iced Latte', image_url = '/images/iced_latte.png'
 WHERE id = 1;
+
+-- Update the product's stall-specific prices and visibility
+UPDATE stall_products
+SET price_usd = 2.75, price_khr = 11000, is_visible = TRUE
+WHERE product_id = 1
+  AND stall_id = 1;
+
+-- Replace product stall assignments during admin updates
+DELETE FROM stall_products
+WHERE product_id = 1;
+
+INSERT INTO stall_products (stall_id, product_id, price_usd, price_khr, is_visible)
+VALUES
+  (1, 1, 2.75, 11000, TRUE),
+  (2, 1, 2.75, 11000, TRUE);
 
 -- Delete a product by ID
 DELETE FROM products 
@@ -163,10 +216,12 @@ FROM stall_staff
 WHERE user_id = 2 
 LIMIT 1;
 
--- Get product details for transaction snapshots
-SELECT id, stall_id, name, price_usd, price_khr, is_visible
-FROM products
-WHERE id = 5;
+-- Get stall-specific product details for transaction snapshots
+SELECT p.id, p.category_id, p.name, sp.stall_id, sp.price_usd, sp.price_khr, sp.is_visible
+FROM stall_products sp
+INNER JOIN products p ON p.id = sp.product_id
+WHERE sp.product_id = 5
+  AND sp.stall_id = 1;
 
 -- Insert a new Order (status defaults to 'pending_payment')
 INSERT INTO orders (stall_id, cashier_id, payment_method, status, subtotal_usd, total_usd)
@@ -265,3 +320,31 @@ WHERE status = 'completed';
 ALTER TABLE orders
 MODIFY status ENUM('pending_payment', 'paid', 'cancelled') NOT NULL DEFAULT 'pending_payment';
 
+-- Development-only product/category ERD migration used before Sequelize sync
+INSERT INTO categories (name, tone)
+SELECT 'Uncategorized', 'gold'
+WHERE NOT EXISTS (SELECT 1 FROM categories LIMIT 1);
+
+ALTER TABLE products
+ADD COLUMN category_id INT NULL;
+
+UPDATE products p
+LEFT JOIN categories c ON c.id = p.category_id
+SET p.category_id = (SELECT id FROM categories ORDER BY id ASC LIMIT 1)
+WHERE p.category_id IS NULL
+   OR c.id IS NULL;
+
+ALTER TABLE products
+MODIFY category_id INT NOT NULL;
+
+-- Development-only duplicate unique-index cleanup for repeated Sequelize alter sync
+SELECT INDEX_NAME
+FROM INFORMATION_SCHEMA.STATISTICS
+WHERE TABLE_SCHEMA = DATABASE()
+  AND TABLE_NAME = 'stalls'
+  AND COLUMN_NAME = 'device_token'
+  AND NON_UNIQUE = 0
+  AND INDEX_NAME <> 'PRIMARY';
+
+ALTER TABLE stalls
+DROP INDEX device_token_2;

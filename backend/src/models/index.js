@@ -23,15 +23,7 @@ StallStaff.belongsTo(User, { foreignKey: 'user_id', onDelete: 'CASCADE' });
 Stall.hasMany(StallStaff, { foreignKey: 'stall_id' });
 User.hasMany(StallStaff, { foreignKey: 'user_id' });
 
-// ── Stall ↔ Category (One-to-Many) ───────────────────────────
-Category.belongsTo(Stall, { foreignKey: 'stall_id', onDelete: 'SET NULL' });
-Stall.hasMany(Category, { foreignKey: 'stall_id' });
-
 // ── Product Associations ─────────────────────────────────────
-Product.belongsTo(Stall, { foreignKey: 'stall_id', onDelete: 'SET NULL' });
-Stall.hasMany(Product, { foreignKey: 'stall_id' });
-
-// Many-to-Many Product ↔ Stall
 Product.belongsToMany(Stall, { through: ProductStall, foreignKey: 'product_id', otherKey: 'stall_id', onDelete: 'CASCADE' });
 Stall.belongsToMany(Product, { through: ProductStall, foreignKey: 'stall_id', otherKey: 'product_id', onDelete: 'CASCADE' });
 
@@ -40,7 +32,7 @@ ProductStall.belongsTo(Stall, { foreignKey: 'stall_id', onDelete: 'CASCADE' });
 Product.hasMany(ProductStall, { foreignKey: 'product_id' });
 Stall.hasMany(ProductStall, { foreignKey: 'stall_id' });
 
-Product.belongsTo(Category, { foreignKey: 'category_id', onDelete: 'SET NULL' });
+Product.belongsTo(Category, { foreignKey: 'category_id', onDelete: 'RESTRICT' });
 Category.hasMany(Product, { foreignKey: 'category_id' });
 
 // ── Order Associations ───────────────────────────────────────

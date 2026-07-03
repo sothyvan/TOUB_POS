@@ -493,7 +493,6 @@ export default function MenuCatalog({
           onCancel={onCancelCategory}
           loading={loading}
           error={error}
-          stalls={stalls}
         />
       </div>
     );

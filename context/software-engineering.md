@@ -294,7 +294,6 @@ classDiagram
 
   class Category {
     +int id
-    +int stall_id
     +string name
     +string tone
     +dateTime created_at
@@ -302,14 +301,19 @@ classDiagram
 
   class Product {
     +int id
-    +int stall_id
     +int category_id
     +string name
+    +string image_url
+    +dateTime created_at
+  }
+
+  class StallProduct {
+    +int id
+    +int stall_id
+    +int product_id
     +double price_usd
     +int price_khr
-    +string image_url
     +bool is_visible
-    +dateTime created_at
   }
 
   class Order {
@@ -349,12 +353,12 @@ classDiagram
 
   %% Relationships representing data flow and structural dependencies
   User "many" -- "many" Stall : stall_staff
-  Stall "1" --> "many" Category : has
-  Stall "1" --> "many" Product : has
+  Stall "1" --> "many" StallProduct : sells
   Stall "1" --> "many" Order : processes
   Stall "1" --> "many" TelegramSession : authorizes
   
   Category "1" --> "many" Product : groups
+  Product "1" --> "many" StallProduct : assigned_to
   
   User "1" --> "many" Order : acts_as_cashier
   

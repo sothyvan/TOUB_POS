@@ -21,7 +21,6 @@ export default function CategoryOwner({
   onCancel,
   loading,
   error,
-  stalls = [],
 }) {
   const { isFormOpen, handleSubmit, handleCancel, handleAddNewClick } =
     useOwnerForm(categoryForm, { onSave, onCancel });
@@ -106,19 +105,6 @@ export default function CategoryOwner({
         placeholder="Smoothies"
         required
       />
-
-      <FormSelect
-        label="Stall Scope"
-        value={categoryForm.stallId || ''}
-        onChange={(event) => setCategoryForm((current) => ({ ...current, stallId: event.target.value }))}
-      >
-        <option value="">Global / shared category</option>
-        {stalls.map((stall) => (
-          <option key={stall.id} value={stall.id}>
-            {stall.name}{stall.location ? ` — ${stall.location}` : ''}
-          </option>
-        ))}
-      </FormSelect>
 
       <FormSelect
         label="Color Tone"

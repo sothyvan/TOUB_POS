@@ -44,16 +44,31 @@ function validateProductImageFile(file) {
 }
 
 function mapProductToFrontend(p) {
+  const directAssignments = p.ProductStalls || p.stall_products || [];
+  const stallAssignments = p.Stalls
+    ? p.Stalls.map(stall => ({
+        stall_id: stall.id,
+        price_usd: stall.ProductStall?.price_usd,
+        price_khr: stall.ProductStall?.price_khr,
+        is_visible: stall.ProductStall?.is_visible,
+      }))
+    : [];
+  const assignments = directAssignments.length > 0 ? directAssignments : stallAssignments;
+  const primaryAssignment = assignments[0] || p.ProductStall || {};
+  const category = p.Category;
+
   return {
     id: p.id,
     name: p.name,
     code: p.name.substring(0, 3).toUpperCase(),
-    price: p.price_usd,
+    price: primaryAssignment.price_usd ?? p.price_usd ?? 0,
     categoryId: p.category_id,
-    stallId: p.stall_id,
-    stallIds: p.Stalls ? p.Stalls.map(s => s.id) : (p.stall_id ? [p.stall_id] : []),
-    tone: p.Category ? p.Category.tone : 'gold',
-    available: p.is_visible,
+    stallId: primaryAssignment.stall_id ?? p.stall_id,
+    stallIds: assignments.length > 0
+      ? assignments.map(assignment => assignment.stall_id)
+      : (p.Stalls ? p.Stalls.map(s => s.id) : (p.stall_id ? [p.stall_id] : [])),
+    tone: category ? category.tone : 'gold',
+    available: primaryAssignment.is_visible ?? false,
     image: p.image_url || ''
   };
 }
@@ -62,7 +77,6 @@ function mapCategoryToFrontend(c) {
   return {
     id: c.id,
     name: c.name,
-    stallId: c.stall_id,
     tone: c.tone || 'gold'
   };
 }
@@ -182,7 +196,6 @@ export const api = {
       const payload = {
         name: item.name,
         tone: item.tone,
-        stall_id: item.stallId ? Number(item.stallId) : null
       };
       if (item.id) {
         await apiRequest(`/categories/${item.id}`, { method: 'PUT', body: payload });
