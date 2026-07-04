@@ -10,22 +10,31 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { user: currentUser, login, loginPin, logout, isAuthenticated } = useAuth();
 
+  const [deviceToken, setDeviceToken] = useSavedState('toub-device-token', null);
   const [deviceRegistered, setDeviceRegistered] = useSavedState('toub-device-registered', false);
-  const [loginMode, setLoginMode] = useState(deviceRegistered ? 'cashier' : 'management');
-  const [flowStep, setFlowStep] = useState(deviceRegistered ? 'select-profile' : 'register');
+  const [loginMode, setLoginMode] = useState(deviceRegistered && deviceToken ? 'cashier' : 'management');
+  const [flowStep, setFlowStep] = useState(deviceRegistered && deviceToken ? 'select-profile' : 'register');
   const [selectedUser, setSelectedUser] = useState(null);
   const [typedPin, setTypedPin] = useState('');
   const [loginError, setLoginError] = useState('');
   
   const [activeCashiers, setActiveCashiers] = useState([]);
+  const [ownerToken, setOwnerToken] = useState(null);
+  const [availableStalls, setAvailableStalls] = useState([]);
   const showDemoCredentials = import.meta.env.DEV || import.meta.env.VITE_SHOW_DEMO_CREDENTIALS === 'true';
 
   useEffect(() => {
+    if (!deviceRegistered || !deviceToken) {
+      setFlowStep('register');
+      setLoginMode('management');
+      return;
+    }
+
     let mounted = true;
     authApi.getCashiers()
       .then(res => {
         if (mounted) {
-          const cashiersList = res?.data || res || [];
+          const cashiersList = res?.data || [];
           setActiveCashiers(cashiersList.map(u => ({
             ...u,
             name: u.username,
@@ -33,9 +42,18 @@ export default function LoginPage() {
           })));
         }
       })
-      .catch(console.error)
+      .catch(err => {
+        console.error('Failed to load cashier roster:', err);
+        if (mounted) {
+          setDeviceRegistered(false);
+          setDeviceToken(null);
+          localStorage.removeItem('toub-device-stall');
+          setFlowStep('register');
+          setLoginMode('management');
+        }
+      });
     return () => { mounted = false; };
-  }, []);
+  }, [deviceRegistered, deviceToken]);
 
   useEffect(() => {
     if (!isAuthenticated || !currentUser) return;
@@ -52,28 +70,102 @@ export default function LoginPage() {
     setLoginError('');
 
     try {
-      const authenticatedUser = await login(username.trim(), password.trim(), {
-        persist: !isRegistering,
-      });
-      const permissions = getPermissions(authenticatedUser);
-
-      if (!permissions.isManagement) {
-        logout();
-        setLoginError('Only owner or manager accounts can access the management portal.');
-        return false;
-      }
-
       if (isRegistering) {
-        setDeviceRegistered(true);
-        setLoginMode('cashier');
-        setFlowStep('select-profile');
+        const response = await authApi.login(username.trim(), password.trim());
+        const authData = response?.data || response;
+
+        const role = String(authData?.user?.role || '').toLowerCase();
+        if (role !== 'owner' && role !== 'manager') {
+          setLoginError('Only owner or manager accounts can register a terminal.');
+          return false;
+        }
+
+        // Fetch stalls using Owner/Manager JWT
+        const stallsResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'}/stalls`, {
+          headers: {
+            'Authorization': `Bearer ${authData.token}`,
+            'Accept': 'application/json'
+          }
+        });
+        if (!stallsResponse.ok) {
+          throw new Error('Failed to fetch available stalls.');
+        }
+        const stallsData = await stallsResponse.json();
+
+        setOwnerToken(authData.token);
+        setAvailableStalls(stallsData.data || []);
       } else {
+        const authenticatedUser = await login(username.trim(), password.trim());
+        const permissions = getPermissions(authenticatedUser);
+
+        if (!permissions.isManagement) {
+          logout();
+          setLoginError('Only owner or manager accounts can access the management portal.');
+          return false;
+        }
         navigate('/owner-portal', { replace: true });
       }
       return true;
     } catch (error) {
       setLoginError(error.message || 'Unable to log in. Please check your credentials.');
       return false;
+    }
+  };
+
+  const handleRegisterDevice = async (stallId) => {
+    setLoginError('');
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'}/stalls/${stallId}/register-device`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${ownerToken}`,
+          'Accept': 'application/json'
+        }
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData?.message || 'Device registration failed.');
+      }
+      const payload = await response.json();
+      const { device_token, stall } = payload.data;
+
+      // Write synchronously to localStorage before updating state to prevent race conditions
+      localStorage.setItem('toub-device-token', JSON.stringify(device_token));
+      localStorage.setItem('toub-device-stall', JSON.stringify(stall));
+      localStorage.setItem('toub-device-registered', JSON.stringify(true));
+
+      setDeviceToken(device_token);
+      setDeviceRegistered(true);
+
+      setOwnerToken(null);
+      setAvailableStalls([]);
+
+      setLoginMode('cashier');
+      setFlowStep('select-profile');
+    } catch (error) {
+      setLoginError(error.message || 'Failed to register device.');
+    }
+  };
+
+  const handleCancelRegistration = () => {
+    setOwnerToken(null);
+    setAvailableStalls([]);
+    setLoginError('');
+  };
+
+  const handleDeregister = () => {
+    if (confirm('Are you sure you want to deregister this terminal? You will need owner or manager credentials to register it again.')) {
+      // Clear synchronously to prevent race conditions
+      localStorage.removeItem('toub-device-token');
+      localStorage.removeItem('toub-device-stall');
+      localStorage.removeItem('toub-device-registered');
+
+      setDeviceRegistered(false);
+      setDeviceToken(null);
+      setLoginMode('management');
+      setFlowStep('register');
+      setSelectedUser(null);
+      setActiveCashiers([]);
     }
   };
 
@@ -142,7 +234,7 @@ export default function LoginPage() {
       flowStep={flowStep}
       setFlowStep={setFlowStep}
       deviceRegistered={deviceRegistered}
-      setDeviceRegistered={setDeviceRegistered}
+      onDeregister={handleDeregister}
       activeCashiers={activeCashiers}
       selectedUser={selectedUser}
       setSelectedUser={setSelectedUser}
@@ -154,6 +246,10 @@ export default function LoginPage() {
       onManagementLogin={handleManagementLogin}
       onSelectProfile={handleSelectProfile}
       showDemoCredentials={showDemoCredentials}
+      ownerToken={ownerToken}
+      availableStalls={availableStalls}
+      onRegisterDevice={handleRegisterDevice}
+      onCancelRegistration={handleCancelRegistration}
     />
   );
 }

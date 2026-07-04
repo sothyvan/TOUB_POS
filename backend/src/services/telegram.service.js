@@ -27,6 +27,29 @@ async function callTelegramApi(method, body) {
       const json = await response.json();
 
       if (!json.ok) {
+        if (json.parameters?.migrate_to_chat_id) {
+          const newChatId = json.parameters.migrate_to_chat_id;
+          try {
+            await Stall.update(
+              { telegram_chat_id: String(newChatId) },
+              { where: { telegram_chat_id: String(body.chat_id) } }
+            );
+            console.log(`[Telegram] Auto-migrating chat ID from ${body.chat_id} to ${newChatId} due to supergroup upgrade.`);
+            
+            body.chat_id = newChatId;
+            const retryResponse = await fetch(url, {
+              ...options,
+              body: JSON.stringify(body)
+            });
+            const retryJson = await retryResponse.json();
+            if (retryJson.ok) {
+              return retryJson.result;
+            }
+            throw new Error(`Telegram API error [${method}]: ${retryJson.description}`);
+          } catch (migrateErr) {
+            console.error('[Telegram] Failed during chat ID migration:', migrateErr.message);
+          }
+        }
         throw new Error(`Telegram API error [${method}]: ${json.description}`);
       }
 
@@ -87,13 +110,21 @@ function formatOrderMessage(order) {
 /**
  * Builds the edited "done" version of the ticket message.
  */
-function formatDoneMessage(order) {
+function formatDoneMessage(order, completedByName) {
   const original = formatOrderMessage(order);
-  // Prepend a ✅ DONE header, replace the 🍽 line
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  
+  const info = completedByName 
+    ? `\n\n✅ <b>Completed by ${completedByName} at ${timeStr}</b>`
+    : `\n\n✅ <b>Completed at ${timeStr}</b>`;
+
+  // Prepend a ✅ DONE header, replace the 🍽 line, and append completion details
   return original.replace(
     /^🍽/,
     '✅ <b>DONE</b> —',
-  );
+  ) + info;
 }
 
 // ── Telegram API Actions ──────────────────────────────────
@@ -118,18 +149,21 @@ async function sendOrderTicket(chatId, order) {
     },
   });
 
-  return result.message_id;
+  return {
+    msgId: result.message_id,
+    chatId: result.chat?.id ? String(result.chat.id) : chatId,
+  };
 }
 
 /**
  * Edits the original kitchen ticket message to show it's completed.
  * Removes the inline keyboard button so cooks can't tap it again.
  */
-export async function editMessageDone(chatId, msgId, order) {
+export async function editMessageDone(chatId, msgId, order, completedByName) {
   await callTelegramApi('editMessageText', {
     chat_id: chatId,
     message_id: msgId,
-    text: formatDoneMessage(order),
+    text: formatDoneMessage(order, completedByName),
     parse_mode: 'HTML',
     reply_markup: { inline_keyboard: [] }, // remove the button
   });
@@ -143,6 +177,17 @@ export async function answerCallbackQuery(callbackQueryId, text = '') {
   await callTelegramApi('answerCallbackQuery', {
     callback_query_id: callbackQueryId,
     text,
+  });
+}
+
+/**
+ * Sends a plain text or HTML formatted notification message to a chat ID.
+ */
+export async function sendNotification(chatId, text) {
+  await callTelegramApi('sendMessage', {
+    chat_id: chatId,
+    text,
+    parse_mode: 'HTML',
   });
 }
 
@@ -178,15 +223,30 @@ export async function dispatchToTelegram(order) {
   });
 
   try {
-    const msgId = await sendOrderTicket(chatId, order);
+    const { msgId, chatId: returnedChatId } = await sendOrderTicket(chatId, order);
 
-    // Update ticket with the sent message ID and mark as sent
+    // If Telegram returned a different chat ID than requested, it means it auto-migrated on-the-fly
+    if (String(returnedChatId) !== String(chatId)) {
+      console.log(`[Telegram] Detected on-the-fly migration from ${chatId} to ${returnedChatId}`);
+      const freshStall = await Stall.findByPk(order.stall_id);
+      if (freshStall) {
+        freshStall.telegram_chat_id = returnedChatId;
+        await freshStall.save();
+      }
+    }
+
+    // Refresh the stall to fetch the latest chat ID in case of migration
+    const freshStall = await Stall.findByPk(order.stall_id);
+    const finalChatId = freshStall?.telegram_chat_id || returnedChatId;
+
+    // Update ticket with the sent message ID, final chat ID, and mark as sent
+    ticket.telegram_chat_id = finalChatId;
     ticket.telegram_msg_id = msgId;
     ticket.status = 'sent';
     ticket.sent_at = new Date();
     await ticket.save();
 
-    console.log(`[Telegram] Order #${order.id} dispatched → chat ${chatId}, msg ${msgId}`);
+    console.log(`[Telegram] Order #${order.id} dispatched → chat ${finalChatId}, msg ${msgId}`);
   } catch (error) {
     // Mark the ticket as failed for observability, but do not rethrow
     ticket.status = 'failed';

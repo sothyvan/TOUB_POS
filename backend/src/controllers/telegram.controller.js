@@ -2,6 +2,7 @@ import { TelegramTicket, Order, OrderItem, Stall, User } from '../models/index.j
 import {
   editMessageDone,
   answerCallbackQuery,
+  sendNotification,
 } from '../services/telegram.service.js';
 
 const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET;
@@ -54,14 +55,28 @@ export async function handleCallback(req, res) {
   const orderId = parseInt(doneMatch[1], 10);
 
   try {
-    // Find the matching TelegramTicket by chat + message ID pair
-    const ticket = await TelegramTicket.findOne({
-      where: { telegram_chat_id: String(chatId), telegram_msg_id: String(msgId) },
+    // Find the matching TelegramTicket by order_id (highly robust),
+    // and fallback to chat + msg ID if needed.
+    let ticket = await TelegramTicket.findOne({
+      where: { order_id: orderId },
     });
+
+    if (!ticket) {
+      ticket = await TelegramTicket.findOne({
+        where: { telegram_chat_id: String(chatId), telegram_msg_id: String(msgId) },
+      });
+    }
 
     if (!ticket) {
       await answerCallbackQuery(callbackQueryId, 'Ticket not found.').catch(() => {});
       return;
+    }
+
+    // Self-healing: if the ticket's saved chat ID does not match the actual callback chat ID, update it
+    if (String(ticket.telegram_chat_id) !== String(chatId)) {
+      console.log(`[Telegram] Self-healing: updating ticket chat ID from ${ticket.telegram_chat_id} to ${chatId}`);
+      ticket.telegram_chat_id = String(chatId);
+      await ticket.save();
     }
 
     // Idempotency: if already done, just dismiss the spinner
@@ -74,7 +89,7 @@ export async function handleCallback(req, res) {
     const order = await Order.findByPk(orderId, {
       include: [
         { model: OrderItem, as: 'Items' },
-        { model: Stall, attributes: ['id', 'name'] },
+        { model: Stall, attributes: ['id', 'name', 'telegram_chat_id'] },
         { model: User, as: 'Cashier', attributes: ['id', 'username'] },
       ],
     });
@@ -84,8 +99,41 @@ export async function handleCallback(req, res) {
       return;
     }
 
-    // Edit the Telegram message to show the ✅ DONE state
-    await editMessageDone(chatId, msgId, order);
+    // Self-healing: if the stall's saved chat ID does not match the actual callback chat ID, update it
+    const stall = order.Stall;
+    if (stall && String(stall.telegram_chat_id) !== String(chatId)) {
+      console.log(`[Telegram] Self-healing: updating stall #${stall.id} chat ID from ${stall.telegram_chat_id} to ${chatId}`);
+      await Stall.update(
+        { telegram_chat_id: String(chatId) },
+        { where: { id: stall.id } }
+      );
+    }
+
+    // Extract the name of the telegram user who clicked the button
+    const tgUser = update.callback_query.from;
+    const completedByName = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ');
+
+    try {
+      // Edit the Telegram message to show the ✅ DONE state with completion info
+      await editMessageDone(chatId, msgId, order, completedByName);
+    } catch (editError) {
+      const errorMsg = String(editError.message || '');
+      if (errorMsg.includes('CHAT_WRITE_FORBIDDEN') || errorMsg.includes('group chat was upgraded')) {
+        console.warn(`[Telegram] Edit failed due to group upgrade. Notifying the new supergroup chat...`);
+        
+        // Find the fresh stall to get the new migrated chat ID
+        const freshStall = await Stall.findByPk(order.stall_id);
+        if (freshStall && freshStall.telegram_chat_id) {
+          const notifyText = `⚠️ <b>Order #${orderId}</b> was marked as done by <b>${completedByName}</b>.\n<i>(Note: Original message was in the old group chat before it was upgraded).</i>`;
+          await sendNotification(freshStall.telegram_chat_id, notifyText).catch((err) => {
+            console.error('[Telegram] Failed to send upgrade notification message:', err.message);
+          });
+        }
+      } else {
+        // Rethrow other errors
+        throw editError;
+      }
+    }
 
     // Persist the done state in the database
     ticket.status = 'done';

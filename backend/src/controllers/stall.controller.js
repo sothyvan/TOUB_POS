@@ -1,5 +1,6 @@
 import * as stallRepository from '../repositories/stall.repository.js';
 import * as userRepository from '../repositories/user.repository.js';
+import crypto from 'crypto';
 
 function parsePositiveInteger(value) {
   const number = Number(value);
@@ -122,6 +123,35 @@ export async function unassignStaff(req, res, next) {
       return res.status(404).json({ success: false, message: 'Assignment not found.' });
     }
     res.json({ success: true, message: 'Staff unassigned successfully.' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Register device for a stall.
+ */
+export async function registerDevice(req, res, next) {
+  try {
+    const { id } = req.params;
+    const stall = await stallRepository.findStallById(id);
+    if (!stall) {
+      return res.status(404).json({ success: false, message: 'Stall not found.' });
+    }
+
+    // Generate secure device token
+    const deviceToken = crypto.randomBytes(32).toString('hex');
+
+    // Update the device token in database
+    await stallRepository.updateStallDeviceToken(id, deviceToken);
+
+    res.json({
+      success: true,
+      data: {
+        device_token: deviceToken,
+        stall: { id: stall.id, name: stall.name, location: stall.location }
+      }
+    });
   } catch (err) {
     next(err);
   }

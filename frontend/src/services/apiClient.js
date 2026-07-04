@@ -37,10 +37,19 @@ async function parseResponse(response) {
 
 export async function apiRequest(path, options = {}) {
   const token = localStorage.getItem(AUTH_STORAGE_KEYS.TOKEN);
+  let deviceToken = localStorage.getItem('toub-device-token');
+  if (deviceToken) {
+    try {
+      deviceToken = JSON.parse(deviceToken);
+    } catch {
+      // Fallback if the token was stored as a raw plain string
+    }
+  }
   const headers = {
     Accept: 'application/json',
     ...(options.body ? { 'Content-Type': 'application/json' } : {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(deviceToken ? { 'X-Device-Token': deviceToken } : {}),
     ...options.headers,
   };
 

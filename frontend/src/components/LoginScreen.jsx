@@ -9,7 +9,8 @@ export default function LoginScreen({
   setLoginMode,
   flowStep,
   setFlowStep,
-  setDeviceRegistered,
+  deviceRegistered,
+  onDeregister,
   activeCashiers,
   selectedUser,
   setSelectedUser,
@@ -21,10 +22,15 @@ export default function LoginScreen({
   onManagementLogin,
   onSelectProfile,
   showDemoCredentials = false,
+  ownerToken,
+  availableStalls,
+  onRegisterDevice,
+  onCancelRegistration,
 }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedStallId, setSelectedStallId] = useState('');
 
   const handleSubmitManagement = async (event) => {
     event.preventDefault();
@@ -42,11 +48,7 @@ export default function LoginScreen({
   };
 
   const handleDeregister = () => {
-    if (confirm('Are you sure you want to deregister this terminal? You will need owner or manager credentials to register it again.')) {
-      setDeviceRegistered(false);
-      setFlowStep('register');
-      setSelectedUser(null);
-    }
+    onDeregister();
   };
 
   const handleBackToProfiles = () => {
@@ -325,10 +327,75 @@ export default function LoginScreen({
     </section>
   );
 
+  const handleStallRegisterSubmit = (e) => {
+    e.preventDefault();
+    if (!selectedStallId) return;
+    setIsSubmitting(true);
+    onRegisterDevice(selectedStallId).finally(() => {
+      setIsSubmitting(false);
+    });
+  };
+
+  const renderSelectStall = () => (
+    <section className="w-[min(380px,calc(100%-1.5rem))] p-8 rounded-3xl bg-white shadow-[0_24px_64px_-16px_rgba(0,0,0,0.12)] flex flex-col gap-6 animate-in fade-in duration-200">
+      <div className="flex items-center gap-4">
+        <Logo variant="login" />
+        <div>
+          <p className="m-0 mb-1 text-gray-500 text-[10px] font-extrabold tracking-wider uppercase">Provisioning</p>
+          <h1 className="m-0 text-brand-blue text-[26px] leading-none font-bold tracking-tight">ToubPOS</h1>
+        </div>
+      </div>
+
+      <div>
+        <h2 className="m-0 text-xl font-bold text-gray-900 leading-snug">Select Stall for Device</h2>
+        <p className="m-0 mt-1.5 text-gray-500 text-xs font-semibold leading-relaxed">
+          Assign this terminal to a specific stall
+        </p>
+      </div>
+
+      <form className="flex flex-col gap-5" onSubmit={handleStallRegisterSubmit}>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[11px] font-extrabold text-[#776f63] uppercase tracking-wider">Stall</label>
+          <select
+            value={selectedStallId}
+            onChange={(e) => setSelectedStallId(e.target.value)}
+            required
+            className="w-full h-12 px-3.5 border border-brand-border rounded-xl bg-brand-card font-semibold text-brand-dark focus:outline-none focus:border-brand-action transition-colors cursor-pointer"
+          >
+            <option value="">Select a stall...</option>
+            {availableStalls.map((stall) => (
+              <option key={stall.id} value={stall.id}>
+                {stall.name} {stall.location ? `— ${stall.location}` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {loginError && <p className="m-0 text-red-500 text-xs font-semibold">{loginError}</p>}
+
+        <button
+          type="submit"
+          disabled={isSubmitting || !selectedStallId}
+          className="w-full h-12 mt-1 bg-brand-blue text-white text-[15px] font-bold rounded-xl hover:bg-brand-blue/95 active:scale-[0.98] transition-all cursor-pointer shadow-[0_2px_4px_rgba(0,71,204,0.1)]"
+        >
+          {isSubmitting ? 'Registering...' : 'Register Device'}
+        </button>
+      </form>
+
+      <button
+        type="button"
+        onClick={onCancelRegistration}
+        className="text-xs font-bold text-red-500/80 hover:underline cursor-pointer border-0 bg-transparent text-center"
+      >
+        Cancel
+      </button>
+    </section>
+  );
+
   return (
     <main className="relative min-h-svh p-6 grid place-items-center bg-brand-yellow text-gray-800 selection:bg-brand-blue/20">
       {loginMode === 'management' && renderManagementLogin()}
-      {loginMode === 'cashier' && flowStep === 'register' && renderRegister()}
+      {loginMode === 'cashier' && flowStep === 'register' && (ownerToken ? renderSelectStall() : renderRegister())}
       {loginMode === 'cashier' && flowStep === 'select-profile' && renderSelectProfile()}
       {loginMode === 'cashier' && flowStep === 'pin-pad' && renderPinPad()}
 

@@ -63,3 +63,19 @@ export async function removeStaffFromStall(stallId, userId) {
   const affectedRows = await StallStaff.destroy({ where: { stall_id: stallId, user_id: userId } });
   return affectedRows > 0;
 }
+
+/**
+ * Update a stall's device token.
+ */
+export async function updateStallDeviceToken(id, deviceToken) {
+  const [affectedRows] = await Stall.update({ device_token: deviceToken }, { where: { id } });
+  return affectedRows > 0;
+}
+
+/**
+ * Find a stall by its device token.
+ */
+export async function findStallByDeviceToken(deviceToken) {
+  return Stall.findOne({ where: { device_token: deviceToken } });
+}
+

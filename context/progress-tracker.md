@@ -10,11 +10,22 @@ Update this file after every meaningful implementation change.
 - Phase 4: Backend-Owned Orders, Cash Confirmation, And Audit Logs — **COMPLETE**
 - Phase 4.5: Security Hardening — **COMPLETE**
 - Phase 5: KDS & Live Payment WebSocket Integration — **IN PROGRESS**
-  - Telegram KDS Bot (cash payment trigger) — **COMPLETE** ✅
+  - Telegram KDS Bot (cash payment trigger & supergroup self-healing) — **COMPLETE** ✅
   - Multiple Stall Product Assignment (choose 0 to many stalls per item) — **COMPLETE** ✅
   - ImageKit product photo upload integration — **COMPLETE** ✅
+  - Strict Stall-Scoped Cashier Roster & Device Registration — **COMPLETE** ✅
+  - Programmatic Ngrok Tunnel & Webhook Auto-Registration — **COMPLETE** ✅
+  - Webgroup Migration Self-Healing & Done Callback updates — **COMPLETE** ✅
   - WebSocket server for KHQR live notification — **NEXT**
   - KHQR webhook → Telegram dispatch (2-line hook, after WebSocket) — **PENDING**
+
+- **Strict Stall-Scoped Cashier Roster & Device Registration**:
+  - Implemented backend repository methods to query and update a stall's `device_token` in the database.
+  - Implemented `POST /api/stalls/:id/register-device` controller and route under Owner/Manager JWT protection to generate secure random device tokens.
+  - Restructured backend `getPublicCashiers` to strictly require the `X-Device-Token` header, verify it against the database, and return only cashiers assigned to that specific stall.
+  - Integrated the two-stage frontend provisioning flow: authenticating Owner/Manager credentials, showing the list of stalls for registration, and saving the resulting token.
+  - Updated API request handlers to append the `X-Device-Token` header to all outgoing requests when provisioned.
+  - Implemented terminal de-registration to clean up all storage tokens and block access until re-provisioned.
 
 - **Refactored product database structure to match the current ERD**:
   - Converted `categories` into global menu groups shared across stalls.
