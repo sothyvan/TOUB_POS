@@ -13,13 +13,15 @@ USE toub_pos;
 --   cashier: password must be NULL, pin stores bcrypt hash of 4-digit PIN
 CREATE TABLE users (
   id         INT AUTO_INCREMENT PRIMARY KEY,
+  owner_id   INT DEFAULT NULL,                         -- business owner responsible for the manager/cashier
   username   VARCHAR(50)  NOT NULL UNIQUE,
   password   VARCHAR(255) DEFAULT NULL,                -- bcrypt hash for owner/manager login
   pin        VARCHAR(255) DEFAULT NULL,                -- bcrypt hash for cashier PIN login
   role       ENUM('owner', 'manager', 'cashier') NOT NULL DEFAULT 'cashier',
   is_active  BOOLEAN NOT NULL DEFAULT TRUE,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- ── Stalls (Physical Booth Locations) ─────────────────────

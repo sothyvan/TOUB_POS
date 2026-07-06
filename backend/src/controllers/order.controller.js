@@ -69,7 +69,8 @@ export async function confirmCashPayment(req, res, next) {
  */
 export async function getAllOrders(req, res, next) {
   try {
-    const orders = await orderService.getAllOrders();
+    const ownerId = req.user.role === 'owner' ? req.user.id : req.user.owner_id;
+    const orders = await orderService.getAllOrders(ownerId);
     res.json({ success: true, data: orders });
   } catch (error) {
     next(error);

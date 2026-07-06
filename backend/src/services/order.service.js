@@ -326,9 +326,35 @@ export async function confirmCashPayment(orderId, actor) {
 }
 
 /**
- * Fetch all orders, including items.
+ * Fetch all orders, optionally filtered by owner.
  */
-export function getAllOrders() {
+export function getAllOrders(ownerId) {
+  if (ownerId) {
+    return Order.findAll({
+      include: [
+        {
+          model: OrderItem,
+          as: 'Items',
+        },
+        {
+          model: TelegramTicket,
+          as: 'TelegramTickets',
+        },
+        {
+          model: Stall,
+          where: { owner_id: ownerId },
+          attributes: ['id', 'name', 'location', 'telegram_chat_id'],
+        },
+        {
+          model: User,
+          as: 'Cashier',
+          attributes: ['id', 'username', 'role'],
+        },
+      ],
+      order: [['created_at', 'DESC']],
+    });
+  }
+
   return Order.findAll({
     include: buildOrderInclude(),
     order: [['created_at', 'DESC']],

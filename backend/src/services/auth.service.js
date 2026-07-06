@@ -43,14 +43,14 @@ export async function loginUser(username, password) {
   }
 
   const token = jwt.sign(
-    { id: user.id, username: user.username, role: user.role },
+    { id: user.id, username: user.username, role: user.role, owner_id: user.owner_id },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
   );
 
   return {
     token,
-    user: { id: user.id, username: user.username, role: user.role },
+    user: { id: user.id, username: user.username, role: user.role, owner_id: user.owner_id },
   };
 }
 
@@ -82,13 +82,13 @@ export async function loginWithPin(userId, pin) {
   }
 
   const token = jwt.sign(
-    { id: user.id, username: user.username, role: user.role },
+    { id: user.id, username: user.username, role: user.role, owner_id: user.owner_id },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
   );
 
   return {
     token,
-    user: { id: user.id, username: user.username, role: user.role },
+    user: { id: user.id, username: user.username, role: user.role, owner_id: user.owner_id },
   };
 }

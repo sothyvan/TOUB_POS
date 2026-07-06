@@ -15,6 +15,7 @@ export async function getDailySummary(req, res, next) {
     const endOfDay = new Date(targetDate);
     endOfDay.setHours(23, 59, 59, 999);
 
+    const ownerId = req.user.role === 'owner' ? req.user.id : req.user.owner_id;
     // Get all paid orders for the specified date
     const orders = await Order.findAll({
       where: {
@@ -23,7 +24,7 @@ export async function getDailySummary(req, res, next) {
           [Op.between]: [startOfDay, endOfDay],
         },
       },
-      include: [{ model: Stall, attributes: ['name'] }],
+      include: [{ model: Stall, where: { owner_id: ownerId }, attributes: ['name'] }],
     });
 
     let totalRevenue = 0;

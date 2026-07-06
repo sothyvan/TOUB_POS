@@ -21,6 +21,29 @@ npm run dev
 
 Server runs at `http://localhost:3000` by default.
 
+### Seed Local Demo Data
+
+For local development only, seed a realistic demo database with Faker:
+
+```bash
+npm run seed
+```
+
+The seeder safely upserts demo users, stalls, staff assignments, categories, products, stall-specific prices, and fake order history. It does not delete existing project data and it does not run automatically on server startup.
+
+Demo credentials:
+
+| Role | Username | Password / PIN |
+|------|----------|----------------|
+| Owner | `owner` | `owner123` |
+| Manager | `manager_demo` | `manager123` |
+| Cashier | `cashier_dara` | PIN `1111` |
+| Cashier | `cashier_sophea` | PIN `1111` |
+| Cashier | `cashier_vireak` | PIN `1111` |
+| Cashier | `cashier_malis` | PIN `1111` |
+
+Do not run this seeder against production or any live merchant database.
+
 ---
 
 ## Environment Variables
@@ -209,4 +232,5 @@ Common error codes:
 ```bash
 npm run lint
 npm run test:credentials
+npm run seed
 ```

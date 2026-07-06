@@ -17,6 +17,23 @@ export async function findAllStalls() {
 }
 
 /**
+ * Fetch all stalls owned by a specific owner.
+ */
+export async function findAllStallsByOwnerId(ownerId) {
+  return Stall.findAll({
+    where: { owner_id: ownerId },
+    include: [
+      { 
+        model: User, 
+        attributes: ['id', 'username', 'role'],
+        through: { attributes: [] }
+      }
+    ],
+    order: [['created_at', 'DESC']],
+  });
+}
+
+/**
  * Find a stall by ID.
  */
 export async function findStallById(id) {

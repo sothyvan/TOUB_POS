@@ -13,6 +13,7 @@ export async function findUserByUsername(username) {
     username: user.username,
     password_hash: user.password,
     role: user.role,
+    owner_id: user.owner_id,
     is_active: user.is_active,
   };
 }
@@ -31,19 +32,20 @@ export async function findUserById(id) {
  */
 export async function findUserWithPinById(id) {
   return User.findByPk(id, {
-    attributes: ['id', 'username', 'role', 'pin', 'is_active'],
+    attributes: ['id', 'username', 'role', 'pin', 'owner_id', 'is_active'],
   });
 }
 
 /**
  * Insert a new user. Role-specific credentials must already be hashed or null.
  */
-export async function insertUser({ username, password_hash, pin_hash, role }) {
+export async function insertUser({ username, password_hash, pin_hash, role, owner_id = null }) {
   const user = await User.create({
     username,
     password: password_hash,
     pin: pin_hash,
     role,
+    owner_id,
   });
   return user.id;
 }
@@ -53,6 +55,17 @@ export async function insertUser({ username, password_hash, pin_hash, role }) {
  */
 export async function findAllUsers() {
   return User.findAll({
+    attributes: { exclude: ['password', 'pin'] },
+    order: [['created_at', 'DESC']],
+  });
+}
+
+/**
+ * Fetch all users belonging to a specific owner.
+ */
+export async function findAllUsersByOwnerId(ownerId) {
+  return User.findAll({
+    where: { owner_id: ownerId },
     attributes: { exclude: ['password', 'pin'] },
     order: [['created_at', 'DESC']],
   });
