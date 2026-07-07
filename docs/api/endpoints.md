@@ -18,6 +18,7 @@ Auth/security notes:
 - Cashier PINs are bcrypt-hashed.
 - Login and PIN endpoints are rate-limited and may return `429`.
 - HttpOnly refresh tokens are a future production improvement.
+- Bakong Open API tokens are backend-only. The frontend calls TouB POS endpoints and never calls Bakong directly.
 
 ---
 
@@ -172,6 +173,8 @@ All routes require authentication.
 | Method | Path             | Auth | Role    | Description                    |
 |--------|------------------|------|---------|--------------------------------|
 | POST   | `/orders`        | ✅   | Cashier | Create backend-owned pending order |
+| GET    | `/orders/:id`    | ✅   | Cashier / Owner / Manager | Fetch one order for status polling |
+| POST   | `/orders/:id/check-khqr-status` | ✅ | Cashier / Owner / Manager | Check KHQR payment status through backend |
 | POST   | `/orders/:id/confirm-cash` | ✅ | Cashier / Owner / Manager | Confirm physical cash received |
 | GET    | `/orders/mine`   | ✅   | Cashier | Fetch own orders               |
 | GET    | `/orders`        | ✅   | Owner / Manager | Fetch all orders               |
@@ -198,6 +201,8 @@ Backend behavior:
 - Rejects hidden products, invalid quantities, and products outside the cashier's assigned stall.
 - Snapshots order item names and prices.
 - Creates orders as `pending_payment`.
+- For KHQR, generates an Individual KHQR payload from backend-owned order totals.
+- For KHQR, stores `qr_payload`, `qr_md5`, `payment_reference`, and `payment_expires_at`.
 - Writes an `order_created` audit log.
 
 **Response `201`**
@@ -207,11 +212,63 @@ Backend behavior:
   "data": {
     "id": 42,
     "qr_payload": "00020101...",
+    "qr_md5": "b8fb54c15be1759f0e25770f1737b41c",
+    "payment_reference": "TOUB-42-ABC123",
+    "payment_expires_at": "2026-07-01T14:10:00.000Z",
     "status": "pending_payment",
     "total_usd": "7.00"
   }
 }
 ```
+
+### GET `/orders/:id`
+
+Cashiers can fetch their own orders only. Owner/Manager can fetch any order. This endpoint is a passive order read.
+
+### POST `/orders/:id/check-khqr-status`
+
+Cashiers can check their own KHQR orders only. Owner/Manager can check any KHQR order.
+
+Frontend KHQR polling should call this endpoint, not Bakong directly.
+
+Backend behavior:
+
+- Requires JWT auth.
+- Requires `payment_method = "khqr"`.
+- Returns already-paid orders idempotently without adding duplicate audit logs.
+- Calls Bakong Open API by `qr_md5`.
+- If Bakong reports paid, validates amount and currency before marking the order `paid`.
+- If Bakong reports not found, keeps the order `pending_payment`.
+- If Bakong reports failed/error, returns a clean response and does not mark the order paid.
+
+**Response `200`**
+```json
+{
+  "success": true,
+  "data": {
+    "paymentStatus": "pending_payment",
+    "providerStatus": "not_found",
+    "checkMode": "bakong",
+    "alreadyProcessed": false,
+    "message": "Payment has not been found yet.",
+    "order": {
+      "id": 42,
+      "status": "pending_payment",
+      "payment_method": "khqr",
+      "qr_md5": "b8fb54c15be1759f0e25770f1737b41c",
+      "total_usd": "7.00"
+    }
+  }
+}
+```
+
+**Errors**
+| Code | Reason |
+|------|--------|
+| 400  | Not a KHQR order, missing md5, amount/currency mismatch |
+| 403  | Cashier is not the order owner |
+| 404  | Order not found |
+| 503  | Bakong token/base URL is misconfigured |
 
 ### POST `/orders/:id/confirm-cash`
 
@@ -244,6 +301,14 @@ Only cash orders in `pending_payment` status can be confirmed. Confirmation chan
   "data": [ { "order_id": 42, "status": "paid", "total": 7.00 } ]
 }
 ```
+
+---
+
+## Legacy Webhook — `/api/webhook`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/webhook/payment` | No | Legacy placeholder; use `/orders/:id/check-khqr-status` |
 
 ---
 
@@ -369,4 +434,5 @@ All errors follow:
 | 403  | Insufficient role    |
 | 404  | Resource not found   |
 | 429  | Rate limit exceeded  |
+| 503  | Backend service/configuration unavailable |
 | 500  | Internal server error |

@@ -43,6 +43,22 @@ const Order = sequelize.define('Order', {
     defaultValue: null,
     field: 'qr_payload',
   },
+  qr_md5: {
+    type: DataTypes.STRING(64),
+    defaultValue: null,
+    field: 'qr_md5',
+  },
+  payment_reference: {
+    type: DataTypes.STRING(100),
+    defaultValue: null,
+    unique: true,
+    field: 'payment_reference',
+  },
+  payment_expires_at: {
+    type: DataTypes.DATE,
+    defaultValue: null,
+    field: 'payment_expires_at',
+  },
   completed_at: {
     type: DataTypes.DATE,
     defaultValue: null,

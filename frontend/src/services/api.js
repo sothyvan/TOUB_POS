@@ -65,6 +65,9 @@ function mapOrderToFrontend(o) {
     paymentMethod,
     status: o.status,
     qrPayload: o.qr_payload || o.qrPayload || null,
+    qrMd5: o.qr_md5 || o.qrMd5 || null,
+    paymentReference: o.payment_reference || o.paymentReference || null,
+    paymentExpiresAt: o.payment_expires_at || o.paymentExpiresAt || null,
     subtotal: parseFloat(o.subtotal_usd || o.total_usd || 0),
     serviceFee: 0,
     estimatedTax: 0,
@@ -204,6 +207,17 @@ export const api = {
       const endpoint = (normalizedRole === 'cashier') ? '/orders/mine' : '/orders';
       const res = await apiRequest(endpoint);
       return res.data.map(mapOrderToFrontend);
+    },
+    async getById(orderId) {
+      const res = await apiRequest(`/orders/${orderId}`);
+      return mapOrderToFrontend(res.data);
+    },
+    async checkKhqrStatus(orderId) {
+      const res = await apiRequest(`/orders/${orderId}/check-khqr-status`, { method: 'POST' });
+      return {
+        ...res.data,
+        order: res.data?.order ? mapOrderToFrontend(res.data.order) : null,
+      };
     },
     async create(order) {
       const payload = {

@@ -1,6 +1,6 @@
 # Payment Flow
 
-This document describes the current Phase 4 payment behavior and the planned Phase 5 KHQR behavior.
+This document describes the current cash and KHQR payment behavior.
 
 ## Current Cash Payment Flow
 
@@ -54,39 +54,62 @@ pending_payment ──▶ paid
 | Status | Trigger |
 |--------|---------|
 | `pending_payment` | Backend creates an order and waits for payment confirmation |
-| `paid` | Cash is confirmed by an allowed user, or future KHQR webhook verifies payment |
+| `paid` | Cash is confirmed by an allowed user, or the backend verifies KHQR payment by Bakong md5/hash |
 | `cancelled` | Order is cancelled before payment completion |
 
 ---
 
-## Planned KHQR Payment Flow
+## KHQR Individual Payment Flow
 
-Real KHQR webhook confirmation is planned for Phase 5 and is not implemented yet. The current webhook endpoint is a placeholder and should not be treated as a real payment confirmation path.
+Phase 5 uses Generate KHQR (Individual), not Merchant KHQR. This is because the project does not have official MerchantID and AcquiringBank credentials. Individual KHQR can use an owner/stall Bakong account ID and is appropriate for final-project/demo scope.
 
-Planned target flow:
+The backend owns QR generation and payment status. The frontend displays the QR and polls the TouB backend status-check endpoint; it never calls Bakong directly and never marks a KHQR order as paid by itself.
 
 ```mermaid
 sequenceDiagram
     participant C as Cashier Browser
     participant API as Backend API
     participant DB as MySQL
-    participant WH as Banking Webhook
-    participant WS as WebSocket / SSE
+    participant KHQR as KHQR SDK
+    participant B as Bakong Open API
+    participant AUD as Audit Logs
 
     C->>API: POST /api/orders { items, payment_method: "khqr" }
+    API->>API: Derive cashier_id from JWT
+    API->>DB: Find cashier's assigned stall
+    API->>DB: Load products and prices
+    API->>API: Calculate trusted total
     API->>DB: INSERT order status = "pending_payment"
-    API->>API: Generate verified KHQR payload
-    API-->>C: { order_id, qr_payload, status: "pending_payment" }
+    API->>KHQR: Generate Individual KHQR payload
+    KHQR-->>API: qr_payload + qr_md5
+    API->>DB: Store qr_payload, qr_md5, payment_reference, payment_expires_at
+    API->>AUD: INSERT order_created
+    API-->>C: { order_id, qr_payload, qr_md5, payment_reference, status }
 
     C->>C: Display QR modal to customer
+    loop every 2.5 seconds while modal open
+      C->>API: POST /api/orders/:id/check-khqr-status
+      API->>B: POST /v1/check_transaction_by_md5 { md5 }
+      B-->>API: paid / not_found / failed / error
+      API->>API: Validate amount and currency if paid
+      API-->>C: paymentStatus + latest order
+    end
 
-    Note over WH: Customer scans and pays in banking app
-    WH->>API: POST /api/webhook/payment { transaction_ref, amount, merchant_id }
-    API->>API: Verify amount, merchant, duplicate events, and order state
+    Note over B: Customer scans and pays in banking app
     API->>DB: UPDATE orders SET status = "paid", completed_at = NOW()
-    API->>WS: Emit payment_confirmed only to the creating cashier session
-    WS-->>C: payment_confirmed event
+    API->>AUD: INSERT khqr_payment_confirmed
+    C->>API: POST /api/orders/:id/check-khqr-status
+    API-->>C: status = "paid"
     C->>C: Close QR modal and show paid receipt
 ```
 
-Phase 5 must add real gateway verification, idempotency, amount matching, and cashier-specific live notifications before KHQR is considered complete.
+Important rules:
+
+- Frontend sends only product IDs, quantities, notes, and payment method.
+- Backend calculates trusted totals from MySQL.
+- Backend generates and stores the QR payload, QR md5, unique payment reference, and expiry timestamp.
+- `POST /api/orders/:id/check-khqr-status` is the frontend polling endpoint.
+- The backend calls Bakong Open API by md5/hash.
+- `BAKONG_OPEN_API_TOKEN` must never reach the frontend.
+- Already-paid checks are idempotent and do not duplicate audit logs.
+- WebSocket cashier-specific push is still a later enhancement; current Phase 5 frontend uses polling.

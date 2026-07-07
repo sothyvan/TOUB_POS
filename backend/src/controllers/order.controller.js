@@ -15,6 +15,12 @@ const FORBIDDEN_ORDER_FIELDS = [
   'status',
   'qr_payload',
   'qrPayload',
+  'qr_md5',
+  'qrMd5',
+  'payment_reference',
+  'paymentReference',
+  'payment_expires_at',
+  'paymentExpiresAt',
   'completed_at',
   'completedAt',
   'created_at',
@@ -59,6 +65,30 @@ export async function confirmCashPayment(req, res, next) {
   try {
     const order = await orderService.confirmCashPayment(req.params.id, req.user);
     res.json({ success: true, data: order });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * cashier, owner, or manager fetches one order.
+ */
+export async function getOrder(req, res, next) {
+  try {
+    const order = await orderService.getOrderForActor(req.params.id, req.user);
+    res.json({ success: true, data: order });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * cashier, owner, or manager checks a KHQR order against Bakong.
+ */
+export async function checkKhqrPaymentStatus(req, res, next) {
+  try {
+    const result = await orderService.checkKhqrPaymentStatus(req.params.id, req.user);
+    res.json({ success: true, data: result });
   } catch (error) {
     next(error);
   }

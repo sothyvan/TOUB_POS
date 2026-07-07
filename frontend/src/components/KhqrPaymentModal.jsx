@@ -1,9 +1,45 @@
+import { useEffect, useState } from 'react';
 import ModalShell from './ui/ModalShell';
 
 const QR_CODE_API_BASE = 'https://api.qrserver.com/v1/create-qr-code/';
 
-export default function KhqrPaymentModal({ isOpen, total, order, qrPayload, onCancel }) {
-  const qrData = encodeURIComponent(qrPayload || `pay-to-toub-pos-amount-${total}`);
+function formatExpiresAt(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+export default function KhqrPaymentModal({ isOpen, total, order, qrPayload, pollingError, onCancel }) {
+  const [now, setNow] = useState(null);
+  const expiresAt = order?.paymentExpiresAt ? new Date(order.paymentExpiresAt) : null;
+
+  useEffect(() => {
+    if (!isOpen || !order?.paymentExpiresAt) return undefined;
+
+    const refreshNow = () => setNow(Date.now());
+    const initialTimerId = window.setTimeout(refreshNow, 0);
+    const intervalId = window.setInterval(refreshNow, 30000);
+
+    return () => {
+      window.clearTimeout(initialTimerId);
+      window.clearInterval(intervalId);
+    };
+  }, [isOpen, order?.paymentExpiresAt]);
+
+  const isExpired = Boolean(
+    order?.status === 'pending_payment'
+    && expiresAt
+    && now
+    && expiresAt.getTime() < now
+  );
+  const displayStatus = isExpired ? 'expired' : (order?.status || 'pending_payment');
+  const qrData = encodeURIComponent(qrPayload || order?.paymentReference || `toub-pos-order-${order?.id || 'pending'}`);
+  const statusClassName = displayStatus === 'paid'
+    ? 'bg-green-50 text-green-700 border-green-200'
+    : displayStatus === 'expired'
+      ? 'bg-red-50 text-red-700 border-red-200'
+      : 'bg-yellow-50 text-yellow-700 border-yellow-200';
 
   return (
     <ModalShell
@@ -11,9 +47,12 @@ export default function KhqrPaymentModal({ isOpen, total, order, qrPayload, onCa
       labelledBy="khqr-payment-title"
       panelClassName="bg-white/80 rounded-4xl w-115 max-w-full p-7 flex flex-col items-center text-center shadow-[0_24px_64px_rgba(0,0,0,0.24)] border-0"
     >
-        <h3 id="khqr-payment-title" className="m-0 text-[26px] font-extrabold text-brand-dark mb-5 mt-1 tracking-tight">
-          Scan QR Code to Pay!
+        <h3 id="khqr-payment-title" className="m-0 text-[26px] font-extrabold text-brand-dark mb-2 mt-1 tracking-tight">
+          Scan KHQR To Pay
         </h3>
+        <p className="m-0 mb-5 text-sm font-semibold text-gray-600">
+          Backend-owned Individual KHQR order
+        </p>
 
         {/* KHQR Poster Slip */}
         <div
@@ -23,7 +62,7 @@ export default function KhqrPaymentModal({ isOpen, total, order, qrPayload, onCa
             TOUB PAY
           </span>
           <span className="text-[11px] font-bold text-gray-400 tracking-wide uppercase mt-1">
-            Scan. Pay. Done.
+            Scan. Pay. Wait for confirmation.
           </span>
 
           {/* QR Code Graphic */}
@@ -43,8 +82,39 @@ export default function KhqrPaymentModal({ isOpen, total, order, qrPayload, onCa
             TOUB POS MERCHANT
           </span>
           <span className="text-[11px] font-bold text-gray-400 mt-1">
-            {order ? `Order ${order.orderNo} · ${order.status}` : 'merchant@toubpos'}
+            {order ? `Order ${order.orderNo}` : 'Preparing order'}
           </span>
+
+          <div className="w-full mt-4 rounded-2xl bg-gray-50 border border-gray-100 p-4 text-left space-y-2">
+            <div className="flex justify-between gap-3 text-sm">
+              <span className="font-semibold text-gray-500">Amount</span>
+              <span className="font-black text-gray-900">${Number(order?.total ?? total ?? 0).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between gap-3 text-sm">
+              <span className="font-semibold text-gray-500">Status</span>
+              <span className={`px-2 py-1 rounded-full border text-xs font-bold uppercase ${statusClassName}`}>
+                {displayStatus.replace('_', ' ')}
+              </span>
+            </div>
+            {order?.paymentReference && (
+              <div className="text-xs">
+                <span className="font-semibold text-gray-500">Reference</span>
+                <p className="m-0 mt-1 font-mono text-gray-800 break-all">{order.paymentReference}</p>
+              </div>
+            )}
+            {order?.qrMd5 && (
+              <div className="text-xs">
+                <span className="font-semibold text-gray-500">QR MD5</span>
+                <p className="m-0 mt-1 font-mono text-gray-800 break-all">{order.qrMd5}</p>
+              </div>
+            )}
+            {formatExpiresAt(order?.paymentExpiresAt) && (
+              <div className="flex justify-between gap-3 text-xs">
+                <span className="font-semibold text-gray-500">Expires</span>
+                <span className="font-bold text-gray-800">{formatExpiresAt(order.paymentExpiresAt)}</span>
+              </div>
+            )}
+          </div>
 
           {/* Member of KHQR footer */}
           <div className="w-full flex justify-between items-center mt-5 pt-3 border-t border-gray-100 text-gray-400">
@@ -61,8 +131,15 @@ export default function KhqrPaymentModal({ isOpen, total, order, qrPayload, onCa
           Cancel
         </button>
         <span className="text-xs font-semibold text-gray-700 mt-3 animate-pulse">
-          Order is pending payment. KHQR webhook confirmation is planned for a later phase.
+          {isExpired
+            ? 'This QR has expired. Create a new KHQR checkout if the customer has not paid.'
+            : 'Waiting for Bakong payment confirmation...'}
         </span>
+        {pollingError && (
+          <span className="text-xs font-semibold text-state-danger mt-2">
+            {pollingError}
+          </span>
+        )}
     </ModalShell>
   );
 }

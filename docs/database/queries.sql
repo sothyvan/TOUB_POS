@@ -193,8 +193,17 @@ VALUES (2, 'cash_payment_confirmed', 1, JSON_OBJECT('confirmed_by_role', 'cashie
 
 -- Set KHQR payload after generating order
 UPDATE orders 
-SET qr_payload = 'MOCK_KHQR_ORDER_1_AMOUNT_15.75' 
+SET qr_payload = '000201010212...',
+    qr_md5 = 'b8fb54c15be1759f0e25770f1737b41c',
+    payment_reference = 'TOUB-1-ABC123',
+    payment_expires_at = DATE_ADD(NOW(), INTERVAL 10 MINUTE)
 WHERE id = 1;
+
+-- Fetch one order for frontend polling; cashiers must also match cashier_id in service logic
+SELECT o.*, i.name AS item_name, i.price_usd, i.quantity
+FROM orders o
+LEFT JOIN order_items i ON o.id = i.order_id
+WHERE o.id = 1;
 
 -- Fetch all orders created by a specific cashier (with details)
 SELECT o.*, i.name AS item_name, i.price_usd, i.quantity 
@@ -210,25 +219,37 @@ WHERE order_id = 1
 ORDER BY id DESC;
 
 
--- ── 6. PAYMENT WEBHOOKS (payment.service.js) ───────────────
+-- ── 6. KHQR PAYMENT CHECKING (order.service.js) ────────────
 
--- Lock and read order for confirmation validation (idempotency + amount match check)
-SELECT id, status, total_usd, cashier_id 
-FROM orders 
-WHERE id = 1 
-FOR UPDATE;
-
--- Complete order and store timestamp on successful webhook payment
-UPDATE orders
-SET status = 'paid', completed_at = NOW()
+-- Read a KHQR order before calling Bakong Open API by qr_md5
+-- Service logic enforces that only the creating cashier, owner, or manager can check it.
+SELECT id, status, payment_method, total_usd, cashier_id, payment_reference, qr_md5, payment_expires_at
+FROM orders
 WHERE id = 1;
 
--- Queue a Telegram ticket after payment confirmation
-INSERT INTO telegram_tickets (order_id, telegram_chat_id, status)
-SELECT 1, s.telegram_chat_id, 'pending'
-FROM orders o
-LEFT JOIN stalls s ON o.stall_id = s.id
-WHERE o.id = 1;
+-- After Bakong Open API returns paid by md5/hash, lock the order before marking it paid.
+SELECT id, status, payment_method, total_usd, cashier_id, payment_reference, qr_md5, payment_expires_at
+FROM orders
+WHERE id = 1
+FOR UPDATE;
+
+-- Complete KHQR order and store timestamp after Bakong amount/currency validation
+UPDATE orders
+SET status = 'paid', completed_at = NOW()
+WHERE id = 1
+  AND payment_method = 'khqr'
+  AND status = 'pending_payment';
+
+-- Audit real Bakong status-check confirmation once
+INSERT INTO audit_logs (actor_user_id, action, order_id, details)
+VALUES (
+  2,
+  'khqr_payment_confirmed',
+  1,
+  JSON_OBJECT('payment_reference', 'TOUB-1-ABC123', 'qr_md5', 'b8fb54c15be1759f0e25770f1737b41c', 'amount', 15.75, 'currency', 'USD', 'source', 'bakong_status_check')
+);
+
+-- ── 6b. FUTURE TELEGRAM TICKETS ───────────────────────────
 
 -- Mark a kitchen ticket sent once Telegram returns a message ID
 UPDATE telegram_tickets
@@ -265,3 +286,11 @@ WHERE status = 'completed';
 ALTER TABLE orders
 MODIFY status ENUM('pending_payment', 'paid', 'cancelled') NOT NULL DEFAULT 'pending_payment';
 
+-- Development-only Phase 5 KHQR metadata migration
+ALTER TABLE orders
+ADD COLUMN qr_md5 VARCHAR(64) DEFAULT NULL AFTER qr_payload,
+ADD COLUMN payment_reference VARCHAR(100) DEFAULT NULL UNIQUE AFTER qr_md5,
+ADD COLUMN payment_expires_at DATETIME DEFAULT NULL AFTER payment_reference;
+
+ALTER TABLE audit_logs
+MODIFY action ENUM('order_created', 'cash_payment_confirmed', 'khqr_payment_confirmed', 'order_cancelled') NOT NULL;

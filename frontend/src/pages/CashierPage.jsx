@@ -50,17 +50,19 @@ export default function CashierPage() {
     addToCart, updateQuantity, setCartItemQuantity, clearCart,
   } = useCart(categoryById);
 
-  const { orders, handleCheckout, checkoutLoading, checkoutError } =
+  const { orders, handleCheckout, fetchOrders, checkoutLoading, checkoutError } =
     useOrders(isOnline, cart, clearCart, currentUser);
 
   const [activeReceipt, setActiveReceipt] = useState(null);
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState(null);
   const [pendingKhqrOrder, setPendingKhqrOrder] = useState(null);
+  const [khqrPollingError, setKhqrPollingError] = useState(null);
 
   const handleCheckoutWithReceipt = async (method) => {
     if (method === 'KHQR') {
       const order = await handleCheckout(method);
       if (order) {
+        setKhqrPollingError(null);
         setPendingKhqrOrder(order);
         setPendingPaymentMethod(method);
       }
@@ -80,6 +82,82 @@ export default function CashierPage() {
       setActiveReceipt(order);
     }
   }, [pendingPaymentMethod, handleCheckout, setActiveReceipt]);
+
+  useEffect(() => {
+    if (pendingPaymentMethod !== 'KHQR' || !pendingKhqrOrder?.id) {
+      return undefined;
+    }
+
+    let stopped = false;
+    let isPolling = false;
+    let initialTimerId = null;
+    let intervalId = null;
+
+    function stopPolling() {
+      if (initialTimerId) window.clearTimeout(initialTimerId);
+      if (intervalId) window.clearInterval(intervalId);
+    }
+
+    async function pollOrderStatus() {
+      if (isPolling) {
+        return;
+      }
+
+      isPolling = true;
+      try {
+        const statusResult = await api.orders.checkKhqrStatus(pendingKhqrOrder.id);
+        if (stopped) {
+          return;
+        }
+
+        const latestOrder = statusResult.order;
+        if (!latestOrder) {
+          setKhqrPollingError('Unable to read KHQR payment status.');
+          return;
+        }
+
+        setPendingKhqrOrder(latestOrder);
+        const nonFatalMessage = ['error', 'failed'].includes(statusResult.providerStatus)
+          ? statusResult.message
+          : null;
+        setKhqrPollingError(nonFatalMessage);
+
+        if (statusResult.paymentStatus === 'paid' || latestOrder.status === 'paid') {
+          stopPolling();
+          setPendingPaymentMethod(null);
+          setPendingKhqrOrder(null);
+          setActiveReceipt(latestOrder);
+          await fetchOrders(false);
+        }
+
+        if (statusResult.paymentStatus === 'expired') {
+          stopPolling();
+          setKhqrPollingError(statusResult.message || 'This QR has expired. Create a new KHQR checkout.');
+        }
+
+        if (statusResult.paymentStatus === 'cancelled' || latestOrder.status === 'cancelled') {
+          stopPolling();
+          setPendingPaymentMethod(null);
+          setPendingKhqrOrder(null);
+          await fetchOrders(false);
+        }
+      } catch (err) {
+        if (!stopped) {
+          setKhqrPollingError(err.message || 'Unable to refresh KHQR payment status.');
+        }
+      } finally {
+        isPolling = false;
+      }
+    }
+
+    initialTimerId = window.setTimeout(pollOrderStatus, 0);
+    intervalId = window.setInterval(pollOrderStatus, 2500);
+
+    return () => {
+      stopped = true;
+      stopPolling();
+    };
+  }, [pendingPaymentMethod, pendingKhqrOrder?.id, fetchOrders]);
 
   // ── UI state ──────────────────────────────────────────────────────────────
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -189,9 +267,11 @@ export default function CashierPage() {
         total={pendingKhqrOrder?.total ?? total}
         order={pendingKhqrOrder}
         qrPayload={pendingKhqrOrder?.qrPayload}
+        pollingError={khqrPollingError}
         onCancel={() => {
           setPendingPaymentMethod(null);
           setPendingKhqrOrder(null);
+          setKhqrPollingError(null);
         }}
       />
     </PageShell>

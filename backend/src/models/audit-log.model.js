@@ -13,7 +13,7 @@ const AuditLog = sequelize.define('AuditLog', {
     field: 'actor_user_id',
   },
   action: {
-    type: DataTypes.ENUM('order_created', 'cash_payment_confirmed', 'order_cancelled'),
+    type: DataTypes.ENUM('order_created', 'cash_payment_confirmed', 'khqr_payment_confirmed', 'order_cancelled'),
     allowNull: false,
   },
   order_id: {

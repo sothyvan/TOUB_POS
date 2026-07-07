@@ -60,6 +60,37 @@ async function migrateLegacyOrderStatuses(sequelize) {
   }
 }
 
+async function migratePhase5KhqrMetadata(sequelize) {
+  if (process.env.NODE_ENV !== 'development') {
+    return;
+  }
+
+  const [orderTables] = await sequelize.query("SHOW TABLES LIKE 'orders';");
+  if (orderTables.length > 0) {
+    const [orderColumns] = await sequelize.query("SHOW COLUMNS FROM `orders` LIKE 'qr_md5';");
+    if (orderColumns.length === 0) {
+      await sequelize.query("ALTER TABLE `orders` ADD COLUMN `qr_md5` VARCHAR(64) DEFAULT NULL AFTER `qr_payload`;");
+    }
+
+    const [referenceColumns] = await sequelize.query("SHOW COLUMNS FROM `orders` LIKE 'payment_reference';");
+    if (referenceColumns.length === 0) {
+      await sequelize.query("ALTER TABLE `orders` ADD COLUMN `payment_reference` VARCHAR(100) DEFAULT NULL UNIQUE AFTER `qr_md5`;");
+    }
+
+    const [expiresColumns] = await sequelize.query("SHOW COLUMNS FROM `orders` LIKE 'payment_expires_at';");
+    if (expiresColumns.length === 0) {
+      await sequelize.query("ALTER TABLE `orders` ADD COLUMN `payment_expires_at` DATETIME DEFAULT NULL AFTER `payment_reference`;");
+    }
+  }
+
+  const [auditTables] = await sequelize.query("SHOW TABLES LIKE 'audit_logs';");
+  if (auditTables.length > 0) {
+    await sequelize.query(
+      "ALTER TABLE `audit_logs` MODIFY `action` ENUM('order_created', 'cash_payment_confirmed', 'khqr_payment_confirmed', 'order_cancelled') NOT NULL;"
+    );
+  }
+}
+
 async function startServer() {
   try {
     validateEnvironment();
@@ -79,6 +110,7 @@ async function startServer() {
 
     await migrateLegacyAdminRoles(sequelize);
     await migrateLegacyOrderStatuses(sequelize);
+    await migratePhase5KhqrMetadata(sequelize);
 
     // Sync schema in development
     const syncOptions = process.env.NODE_ENV === 'development' ? { alter: true } : {};
