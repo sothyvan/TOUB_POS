@@ -127,6 +127,26 @@ async function migrateLegacyProductCategories(sequelize) {
     { replacements: [fallbackCategoryId] }
   );
 
+  // Drop existing foreign key constraints on category_id to allow MODIFY to NOT NULL
+  const [fks] = await sequelize.query(
+    `
+      SELECT CONSTRAINT_NAME
+      FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'products'
+        AND COLUMN_NAME = 'category_id'
+        AND REFERENCED_TABLE_NAME IS NOT NULL;
+    `
+  );
+  for (const fk of fks) {
+    try {
+      await sequelize.query(`ALTER TABLE \`products\` DROP FOREIGN KEY \`${fk.CONSTRAINT_NAME}\`;`);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn(`[migration] Failed to drop foreign key ${fk.CONSTRAINT_NAME}:`, e.message);
+    }
+  }
+
   await sequelize.query('ALTER TABLE `products` MODIFY `category_id` INT NOT NULL;');
 
   if (metadata?.affectedRows > 0 || !hasCategoryId) {

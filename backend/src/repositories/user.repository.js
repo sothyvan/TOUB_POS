@@ -104,3 +104,20 @@ export async function findAssignedStallByUserId(userId) {
   }
   return null;
 }
+
+/**
+ * Find all active cashiers assigned to a specific stall.
+ */
+export async function findCashiersByStallId(stallId) {
+  return User.findAll({
+    attributes: ['id', 'username', 'role'],
+    include: [{
+      model: Stall,
+      where: { id: stallId },
+      attributes: [],
+      through: { attributes: [] }
+    }],
+    where: { role: 'cashier', is_active: true }
+  });
+}
+

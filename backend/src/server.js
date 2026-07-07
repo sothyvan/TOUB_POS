@@ -1,6 +1,10 @@
 import 'dotenv/config';
+import dns from 'node:dns';
 import bcrypt from 'bcryptjs';
 import { validateEnvironment } from './config/env.js';
+
+// Force DNS resolution to prefer IPv4 over IPv6
+dns.setDefaultResultOrder('ipv4first');
 import { runDevelopmentMigrations } from './services/development-migration.service.js';
 
 const PORT = process.env.PORT || 3000;
