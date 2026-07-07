@@ -36,6 +36,7 @@ erDiagram
 
     categories {
         int id PK
+        int owner_id FK
         varchar name
         enum tone "gold, green, blue, rose"
         datetime created_at
@@ -109,6 +110,7 @@ erDiagram
     }
 
     users ||--o{ stalls : "owns"
+    users ||--o{ categories : "manages"
     users ||--o{ stall_staff : "assigned to"
     stalls ||--o{ stall_staff : "has staff"
     categories ||--o{ products : "groups"
@@ -141,7 +143,7 @@ erDiagram
 - `stalls.owner_id` identifies the business owner responsible for each stall.
 - `stalls.location` stores the physical location of the stall (e.g. AEON Mall, Night Market, University).
 - `stalls.device_token` is the permanent terminal registration key stored in browser `localStorage`.
-- `categories` are global menu groups shared across stalls.
+- `categories.owner_id` links each category to the business owner who manages it. Category names are unique per owner.
 - `products` stores shared catalog metadata and its global category.
 - Per-stall price and visibility live in `stall_products`.
 - A product is visible to a stall only when a matching `stall_products` row exists with `is_visible = TRUE`.

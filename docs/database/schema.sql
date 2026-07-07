@@ -50,10 +50,13 @@ CREATE TABLE stall_staff (
 -- ── Categories ────────────────────────────────────────────
 CREATE TABLE categories (
   id         INT AUTO_INCREMENT PRIMARY KEY,
+  owner_id   INT NOT NULL,                               -- business owner who manages this category
   name       VARCHAR(100) NOT NULL,
   tone       ENUM('gold', 'green', 'blue', 'rose') NOT NULL DEFAULT 'gold',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_category_owner_name (owner_id, name),
+  FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- ── Products ──────────────────────────────────────────────

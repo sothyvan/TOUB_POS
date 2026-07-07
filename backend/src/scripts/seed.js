@@ -29,7 +29,7 @@ async function main() {
 
   // Step 3: Categories, Products, and Stall-Product visibility/prices
   console.log('[seed] Seeding menu catalog...');
-  await seedMenu(stallsByName);
+  await seedMenu(owners);
 
   // Step 4: Generate fake order history
   console.log('[seed] Generating order history...');

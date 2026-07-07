@@ -39,6 +39,9 @@ Stall.hasMany(ProductStall, { foreignKey: 'stall_id' });
 Product.belongsTo(Category, { foreignKey: 'category_id', onDelete: 'RESTRICT' });
 Category.hasMany(Product, { foreignKey: 'category_id' });
 
+Category.belongsTo(User, { as: 'CategoryOwner', foreignKey: 'owner_id', onDelete: 'CASCADE' });
+User.hasMany(Category, { as: 'Categories', foreignKey: 'owner_id' });
+
 // ── Order Associations ───────────────────────────────────────
 Order.belongsTo(Stall, { foreignKey: 'stall_id' });
 Stall.hasMany(Order, { foreignKey: 'stall_id' });

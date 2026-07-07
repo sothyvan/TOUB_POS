@@ -7,6 +7,11 @@ const Category = sequelize.define('Category', {
     autoIncrement: true,
     primaryKey: true,
   },
+  owner_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    field: 'owner_id',
+  },
   name: {
     type: DataTypes.STRING(100),
     allowNull: false,

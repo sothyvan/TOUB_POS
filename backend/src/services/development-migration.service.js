@@ -95,6 +95,21 @@ async function migrateLegacyProductCategories(sequelize) {
     return;
   }
 
+  // Resolve a fallback owner for legacy categories
+  const [ownerRows] = await sequelize.query(
+    "SELECT `id` FROM `users` WHERE `role` = 'owner' ORDER BY `id` ASC LIMIT 1;"
+  );
+  let fallbackOwnerId = ownerRows[0]?.id;
+  if (!fallbackOwnerId) {
+    const [ownerInsertResult] = await sequelize.query(
+      "INSERT INTO `users` (`username`, `role`, `password`, `is_active`, `created_at`, `updated_at`) VALUES ('legacy_migration_owner', 'owner', NULL, FALSE, NOW(), NOW());"
+    );
+    fallbackOwnerId = ownerInsertResult?.insertId;
+  }
+  if (!fallbackOwnerId) {
+    throw new Error('Unable to create a fallback owner for legacy categories.');
+  }
+
   const [categoryRows] = await sequelize.query(
     'SELECT `id` FROM `categories` ORDER BY `id` ASC LIMIT 1;'
   );
@@ -102,7 +117,8 @@ async function migrateLegacyProductCategories(sequelize) {
   let fallbackCategoryId = categoryRows[0]?.id;
   if (!fallbackCategoryId) {
     const [, metadata] = await sequelize.query(
-      "INSERT INTO `categories` (`name`, `tone`, `created_at`, `updated_at`) VALUES ('Uncategorized', 'gold', NOW(), NOW());"
+      "INSERT INTO `categories` (`name`, `tone`, `owner_id`, `created_at`, `updated_at`) VALUES ('Uncategorized', 'gold', ?, NOW(), NOW());",
+      { replacements: [fallbackOwnerId] }
     );
     fallbackCategoryId = metadata?.insertId;
   }
@@ -155,6 +171,54 @@ async function migrateLegacyProductCategories(sequelize) {
   }
 }
 
+async function migrateLegacyCategoryOwner(sequelize) {
+  const [categoryTables] = await sequelize.query("SHOW TABLES LIKE 'categories';");
+  if (categoryTables.length === 0) {
+    return;
+  }
+
+  const hasOwnerId = await columnExists(sequelize, 'categories', 'owner_id');
+  if (hasOwnerId) {
+    return;
+  }
+
+  // Add as nullable first so data can be backfilled before the FK is applied
+  await sequelize.query('ALTER TABLE `categories` ADD COLUMN `owner_id` INT NULL;');
+
+  // Resolve a fallback owner for legacy categories
+  const [ownerRows] = await sequelize.query(
+    "SELECT `id` FROM `users` WHERE `role` = 'owner' ORDER BY `id` ASC LIMIT 1;"
+  );
+  let fallbackOwnerId = ownerRows[0]?.id;
+  if (!fallbackOwnerId) {
+    const [userRows] = await sequelize.query(
+      "SELECT `id` FROM `users` ORDER BY `id` ASC LIMIT 1;"
+    );
+    if (userRows[0]?.id) {
+      fallbackOwnerId = userRows[0].id;
+    } else {
+      const [insertResult] = await sequelize.query(
+        "INSERT INTO `users` (`username`, `role`, `password`, `is_active`, `created_at`, `updated_at`) VALUES ('legacy_migration_owner', 'owner', NULL, FALSE, NOW(), NOW());"
+      );
+      fallbackOwnerId = insertResult?.insertId;
+    }
+  }
+
+  if (!fallbackOwnerId) {
+    throw new Error('Unable to resolve a fallback owner for legacy category migration.');
+  }
+
+  const [, metadata] = await sequelize.query(
+    'UPDATE `categories` SET `owner_id` = ? WHERE `owner_id` IS NULL;',
+    { replacements: [fallbackOwnerId] }
+  );
+
+  if (metadata?.affectedRows > 0) {
+    // eslint-disable-next-line no-console
+    console.log(`[migration] Backfilled ${metadata.affectedRows} legacy categories with owner #${fallbackOwnerId}.`);
+  }
+}
+
 async function dropDuplicateUniqueIndexes(sequelize, tableName, columnName) {
   const [indexes] = await sequelize.query(
     `
@@ -200,6 +264,7 @@ export async function runDevelopmentMigrations(sequelize) {
 
   await migrateLegacyAdminRoles(sequelize);
   await migrateLegacyOrderStatuses(sequelize);
+  await migrateLegacyCategoryOwner(sequelize);
   await migrateLegacyProductCategories(sequelize);
   await cleanDevelopmentDuplicateIndexes(sequelize);
 }

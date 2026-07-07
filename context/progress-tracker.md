@@ -49,8 +49,25 @@ Update this file after every meaningful implementation change.
   - Updated API request handlers to append the `X-Device-Token` header to all outgoing requests when provisioned.
   - Implemented terminal de-registration to clean up all storage tokens and block access until re-provisioned.
 
+- **Refactored seed to per-owner menus**:
+  - Moved `categories` and `products` arrays inside each `OWNER_SEEDS` entry in `data.js`, removed global `CATEGORY_SEEDS`/`PRODUCT_SEEDS`.
+  - `seedMenu` now iterates over each owner record, creates their specific categories + products, and assigns only to that owner's stalls.
+  - Each owner has their own themed catalog: owner (general food court), owner_bixby (BBQ & Bakery), owner_clara (Juice & Desserts).
+
+- **Added `owner_id` to categories for multi-owner data isolation**:
+  - Added `owner_id INT NOT NULL` column + FK to `categories` table in `schema.sql`.
+  - Updated `erd.md` with the new column and `users ||--o{ categories : "manages"` relationship.
+  - Updated note: categories are per-owner menu groupings, not global.
+  - Added `Category.belongsTo(User)` / `User.hasMany(Category)` association in `models/index.js`.
+  - Scoped `getCategories` in the controller to filter by the authenticated owner.
+  - Set `owner_id` on `createCategory` from the authenticated user's owner chain.
+  - Added ownership checks on `updateCategory` and `deleteCategory` to prevent cross-owner mutations.
+  - Updated `validateCategoryRef` in the product controller to reject cross-owner category assignment.
+  - Updated the dev migration fallback category creation to resolve and assign an `owner_id`.
+  - Added `UNIQUE KEY uq_category_owner_name (owner_id, name)` to prevent duplicate category names per owner.
+
 - **Refactored product database structure to match the current ERD**:
-  - Converted `categories` into global menu groups shared across stalls.
+  - Converted `categories` into global menu groups shared across stalls (later revised to per-owner).
   - Converted `products` into shared catalog metadata with `category_id`, `name`, and `image_url`.
   - Replaced the partial `product_stalls` assignment table with ERD-aligned `stall_products`.
   - Moved per-stall `price_usd`, `price_khr`, and `is_visible` into `stall_products`.

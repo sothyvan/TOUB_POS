@@ -1,12 +1,12 @@
 import { faker } from '@faker-js/faker';
-import { Category, Product, ProductStall } from '../../models/index.js';
-import { CATEGORY_SEEDS, PRODUCT_SEEDS } from './data.js';
+import { Category, Product, ProductStall, Stall } from '../../models/index.js';
+import { OWNER_SEEDS } from './data.js';
 import { roundUsd, toKhr } from './helpers.js';
 
-export async function upsertCategory(seed) {
+export async function upsertCategory(seed, ownerId) {
   const [category, created] = await Category.findOrCreate({
-    where: { name: seed.name },
-    defaults: seed,
+    where: { name: seed.name, owner_id: ownerId },
+    defaults: { ...seed, owner_id: ownerId },
   });
 
   if (!created) {
@@ -62,31 +62,44 @@ export async function upsertStallProduct({ stallId, productId, priceUsd, visible
   return stallProduct;
 }
 
-export async function seedMenu(stallsByName) {
-  const categoriesByName = new Map();
-  for (const categorySeed of CATEGORY_SEEDS) {
-    const category = await upsertCategory(categorySeed);
-    categoriesByName.set(category.name, category);
-  }
+export async function seedMenu(owners) {
+  for (const ownerRecord of owners) {
+    const ownerSeed = OWNER_SEEDS.find((s) => s.username === ownerRecord.username);
+    if (!ownerSeed) {
+      continue;
+    }
 
-  const products = [];
-  for (const productSeed of PRODUCT_SEEDS) {
-    const category = categoriesByName.get(productSeed.categoryName);
-    const product = await upsertProduct(productSeed, category.id);
-    products.push({ product, seed: productSeed });
-  }
+    const ownerStalls = await Stall.findAll({ where: { owner_id: ownerRecord.id } });
+    if (ownerStalls.length === 0) {
+      continue;
+    }
 
-  for (const stall of stallsByName.values()) {
-    for (const { product, seed } of products) {
-      const priceOffset = faker.number.float({ min: -0.25, max: 0.75, fractionDigits: 2 });
-      await upsertStallProduct({
-        stallId: stall.id,
-        productId: product.id,
-        priceUsd: Math.max(1, roundUsd(seed.baseUsd + priceOffset)),
-        visible: faker.datatype.boolean({ probability: 0.9 }),
-      });
+    const categoriesByName = new Map();
+    for (const categorySeed of ownerSeed.categories) {
+      const category = await upsertCategory(categorySeed, ownerRecord.id);
+      categoriesByName.set(category.name, category);
+    }
+
+    const products = [];
+    for (const productSeed of ownerSeed.products) {
+      const category = categoriesByName.get(productSeed.categoryName);
+      if (!category) {
+        continue;
+      }
+      const product = await upsertProduct(productSeed, category.id);
+      products.push({ product, seed: productSeed });
+    }
+
+    for (const stall of ownerStalls) {
+      for (const { product, seed } of products) {
+        const priceOffset = faker.number.float({ min: -0.25, max: 0.75, fractionDigits: 2 });
+        await upsertStallProduct({
+          stallId: stall.id,
+          productId: product.id,
+          priceUsd: Math.max(1, roundUsd(seed.baseUsd + priceOffset)),
+          visible: faker.datatype.boolean({ probability: 0.9 }),
+        });
+      }
     }
   }
-
-  return { categoriesByName, products };
 }

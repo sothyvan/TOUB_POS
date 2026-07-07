@@ -59,10 +59,14 @@ async function validateProductStalls(res, stallIds, ownerId) {
   return true;
 }
 
-async function validateCategoryRef(res, categoryId) {
+async function validateCategoryRef(res, categoryId, ownerId) {
   const category = await categoryRepository.findCategoryById(categoryId);
   if (!category) {
     res.status(404).json({ success: false, message: 'Category not found.' });
+    return false;
+  }
+  if (category.owner_id !== ownerId) {
+    res.status(403).json({ success: false, message: 'Forbidden: Category does not belong to your business.' });
     return false;
   }
   return true;
@@ -139,7 +143,7 @@ export async function createProduct(req, res, next) {
     if (!stallsValid) {
       return;
     }
-    const categoryValid = await validateCategoryRef(res, parsedCategoryId);
+    const categoryValid = await validateCategoryRef(res, parsedCategoryId, ownerId);
     if (!categoryValid) {
       return;
     }
@@ -203,7 +207,7 @@ export async function updateProduct(req, res, next) {
       if (!parsedCategoryId) {
         return res.status(400).json({ success: false, message: 'category_id must be a positive integer.' });
       }
-      const categoryValid = await validateCategoryRef(res, parsedCategoryId);
+      const categoryValid = await validateCategoryRef(res, parsedCategoryId, ownerId);
       if (!categoryValid) {
         return;
       }

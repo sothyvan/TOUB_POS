@@ -1,45 +1,50 @@
 import * as categoryRepository from '../repositories/category.repository.js';
 
-/**
- * Get all categories.
- */
+function resolveOwnerId(req) {
+  return req.user.role === 'owner' ? req.user.id : req.user.owner_id;
+}
+
 export async function getCategories(req, res, next) {
   try {
-    const categories = await categoryRepository.findAllCategories({});
+    const ownerId = resolveOwnerId(req);
+    const categories = await categoryRepository.findAllCategories({ owner_id: ownerId });
     res.json({ success: true, data: categories });
   } catch (err) {
     next(err);
   }
 }
 
-/**
- * Create a new category.
- */
 export async function createCategory(req, res, next) {
   try {
     const { name, tone } = req.body;
     if (!name) {
       return res.status(400).json({ success: false, message: 'Category name is required.' });
     }
-    const category = await categoryRepository.insertCategory({ name, tone });
+    const ownerId = resolveOwnerId(req);
+    const category = await categoryRepository.insertCategory({ name, tone, owner_id: ownerId });
     res.status(201).json({ success: true, data: category });
   } catch (err) {
     next(err);
   }
 }
 
-/**
- * Update an existing category.
- */
 export async function updateCategory(req, res, next) {
   try {
     const { id } = req.params;
-    const { name, tone } = req.body;
+    const ownerId = resolveOwnerId(req);
 
+    const existing = await categoryRepository.findCategoryById(id);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Category not found.' });
+    }
+    if (existing.owner_id !== ownerId) {
+      return res.status(403).json({ success: false, message: 'Forbidden: Category does not belong to your business.' });
+    }
+
+    const { name, tone } = req.body;
     const updateData = {};
     if (name !== undefined) {updateData.name = name;}
     if (tone !== undefined) {updateData.tone = tone;}
-
     const success = await categoryRepository.updateCategoryById(id, updateData);
     if (!success) {
       return res.status(404).json({ success: false, message: 'Category not found or no changes made.' });
@@ -50,12 +55,19 @@ export async function updateCategory(req, res, next) {
   }
 }
 
-/**
- * Delete a category by ID.
- */
 export async function deleteCategory(req, res, next) {
   try {
     const { id } = req.params;
+    const ownerId = resolveOwnerId(req);
+
+    const existing = await categoryRepository.findCategoryById(id);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Category not found.' });
+    }
+    if (existing.owner_id !== ownerId) {
+      return res.status(403).json({ success: false, message: 'Forbidden: Category does not belong to your business.' });
+    }
+
     const success = await categoryRepository.deleteCategoryById(id);
     if (!success) {
       return res.status(404).json({ success: false, message: 'Category not found.' });
