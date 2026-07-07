@@ -88,7 +88,7 @@ Credential rules:
 - The backend changes cash orders to `paid` and writes audit logs.
 - Order history loads from the backend, so clearing browser localStorage does not erase saved orders.
 
-KHQR webhook success, live payment WebSocket updates, and Telegram kitchen dispatch are planned for Phase 5+.
+KHQR Individual checkout displays the backend-generated QR payload and polls the TouB backend status-check endpoint. The frontend never calls Bakong directly and never receives the Bakong token. It only shows KHQR success after the backend marks the order as `paid` through Bakong md5/hash checking. Live payment WebSocket updates and Telegram kitchen dispatch are later phases.
 
 ---
 

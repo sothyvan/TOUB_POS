@@ -71,17 +71,25 @@
 - Successful cash confirmation changes `orders.status` to `paid`, sets `completed_at`, and writes a `cash_payment_confirmed` audit log.
 - The frontend must not create paid orders locally or submit trusted fields such as totals, status, `cashier_id`, or `stall_id`.
 
-## Planned Real-Time & Payment Flow (Phase 5 KHQR)
+## KHQR Individual Payment Flow (Phase 5)
 
-- Real KHQR webhook confirmation is not implemented yet; the current payment webhook path is a placeholder.
-- When a KHQR code is generated in the future, the frontend should open a WebSocket connection identified by `{ cashier_id, order_id }`.
-- `websocket.service.js` should maintain a `Map<cashier_id, socket>` to track active sessions.
-- Upon successful verified payment, the banking webhook (`POST /api/webhook/payment`) should trigger the services layer to:
-  1. Validate duplicate events, amount, merchant, and order state.
-  2. Update `orders.status = 'paid'` in DB.
-  3. Push `payment_confirmed` event via WebSocket to **only** the socket mapped to that `cashier_id`.
-  4. Call `telegram.service.js` to relay the order payload to the stall's Telegram kitchen channel.
-- The Telegram bot should post a structured ticket with inline "Done" button.
+- TouB POS uses Generate KHQR (Individual)
+- Backend KHQR generation uses the `bakong-khqr` SDK.
+- Cashier checkout calls `POST /api/orders` with safe item data and `paymentMethod = "khqr"`.
+- The backend calculates trusted totals from MySQL and creates the order as `pending_payment`.
+- The backend stores `qr_payload`, `qr_md5`, `payment_reference`, and `payment_expires_at`.
+- The frontend displays the backend QR payload and polls `POST /api/orders/:id/check-khqr-status` while the modal is open.
+- The backend calls Bakong Open API `POST /v1/check_transaction_by_md5` with the stored `qr_md5`.
+- `BAKONG_OPEN_API_TOKEN` is backend-only and must never be sent to the frontend.
+- If Bakong reports payment success, the backend validates amount/currency and optional destination account before marking the order `paid`.
+- Already-paid status checks are idempotent and do not duplicate audit logs.
+
+## Planned Real-Time & Kitchen Flow (Future)
+
+- WebSocket payment notifications are not implemented in Phase 5; current frontend uses polling.
+- A future WebSocket service should maintain a strict `Map<cashier_id, socket>` and emit only to the cashier who created the paid order.
+- Telegram kitchen dispatch remains a later phase.
+- The Telegram bot should post a structured ticket with inline "Done" button after paid order confirmation.
 - Cook taps "Done" → Telegram sends a callback query → backend validates cook authorization through a future Telegram-only cook identity model → edits the message to mark it complete.
 
 ## Telegram Kitchen Bot Architecture
@@ -114,7 +122,7 @@
 
 | # | Risk | Severity | Mitigation |
 |---|------|----------|------------|
-| 1 | **KHQR / Bakong webhook integration** | 🟡 Medium | Phase 5 must replace the current placeholder webhook with Bakong's official development API environment. Register for dev credentials, validate real gateway payloads, and avoid treating mock/browser events as payment truth. |
+| 1 | **KHQR / Bakong integration** | 🟡 Medium | Phase 5 now uses SDK-generated Individual KHQR payloads plus backend-only Bakong Open API checking by md5/hash. Production Bakong testing has passed; keep monitoring response contracts, destination account fields, and operational failure handling. |
 | 2 | **WebSocket routing — accidental broadcast to wrong cashier** | 🔴 High | Isolated per-cashier notification is a confirmed core feature. Risk is implementing it incorrectly. `websocket.service.js` must maintain a strict `Map<cashier_id, socket>` and emit only to the mapped socket. Never use `io.emit()` or room broadcasts. Validate `cashier_id` on every emit. |
 | 3 | **Telegram Bot async failures** | 🟡 Medium | Telegram failure must never block or rollback the order. Strategy: (1) Always log the error. (2) Store Telegram dispatch state in `telegram_tickets.status` (`pending` / `sent` / `failed` / `done`) instead of mutating payment state on `orders`. (3) Show a management dashboard badge for failed tickets so an Owner/Manager can manually relay. Auto-retry queue is out of scope (Future). |
 | 4 | **KHR exchange rate — hardcoded vs. live** | 🟡 Medium | Decision required before building the product form. Recommend: hardcode the rate as a `.env` constant (`KHR_RATE=4100`) for now. Add a note in the admin panel showing the current rate. Live rate API is out of scope. |

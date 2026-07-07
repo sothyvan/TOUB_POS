@@ -59,6 +59,34 @@ Update this file after every meaningful implementation change.
   - Hardened product `image_url` create/update validation to require a URL/app-relative path with the existing 500-character DB limit.
   - Added frontend product-photo upload controls with JPG/PNG/WebP validation, 5MB max size, progress state, error state, preview rendering, and manual URL fallback.
   - Kept v1 persistence scoped to the existing `products.image_url` field; ImageKit `fileId` deletion/cleanup remains out of scope.
+- Phase 5: KHQR Individual Payment Flow — **COMPLETE**
+- Phase 6: KDS, Telegram Kitchen, And Live Payment WebSocket Integration — **NEXT**
+
+- **Generated current code-backed ERD documentation**:
+  - Refreshed `docs/database/erd.md` from the active Sequelize models and canonical SQL schema.
+  - Added current KHQR order fields, line item totals, timestamps, nullable shared menu scoping, and `audit_logs`.
+  - Kept the Mermaid relationship diagram aligned with the Owner / Manager / Cashier, stall, order, Telegram ticket, and audit-log model.
+
+- **Implemented Phase 5 KHQR Individual Payment Flow**:
+  - Added `bakong-khqr` SDK-backed Individual KHQR generation for KHQR orders.
+  - Kept order creation backend-owned: cashier checkout sends only item IDs, quantities, notes, and payment method while backend derives cashier/stall and calculates trusted totals.
+  - Added KHQR order metadata storage: `qr_payload`, `qr_md5`, `payment_reference`, and `payment_expires_at`.
+  - Added protected `GET /api/orders/:id` for passive order reads, with cashier ownership enforced server-side.
+  - Updated the KHQR modal to display backend QR payload details and rely on backend payment status.
+  - Synchronized Sequelize models, raw SQL docs, ERD notes, API docs, Swagger, architecture, and payment-flow docs.
+
+- **Upgraded Phase 5 to real Bakong transaction status checking**:
+  - Added backend-only Bakong Open API checking by stored KHQR `qr_md5` through `POST /api/orders/:id/check-khqr-status`.
+  - Added `BAKONG_OPEN_API_BASE_URL` and backend-only `BAKONG_OPEN_API_TOKEN` configuration.
+  - Backend calls `/v1/check_transaction_by_md5`, normalizes provider responses, and validates amount/currency before marking an order `paid`.
+  - Made already-paid checks idempotent so repeated polling does not duplicate `khqr_payment_confirmed` audit logs.
+  - Updated KHQR modal polling to call the TouB backend status-check endpoint instead of passively reading order status.
+  - Updated active docs, Swagger, architecture notes, and environment examples to show that the frontend never receives the Bakong Open API token.
+
+- **Finalized Phase 5 production Bakong KHQR flow**:
+  - Standardized KHQR confirmation on backend-owned Bakong Open API status checking.
+  - Simplified environment configuration to production/SIT Bakong Open API URL plus backend-only token.
+  - Kept KHQR confirmation backend-owned through `POST /api/orders/:id/check-khqr-status`.
 
 - **Refined role-specific user credential model**:
   - Updated active backend validation so Owner/Manager accounts use username/password only and Cashier accounts use PIN login only.
@@ -89,7 +117,7 @@ Update this file after every meaningful implementation change.
   - Added database-backed `audit_logs` for `order_created` and `cash_payment_confirmed`.
   - Updated cashier checkout/history to use backend order responses instead of building paid receipts from frontend cart totals.
   - Removed fake order-history seed fallback from the management ledger so order history is backend-owned.
-  - Disabled the old mock KHQR webhook confirmation path for this phase; it now returns `501` until real gateway verification is implemented.
+  - Deferred KHQR gateway verification to Phase 5.
   - Synchronized Sequelize models with `docs/database/schema.sql`, `docs/database/queries.sql`, API docs, and architecture context.
 
 - **Applied Phase 4 RBAC cleanup**:
@@ -348,10 +376,10 @@ Update this file after every meaningful implementation change.
 
 ## Next Up
 
-- Unit 4: KDS and WebSocket Payment Webhooks.
-  - ~~Create the `POST /api/auth/pin` route to securely authenticate cashiers via their station PIN, completing the Phase 1 tech debt.~~ **COMPLETE**
-  - Set up a WebSocket server in Express for live KHQR payment success notifications.
-  - Implement a basic KDS (Kitchen Display System) view to listen to active orders from the backend.
+- Phase 6: KDS, Telegram Kitchen, And Live Payment WebSocket Integration.
+  - Set up a WebSocket server in Express for live KHQR payment success notifications instead of frontend polling.
+  - Implement a basic KDS or Telegram kitchen display flow for paid orders.
+  - Keep cook authorization Telegram-only, not web-app RBAC.
 
 - Future SaaS / Multi-Customer Platform Administration:
   - Consider adding a separate `platform_admin` role for the TouB POS developer/operator team.
@@ -360,8 +388,7 @@ Update this file after every meaningful implementation change.
 
 ## Open Questions
 
-- What specific payment gateway API (e.g., Bakong KHQR) will be used to build the real-time listener webhook?
-- Will the frontend use `react-router-dom` for routing, or a custom auth-guard pattern?
+- Continue monitoring production Bakong Open API response fields for amount, currency, transaction hash, and destination account before a real merchant rollout.
 - Confirm KHR exchange rate strategy: hardcoded `.env` constant (recommended) or live API?
 
 ---
@@ -382,6 +409,7 @@ Record of key architectural and product decisions made, with rationale.
 | 8 | **Telegram Bot for kitchen display** (not custom screen) | Eliminates the need for a dedicated kitchen hardware/display build. Cooks already use Telegram. Saves significant scope while delivering real-time order relay. |
 | 9 | **Three-role RBAC: Owner / Manager / Cashier** | Separates full business control from day-to-day operations. Owner can manage all roles and sensitive settings; Manager can operate the store and manage Cashiers only; Cashier remains stall-scoped to POS sales. |
 | 10 | **Future platform_admin is separate from store roles** | TouB POS may later need a developer/operator role for SaaS administration. This must be modeled outside customer RBAC so platform support access does not blur with Owner, Manager, or Cashier permissions. |
+| 11 | **KHQR Individual before Merchant KHQR** | Final-project scope does not have official MerchantID and AcquiringBank credentials. Individual KHQR can use owner/stall Bakong account ID and is easier to demo while keeping backend-owned payment status. |
 
 ---
 
@@ -396,5 +424,5 @@ Intentional shortcuts taken during development that must be resolved before prod
 | 3 | **No input sanitization on order modifiers** | `order_items.notes` | 🟡 Medium — add max-length enforcement and strip dangerous characters before DB write |
 | 4 | **No auth endpoint rate limiting** | `POST /api/auth/login` / `POST /api/auth/pin` | ✅ Resolved — added `express-rate-limit` |
 | 5 | **Seed owner password is a placeholder hash** | `docs/database/schema.sql` | 🔴 High — generate real bcrypt hash and store securely before any live deployment |
-| 6 | **WebSocket server not yet implemented** | `backend/services/` | 🔴 High — required for KHQR payment confirmation routing |
+| 6 | **WebSocket server not yet implemented** | `backend/services/` | 🟡 Medium — current KHQR UI uses polling; WebSocket is the next improvement for instant cashier-specific payment updates |
 

@@ -11,6 +11,11 @@ import {
   User,
 } from '../models/index.js';
 import { dispatchToTelegram } from './telegram.service.js';
+import { generateKhqrIndividualPayment } from './khqr-provider.service.js';
+import {
+  checkBakongTransactionByMd5,
+  getBakongCheckMode,
+} from './bakong-provider.service.js';
 
 const ALLOWED_PAYMENT_METHODS = new Set(['cash', 'khqr']);
 const CASH_CONFIRMATION_ROLES = new Set(['owner', 'manager']);
@@ -59,6 +64,15 @@ function normalizePaymentMethod(paymentMethod) {
   return normalized;
 }
 
+function normalizeOptionalText(value) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  const text = String(value).trim();
+  return text || null;
+}
+
 function normalizeNotes(notes) {
   if (notes === undefined || notes === null || notes === '') {
     return null;
@@ -96,6 +110,55 @@ function isVisibleStallProduct(stallProduct) {
   return stallProduct.is_visible === true || stallProduct.is_visible === 1;
 }
 
+function canAccessOrder(order, actorId, actorRole) {
+  return CASH_CONFIRMATION_ROLES.has(actorRole)
+    || (actorRole === 'cashier' && Number(order.cashier_id) === actorId);
+}
+
+function isKhqrExpired(order) {
+  return Boolean(
+    order.payment_expires_at
+    && new Date(order.payment_expires_at).getTime() < Date.now()
+  );
+}
+
+function assertBakongPaidResultMatchesOrder(order, providerResult) {
+  if (providerResult.amount === null || providerResult.amount === undefined) {
+    throw httpError('Bakong paid response did not include an amount.', 400);
+  }
+
+  const expectedAmount = Number(order.total_usd);
+  if (Math.abs(Number(providerResult.amount) - expectedAmount) > 0.01) {
+    throw httpError(`Bakong amount mismatch. Expected ${expectedAmount.toFixed(2)}, received ${Number(providerResult.amount).toFixed(2)}.`, 400);
+  }
+
+  const receivedCurrency = normalizeOptionalText(providerResult.currency)?.toUpperCase() || 'USD';
+  if (receivedCurrency !== 'USD') {
+    throw httpError('Only USD KHQR confirmations are supported in this Phase 5 flow.', 400);
+  }
+
+  const expectedDestination = normalizeOptionalText(process.env.BAKONG_ACCOUNT_ID)?.toLowerCase();
+  const receivedDestination = normalizeOptionalText(providerResult.destinationAccount)?.toLowerCase();
+  if (expectedDestination && receivedDestination && expectedDestination !== receivedDestination) {
+    throw httpError('Bakong destination account does not match the configured Bakong account.', 400);
+  }
+}
+
+function logKhqrStatusCheckDebug(order, checkMode, providerResult = null) {
+  console.info('[khqr-status-check]', {
+    orderId: order?.id ?? null,
+    bakongCheckMode: checkMode,
+    hasQrMd5: Boolean(order?.qr_md5),
+    orderStatus: order?.status ?? null,
+    bakongHttpStatus: providerResult?.httpStatus ?? null,
+    bakongResponseCode: providerResult?.responseCode ?? null,
+    bakongResponseMessage: providerResult?.responseMessage ?? null,
+    normalizedProviderStatus: providerResult?.status ?? null,
+    normalizedAmount: providerResult?.amount ?? null,
+    normalizedCurrency: providerResult?.currency ?? null,
+  });
+}
+
 function buildOrderInclude() {
   return [
     {
@@ -124,6 +187,23 @@ export function getOrderById(orderId) {
   });
 }
 
+export async function getOrderForActor(orderId, actor) {
+  const parsedOrderId = parsePositiveInteger(orderId, 'order ID');
+  const actorId = parsePositiveInteger(actor?.id, 'actor ID');
+  const actorRole = String(actor?.role || '').toLowerCase();
+  const order = await getOrderById(parsedOrderId);
+
+  if (!order) {
+    throw httpError('Order not found.', 404);
+  }
+
+  if (!canAccessOrder(order, actorId, actorRole)) {
+    throw httpError('You cannot access this order.', 403);
+  }
+
+  return order;
+}
+
 /**
  * Creates a new order along with its order items inside a transaction.
  */
@@ -150,6 +230,16 @@ export async function createOrder(cashierId, items, paymentMethod) {
     }
 
     const stallId = stallStaff.stall_id;
+    const stall = await Stall.findByPk(stallId, { transaction });
+    if (!stall) {
+      throw httpError('Assigned stall was not found.', 404);
+    }
+
+    const cashier = await User.findByPk(parsedCashierId, {
+      attributes: ['id', 'username', 'role'],
+      transaction,
+    });
+
     let totalUsd = 0;
     let totalKhr = 0;
     const orderItemsToCreate = [];
@@ -224,7 +314,11 @@ export async function createOrder(cashierId, items, paymentMethod) {
     }
 
     if (normalizedPaymentMethod === 'khqr') {
-      order.qr_payload = `MOCK_KHQR_ORDER_${order.id}_AMOUNT_${totalUsd}`;
+      const khqrPayment = generateKhqrIndividualPayment({ order, stall, cashier });
+      order.qr_payload = khqrPayment.qrPayload;
+      order.qr_md5 = khqrPayment.qrMd5;
+      order.payment_reference = khqrPayment.paymentReference;
+      order.payment_expires_at = khqrPayment.expiresAt;
       await order.save({ transaction });
     }
 
@@ -239,6 +333,11 @@ export async function createOrder(cashierId, items, paymentMethod) {
         subtotal_usd: totalUsd,
         total_usd: totalUsd,
         total_khr: totalKhr,
+        ...(normalizedPaymentMethod === 'khqr' ? {
+          payment_reference: order.payment_reference,
+          qr_md5: order.qr_md5,
+          payment_expires_at: order.payment_expires_at,
+        } : {}),
       },
     }, { transaction });
 
@@ -323,6 +422,192 @@ export async function confirmCashPayment(orderId, actor) {
   });
 
   return confirmedOrder;
+}
+
+export async function checkKhqrPaymentStatus(orderId, actor) {
+  const parsedOrderId = parsePositiveInteger(orderId, 'order ID');
+  const actorId = parsePositiveInteger(actor?.id, 'actor ID');
+  const actorRole = String(actor?.role || '').toLowerCase();
+  const checkMode = getBakongCheckMode();
+  const order = await Order.findByPk(parsedOrderId);
+
+  if (!order) {
+    throw httpError('Order not found.', 404);
+  }
+
+  if (!canAccessOrder(order, actorId, actorRole)) {
+    throw httpError('You cannot check payment status for this order.', 403);
+  }
+
+  if (order.payment_method !== 'khqr') {
+    throw httpError('Only KHQR orders can be checked with this endpoint.', 400);
+  }
+
+  if (order.status === 'paid') {
+    logKhqrStatusCheckDebug(order, checkMode);
+    return {
+      order: await getOrderById(order.id),
+      paymentStatus: 'paid',
+      providerStatus: 'already_paid',
+      checkMode,
+      alreadyProcessed: true,
+      message: 'Order is already paid.',
+    };
+  }
+
+  if (order.status === 'cancelled') {
+    logKhqrStatusCheckDebug(order, checkMode);
+    return {
+      order: await getOrderById(order.id),
+      paymentStatus: 'cancelled',
+      providerStatus: 'not_checked',
+      checkMode,
+      alreadyProcessed: false,
+      message: 'Order is cancelled.',
+    };
+  }
+
+  if (order.status !== 'pending_payment') {
+    logKhqrStatusCheckDebug(order, checkMode);
+    return {
+      order: await getOrderById(order.id),
+      paymentStatus: order.status,
+      providerStatus: 'not_checked',
+      checkMode,
+      alreadyProcessed: false,
+      message: 'Order is not pending payment.',
+    };
+  }
+
+  if (isKhqrExpired(order)) {
+    logKhqrStatusCheckDebug(order, checkMode);
+    return {
+      order: await getOrderById(order.id),
+      paymentStatus: 'expired',
+      providerStatus: 'expired',
+      checkMode,
+      alreadyProcessed: false,
+      message: 'KHQR payment request has expired.',
+    };
+  }
+
+  if (!order.qr_md5) {
+    logKhqrStatusCheckDebug(order, checkMode);
+    throw httpError('KHQR md5 is missing for this order.', 400);
+  }
+
+  let providerResult;
+  try {
+    providerResult = await checkBakongTransactionByMd5(order.qr_md5);
+  } catch (error) {
+    logKhqrStatusCheckDebug(order, checkMode);
+    throw error;
+  }
+  logKhqrStatusCheckDebug(order, checkMode, providerResult);
+
+  if (providerResult.status === 'not_found') {
+    return {
+      order: await getOrderById(order.id),
+      paymentStatus: 'pending_payment',
+      providerStatus: 'not_found',
+      checkMode,
+      alreadyProcessed: false,
+      message: 'Payment has not been found yet.',
+    };
+  }
+
+  if (providerResult.status === 'failed') {
+    return {
+      order: await getOrderById(order.id),
+      paymentStatus: 'pending_payment',
+      providerStatus: 'failed',
+      checkMode,
+      alreadyProcessed: false,
+      message: 'Bakong returned a failed payment status.',
+    };
+  }
+
+  if (providerResult.status === 'error') {
+    return {
+      order: await getOrderById(order.id),
+      paymentStatus: 'pending_payment',
+      providerStatus: 'error',
+      checkMode,
+      alreadyProcessed: false,
+      message: providerResult.errorMessage || 'Unable to check Bakong payment status right now.',
+    };
+  }
+
+  assertBakongPaidResultMatchesOrder(order, providerResult);
+
+  let confirmedOrderId;
+  let alreadyProcessed = false;
+  const transaction = await sequelize.transaction();
+
+  try {
+    const lockedOrder = await Order.findByPk(parsedOrderId, {
+      transaction,
+      lock: true,
+    });
+
+    if (!lockedOrder) {
+      throw httpError('Order not found.', 404);
+    }
+
+    if (lockedOrder.status === 'paid') {
+      confirmedOrderId = lockedOrder.id;
+      alreadyProcessed = true;
+      await transaction.commit();
+    } else {
+      if (lockedOrder.status === 'cancelled') {
+        throw httpError('Cancelled orders cannot be confirmed.', 409);
+      }
+
+      if (lockedOrder.status !== 'pending_payment') {
+        throw httpError('Order is not pending payment.', 400);
+      }
+
+      if (isKhqrExpired(lockedOrder)) {
+        throw httpError('KHQR payment request has expired.', 409);
+      }
+
+      assertBakongPaidResultMatchesOrder(lockedOrder, providerResult);
+
+      lockedOrder.status = 'paid';
+      lockedOrder.completed_at = new Date();
+      await lockedOrder.save({ transaction });
+
+      await AuditLog.create({
+        actor_user_id: actorId,
+        action: 'khqr_payment_confirmed',
+        order_id: lockedOrder.id,
+        details: {
+          payment_reference: lockedOrder.payment_reference,
+          qr_md5: lockedOrder.qr_md5,
+          amount: providerResult.amount,
+          currency: normalizeOptionalText(providerResult.currency)?.toUpperCase() || 'USD',
+          hash: providerResult.hash,
+          source: 'bakong_status_check',
+          checked_by_role: actorRole,
+        },
+      }, { transaction });
+
+      confirmedOrderId = lockedOrder.id;
+      await transaction.commit();
+    }
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+
+  return {
+    order: await getOrderById(confirmedOrderId),
+    paymentStatus: 'paid',
+    providerStatus: 'paid',
+    checkMode,
+    alreadyProcessed,
+    message: alreadyProcessed ? 'Order was already paid.' : 'KHQR payment confirmed by Bakong.',
+  };
 }
 
 /**

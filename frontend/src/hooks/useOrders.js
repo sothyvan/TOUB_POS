@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 
 /**
@@ -15,40 +15,34 @@ export function useOrders(isOnline, cart, clearCart, currentUser) {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState(null);
 
-  useEffect(() => {
-    let ignore = false;
-    async function init() {
-      if (currentUser) {
-        try {
-          if (!ignore) setLoading(true);
-          if (!ignore) setError(null);
-          const data = await api.orders.getAll(currentUser?.role);
-          if (!ignore) setOrders(data);
-        } catch (err) {
-          if (!ignore) setError(err.message || 'Failed to load orders.');
-        } finally {
-          if (!ignore) setLoading(false);
-        }
-      } else {
-        if (!ignore) setLoading(false);
-      }
+  const fetchOrders = useCallback(async (showSpinner = true) => {
+    if (!currentUser) {
+      setOrders([]);
+      setLoading(false);
+      return [];
     }
-    init();
-    return () => { ignore = true; };
-  }, [currentUser]);
 
-  const fetchOrders = async (showSpinner = true) => {
     try {
       if (showSpinner) setLoading(true);
       setError(null);
       const data = await api.orders.getAll(currentUser?.role);
       setOrders(data);
+      return data;
     } catch (err) {
       setError(err.message || 'Failed to load orders.');
+      return [];
     } finally {
       if (showSpinner) setLoading(false);
     }
-  };
+  }, [currentUser]);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      fetchOrders(true);
+    }, 0);
+
+    return () => window.clearTimeout(timerId);
+  }, [fetchOrders]);
 
   const todaysOrders = orders.filter(
     (o) => {
@@ -108,6 +102,7 @@ export function useOrders(isOnline, cart, clearCart, currentUser) {
     todaysOrders,
     todaysTotal,
     handleCheckout,
+    fetchOrders,
     loading,
     error,
     checkoutLoading,

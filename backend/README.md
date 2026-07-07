@@ -37,6 +37,12 @@ Server runs at `http://localhost:3000` by default.
 | `DB_NAME` | MySQL database name | `toub_pos` |
 | `JWT_SECRET` | Secret key for signing JWTs | `a_long_random_string` |
 | `JWT_EXPIRES_IN` | JWT expiry duration | `8h` |
+| `BAKONG_ACCOUNT_ID` | Owner/stall Bakong account for Individual KHQR | `owner@bakong` |
+| `KHQR_MERCHANT_NAME` | Name embedded in KHQR payload | `Toub POS` |
+| `KHQR_MERCHANT_CITY` | City embedded in KHQR payload | `PHNOM PENH` |
+| `KHQR_EXPIRATION_MINUTES` | KHQR payment expiration window | `10` |
+| `BAKONG_OPEN_API_BASE_URL` | Bakong Open API base URL | `https://api-bakong.nbc.gov.kh` |
+| `BAKONG_OPEN_API_TOKEN` | Backend-only Bakong Open API token | `replace_with_token` |
 
 ---
 
@@ -161,11 +167,15 @@ Owners can manage Owner, Manager, and Cashier accounts. Managers can manage Cash
 | POST | `/api/orders` | Cashier | Create backend-owned pending order |
 | GET | `/api/orders/mine` | Cashier | Fetch own orders |
 | GET | `/api/orders` | Owner / Manager | Fetch all orders |
+| GET | `/api/orders/:id` | Creating Cashier / Owner / Manager | Fetch one order for status polling |
+| POST | `/api/orders/:id/check-khqr-status` | Creating Cashier / Owner / Manager | Check KHQR payment by Bakong md5/hash |
 | POST | `/api/orders/:id/confirm-cash` | Creating Cashier / Owner / Manager | Mark cash order as paid |
 
 Order creation accepts only product IDs, quantities, optional notes, and payment method. The backend derives cashier/stall, calculates trusted totals from MySQL, snapshots item names/prices, and rejects client-submitted trusted fields such as totals, status, `cashier_id`, and `stall_id`.
 
 Cash orders start as `pending_payment`. Cash confirmation changes the status to `paid` and writes a `cash_payment_confirmed` audit log.
+
+KHQR orders also start as `pending_payment`. The backend generates Individual KHQR data, stores the QR payload, md5, payment reference, and expiry. The frontend asks the backend to run `POST /api/orders/:id/check-khqr-status`; the backend calls Bakong Open API by md5/hash and marks the order `paid` only after amount/currency validation.
 
 ### Reports
 
@@ -177,7 +187,7 @@ Cash orders start as `pending_payment`. Cash confirmation changes the status to 
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| POST | `/api/webhook/payment` | No | Placeholder; real KHQR webhook confirmation is Phase 5 and currently returns not implemented |
+| POST | `/api/webhook/payment` | No | Legacy placeholder; use `/api/orders/:id/check-khqr-status` |
 
 ---
 

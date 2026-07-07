@@ -260,8 +260,7 @@ This is useful for security and debugging because the team can later answer ques
 
 `backend/src/controllers/webhook.controller.js`
 
-- Old mock KHQR behavior was disabled for this phase.
-- Real KHQR webhook verification belongs to a later phase.
+- KHQR payment verification is handled by the backend-owned Bakong status-check flow in Phase 5.
 
 `backend/src/services/payment.service.js`
 

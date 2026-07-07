@@ -47,7 +47,8 @@ export const swaggerDocument = {
             'RBAC roles: owner, manager, cashier.',
             'Owner/Manager use username + password. Cashier uses PIN login.',
             'Protected routes require Authorization: Bearer <token>.',
-            'Rate-limited auth endpoints may return 429.'
+            'Rate-limited auth endpoints may return 429.',
+            'Bakong Open API tokens are backend-only; the frontend never calls Bakong directly.'
         ].join(' ')
     },
     components: {
@@ -202,7 +203,8 @@ export const swaggerDocument = {
                 description: [
                     'Cashier only.',
                     'Frontend sends product IDs, quantities, optional notes, and payment method only.',
-                    'Backend derives cashier/stall, calculates trusted totals, snapshots item names/prices, and starts the order as pending_payment.'
+                    'Backend derives cashier/stall, calculates trusted totals, snapshots item names/prices, and starts the order as pending_payment.',
+                    'KHQR orders generate an Individual KHQR payload plus md5, payment reference, and expiry metadata.'
                 ].join(' '),
                 requestBody: {
                     required: true,
@@ -242,6 +244,65 @@ export const swaggerDocument = {
             get: {
                 summary: 'Get my orders',
                 description: 'Cashier only. Returns orders created by the authenticated cashier.'
+            }
+        },
+        '/api/orders/{id}': {
+            get: {
+                summary: 'Get one order',
+                description: 'Cashiers can fetch their own orders only. Owner/Manager can fetch any order. Passive order read.'
+            }
+        },
+        '/api/orders/{id}/check-khqr-status': {
+            post: {
+                summary: 'Check KHQR payment status',
+                description: [
+                    'Allowed for the creating cashier, owner, or manager.',
+                    'Frontend calls this endpoint while the KHQR modal is open.',
+                    'The backend calls Bakong Open API by qr_md5 and validates amount/currency before marking paid.',
+                    'The Bakong Open API token is backend-only and is never exposed to the frontend.'
+                ].join(' '),
+                parameters: [
+                    {
+                        in: 'path',
+                        name: 'id',
+                        required: true,
+                        schema: { type: 'integer' }
+                    }
+                ],
+                responses: {
+                    200: {
+                        description: 'KHQR status check completed',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        success: { type: 'boolean', example: true },
+                                        data: {
+                                            type: 'object',
+                                            properties: {
+                                                paymentStatus: { type: 'string', example: 'pending_payment' },
+                                                providerStatus: { type: 'string', enum: ['paid', 'already_paid', 'not_found', 'failed', 'error', 'expired', 'not_checked'] },
+                                                checkMode: { type: 'string', enum: ['bakong'] },
+                                                alreadyProcessed: { type: 'boolean', example: false },
+                                                message: { type: 'string', example: 'Payment has not been found yet.' },
+                                                order: { type: 'object' }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    400: { $ref: '#/components/responses/BadRequest' },
+                    401: { $ref: '#/components/responses/Unauthorized' },
+                    403: { $ref: '#/components/responses/Forbidden' },
+                    404: { $ref: '#/components/responses/NotFound' },
+                    503: {
+                        ...errorResponse,
+                        description: 'Bakong status checking is misconfigured'
+                    }
+                }
             }
         },
         '/api/orders/{id}/confirm-cash': {
@@ -327,11 +388,11 @@ export const swaggerDocument = {
         },
         '/api/webhook/payment': {
             post: {
-                summary: 'Payment webhook placeholder',
-                description: 'Real KHQR webhook confirmation belongs to Phase 5 and is not implemented yet.',
+                summary: 'Legacy payment webhook placeholder',
+                description: 'Use /api/orders/{id}/check-khqr-status for Bakong status checking.',
                 security: [],
                 responses: {
-                    501: { description: 'KHQR webhook confirmation is not implemented yet' }
+                    501: { description: 'Legacy placeholder path' }
                 }
             }
         }
