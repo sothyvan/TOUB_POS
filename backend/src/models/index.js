@@ -14,6 +14,10 @@ import ProductStall from './product-stall.model.js';
 Stall.belongsTo(User, { as: 'Owner', foreignKey: 'owner_id', onDelete: 'SET NULL' });
 User.hasMany(Stall, { as: 'OwnedStalls', foreignKey: 'owner_id' });
 
+// ── User Subordination (Owner has Managers/Cashiers) ─────────
+User.belongsTo(User, { as: 'Owner', foreignKey: 'owner_id', onDelete: 'SET NULL' });
+User.hasMany(User, { as: 'Staff', foreignKey: 'owner_id' });
+
 // ── Stall ↔ Staff (Many-to-Many via StallStaff) ──────────────
 Stall.belongsToMany(User, { through: StallStaff, foreignKey: 'stall_id', otherKey: 'user_id' });
 User.belongsToMany(Stall, { through: StallStaff, foreignKey: 'user_id', otherKey: 'stall_id' });

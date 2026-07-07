@@ -9,12 +9,35 @@ Update this file after every meaningful implementation change.
 - Phase 3: Backend-Owned Products, Categories, Stalls, And Staff — **COMPLETE**
 - Phase 4: Backend-Owned Orders, Cash Confirmation, And Audit Logs — **COMPLETE**
 - Phase 4.5: Security Hardening — **COMPLETE**
-- Phase 5: KDS & Live Payment WebSocket Integration — **IN PROGRESS**
+- Phase 5: Multi-Owner Data Isolation & Security — **COMPLETE** ✅
+- Phase 6: KDS & Live Payment WebSocket Integration — **IN PROGRESS**
   - Telegram KDS Bot (cash payment trigger) — **COMPLETE** ✅
   - Multiple Stall Product Assignment (choose 0 to many stalls per item) — **COMPLETE** ✅
   - ImageKit product photo upload integration — **COMPLETE** ✅
   - WebSocket server for KHQR live notification — **NEXT**
   - KHQR webhook → Telegram dispatch (2-line hook, after WebSocket) — **PENDING**
+
+- **Enforced Multi-Owner Data Isolation & Security across Backend Operations**:
+  - Added an `owner_id` column to the `users` table to link managers and cashiers to their business owners.
+  - Signed the authenticated owner's user ID (`owner_id`) into the JWT token payload.
+  - Implemented data-scoping filters on `GET /api/stalls`, `GET /api/users`, `GET /api/products`, `GET /api/orders`, and `GET /api/reports/daily` so that logged-in users only retrieve resources belonging to their business.
+  - Hardened route mutations (`create/update/delete`) for stalls, products, and users to perform server-side checks preventing cross-owner updates.
+  - Updated seeding logic to assign the correct `owner_id` to managers and cashiers under each owner.
+  - Synchronized `erd.md`, `schema.sql`, and `queries.sql` to maintain 100% database schema parity.
+
+- **Refactored local demo database seeding system to be modular, ERD-aligned, and multi-owner supporting**:
+  - Replaced the monolithic `seed-demo-data.js` script with a clean driver entry point `backend/src/scripts/seed.js`.
+  - Separated concerns into modular seeder modules under `backend/src/scripts/seeders/` including `data.js` (static configurations), `helpers.js` (pricing/date utilities), `users.js` (user seeding), `stalls.js` (stall creation and staff assignments), `menu.js` (menu items catalog), and `orders.js` (orders, order items, audit logs, and Telegram tickets).
+  - Added support for seeding 3 distinct business owners (`owner`, `owner_bixby`, `owner_clara`), each with their own assigned manager, stalls, cashiers, product menu assignments, and transaction logs.
+  - Refactored order seeding to populate `telegram_tickets` for paid/pending orders to fully align the test data with `erd.md` definitions.
+  - Added mock `telegram_chat_id`s in stall seeds so that the Telegram KDS can be tested with seeded values.
+  - Updated `package.json` to map `npm run seed` to the new `seed.js` script.
+
+- **Added local Faker demo database seeding**:
+  - Installed `@faker-js/faker` in the backend and added `npm run seed`.
+  - Added a safe upsert seeder for owner/manager/cashier users, stalls, cashier assignments, categories, products, per-stall prices, and recent fake order history.
+  - Marked seeded audit-log details so repeat seed runs skip duplicate fake order generation while preserving existing project data.
+  - Documented the seed command, local-only warning, and demo credentials in `backend/README.md`.
 
 - **Refactored product database structure to match the current ERD**:
   - Converted `categories` into global menu groups shared across stalls.

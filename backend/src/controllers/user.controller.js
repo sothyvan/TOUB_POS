@@ -5,6 +5,7 @@ import { hashPin } from '../utils/pin.util.js';
 const WEB_APP_ROLES = ['owner', 'manager', 'cashier'];
 const PASSWORD_ROLES = ['owner', 'manager'];
 const ROLE_MANAGEMENT_RULES = {
+  admin: ['owner','manager', 'cashier'],
   owner: ['manager', 'cashier'],
   manager: ['cashier'],
   cashier: [],
@@ -106,7 +107,8 @@ async function applyUpdateCredentialRules(updateData, existingRole, targetRole, 
  */
 export async function getUsers(req, res, next) {
   try {
-    const users = await userRepository.findAllUsers();
+    const ownerId = req.user.role === 'owner' ? req.user.id : req.user.owner_id;
+    const users = await userRepository.findAllUsersByOwnerId(ownerId);
     const visibleUsers = normalizeRole(req.user?.role) === 'manager'
       ? users.filter((user) => normalizeRole(user.role) === 'cashier')
       : users;
@@ -145,11 +147,13 @@ export async function createUser(req, res, next) {
       return res.status(400).json(credentialError(credentialData.error));
     }
 
+    const ownerId = req.user.role === 'owner' ? req.user.id : req.user.owner_id;
     const userId = await userRepository.insertUser({
       username: normalizedUsername,
       password_hash: credentialData.password_hash,
-      pin: credentialData.pin,
+      pin_hash: credentialData.pin,
       role: normalizedRole,
+      owner_id: ownerId,
     });
     res.status(201).json({ success: true, data: { id: userId, username: normalizedUsername, role: normalizedRole } });
   } catch (err) {
@@ -164,9 +168,14 @@ export async function updateUser(req, res, next) {
   try {
     const { id } = req.params;
     const { username, password, pin, role, is_active } = req.body;
+
+    const ownerId = req.user.role === 'owner' ? req.user.id : req.user.owner_id;
     const existingUser = await userRepository.findUserById(id);
     if (!existingUser) {
       return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+    if (existingUser.owner_id !== ownerId) {
+      return res.status(403).json({ success: false, message: 'Forbidden: User belongs to another owner.' });
     }
     if (!canManageRole(req.user?.role, existingUser.role)) {
       return res.status(403).json({ success: false, message: rolePermissionMessage(req.user?.role) });
@@ -224,9 +233,13 @@ export async function updateUser(req, res, next) {
 export async function deleteUser(req, res, next) {
   try {
     const { id } = req.params;
+    const ownerId = req.user.role === 'owner' ? req.user.id : req.user.owner_id;
     const existingUser = await userRepository.findUserById(id);
     if (!existingUser) {
       return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+    if (existingUser.owner_id !== ownerId) {
+      return res.status(403).json({ success: false, message: 'Forbidden: User belongs to another owner.' });
     }
     if (!canManageRole(req.user?.role, existingUser.role)) {
       return res.status(403).json({ success: false, message: rolePermissionMessage(req.user?.role) });
