@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../middleware/auth.middleware.js';
-import { getStalls, createStall, updateStall, deleteStall, assignStaff, unassignStaff } from '../controllers/stall.controller.js';
+import { getStalls, createStall, updateStall, deleteStall, assignStaff, unassignStaff, registerDevice } from '../controllers/stall.controller.js';
 
 const router = Router();
 
@@ -24,5 +24,8 @@ router.post('/:id/staff', assignStaff);
 
 // DELETE /api/stalls/:id/staff/:userId — Remove a user from this stall
 router.delete('/:id/staff/:userId', unassignStaff);
+
+// POST   /api/stalls/:id/register-device — Register terminal to a stall
+router.post('/:id/register-device', registerDevice);
 
 export default router;

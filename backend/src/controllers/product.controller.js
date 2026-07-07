@@ -44,11 +44,15 @@ function normalizeImageUrl(value) {
   return { ok: true, value: trimmed };
 }
 
-async function validateProductStalls(res, stallIds) {
+async function validateProductStalls(res, stallIds, ownerId) {
   for (const id of stallIds) {
     const stall = await stallRepository.findStallById(id);
     if (!stall) {
       res.status(404).json({ success: false, message: `Stall with ID ${id} not found.` });
+      return false;
+    }
+    if (stall.owner_id !== ownerId) {
+      res.status(403).json({ success: false, message: `Forbidden: Stall with ID ${id} belongs to another owner.` });
       return false;
     }
   }
@@ -77,7 +81,8 @@ export async function getProducts(req, res, next) {
       const products = await productRepository.findAllProductsForStall(stall.id, { is_visible: true });
       return res.json({ success: true, data: products });
     }
-    const products = await productRepository.findAllProducts({});
+    const ownerId = req.user.role === 'owner' ? req.user.id : req.user.owner_id;
+    const products = await productRepository.findAllProductsByOwnerId(ownerId);
     res.json({ success: true, data: products });
   } catch (err) {
     next(err);
@@ -129,7 +134,8 @@ export async function createProduct(req, res, next) {
       }
     }
 
-    const stallsValid = await validateProductStalls(res, validatedStallIds);
+    const ownerId = req.user.role === 'owner' ? req.user.id : req.user.owner_id;
+    const stallsValid = await validateProductStalls(res, validatedStallIds, ownerId);
     if (!stallsValid) {
       return;
     }
@@ -161,6 +167,12 @@ export async function updateProduct(req, res, next) {
   try {
     const { id } = req.params;
     const { name, price_usd, price_khr, image_url, is_visible, stall_id, stall_ids, category_id } = req.body;
+
+    const ownerId = req.user.role === 'owner' ? req.user.id : req.user.owner_id;
+    const isOwnerProduct = await productRepository.checkProductOwnership(id, ownerId);
+    if (!isOwnerProduct) {
+      return res.status(403).json({ success: false, message: 'Forbidden: Product does not belong to your stalls.' });
+    }
 
     const updateData = {};
     const assignmentData = {};
@@ -207,7 +219,7 @@ export async function updateProduct(req, res, next) {
         rawStallIds = stall_id ? [stall_id] : [];
       }
       validatedStallIds = rawStallIds.map(sid => parsePositiveInteger(sid)).filter(Boolean);
-      const stallsValid = await validateProductStalls(res, validatedStallIds);
+      const stallsValid = await validateProductStalls(res, validatedStallIds, ownerId);
       if (!stallsValid) {
         return;
       }
@@ -239,6 +251,12 @@ export async function updateProduct(req, res, next) {
 export async function deleteProduct(req, res, next) {
   try {
     const { id } = req.params;
+    const ownerId = req.user.role === 'owner' ? req.user.id : req.user.owner_id;
+    const isOwnerProduct = await productRepository.checkProductOwnership(id, ownerId);
+    if (!isOwnerProduct) {
+      return res.status(403).json({ success: false, message: 'Forbidden: Product does not belong to your stalls.' });
+    }
+
     const success = await productRepository.deleteProductById(id);
     if (!success) {
       return res.status(404).json({ success: false, message: 'Product not found.' });

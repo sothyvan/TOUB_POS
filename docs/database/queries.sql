@@ -7,41 +7,47 @@
 -- ── 1. USERS / STAFF CRUD (user.repository.js) ──────────────
 
 -- Find owner/manager by username (used for password login authentication)
-SELECT id, username, password AS password_hash, role, is_active 
+SELECT id, username, password AS password_hash, role, owner_id, is_active 
 FROM users 
 WHERE username = 'owner';
 
 -- Find user by ID (excluding password and PIN)
-SELECT id, username, role, is_active, created_at, updated_at
+SELECT id, owner_id, username, role, is_active, created_at, updated_at
 FROM users 
 WHERE id = 1;
 
 -- Find user by ID including PIN hash (PIN login only)
-SELECT id, username, role, pin, is_active
+SELECT id, username, role, pin, owner_id, is_active
 FROM users
 WHERE id = 2;
 
 -- List all users (excluding password and PIN)
-SELECT id, username, role, is_active, created_at, updated_at
+SELECT id, owner_id, username, role, is_active, created_at, updated_at
 FROM users 
 ORDER BY created_at DESC;
 
+-- List all users belonging to a specific owner (excluding password and PIN)
+SELECT id, owner_id, username, role, is_active, created_at, updated_at
+FROM users 
+WHERE owner_id = 1
+ORDER BY created_at DESC;
+
 -- Insert a new user account
-INSERT INTO users (username, password, pin, role, is_active)
-VALUES ('manager1', '$2b$10$hashedpasswordstring...', NULL, 'manager', TRUE);
+INSERT INTO users (username, password, pin, role, owner_id, is_active)
+VALUES ('manager1', '$2b$10$hashedpasswordstring...', NULL, 'manager', 1, TRUE);
 
 -- Insert a cashier account
-INSERT INTO users (username, password, pin, role, is_active)
-VALUES ('cashier1', NULL, '$2b$10$hashedpinstring...', 'cashier', TRUE);
+INSERT INTO users (username, password, pin, role, owner_id, is_active)
+VALUES ('cashier1', NULL, '$2b$10$hashedpinstring...', 'cashier', 1, TRUE);
 
 -- Update owner/manager credentials by ID
 UPDATE users
-SET username = 'manager1_updated', password = '$2b$10$newhashedpassword...', pin = NULL, role = 'manager', is_active = TRUE
+SET username = 'manager1_updated', password = '$2b$10$newhashedpassword...', pin = NULL, role = 'manager', owner_id = 1, is_active = TRUE
 WHERE id = 2;
 
 -- Update cashier details/PIN by ID
 UPDATE users 
-SET username = 'cashier1_updated', password = NULL, pin = '$2b$10$newhashedpinstring...', role = 'cashier', is_active = TRUE
+SET username = 'cashier1_updated', password = NULL, pin = '$2b$10$newhashedpinstring...', role = 'cashier', owner_id = 1, is_active = TRUE
 WHERE id = 2;
 
 -- Development-only credential storage migration
@@ -76,6 +82,12 @@ WHERE id = 2;
 -- List all stalls
 SELECT id, owner_id, name, location, device_token, telegram_chat_id, created_at, updated_at 
 FROM stalls 
+ORDER BY created_at DESC;
+
+-- List all stalls owned by a specific owner
+SELECT id, owner_id, name, location, device_token, telegram_chat_id, created_at, updated_at 
+FROM stalls 
+WHERE owner_id = 1
 ORDER BY created_at DESC;
 
 -- Find a stall by ID
@@ -140,6 +152,15 @@ FROM products p
 LEFT JOIN stall_products sp ON sp.product_id = p.id
 LEFT JOIN stalls s ON sp.stall_id = s.id
 LEFT JOIN categories c ON p.category_id = c.id
+ORDER BY p.created_at DESC;
+
+-- List all products assigned to a specific owner's stalls
+SELECT p.id, p.category_id, p.name, p.image_url, p.created_at, p.updated_at
+FROM products p
+INNER JOIN stall_products sp ON sp.product_id = p.id
+INNER JOIN stalls s ON sp.stall_id = s.id
+WHERE s.owner_id = 1
+GROUP BY p.id
 ORDER BY p.created_at DESC;
 
 -- List visible products sold by a cashier's assigned stall
@@ -319,11 +340,12 @@ WHERE id = 1;
 
 -- ── 7. DAILY REPORTING (report.controller.js) ─────────────
 
--- Fetch paid orders within date range (including stall names)
+-- Fetch paid orders within date range (including stall names) for a specific owner
 SELECT o.id, o.stall_id, o.payment_method, o.total_usd, o.created_at, s.name AS stall_name
 FROM orders o
 LEFT JOIN stalls s ON o.stall_id = s.id
 WHERE o.status = 'paid'
+  AND s.owner_id = 1
   AND o.created_at BETWEEN '2026-06-19 00:00:00' AND '2026-06-19 23:59:59';
 
 -- Development-only legacy order status migration used before Sequelize sync

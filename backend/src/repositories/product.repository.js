@@ -52,6 +52,59 @@ export function findAllProducts(whereClause = {}) {
 }
 
 /**
+ * Fetch all products assigned to a specific owner's stalls.
+ */
+export function findAllProductsByOwnerId(ownerId) {
+  return Product.findAll({
+    include: [
+      {
+        model: Category,
+        attributes: ['id', 'name', 'tone'],
+      },
+      {
+        model: ProductStall,
+        required: true,
+        include: [
+          {
+            model: Stall,
+            where: { owner_id: ownerId },
+            attributes: ['id', 'name', 'location'],
+          },
+        ],
+      },
+      {
+        model: Stall,
+        as: 'Stalls',
+        required: true,
+        where: { owner_id: ownerId },
+        attributes: ['id', 'name', 'location'],
+        through: {
+          attributes: ['id', 'price_usd', 'price_khr', 'is_visible'],
+        },
+      },
+    ],
+    order: [['created_at', 'DESC']],
+  });
+}
+
+/**
+ * Check if a product belongs to any stall owned by the specified owner.
+ */
+export async function checkProductOwnership(productId, ownerId) {
+  const count = await ProductStall.count({
+    where: { product_id: productId },
+    include: [
+      {
+        model: Stall,
+        where: { owner_id: ownerId },
+        required: true,
+      },
+    ],
+  });
+  return count > 0;
+}
+
+/**
  * Fetch products associated with a specific stall.
  */
 export function findAllProductsForStall(stallId, assignmentWhereClause = {}) {
