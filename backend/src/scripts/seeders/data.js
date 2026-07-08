@@ -9,9 +9,9 @@ export const OWNER_SEEDS = [
     username: 'owner',
     password: 'owner123',
     stalls: [
-      { name: 'Stall A - Drinks', location: 'Main Booth', telegram_chat_id: -1002003004001 },
-      { name: 'Stall B - Noodles', location: 'East Walkway', telegram_chat_id: -1002003004002 },
-      { name: 'Stall C - Snacks', location: 'Garden Corner', telegram_chat_id: -1002003004003 },
+      { name: 'Stall A - Drinks', location: 'Main Booth', telegram_chat_id: -1004305155093 },
+      { name: 'Stall B - Noodles', location: 'East Walkway', telegram_chat_id: -1004305155093 },
+      { name: 'Stall C - Snacks', location: 'Garden Corner', telegram_chat_id: -1004305155093 },
     ],
     managers: [
       { username: 'manager_demo', password: 'manager123' },
@@ -49,8 +49,8 @@ export const OWNER_SEEDS = [
     username: 'owner_bixby',
     password: 'owner123',
     stalls: [
-      { name: 'Stall D - BBQ', location: 'North Pavilion', telegram_chat_id: -1002003004004 },
-      { name: 'Stall E - Bakery', location: 'West Arcade', telegram_chat_id: -1002003004005 },
+      { name: 'Stall D - BBQ', location: 'North Pavilion', telegram_chat_id: -1004305155093 },
+      { name: 'Stall E - Bakery', location: 'West Arcade', telegram_chat_id: -1004305155093 },
     ],
     managers: [
       { username: 'manager_bixby', password: 'manager123' },
@@ -82,8 +82,8 @@ export const OWNER_SEEDS = [
     username: 'owner_clara',
     password: 'owner123',
     stalls: [
-      { name: 'Stall F - Juice', location: 'South Terrace', telegram_chat_id: -1002003004006 },
-      { name: 'Stall G - Dessert', location: 'Food Court', telegram_chat_id: -1002003004007 },
+      { name: 'Stall F - Juice', location: 'South Terrace', telegram_chat_id: -1004305155093 },
+      { name: 'Stall G - Dessert', location: 'Food Court', telegram_chat_id: -1004305155093 },
     ],
     managers: [
       { username: 'manager_clara', password: 'manager123' },
