@@ -99,18 +99,20 @@ async function startServer() {
 
     // Auto-seed default platform admin user for local development only.
     // Business owner accounts should be created by platform_admin through the user API.
-    const userCount = await User.count();
-    if (process.env.NODE_ENV !== 'production' && userCount === 0) {
-      const hashedPassword = await bcrypt.hash('platform123', 10);
-      await User.create({
-        username: 'platform_admin',
-        password: hashedPassword,
-        pin: null,
-        role: 'platform_admin',
-        owner_id: null,
-        is_active: true,
-      });
-      console.log('[server] Seeded default platform admin user (username: platform_admin, password: platform123).');
+    if (process.env.NODE_ENV !== 'production') {
+      const adminCount = await User.count({ where: { username: process.env.PLATFORM_ADMIN_USERNAME } });
+      if (adminCount === 0) {
+        const hashedPassword = await bcrypt.hash(process.env.PLATFORM_ADMIN_PASSWORD, 10);
+        await User.create({
+          username: process.env.PLATFORM_ADMIN_USERNAME,
+          password: hashedPassword,
+          pin: null,
+          role: process.env.PLATFORM_ADMIN_ROLE,
+          owner_id: null,
+          is_active: true,
+        });
+        console.log(`[server] Seeded default platform admin user (username: ${process.env.PLATFORM_ADMIN_USERNAME}, password: ${process.env.PLATFORM_ADMIN_PASSWORD}).`);
+      }
     }
 
     // Start server
