@@ -31,7 +31,9 @@ import {
   UserPlus,
   Settings,
   ArrowRight,
-  ShoppingCart
+  ShoppingCart,
+  MoreHorizontal,
+  MoreVertical
 } from 'lucide-react';
 
 const iconMap = {
@@ -69,7 +71,9 @@ const iconMap = {
   userPlus: UserPlus,
   settings: Settings,
   arrowRight: ArrowRight,
-  shoppingCart: ShoppingCart
+  shoppingCart: ShoppingCart,
+  moreHorizontal: MoreHorizontal,
+  moreVertical: MoreVertical
 };
 
 export default function Icon({

@@ -14,7 +14,6 @@ import { errorHandler } from './middleware/error.middleware.js';
 import { requestLogger } from './middleware/logger.middleware.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerDocument } from './config/swagger.js';
-import { getCorsOptions } from './config/env.js';
 
 const app = express();
 
@@ -22,7 +21,28 @@ const app = express();
 app.use(helmet({
   contentSecurityPolicy: false,
 }));
-app.use(cors(getCorsOptions()));
+app.use(cors({
+  origin(origin, callback) {
+    const isDev = process.env.NODE_ENV !== 'production';
+    const allowedOrigin = process.env.FRONTEND_ORIGIN || (isDev ? 'http://localhost:5173' : null);
+
+    if (isDev) {
+      if (!origin || /^https?:\/\/localhost(:\d+)?$/.test(origin) || /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) {
+        return callback(null, true);
+      }
+    }
+
+    if (!allowedOrigin) {
+      return callback(new Error('FRONTEND_ORIGIN is required when NODE_ENV is production.'));
+    }
+
+    if (!origin || origin === allowedOrigin) {
+      return callback(null, true);
+    }
+
+    callback(new Error(`CORS origin is not allowed: ${origin}`));
+  },
+}));
 app.use(express.json());
 app.use(requestLogger);
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));

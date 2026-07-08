@@ -1,80 +1,10 @@
 import 'dotenv/config';
-import dns from 'node:dns';
 import bcrypt from 'bcryptjs';
-import { validateEnvironment } from './config/env.js';
-
-// Force DNS resolution to prefer IPv4 over IPv6
-dns.setDefaultResultOrder('ipv4first');
-import { runDevelopmentMigrations } from './services/development-migration.service.js';
 
 const PORT = process.env.PORT || 3000;
 
-async function migrateLegacyOrderStatuses(sequelize) {
-  if (process.env.NODE_ENV !== 'development') {
-    return;
-  }
-
-  const [tables] = await sequelize.query("SHOW TABLES LIKE 'orders';");
-  if (tables.length === 0) {
-    return;
-  }
-
-  await sequelize.query(
-    "ALTER TABLE `orders` MODIFY `status` ENUM('pending', 'completed', 'pending_payment', 'paid', 'cancelled') NOT NULL DEFAULT 'pending';"
-  );
-
-  const [, pendingMetadata] = await sequelize.query(
-    "UPDATE `orders` SET `status` = 'pending_payment' WHERE `status` = 'pending';"
-  );
-  const [, completedMetadata] = await sequelize.query(
-    "UPDATE `orders` SET `status` = 'paid' WHERE `status` = 'completed';"
-  );
-
-  await sequelize.query(
-    "ALTER TABLE `orders` MODIFY `status` ENUM('pending_payment', 'paid', 'cancelled') NOT NULL DEFAULT 'pending_payment';"
-  );
-
-  const migratedCount = (pendingMetadata?.affectedRows || 0) + (completedMetadata?.affectedRows || 0);
-  if (migratedCount > 0) {
-    console.log(`[server] Migrated ${migratedCount} legacy order status value(s).`);
-  }
-}
-
-async function migratePhase5KhqrMetadata(sequelize) {
-  if (process.env.NODE_ENV !== 'development') {
-    return;
-  }
-
-  const [orderTables] = await sequelize.query("SHOW TABLES LIKE 'orders';");
-  if (orderTables.length > 0) {
-    const [orderColumns] = await sequelize.query("SHOW COLUMNS FROM `orders` LIKE 'qr_md5';");
-    if (orderColumns.length === 0) {
-      await sequelize.query("ALTER TABLE `orders` ADD COLUMN `qr_md5` VARCHAR(64) DEFAULT NULL AFTER `qr_payload`;");
-    }
-
-    const [referenceColumns] = await sequelize.query("SHOW COLUMNS FROM `orders` LIKE 'payment_reference';");
-    if (referenceColumns.length === 0) {
-      await sequelize.query("ALTER TABLE `orders` ADD COLUMN `payment_reference` VARCHAR(100) DEFAULT NULL UNIQUE AFTER `qr_md5`;");
-    }
-
-    const [expiresColumns] = await sequelize.query("SHOW COLUMNS FROM `orders` LIKE 'payment_expires_at';");
-    if (expiresColumns.length === 0) {
-      await sequelize.query("ALTER TABLE `orders` ADD COLUMN `payment_expires_at` DATETIME DEFAULT NULL AFTER `payment_reference`;");
-    }
-  }
-
-  const [auditTables] = await sequelize.query("SHOW TABLES LIKE 'audit_logs';");
-  if (auditTables.length > 0) {
-    await sequelize.query(
-      "ALTER TABLE `audit_logs` MODIFY `action` ENUM('order_created', 'cash_payment_confirmed', 'khqr_payment_confirmed', 'order_cancelled') NOT NULL;"
-    );
-  }
-}
-
 async function startServer() {
   try {
-    validateEnvironment();
-
     const { default: app } = await import('./app.js');
     const { default: sequelize, ensureDatabaseExists } = await import('./config/db.js');
     const { User } = await import('./models/index.js');
@@ -87,10 +17,6 @@ async function startServer() {
     // Authenticate Sequelize connection
     await sequelize.authenticate();
     console.log('[server] Database connection established via Sequelize.');
-
-    await runDevelopmentMigrations(sequelize);
-    await migrateLegacyOrderStatuses(sequelize);
-    await migratePhase5KhqrMetadata(sequelize);
 
     // Sync schema in development
     const syncOptions = process.env.NODE_ENV === 'development' ? { alter: true } : {};

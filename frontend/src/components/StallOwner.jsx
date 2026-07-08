@@ -94,19 +94,22 @@ function PoolPill({ user, idx, assignedStall, selectedStallId, onDragStart, onCl
         style={avatarStyle(idx)}>
         {initials(user.name)}
       </div>
-      <div className="min-w-0 flex-1">
-        <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
+      <div className="min-w-0 flex-1" title={user.name}>
+        <p className="truncate" style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
           {user.name}
         </p>
-        <p style={{ margin: 0, fontSize: 11, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}>
+        <p className="truncate" style={{ margin: 0, fontSize: 11, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}>
           {user.role}
         </p>
       </div>
 
       {isAssigned && (
-        <div className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
-          isThisStall ? 'bg-[#eff6ff] text-[#1e40af]' : 'bg-[#f3f4f6] text-[#4b5563]'
-        }`}>
+        <div 
+          title={isThisStall ? 'This stall' : assignedStall.name}
+          className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 max-w-[90px] truncate ${
+            isThisStall ? 'bg-[#eff6ff] text-[#1e40af]' : 'bg-[#f3f4f6] text-[#4b5563]'
+          }`}
+        >
           {isThisStall ? 'This stall' : assignedStall.name}
         </div>
       )}
@@ -330,10 +333,10 @@ export default function StallOwner({ users = [] }) {
 
   return (
     <div
-      className="flex gap-4 h-full min-h-0 overflow-hidden"
+      className="flex flex-col xl:flex-row gap-4 h-full min-h-0 xl:overflow-hidden overflow-y-auto overflow-x-hidden pb-6 xl:pb-0"
       onDragEnd={() => { setIsDraggingFromRoster(false); setIsDropZoneOver(false); setIsPoolOver(false); }}
     >
-      <div className="flex flex-col bg-white rounded-2xl overflow-hidden" style={{ width: 280, minWidth: 240, flexShrink: 0 }}>
+      <div className="flex flex-col bg-white rounded-2xl shrink-0 w-full xl:w-[280px] xl:min-w-[240px] max-h-[300px] xl:max-h-none xl:h-auto xl:overflow-hidden">
         <div className="flex flex-col gap-1 px-5 pt-5 pb-3.5 border-b border-[#f3f4f6]">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: '#eef2ff' }}>
@@ -391,13 +394,13 @@ export default function StallOwner({ users = [] }) {
         </div>
       </div>
 
-      <div className="flex-1 bg-white rounded-2xl flex flex-col overflow-hidden min-w-0">
+      <div className="xl:flex-1 bg-white rounded-2xl flex flex-col min-w-0 w-full min-h-[350px] xl:min-h-0 xl:h-auto xl:overflow-hidden">
         <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-4 border-b border-[#f3f4f6]">
-          <div>
-            <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
+          <div className="min-w-0">
+            <h2 className="truncate" title={selectedStall ? `Current Roster: ${selectedStall.name}${selectedStall.location ? ` — ${selectedStall.location}` : ''}` : 'Select a Location'} style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
               {selectedStall ? `Current Roster: ${selectedStall.name}${selectedStall.location ? ` — ${selectedStall.location}` : ''}` : 'Select a Location'}
             </h2>
-            <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}>
+            <p className="truncate" title={selectedStall ? `${assignedUsers.length} staff currently assigned · click a card to manage` : 'Choose a location from the left'} style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}>
               {selectedStall ? `${assignedUsers.length} staff currently assigned · click a card to manage` : 'Choose a location from the left'}
             </p>
           </div>
@@ -426,8 +429,7 @@ export default function StallOwner({ users = [] }) {
       </div>
 
       <div
-        className="flex flex-col bg-white rounded-2xl overflow-hidden"
-        style={{ width: 280, minWidth: 240, flexShrink: 0 }}
+        className="flex flex-col bg-white rounded-2xl shrink-0 w-full xl:w-[280px] xl:min-w-[240px] h-[450px] xl:h-auto xl:overflow-hidden"
         onDragOver={(e) => { e.preventDefault(); setIsPoolOver(true); }}
         onDragLeave={() => setIsPoolOver(false)}
         onDrop={handlePoolDrop}

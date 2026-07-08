@@ -1,7 +1,6 @@
 /* eslint-disable no-console */
 import 'dotenv/config';
 import { faker } from '@faker-js/faker';
-import { validateEnvironment } from '../config/env.js';
 import sequelize, { ensureDatabaseExists } from '../config/db.js';
 import { seedUsers } from './seeders/users.js';
 import { seedStalls } from './seeders/stalls.js';
@@ -11,7 +10,6 @@ import { CASHIER_PIN, OWNER_SEEDS } from './seeders/data.js';
 
 async function main() {
   faker.seed(20260705);
-  validateEnvironment();
 
   await ensureDatabaseExists();
   await sequelize.authenticate();

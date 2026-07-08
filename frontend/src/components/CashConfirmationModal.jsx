@@ -48,33 +48,72 @@ export default function CashConfirmationModal({
         </p>
 
         <div className="rounded-2xl bg-gray-50 border border-gray-100 p-4 mb-4 text-left space-y-3">
-          <div className="flex items-center justify-between text-sm font-bold text-gray-500">
+          <div className="flex items-center justify-between text-sm font-bold text-gray-500 mb-2">
             <span>Order total</span>
-            <span className="text-xl text-gray-900">{money(totalAmount)}</span>
+            <div className="text-right">
+              <span className="text-xl text-gray-900">{money(totalAmount)}</span>
+              <span className="block text-xs text-gray-400">{Math.round(totalAmount * 4000).toLocaleString()} ៛</span>
+            </div>
           </div>
 
-          <label className="block">
-            <span className="block mb-2 text-xs font-black uppercase tracking-wide text-gray-500">
-              Cash received (USD)
-            </span>
-            <input
-              className="w-full h-13 rounded-xl border border-gray-200 bg-white px-4 text-2xl font-black text-gray-900 outline-none focus:border-brand-action focus:ring-4 focus:ring-brand-action/10 disabled:opacity-60"
-              type="number"
-              min="0"
-              step="0.01"
-              inputMode="decimal"
-              value={cashReceived}
-              disabled={isBusy}
-              onChange={(event) => setCashReceived(event.target.value)}
-              autoFocus
-            />
-          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="block mb-2 text-xs font-black uppercase tracking-wide text-gray-500">
+                Received (USD)
+              </span>
+              <div className="flex items-center w-full h-13 rounded-xl border border-gray-200 bg-white px-3 focus-within:border-brand-action focus-within:ring-4 focus-within:ring-brand-action/10 transition-all">
+                <span className="text-xl font-medium text-gray-400 mr-1">$</span>
+                <input
+                  className="w-full text-2xl font-black text-gray-900 bg-transparent outline-none disabled:opacity-60 p-0"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={cashReceived}
+                  disabled={isBusy}
+                  onChange={(event) => setCashReceived(event.target.value)}
+                  autoFocus
+                />
+              </div>
+            </label>
+            <label className="block">
+              <span className="block mb-2 text-xs font-black uppercase tracking-wide text-gray-500">
+                Received (KHR)
+              </span>
+              <div className="flex items-center w-full h-13 rounded-xl border border-gray-200 bg-white px-3 focus-within:border-brand-action focus-within:ring-4 focus-within:ring-brand-action/10 transition-all">
+                <input
+                  className="w-full text-2xl font-black text-gray-900 bg-transparent outline-none disabled:opacity-60 p-0"
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputMode="numeric"
+                  value={cashReceived === '' || isNaN(parsedCashReceived) ? '' : Math.round(parsedCashReceived * 4000)}
+                  disabled={isBusy}
+                  onChange={(event) => {
+                    const val = event.target.value;
+                    if (val === '') {
+                      setCashReceived('');
+                    } else {
+                      const usd = parseFloat(val) / 4000;
+                      setCashReceived(usd.toString());
+                    }
+                  }}
+                />
+                <span className="text-xl font-bold text-gray-400 ml-1">៛</span>
+              </div>
+            </label>
+          </div>
 
           <div className="flex items-center justify-between rounded-xl bg-white border border-gray-100 px-4 py-3">
             <span className="text-sm font-bold text-gray-500">Change due</span>
-            <span className={`text-2xl font-black ${isUnderpaid ? 'text-state-danger' : 'text-state-success'}`}>
-              {money(Math.max(changeDue, 0))}
-            </span>
+            <div className="text-right">
+              <span className={`block text-2xl font-black ${isUnderpaid ? 'text-state-danger' : 'text-state-success'}`}>
+                {money(Math.max(changeDue, 0))}
+              </span>
+              <span className={`block text-sm font-bold mt-0.5 ${isUnderpaid ? 'text-state-danger/70' : 'text-gray-400'}`}>
+                {Math.round(Math.max(changeDue, 0) * 4000).toLocaleString()} ៛
+              </span>
+            </div>
           </div>
         </div>
 

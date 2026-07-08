@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import Icon from './ui/Icon';
 import CategoryOwner from './CategoryOwner';
 import { money } from '../utils/format';
@@ -46,75 +46,131 @@ function Toggle({ checked, onChange }) {
 
 function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete }) {
   const category = categories.find(c => c.id === product.categoryId);
+  const [showMenu, setShowMenu] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [product.image]);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    
+    function handleClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setShowMenu(false);
+      }
+    }
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [showMenu]);
 
   return (
     <div
-      className="flex items-center gap-4 cursor-pointer transition-all duration-100"
+      className={`relative flex flex-col md:flex-row md:items-center gap-0 md:gap-4 cursor-pointer transition-all duration-200 rounded-2xl md:rounded-none border border-gray-200 md:border-0 md:border-b md:border-b-gray-50 bg-white md:bg-transparent overflow-hidden ${isSelected ? 'md:bg-indigo-50/50 border-indigo-200 shadow-sm ring-2 ring-indigo-500/20' : 'hover:shadow-lg md:hover:shadow-none hover:-translate-y-0.5 md:hover:translate-y-0 shadow-sm md:shadow-none'}`}
       style={{
-        padding: '12px 22px',
-        borderBottom: '1px solid #f9fafb',
-        background: isSelected ? '#f5f3ff' : 'transparent',
+        padding: '0', // Mobile relies on internal padding, desktop uses custom md: padding class
+        background: isSelected ? '#f5f3ff' : undefined,
       }}
       onClick={() => onEdit(product)}
     >
-      {/* Thumbnail */}
-      <div className="w-10 h-10 rounded-[9px] overflow-hidden shrink-0 border border-[#f3f4f6]"
-        style={{ background: '#f9fafb' }}>
-        {product.image
-          ? <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-          : <div className="w-full h-full flex items-center justify-center text-[9px] font-bold text-[#9ca3af]">IMG</div>
-        }
+      <div className="md:hidden absolute top-3 left-3 z-10">
+        <StatusBadge active={product.available} activeLabel="In Stock" inactiveLabel="Out of Stock" className="shadow-sm" />
       </div>
 
-      {/* Name */}
-      <div style={{ flex: '1 1 200px', minWidth: 0 }}>
-        <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111827', fontFamily: 'Inter, sans-serif', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {product.name}
-        </p>
-        {stalls && stalls.length > 0 && (
-          <p style={{ margin: '2px 0 0', fontSize: 11, color: '#6b7280', fontFamily: 'Inter, sans-serif', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {product.stallIds && product.stallIds.length > 0
-              ? stalls.filter(s => product.stallIds.includes(s.id)).map(s => s.name).join(', ')
-              : 'No assigned stalls'}
-          </p>
+      <div className="md:hidden flex items-center justify-center absolute top-3 right-3 z-10" ref={menuRef}>
+        <button 
+          type="button" 
+          onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
+          className="w-8 h-8 rounded-full bg-white/90 backdrop-blur shadow-sm flex items-center justify-center text-gray-700 hover:bg-white active:scale-95 transition-all border border-gray-100 cursor-pointer"
+        >
+           <Icon name="moreVertical" className="w-4 h-4 text-gray-600" />
+        </button>
+        {showMenu && (
+          <div className="absolute top-10 right-0 w-36 bg-white rounded-xl shadow-xl border border-gray-100 p-1 flex flex-col gap-1">
+             <button type="button" onClick={(e) => { e.stopPropagation(); setShowMenu(false); onEdit(product); }} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 text-left border-0 bg-transparent cursor-pointer">
+               <Icon name="edit" className="w-3.5 h-3.5 text-blue-600" strokeWidth={2} />
+               <span className="text-sm font-medium text-blue-600">Edit</span>
+             </button>
+             <button type="button" onClick={(e) => { e.stopPropagation(); setShowMenu(false); onDelete(product.id); }} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-50 text-left border-0 bg-transparent cursor-pointer">
+               <Icon name="delete" className="w-3.5 h-3.5 text-red-600" strokeWidth={2} />
+               <span className="text-sm font-medium text-red-600">Delete</span>
+             </button>
+          </div>
         )}
       </div>
 
-      {/* Category */}
-      <div style={{ flex: '0 0 90px' }}>
-        <span style={{ fontSize: 12, fontWeight: 500, color: '#6b7280', fontFamily: 'Inter, sans-serif' }}>
-          {category?.name ?? '—'}
-        </span>
-      </div>
+      <div className="flex flex-col md:flex-row md:items-center gap-0 md:gap-4 w-full h-full md:px-5 md:py-3">
+        {/* Thumbnail */}
+        <div className="w-full aspect-[4/3] md:aspect-auto md:w-[40px] md:h-10 shrink-0 md:rounded-[9px] overflow-hidden border-b border-gray-100 md:border md:border-gray-100 bg-gray-50">
+          {product.image && !imgError
+            ? <img src={product.image} alt={product.name} className="w-full h-full object-cover" onError={() => setImgError(true)} />
+            : <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-gray-400">
+                <Icon name="product" className="w-6 h-6 md:hidden" strokeWidth={1.5} />
+                <span className="text-[11px] md:text-[9px] font-bold tracking-widest md:tracking-normal">IMG</span>
+              </div>
+          }
+        </div>
 
-      {/* Price USD + KHR */}
-      <div style={{ flex: '0 0 110px' }}>
-        <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
-          {money(product.price)}
-        </p>
-        <p style={{ margin: 0, fontSize: 11, fontWeight: 400, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}>
-          {toKHR(product.price)}៛
-        </p>
-      </div>
+        {/* Info Area */}
+        <div className="flex flex-col md:flex-row md:items-center gap-1.5 md:gap-4 p-3.5 md:p-0 flex-1 min-w-0 bg-white">
+          {/* Name */}
+          <div className="flex-1 min-w-[200px]">
+            <p className="truncate" style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
+              {product.name}
+            </p>
+            {stalls && stalls.length > 0 && (
+              <p className="truncate" style={{ margin: '2px 0 0', fontSize: 11, color: '#6b7280', fontFamily: 'Inter, sans-serif' }}>
+                {product.stallIds && product.stallIds.length > 0
+                  ? stalls.filter(s => product.stallIds.includes(s.id)).map(s => s.name).join(', ')
+                  : 'No stalls'}
+              </p>
+            )}
+          </div>
 
-      {/* Status badge */}
-      <div style={{ flex: '0 0 90px' }}>
-        <StatusBadge active={product.available} activeLabel="In Stock" inactiveLabel="Out of Stock" />
-      </div>
+          {/* Category */}
+          <div className="hidden md:block w-[90px] shrink-0">
+            <span style={{ fontSize: 12, fontWeight: 500, color: '#6b7280', fontFamily: 'Inter, sans-serif' }}>
+              {category?.name ?? '—'}
+            </span>
+          </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
-        <button type="button" onClick={() => onEdit(product)}
-          className="flex items-center gap-1 cursor-pointer border-0 bg-transparent hover:opacity-70 transition-all px-1 py-0.5">
-          <Icon name="edit" className="w-3 h-3" style={{ color: '#003ec7' }} strokeWidth={2} />
-          <span style={{ fontSize: 12, fontWeight: 600, color: '#003ec7', fontFamily: 'Inter, sans-serif' }}>Edit</span>
-        </button>
-        <span style={{ color: '#e5e7eb', fontSize: 16, lineHeight: 1, userSelect: 'none' }}>|</span>
-        <button type="button" onClick={() => onDelete(product.id)}
-          className="flex items-center gap-1 cursor-pointer border-0 bg-transparent hover:opacity-70 transition-all px-1 py-0.5">
-          <Icon name="delete" className="w-3 h-3" style={{ color: '#ef4444' }} strokeWidth={2} />
-          <span style={{ fontSize: 12, fontWeight: 600, color: '#ef4444', fontFamily: 'Inter, sans-serif' }}>Del</span>
-        </button>
+          {/* Price USD + KHR */}
+          <div className="w-[110px] shrink-0 flex items-center justify-between md:block">
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
+              {money(product.price)}
+            </p>
+            <p style={{ margin: 0, fontSize: 12, fontWeight: 500, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}>
+              {toKHR(product.price)}៛
+            </p>
+          </div>
+
+          {/* Status badge */}
+          <div className="hidden md:block w-[90px] shrink-0">
+            <StatusBadge active={product.available} activeLabel="In Stock" inactiveLabel="Out of Stock" />
+          </div>
+
+          {/* Actions */}
+          <div className="hidden md:flex items-center gap-1 w-[80px] shrink-0" onClick={e => e.stopPropagation()}>
+            <button type="button" onClick={() => onEdit(product)}
+              className="flex items-center gap-1 cursor-pointer border-0 bg-transparent hover:opacity-70 transition-all px-1 py-0.5">
+              <Icon name="edit" className="w-3 h-3" style={{ color: '#003ec7' }} strokeWidth={2} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: '#003ec7', fontFamily: 'Inter, sans-serif' }}>Edit</span>
+            </button>
+            <span style={{ color: '#e5e7eb', fontSize: 16, lineHeight: 1, userSelect: 'none' }}>|</span>
+            <button type="button" onClick={() => onDelete(product.id)}
+              className="flex items-center gap-1 cursor-pointer border-0 bg-transparent hover:opacity-70 transition-all px-1 py-0.5">
+              <Icon name="delete" className="w-3 h-3" style={{ color: '#ef4444' }} strokeWidth={2} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: '#ef4444', fontFamily: 'Inter, sans-serif' }}>Del</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -122,7 +178,6 @@ function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete 
 
 // ── Editor panel ──────────────────────────────────────────────────────────────
 function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsError, onSave, onCancel, isNew }) {
-  const liveKHR = toKHR(form.price);
   const [uploadProgress, setUploadProgress] = useState(null);
   const [uploadError, setUploadError] = useState('');
   const [isUploading, setIsUploading] = useState(false);
@@ -160,7 +215,7 @@ function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsE
   };
 
   return (
-    <div className="flex flex-col bg-white rounded-2xl overflow-hidden h-full border border-[#e5e7eb]" style={{ minWidth: 340, maxWidth: 465 }}>
+    <div className="flex flex-col bg-white rounded-2xl overflow-hidden h-full border border-[#e5e7eb] shadow-2xl md:shadow-none w-full md:min-w-[340px] md:max-w-[465px]">
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-[#f3f4f6]" style={{ minHeight: 80 }}>
         <div>
@@ -348,16 +403,22 @@ function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsE
               placeholder="2.00"
               required
             />
-            <div className="grid gap-1.5 text-brand-text text-[13px] font-bold">
-              <span>Price (KHR) — auto</span>
-              <div className="flex items-center border border-[#e5e7eb] rounded-xl px-3"
-                style={{ height: 46, background: '#f9fafb' }}>
-                <span style={{ fontSize: 14, fontFamily: 'Inter, sans-serif', color: '#111827', fontWeight: 600 }}>
-                  {liveKHR}
-                </span>
-                <span style={{ fontSize: 14, color: '#9ca3af', marginLeft: 2 }}>៛</span>
-              </div>
-            </div>
+            <FormInput
+              label="Price (KHR)"
+              type="number" min="0" step="1"
+              value={form.price === '' || isNaN(parseFloat(form.price)) ? '' : Math.round(parseFloat(form.price) * KHR_RATE)}
+              onChange={e => {
+                const val = e.target.value;
+                if (val === '') {
+                  setForm(f => ({ ...f, price: '' }));
+                } else {
+                  const usd = parseFloat(val) / KHR_RATE;
+                  setForm(f => ({ ...f, price: usd.toString() }));
+                }
+              }}
+              placeholder="8000"
+              required
+            />
           </div>
 
           {/* Availability */}
@@ -606,28 +667,17 @@ export default function MenuCatalog({
           </div>
 
           {/* Column headers */}
-          <div className="flex items-center gap-4 px-5 py-2 border-b border-[#f3f4f6]"
-            style={{ background: '#fafafa' }}>
-            {[
-              { label: 'Photo',    flex: '0 0 40px'  },
-              { label: 'Name',     flex: '1 1 200px' },
-              { label: 'Category', flex: '0 0 90px'  },
-              { label: 'Price',    flex: '0 0 110px' },
-              { label: 'Status',   flex: '0 0 90px'  },
-              { label: 'Actions',  flex: '0 0 80px'  },
-            ].map(col => (
-              <span key={col.label} style={{
-                flex: col.flex, fontSize: 11, fontWeight: 700,
-                color: '#9ca3af', fontFamily: 'Inter, sans-serif',
-                textTransform: 'uppercase', letterSpacing: '0.05em',
-              }}>
-                {col.label}
-              </span>
-            ))}
+          <div className="hidden md:flex items-center gap-4 px-5 py-2 border-b border-[#f3f4f6] bg-[#fafafa]">
+            <span className="w-[40px] shrink-0 text-[11px] font-bold text-gray-400 uppercase tracking-wider font-sans">Photo</span>
+            <span className="flex-1 min-w-[200px] text-[11px] font-bold text-gray-400 uppercase tracking-wider font-sans">Name</span>
+            <span className="w-[90px] shrink-0 text-[11px] font-bold text-gray-400 uppercase tracking-wider font-sans">Category</span>
+            <span className="w-[110px] shrink-0 text-[11px] font-bold text-gray-400 uppercase tracking-wider font-sans">Price</span>
+            <span className="w-[90px] shrink-0 text-[11px] font-bold text-gray-400 uppercase tracking-wider font-sans">Status</span>
+            <span className="w-[80px] shrink-0 text-[11px] font-bold text-gray-400 uppercase tracking-wider font-sans">Actions</span>
           </div>
 
           {/* Rows */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto p-4 md:p-0">
             {loading ? (
               <div className="flex flex-col items-center justify-center h-40 gap-2 text-[#9ca3af]">
                 <span style={{ fontSize: 13, fontFamily: 'Inter, sans-serif' }} className="animate-pulse">Loading products...</span>
@@ -638,35 +688,42 @@ export default function MenuCatalog({
                 <span style={{ fontSize: 13, fontFamily: 'Inter, sans-serif' }}>No products found</span>
               </div>
             ) : (
-              filtered.map(product => (
-                <ProductRow
-                  key={product.id}
-                  product={product}
-                  categories={categories}
-                  stalls={stalls}
-                  isSelected={editingProduct?.id === product.id}
-                  onEdit={openEditor}
-                  onDelete={handleDelete}
-                  onToggle={onToggleProductAvailability}
-                />
-              ))
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:flex md:flex-col gap-4 md:gap-0">
+                {filtered.map(product => (
+                  <ProductRow
+                    key={product.id}
+                    product={product}
+                    categories={categories}
+                    stalls={stalls}
+                    isSelected={editingProduct?.id === product.id}
+                    onEdit={openEditor}
+                    onDelete={handleDelete}
+                    onToggle={onToggleProductAvailability}
+                  />
+                ))}
+              </div>
             )}
           </div>
         </div>
 
         {/* Right — editor panel (shown when editing) */}
         {editingProduct !== null && (
-          <EditorPanel
-            form={editingProduct}
-            setForm={setEditing}
-            categories={categories}
-            stalls={stalls}
-            stallsLoading={stallsLoading}
-            stallsError={stallsError}
-            onSave={handleSave}
-            onCancel={handleCancel}
-            isNew={!editingProduct.id}
-          />
+          <>
+            <div className="md:hidden fixed inset-0 z-40 bg-gray-900/40 backdrop-blur-sm" onClick={handleCancel} />
+            <div className="fixed md:static inset-x-4 top-16 bottom-4 md:inset-auto z-50 md:z-auto">
+              <EditorPanel
+                form={editingProduct}
+                setForm={setEditing}
+                categories={categories}
+                stalls={stalls}
+                stallsLoading={stallsLoading}
+                stallsError={stallsError}
+                onSave={handleSave}
+                onCancel={handleCancel}
+                isNew={!editingProduct.id}
+              />
+            </div>
+          </>
         )}
       </div>
     </div>
