@@ -56,6 +56,24 @@ function parsePositiveInteger(value, fieldName) {
   return number;
 }
 
+function parseUsdCents(value, fieldName) {
+  const text = String(value ?? '').trim();
+  if (!/^\d+(\.\d{1,2})?$/.test(text)) {
+    throw httpError(`${fieldName} must be a positive USD amount with up to 2 decimals.`, 400);
+  }
+
+  const number = Number(text);
+  if (!Number.isFinite(number) || number <= 0) {
+    throw httpError(`${fieldName} must be greater than 0.`, 400);
+  }
+
+  return Math.round(number * 100);
+}
+
+function centsToUsd(cents) {
+  return (cents / 100).toFixed(2);
+}
+
 function normalizePaymentMethod(paymentMethod) {
   const normalized = String(paymentMethod || '').trim().toLowerCase();
   if (!ALLOWED_PAYMENT_METHODS.has(normalized)) {
@@ -394,7 +412,7 @@ export async function createOrder(cashierId, items, paymentMethod) {
   return getOrderById(createdOrderId);
 }
 
-export async function confirmCashPayment(orderId, actor) {
+export async function confirmCashPayment(orderId, actor, cashReceivedUsd) {
   const parsedOrderId = parsePositiveInteger(orderId, 'order ID');
   const actorId = parsePositiveInteger(actor?.id, 'actor ID');
   const actorRole = String(actor?.role || '').toLowerCase();
@@ -433,7 +451,17 @@ export async function confirmCashPayment(orderId, actor) {
       throw httpError('Order is not pending payment.', 400);
     }
 
+    const orderTotalCents = parseUsdCents(order.total_usd, 'order total');
+    const cashReceivedCents = parseUsdCents(cashReceivedUsd, 'cash_received_usd');
+    if (cashReceivedCents < orderTotalCents) {
+      throw httpError('Cash received must be greater than or equal to the order total.', 400);
+    }
+
+    const changeDueCents = cashReceivedCents - orderTotalCents;
+
     order.status = 'paid';
+    order.cash_received_usd = centsToUsd(cashReceivedCents);
+    order.change_due_usd = centsToUsd(changeDueCents);
     order.completed_at = new Date();
     await order.save({ transaction });
 
@@ -445,6 +473,8 @@ export async function confirmCashPayment(orderId, actor) {
         cashier_id: order.cashier_id,
         stall_id: order.stall_id,
         total_usd: Number(order.total_usd),
+        cash_received_usd: Number(centsToUsd(cashReceivedCents)),
+        change_due_usd: Number(centsToUsd(changeDueCents)),
         confirmed_by_role: actorRole,
       },
     }, { transaction });

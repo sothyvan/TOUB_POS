@@ -318,8 +318,22 @@ export const swaggerDocument = {
                 description: [
                     'Allowed for the creating cashier, or an owner/manager within the same business owner scope.',
                     'Only cash orders in pending_payment status can be confirmed.',
-                    'Confirmation changes status to paid, sets completed_at, and writes a cash_payment_confirmed audit log.'
+                    'Request includes cash_received_usd. Backend rejects underpayment, calculates change_due_usd, changes status to paid, sets completed_at, and writes a cash_payment_confirmed audit log.'
                 ].join(' '),
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                required: ['cash_received_usd'],
+                                properties: {
+                                    cash_received_usd: { type: 'string', example: '10.00' }
+                                }
+                            }
+                        }
+                    }
+                },
                 responses: {
                     200: { description: 'Cash payment confirmed and order marked paid' },
                     400: { $ref: '#/components/responses/BadRequest' },

@@ -87,7 +87,7 @@ Credential rules:
 - The backend calculates trusted prices and totals from MySQL.
 - Cash orders start as `pending_payment`.
 - Cash confirmation calls `POST /api/orders/:id/confirm-cash`.
-- The backend changes cash orders to `paid` and writes audit logs.
+- The cashier enters cash received; the frontend previews change, while the backend verifies the amount, calculates saved change due, changes cash orders to `paid`, and writes audit logs.
 - Order history loads from the backend, so clearing browser localStorage does not erase saved orders.
 
 KHQR Individual checkout displays the backend-generated QR payload and polls the TouB backend status-check endpoint. The frontend never calls Bakong directly and never receives the Bakong token. It only shows KHQR success after the backend marks the order as `paid` through Bakong md5/hash checking. Live payment WebSocket updates and Telegram kitchen dispatch are later phases.

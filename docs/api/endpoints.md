@@ -294,7 +294,16 @@ Allowed for:
 - owner within the same business
 - manager within the same business
 
-Only cash orders in `pending_payment` status can be confirmed. Confirmation changes the status to `paid`, sets `completed_at`, and writes a `cash_payment_confirmed` audit log.
+Only cash orders in `pending_payment` status can be confirmed. The request must include the customer cash amount. The backend rejects underpayment, calculates `change_due_usd`, changes the status to `paid`, sets `completed_at`, and writes a `cash_payment_confirmed` audit log.
+
+**Request body**
+```json
+{
+  "cash_received_usd": "20.00"
+}
+```
+
+The frontend must not send trusted fields such as `total`, `status`, `cashier_id`, `stall_id`, or `change_due_usd`.
 
 **Response `200`**
 ```json
@@ -303,10 +312,21 @@ Only cash orders in `pending_payment` status can be confirmed. Confirmation chan
   "data": {
     "id": 42,
     "status": "paid",
+    "total_usd": "7.00",
+    "cash_received_usd": "10.00",
+    "change_due_usd": "3.00",
     "completed_at": "2026-06-29T10:30:00.000Z"
   }
 }
 ```
+
+**Errors**
+| Code | Reason |
+|------|--------|
+| 400  | Missing/invalid cash amount or cash received is less than the order total |
+| 403  | Actor is not allowed for this order |
+| 404  | Order not found |
+| 409  | Order is already paid or cancelled |
 
 ### GET `/orders/mine`
 

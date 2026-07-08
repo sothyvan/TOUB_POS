@@ -72,11 +72,11 @@ export default function CashierPage() {
     setPendingPaymentMethod(method);
   };
 
-  const handleConfirmPayment = useCallback(async () => {
+  const handleConfirmPayment = useCallback(async (cashReceivedUsd) => {
     if (!pendingPaymentMethod) return;
     
     const method = pendingPaymentMethod;
-    const order = await handleCheckout(method);
+    const order = await handleCheckout(method, { cashReceivedUsd });
     if (order) {
       setPendingPaymentMethod(null);
       setActiveReceipt(order);
@@ -253,15 +253,18 @@ export default function CashierPage() {
         onClose={() => setActiveReceipt(null)}
       />
 
-      <CashConfirmationModal
-        isOpen={pendingPaymentMethod === 'CASH'}
-        isBusy={checkoutLoading}
-        error={checkoutError}
-        onCancel={() => {
-          if (!checkoutLoading) setPendingPaymentMethod(null);
-        }}
-        onConfirm={handleConfirmPayment}
-      />
+      {pendingPaymentMethod === 'CASH' ? (
+        <CashConfirmationModal
+          isOpen
+          total={total}
+          isBusy={checkoutLoading}
+          error={checkoutError}
+          onCancel={() => {
+            if (!checkoutLoading) setPendingPaymentMethod(null);
+          }}
+          onConfirm={handleConfirmPayment}
+        />
+      ) : null}
 
       <KhqrPaymentModal
         isOpen={pendingPaymentMethod === 'KHQR'}

@@ -36,6 +36,12 @@ Update this file after every meaningful implementation change.
   - Removed the KHQR demo account fallback; `BAKONG_ACCOUNT_ID` is now required for KHQR generation and paid-status validation.
   - Updated API docs, Swagger, payment flow docs, backend README, and architecture notes to reflect same-business order permissions and required Bakong account configuration.
 
+- **Implemented cash change calculation for cash confirmation**:
+  - Added backend-owned cash received/change tracking on orders with `cash_received_usd` and `change_due_usd`.
+  - Updated `POST /api/orders/:id/confirm-cash` so the cashier submits the cash amount received, while the backend rejects underpayment and calculates the saved change due.
+  - Updated the cashier cash confirmation modal to collect cash received, preview change, and show cash/change values on the receipt.
+  - Synchronized Sequelize, raw SQL schema/query docs, ERD, API docs, Swagger, payment flow docs, and active architecture notes.
+
 - **Enforced Multi-Owner Data Isolation & Security across Backend Operations**:
   - Added an `owner_id` column to the `users` table to link managers and cashiers to their business owners.
   - Signed the authenticated owner's user ID (`owner_id`) into the JWT token payload.

@@ -38,6 +38,16 @@ const Order = sequelize.define('Order', {
     allowNull: false,
     field: 'total_usd',
   },
+  cash_received_usd: {
+    type: DataTypes.DECIMAL(10, 2),
+    defaultValue: null,
+    field: 'cash_received_usd',
+  },
+  change_due_usd: {
+    type: DataTypes.DECIMAL(10, 2),
+    defaultValue: null,
+    field: 'change_due_usd',
+  },
   qr_payload: {
     type: DataTypes.TEXT,
     defaultValue: null,

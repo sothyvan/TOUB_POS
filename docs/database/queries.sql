@@ -257,14 +257,27 @@ VALUES (2, 'order_created', 1, JSON_OBJECT('payment_method', 'cash', 'stall_id',
 
 -- Confirm a cash order after physical cash is received
 UPDATE orders
-SET status = 'paid', completed_at = NOW()
+SET status = 'paid',
+    cash_received_usd = 20.00,
+    change_due_usd = 4.25,
+    completed_at = NOW()
 WHERE id = 1
   AND payment_method = 'cash'
   AND status = 'pending_payment';
 
 -- Audit cash confirmation
 INSERT INTO audit_logs (actor_user_id, action, order_id, details)
-VALUES (2, 'cash_payment_confirmed', 1, JSON_OBJECT('confirmed_by_role', 'cashier', 'total_usd', 15.75));
+VALUES (
+  2,
+  'cash_payment_confirmed',
+  1,
+  JSON_OBJECT(
+    'confirmed_by_role', 'cashier',
+    'total_usd', 15.75,
+    'cash_received_usd', 20.00,
+    'change_due_usd', 4.25
+  )
+);
 
 -- Set KHQR payload after generating order
 UPDATE orders 
@@ -398,3 +411,8 @@ ADD COLUMN payment_expires_at DATETIME DEFAULT NULL AFTER payment_reference;
 
 ALTER TABLE audit_logs
 MODIFY action ENUM('order_created', 'cash_payment_confirmed', 'khqr_payment_confirmed', 'order_cancelled') NOT NULL;
+
+-- Development-only cash change columns for Phase 5.6-style cash confirmation
+ALTER TABLE orders
+ADD COLUMN cash_received_usd DECIMAL(10, 2) DEFAULT NULL AFTER total_usd,
+ADD COLUMN change_due_usd DECIMAL(10, 2) DEFAULT NULL AFTER cash_received_usd;

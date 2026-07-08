@@ -68,6 +68,8 @@ erDiagram
         enum status "pending_payment, paid, cancelled"
         decimal subtotal_usd
         decimal total_usd
+        decimal cash_received_usd "nullable cash"
+        decimal change_due_usd "nullable cash"
         text qr_payload "nullable KHQR"
         varchar qr_md5 "nullable KHQR"
         varchar payment_reference UK "nullable KHQR"
@@ -128,6 +130,7 @@ erDiagram
 ## Notes
 
 - `order_items.name`, `price_usd`, `price_khr`, `line_total_usd`, and `line_total_khr` are snapshots frozen at time of sale. They survive product edits or deletion.
+- `orders.cash_received_usd` and `orders.change_due_usd` are stored for cash orders after backend confirmation. The frontend may preview change, but the backend calculates the saved value.
 - `orders.qr_payload`, `qr_md5`, `payment_reference`, and `payment_expires_at` are populated for KHQR orders and remain `NULL` for cash orders.
 - `orders.payment_reference` is the unique bill number/reference used by the KHQR webhook.
 - `users.username` is required and unique for every role.

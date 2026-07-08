@@ -69,7 +69,7 @@
 - The backend loads product prices from MySQL, calculates trusted subtotal/total values, snapshots item names/prices, and creates the order as `pending_payment`.
 - Cash confirmation uses `POST /api/orders/:id/confirm-cash`.
 - Cash confirmation is allowed for the creating Cashier, or an Owner/Manager within the same business owner scope.
-- Successful cash confirmation changes `orders.status` to `paid`, sets `completed_at`, and writes a `cash_payment_confirmed` audit log.
+- Successful cash confirmation requires `cash_received_usd`, rejects underpayment, stores backend-calculated `change_due_usd`, changes `orders.status` to `paid`, sets `completed_at`, and writes a `cash_payment_confirmed` audit log.
 - The frontend must not create paid orders locally or submit trusted fields such as totals, status, `cashier_id`, or `stall_id`.
 
 ## KHQR Individual Payment Flow (Phase 5)
@@ -110,7 +110,7 @@
 - **Category**: Global menu group shared across stalls.
 - **Product**: Shared catalog item metadata with name, category, and image.
 - **StallProduct**: Junction that maps a `Product` to a `Stall` and stores that stall's `price_usd`, `price_khr`, and visibility.
-- **Order**: A transaction. Belongs to a `User` (cashier) and a `Stall`. Has payment method, status, and totals.
+- **Order**: A transaction. Belongs to a `User` (cashier) and a `Stall`. Has payment method, status, totals, KHQR metadata when relevant, and cash received/change fields when cash is confirmed.
 - **OrderItem**: Links `Order` to `Product`. Stores quantity, price snapshot, and **`notes`** (modifiers like "no ice").
 - **AuditLog**: Records sensitive POS actions such as order creation and cash payment confirmation, including the actor, action, order, details, and timestamp.
 - **TelegramTicket**: Tracks Telegram kitchen dispatch state for an order, including Telegram message/chat IDs, send status, and cook completion timestamp.

@@ -208,11 +208,11 @@ Platform Admin can create Owner accounts only. Owners can manage Manager and Cas
 | GET | `/api/orders` | Owner / Manager | Fetch all orders |
 | GET | `/api/orders/:id` | Creating Cashier / Same-Business Owner / Manager | Fetch one order for status polling |
 | POST | `/api/orders/:id/check-khqr-status` | Creating Cashier / Same-Business Owner / Manager | Check KHQR payment by Bakong md5/hash |
-| POST | `/api/orders/:id/confirm-cash` | Creating Cashier / Same-Business Owner / Manager | Mark cash order as paid |
+| POST | `/api/orders/:id/confirm-cash` | Creating Cashier / Same-Business Owner / Manager | Confirm cash received and mark cash order as paid |
 
 Order creation accepts only product IDs, quantities, optional notes, and payment method. The backend derives cashier/stall, calculates trusted totals from MySQL, snapshots item names/prices, and rejects client-submitted trusted fields such as totals, status, `cashier_id`, and `stall_id`.
 
-Cash orders start as `pending_payment`. Cash confirmation changes the status to `paid` and writes a `cash_payment_confirmed` audit log.
+Cash orders start as `pending_payment`. Cash confirmation requires `cash_received_usd`; the backend rejects underpayment, calculates `change_due_usd`, changes the status to `paid`, and writes a `cash_payment_confirmed` audit log.
 
 KHQR orders also start as `pending_payment`. The backend requires `BAKONG_ACCOUNT_ID`, generates Individual KHQR data, stores the QR payload, md5, payment reference, and expiry. The frontend asks the backend to run `POST /api/orders/:id/check-khqr-status`; the backend calls Bakong Open API by md5/hash and marks the order `paid` only after amount/currency/destination-account validation.
 

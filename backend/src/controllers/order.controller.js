@@ -13,6 +13,10 @@ const FORBIDDEN_ORDER_FIELDS = [
   'total_usd',
   'paid',
   'status',
+  'cash_received_usd',
+  'cashReceivedUsd',
+  'change_due_usd',
+  'changeDueUsd',
   'qr_payload',
   'qrPayload',
   'qr_md5',
@@ -25,6 +29,25 @@ const FORBIDDEN_ORDER_FIELDS = [
   'completedAt',
   'created_at',
   'updated_at',
+];
+
+const FORBIDDEN_CASH_CONFIRM_FIELDS = [
+  'id',
+  'orderId',
+  'stall_id',
+  'stallId',
+  'cashier_id',
+  'cashierId',
+  'subtotal',
+  'subtotal_usd',
+  'total',
+  'total_usd',
+  'status',
+  'paid',
+  'change_due_usd',
+  'changeDueUsd',
+  'completed_at',
+  'completedAt',
 ];
 
 function hasOwn(object, key) {
@@ -63,7 +86,17 @@ export async function createOrder(req, res, next) {
  */
 export async function confirmCashPayment(req, res, next) {
   try {
-    const order = await orderService.confirmCashPayment(req.params.id, req.user);
+    const body = req.body || {};
+    const forbiddenFields = FORBIDDEN_CASH_CONFIRM_FIELDS.filter((field) => hasOwn(body, field));
+    if (forbiddenFields.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cash confirmation cannot include trusted fields: ${forbiddenFields.join(', ')}.`,
+      });
+    }
+
+    const cashReceivedUsd = body.cash_received_usd ?? body.cashReceivedUsd;
+    const order = await orderService.confirmCashPayment(req.params.id, req.user, cashReceivedUsd);
     res.json({ success: true, data: order });
   } catch (error) {
     next(error);

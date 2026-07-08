@@ -55,7 +55,7 @@ export function useOrders(isOnline, cart, clearCart, currentUser) {
     .filter((order) => order.status === 'paid')
     .reduce((sum, o) => sum + (o.total || 0), 0);
 
-  const handleCheckout = async (method) => {
+  const handleCheckout = async (method, options = {}) => {
     if (!cart.length) {
       alert('Add at least one item before checkout.');
       return null;
@@ -81,7 +81,7 @@ export function useOrders(isOnline, cart, clearCart, currentUser) {
       const createdOrder = await api.orders.create(orderPayload);
 
       const finalOrder = normalizedMethod === 'CASH'
-        ? await api.orders.confirmCash(createdOrder.id)
+        ? await api.orders.confirmCash(createdOrder.id, options.cashReceivedUsd)
         : createdOrder;
 
       await fetchOrders(false);

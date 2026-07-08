@@ -48,6 +48,10 @@ export function createOrderWithItems({ cashier, stall, stallProducts }) {
   });
 
   return sequelize.transaction(async (transaction) => {
+    const cashReceivedUsd = isPaid && paymentMethod === 'cash'
+      ? roundUsd(subtotalUsd + faker.helpers.arrayElement([0, 0.25, 0.5, 1, 5]))
+      : null;
+
     const order = await Order.create({
       stall_id: stall.id,
       cashier_id: cashier.id,
@@ -55,6 +59,8 @@ export function createOrderWithItems({ cashier, stall, stallProducts }) {
       status: isPaid ? 'paid' : 'pending_payment',
       subtotal_usd: subtotalUsd,
       total_usd: subtotalUsd,
+      cash_received_usd: cashReceivedUsd,
+      change_due_usd: cashReceivedUsd === null ? null : roundUsd(cashReceivedUsd - subtotalUsd),
       qr_payload: paymentMethod === 'khqr' ? `DEMO_KHQR_${faker.string.alphanumeric(16).toUpperCase()}` : null,
       completed_at: isPaid ? createdAt : null,
       createdAt,
@@ -94,6 +100,8 @@ export function createOrderWithItems({ cashier, stall, stallProducts }) {
           cashier_id: cashier.id,
           stall_id: stall.id,
           total_usd: subtotalUsd,
+          cash_received_usd: cashReceivedUsd,
+          change_due_usd: roundUsd(cashReceivedUsd - subtotalUsd),
           confirmed_by_role: 'cashier',
         },
         created_at: createdAt,

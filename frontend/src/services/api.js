@@ -128,6 +128,12 @@ function mapOrderToFrontend(o) {
     serviceFee: 0,
     estimatedTax: 0,
     total: parseFloat(o.total_usd || 0),
+    cashReceived: o.cash_received_usd === null || o.cash_received_usd === undefined
+      ? null
+      : parseFloat(o.cash_received_usd),
+    changeDue: o.change_due_usd === null || o.change_due_usd === undefined
+      ? null
+      : parseFloat(o.change_due_usd),
     items: items.map(i => ({
       id: i.id,
       productId: i.product_id,
@@ -304,8 +310,11 @@ export const api = {
       const res = await apiRequest('/orders', { method: 'POST', body: payload });
       return mapOrderToFrontend(res.data);
     },
-    async confirmCash(orderId) {
-      const res = await apiRequest(`/orders/${orderId}/confirm-cash`, { method: 'POST' });
+    async confirmCash(orderId, cashReceivedUsd) {
+      const res = await apiRequest(`/orders/${orderId}/confirm-cash`, {
+        method: 'POST',
+        body: { cash_received_usd: cashReceivedUsd },
+      });
       return mapOrderToFrontend(res.data);
     },
   },

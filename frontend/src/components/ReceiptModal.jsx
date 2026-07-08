@@ -62,6 +62,19 @@ export default function ReceiptModal({ activeReceipt, onClose }) {
             variant="receipt"
           />
 
+          {activeReceipt.paymentMethod === 'CASH' && activeReceipt.cashReceived !== null ? (
+            <div className="border-t border-dashed border-gray-200 pt-4 mt-4 space-y-2 text-sm font-bold">
+              <div className="flex justify-between text-gray-500">
+                <span>Cash received</span>
+                <span className="text-gray-900">{money(activeReceipt.cashReceived)}</span>
+              </div>
+              <div className="flex justify-between text-gray-500">
+                <span>Change due</span>
+                <span className="text-state-success">{money(activeReceipt.changeDue || 0)}</span>
+              </div>
+            </div>
+          ) : null}
+
           {/* Metadata */}
           <div className="border-t border-dashed border-gray-200 pt-4 mt-4 text-[11px] text-gray-400 font-bold space-y-1">
             <div className="flex justify-between">
