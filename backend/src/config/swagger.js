@@ -22,13 +22,19 @@ const jwtResponse = {
                 type: 'object',
                 properties: {
                     success: { type: 'boolean', example: true },
-                    token: { type: 'string', example: '<jwt>' },
-                    user: {
+                    data: {
                         type: 'object',
                         properties: {
-                            id: { type: 'integer', example: 1 },
-                            username: { type: 'string', example: 'owner' },
-                            role: { type: 'string', enum: ['owner', 'manager', 'cashier'] }
+                            token: { type: 'string', example: '<jwt>' },
+                            user: {
+                                type: 'object',
+                                properties: {
+                                    id: { type: 'integer', example: 1 },
+                                    username: { type: 'string', example: 'owner' },
+                                    role: { type: 'string', enum: ['platform_admin', 'owner', 'manager', 'cashier'] },
+                                    owner_id: { type: 'integer', nullable: true, example: null }
+                                }
+                            }
                         }
                     }
                 }
@@ -44,8 +50,9 @@ export const swaggerDocument = {
         version: '1.0',
         description: [
             'TouB POS API documentation.',
-            'RBAC roles: owner, manager, cashier.',
-            'Owner/Manager use username + password. Cashier uses PIN login.',
+            'RBAC roles: platform_admin, owner, manager, cashier.',
+            'Platform Admin is a temporary API/bootstrap role for creating business owners only.',
+            'Platform Admin/Owner/Manager use username + password. Cashier uses PIN login.',
             'Protected routes require Authorization: Bearer <token>.',
             'Rate-limited auth endpoints may return 429.',
             'Bakong Open API tokens are backend-only; the frontend never calls Bakong directly.'
@@ -79,8 +86,8 @@ export const swaggerDocument = {
         },
         '/api/auth/login': {
             post: {
-                summary: 'Owner/Manager username-password login',
-                description: 'Issues a JWT for owner and manager accounts. Cashier accounts must use /api/auth/pin.',
+                summary: 'Platform Admin/Owner/Manager username-password login',
+                description: 'Issues a JWT for platform_admin, owner, and manager accounts. Cashier accounts must use /api/auth/pin. Platform Admin is API/bootstrap-only and does not access the management portal.',
                 security: [],
                 requestBody: {
                     required: true,
@@ -108,7 +115,7 @@ export const swaggerDocument = {
         '/api/auth/pin': {
             post: {
                 summary: 'Cashier PIN login',
-                description: 'Issues a JWT for cashier accounts using a bcrypt-hashed PIN. Owner/Manager accounts cannot use PIN login.',
+                description: 'Issues a JWT for cashier accounts using a bcrypt-hashed PIN. Platform Admin/Owner/Manager accounts cannot use PIN login.',
                 security: [],
                 requestBody: {
                     required: true,
@@ -249,16 +256,16 @@ export const swaggerDocument = {
         '/api/orders/{id}': {
             get: {
                 summary: 'Get one order',
-                description: 'Cashiers can fetch their own orders only. Owner/Manager can fetch any order. Passive order read.'
+                description: 'Cashiers can fetch their own orders only. Owner/Manager can fetch orders only within their own business owner scope. Passive order read.'
             }
         },
         '/api/orders/{id}/check-khqr-status': {
             post: {
                 summary: 'Check KHQR payment status',
                 description: [
-                    'Allowed for the creating cashier, owner, or manager.',
+                    'Allowed for the creating cashier, or an owner/manager within the same business owner scope.',
                     'Frontend calls this endpoint while the KHQR modal is open.',
-                    'The backend calls Bakong Open API by qr_md5 and validates amount/currency before marking paid.',
+                    'The backend calls Bakong Open API by qr_md5 and validates amount/currency/configured destination account before marking paid.',
                     'The Bakong Open API token is backend-only and is never exposed to the frontend.'
                 ].join(' '),
                 parameters: [
@@ -300,7 +307,7 @@ export const swaggerDocument = {
                     404: { $ref: '#/components/responses/NotFound' },
                     503: {
                         ...errorResponse,
-                        description: 'Bakong status checking is misconfigured'
+                        description: 'Bakong status checking or account configuration is misconfigured'
                     }
                 }
             }
@@ -309,7 +316,7 @@ export const swaggerDocument = {
             post: {
                 summary: 'Confirm cash payment',
                 description: [
-                    'Allowed for the creating cashier, owner, or manager.',
+                    'Allowed for the creating cashier, or an owner/manager within the same business owner scope.',
                     'Only cash orders in pending_payment status can be confirmed.',
                     'Confirmation changes status to paid, sets completed_at, and writes a cash_payment_confirmed audit log.'
                 ].join(' '),
@@ -325,11 +332,11 @@ export const swaggerDocument = {
         '/api/users': {
             get: {
                 summary: 'List users',
-                description: 'Owner/Manager only. Managers see/manage cashier accounts only. Password and PIN hashes are never returned.'
+                description: 'Platform Admin/Owner/Manager only. Platform Admin sees owner accounts only; Managers see/manage cashier accounts only. Password and PIN hashes are never returned.'
             },
             post: {
                 summary: 'Create user',
-                description: 'Owner can create owner, manager, and cashier users. Manager can create cashier users only. Owner/Manager require password; cashier requires PIN.'
+                description: 'Platform Admin can create owner accounts only. Owner can create manager and cashier users only. Manager can create cashier users only. Platform Admin/Owner/Manager require password; cashier requires PIN.'
             }
         },
         '/api/users/me/stall': {
@@ -341,11 +348,11 @@ export const swaggerDocument = {
         '/api/users/{id}': {
             put: {
                 summary: 'Update user',
-                description: 'Owner/Manager only, with server-side role and credential rules.'
+                description: 'Owner/Manager only, with server-side role and credential rules. Platform Admin cannot update users in this temporary bootstrap implementation.'
             },
             delete: {
                 summary: 'Delete user',
-                description: 'Owner/Manager only. Frontend destructive actions require typed confirmation.'
+                description: 'Owner/Manager only. Platform Admin cannot delete users in this temporary bootstrap implementation. Frontend destructive actions require typed confirmation.'
             }
         },
         '/api/stalls': {

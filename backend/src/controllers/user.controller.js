@@ -2,10 +2,10 @@ import bcrypt from 'bcryptjs';
 import * as userRepository from '../repositories/user.repository.js';
 import { hashPin } from '../utils/pin.util.js';
 
-const WEB_APP_ROLES = ['owner', 'manager', 'cashier'];
-const PASSWORD_ROLES = ['owner', 'manager'];
+const CUSTOMER_ROLES = ['owner', 'manager', 'cashier'];
+const PASSWORD_ROLES = ['platform_admin', 'owner', 'manager'];
 const ROLE_MANAGEMENT_RULES = {
-  admin: ['owner','manager', 'cashier'],
+  platform_admin: ['owner'],
   owner: ['manager', 'cashier'],
   manager: ['cashier'],
   cashier: [],
@@ -16,7 +16,7 @@ function normalizeRole(role) {
 }
 
 function isValidWebAppRole(role) {
-  return WEB_APP_ROLES.includes(role);
+  return CUSTOMER_ROLES.includes(role);
 }
 
 function canManageRole(actorRole, targetRole) {
@@ -41,9 +41,27 @@ function roleValidationMessage() {
 
 function rolePermissionMessage(actorRole) {
   const normalized = normalizeRole(actorRole);
-  if (normalized === 'owner')   {return 'Owners can create and manage manager and cashier users only.'};
-  if (normalized === 'manager') {return 'Managers can create and manage cashier users only.'};
+  if (normalized === 'platform_admin') {
+    return 'Platform admins can create owner accounts only.';
+  }
+  if (normalized === 'owner') {
+    return 'Owners can create and manage manager and cashier users only.';
+  }
+  if (normalized === 'manager') {
+    return 'Managers can create and manage cashier users only.';
+  }
   return 'Insufficient permissions to manage this user role.';
+}
+
+function ownerScopeForActor(user) {
+  const role = normalizeRole(user?.role);
+  if (role === 'platform_admin') {
+    return null;
+  }
+  if (role === 'owner') {
+    return user.id;
+  }
+  return user?.owner_id;
 }
 
 function isCashierRole(role) {
@@ -107,12 +125,17 @@ async function applyUpdateCredentialRules(updateData, existingRole, targetRole, 
  */
 export async function getUsers(req, res, next) {
   try {
-    const ownerId = req.user.role === 'owner' ? req.user.id : req.user.owner_id;
+    if (normalizeRole(req.user?.role) === 'platform_admin') {
+      const owners = await userRepository.findOwnerUsers();
+      return res.json({ success: true, data: owners });
+    }
+
+    const ownerId = ownerScopeForActor(req.user);
     const users = await userRepository.findAllUsersByOwnerId(ownerId);
     const visibleUsers = normalizeRole(req.user?.role) === 'manager'
       ? users.filter((user) => normalizeRole(user.role) === 'cashier')
       : users;
-    res.json({ success: true, data: visibleUsers });
+    return res.json({ success: true, data: visibleUsers });
   } catch (err) {
     next(err);
   }
@@ -132,14 +155,14 @@ export async function createUser(req, res, next) {
     if (!isValidWebAppRole(normalizedRole)) {
       return res.status(400).json({ success: false, message: roleValidationMessage() });
     }
+    if (!canManageRole(req.user?.role, normalizedRole)) {
+      return res.status(403).json({ success: false, message: rolePermissionMessage(req.user?.role) });
+    }
     if (isCashierRole(normalizedRole) && !pin) {
       return res.status(400).json({ success: false, message: 'pin is required for cashier users.' });
     }
     if (!isCashierRole(normalizedRole) && !password) {
       return res.status(400).json({ success: false, message: 'password is required for owner and manager users.' });
-    }
-    if (!canManageRole(req.user?.role, normalizedRole)) {
-      return res.status(403).json({ success: false, message: rolePermissionMessage(req.user?.role) });
     }
 
     const credentialData = await buildCreateCredentials(normalizedRole, password, pin);
@@ -147,7 +170,7 @@ export async function createUser(req, res, next) {
       return res.status(400).json(credentialError(credentialData.error));
     }
 
-    const ownerId = req.user.role === 'owner' ? req.user.id : req.user.owner_id;
+    const ownerId = ownerScopeForActor(req.user);
     const userId = await userRepository.insertUser({
       username: normalizedUsername,
       password_hash: credentialData.password_hash,
@@ -166,10 +189,14 @@ export async function createUser(req, res, next) {
  */
 export async function updateUser(req, res, next) {
   try {
+    if (normalizeRole(req.user?.role) === 'platform_admin') {
+      return res.status(403).json({ success: false, message: rolePermissionMessage(req.user?.role) });
+    }
+
     const { id } = req.params;
     const { username, password, pin, role, is_active } = req.body;
 
-    const ownerId = req.user.role === 'owner' ? req.user.id : req.user.owner_id;
+    const ownerId = ownerScopeForActor(req.user);
     const existingUser = await userRepository.findUserById(id);
     if (!existingUser) {
       return res.status(404).json({ success: false, message: 'User not found.' });
@@ -232,8 +259,12 @@ export async function updateUser(req, res, next) {
  */
 export async function deleteUser(req, res, next) {
   try {
+    if (normalizeRole(req.user?.role) === 'platform_admin') {
+      return res.status(403).json({ success: false, message: rolePermissionMessage(req.user?.role) });
+    }
+
     const { id } = req.params;
-    const ownerId = req.user.role === 'owner' ? req.user.id : req.user.owner_id;
+    const ownerId = ownerScopeForActor(req.user);
     const existingUser = await userRepository.findUserById(id);
     if (!existingUser) {
       return res.status(404).json({ success: false, message: 'User not found.' });

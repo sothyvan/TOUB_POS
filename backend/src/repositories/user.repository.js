@@ -72,6 +72,17 @@ export async function findAllUsersByOwnerId(ownerId) {
 }
 
 /**
+ * Fetch business owner accounts visible to the temporary platform admin.
+ */
+export async function findOwnerUsers() {
+  return User.findAll({
+    where: { role: 'owner' },
+    attributes: { exclude: ['password', 'pin'] },
+    order: [['created_at', 'DESC']],
+  });
+}
+
+/**
  * Update user by ID.
  */
 export async function updateUserById(id, data) {

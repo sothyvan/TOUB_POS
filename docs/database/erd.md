@@ -7,11 +7,11 @@ and the canonical MySQL schema in `docs/database/schema.sql`.
 erDiagram
     users {
         int id PK
-        int owner_id FK "nullable self-reference to owner user"
+        int owner_id FK "NULL for platform_admin/owner; owner for staff"
         varchar username
-        varchar password "nullable bcrypt hash for owner/manager"
+        varchar password "nullable bcrypt hash for platform_admin/owner/manager"
         varchar pin "nullable bcrypt hash for cashier"
-        enum role "owner, manager, cashier"
+        enum role "platform_admin, owner, manager, cashier"
         boolean is_active
         datetime created_at
         datetime updated_at
@@ -131,10 +131,10 @@ erDiagram
 - `orders.qr_payload`, `qr_md5`, `payment_reference`, and `payment_expires_at` are populated for KHQR orders and remain `NULL` for cash orders.
 - `orders.payment_reference` is the unique bill number/reference used by the KHQR webhook.
 - `users.username` is required and unique for every role.
-- `users.password` is used only for Owner/Manager username-password login and is `NULL` for Cashiers.
-- `users.pin` is used only for Cashier PIN login and is `NULL` for Owners/Managers.
+- `users.password` is used only for Platform Admin, Owner, and Manager username-password login and is `NULL` for Cashiers.
+- `users.pin` is used only for Cashier PIN login and is `NULL` for Platform Admins, Owners, and Managers.
 - `stall_staff` enforces a unique `(stall_id, user_id)` assignment pair.
-- `users.owner_id` links managers and cashiers to the specific business owner who manages them.
+- `users.owner_id` is `NULL` for `platform_admin` and business `owner` accounts. It links managers and cashiers to the specific business owner who manages them.
 - `order_items.notes` stores free-text modifiers ("no ice", "extra spicy") per line item.
 - `audit_logs` stores sensitive POS actions and links them back to the acting user and related order when available.
 - `telegram_tickets.status` tracks the kitchen ticket progress independently from the order payment status.

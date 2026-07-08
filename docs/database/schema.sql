@@ -9,15 +9,15 @@ USE toub_pos;
 
 -- ── Users / Staff ─────────────────────────────────────────
 -- Credential rules:
---   owner/manager: password stores bcrypt hash, pin must be NULL
+--   platform_admin/owner/manager: password stores bcrypt hash, pin must be NULL
 --   cashier: password must be NULL, pin stores bcrypt hash of 4-digit PIN
 CREATE TABLE users (
   id         INT AUTO_INCREMENT PRIMARY KEY,
-  owner_id   INT DEFAULT NULL,                         -- business owner responsible for the manager/cashier
+  owner_id   INT DEFAULT NULL,                         -- NULL for platform_admin/owner; owner ID for manager/cashier
   username   VARCHAR(50)  NOT NULL UNIQUE,
-  password   VARCHAR(255) DEFAULT NULL,                -- bcrypt hash for owner/manager login
+  password   VARCHAR(255) DEFAULT NULL,                -- bcrypt hash for platform_admin/owner/manager login
   pin        VARCHAR(255) DEFAULT NULL,                -- bcrypt hash for cashier PIN login
-  role       ENUM('owner', 'manager', 'cashier') NOT NULL DEFAULT 'cashier',
+  role       ENUM('platform_admin', 'owner', 'manager', 'cashier') NOT NULL DEFAULT 'cashier',
   is_active  BOOLEAN NOT NULL DEFAULT TRUE,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -153,10 +153,15 @@ CREATE TABLE telegram_tickets (
   FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
 
--- ── Seed: default owner account ───────────────────────────
--- Password: owner123 (replace bcrypt hash before production)
+-- ── Seed: development bootstrap platform admin ────────────
+-- Password: platform123 (replace bcrypt hash before production)
+INSERT INTO users (username, password, pin, role) VALUES
+  ('platform_admin', '$2b$10$examplehashreplaceme', NULL, 'platform_admin');
+
+-- Business owner accounts are normally created by platform_admin.
+-- Example owner password: owner123
 INSERT INTO users (username, password, pin, role) VALUES
   ('owner', '$2b$10$examplehashreplaceme', NULL, 'owner');
 
 -- ── Seed: example stall ───────────────────────────────────
-INSERT INTO stalls (owner_id, name, location) VALUES (1, 'Stall A - Drinks', 'Main Booth');
+INSERT INTO stalls (owner_id, name, location) VALUES (2, 'Stall A - Drinks', 'Main Booth');

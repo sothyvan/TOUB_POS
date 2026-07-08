@@ -9,31 +9,6 @@ import { runDevelopmentMigrations } from './services/development-migration.servi
 
 const PORT = process.env.PORT || 3000;
 
-async function migrateLegacyAdminRoles(sequelize) {
-  if (process.env.NODE_ENV !== 'development') {
-    return;
-  }
-
-  const [tables] = await sequelize.query("SHOW TABLES LIKE 'users';");
-  if (tables.length === 0) {
-    return;
-  }
-
-  await sequelize.query(
-    "ALTER TABLE `users` MODIFY `role` ENUM('admin', 'owner', 'manager', 'cashier') NOT NULL DEFAULT 'cashier';"
-  );
-
-  const [, metadata] = await sequelize.query("UPDATE `users` SET `role` = 'owner' WHERE `role` = 'admin';");
-
-  await sequelize.query(
-    "ALTER TABLE `users` MODIFY `role` ENUM('owner', 'manager', 'cashier') NOT NULL DEFAULT 'cashier';"
-  );
-
-  if (metadata?.affectedRows > 0) {
-    console.log(`[server] Migrated ${metadata.affectedRows} legacy admin user role(s) to owner.`);
-  }
-}
-
 async function migrateLegacyOrderStatuses(sequelize) {
   if (process.env.NODE_ENV !== 'development') {
     return;
@@ -114,7 +89,6 @@ async function startServer() {
     console.log('[server] Database connection established via Sequelize.');
 
     await runDevelopmentMigrations(sequelize);
-    await migrateLegacyAdminRoles(sequelize);
     await migrateLegacyOrderStatuses(sequelize);
     await migratePhase5KhqrMetadata(sequelize);
 
@@ -123,17 +97,20 @@ async function startServer() {
     await sequelize.sync(syncOptions);
     console.log('[server] Database models synchronized successfully.');
 
-    // Auto-seed default owner user for local development only
+    // Auto-seed default platform admin user for local development only.
+    // Business owner accounts should be created by platform_admin through the user API.
     const userCount = await User.count();
     if (process.env.NODE_ENV !== 'production' && userCount === 0) {
-      const hashedPassword = await bcrypt.hash('owner123', 10);
+      const hashedPassword = await bcrypt.hash('platform123', 10);
       await User.create({
-        username: 'owner',
+        username: 'platform_admin',
         password: hashedPassword,
-        role: 'owner',
+        pin: null,
+        role: 'platform_admin',
+        owner_id: null,
         is_active: true,
       });
-      console.log('[server] Seeded default owner user (username: owner, password: owner123).');
+      console.log('[server] Seeded default platform admin user (username: platform_admin, password: platform123).');
     }
 
     // Start server

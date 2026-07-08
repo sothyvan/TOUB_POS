@@ -7,7 +7,7 @@
  * 
  * However, MySQL will throw errors (like "Data truncated for column...") if you attempt to alter
  * constraints (e.g. shrinking ENUMs, adding NOT NULL fields) on tables that already contain legacy data
- * violating those rules (such as old 'admin' user roles, legacy order statuses, or products with NULL categories).
+ * violating those rules (such as legacy order statuses or products with NULL categories).
  * 
  * This service runs raw SQL queries *prior* to `sequelize.sync()` to clean up, backfill, or modify
  * existing data so the schema alteration can complete successfully.
@@ -17,28 +17,6 @@
  * - If you prefer a cleaner setup, you can drop your local database and let Sequelize recreate it empty,
  *   which bypasses the need for these migrations altogether.
  */
-
-async function migrateLegacyAdminRoles(sequelize) {
-  const [tables] = await sequelize.query("SHOW TABLES LIKE 'users';");
-  if (tables.length === 0) {
-    return;
-  }
-
-  await sequelize.query(
-    "ALTER TABLE `users` MODIFY `role` ENUM('admin', 'owner', 'manager', 'cashier') NOT NULL DEFAULT 'cashier';"
-  );
-
-  const [, metadata] = await sequelize.query("UPDATE `users` SET `role` = 'owner' WHERE `role` = 'admin';");
-
-  await sequelize.query(
-    "ALTER TABLE `users` MODIFY `role` ENUM('owner', 'manager', 'cashier') NOT NULL DEFAULT 'cashier';"
-  );
-
-  if (metadata?.affectedRows > 0) {
-    // eslint-disable-next-line no-console
-    console.log(`[migration] Migrated ${metadata.affectedRows} legacy admin user role(s) to owner.`);
-  }
-}
 
 async function migrateLegacyOrderStatuses(sequelize) {
   const [tables] = await sequelize.query("SHOW TABLES LIKE 'orders';");
@@ -262,7 +240,6 @@ export async function runDevelopmentMigrations(sequelize) {
     return;
   }
 
-  await migrateLegacyAdminRoles(sequelize);
   await migrateLegacyOrderStatuses(sequelize);
   await migrateLegacyCategoryOwner(sequelize);
   await migrateLegacyProductCategories(sequelize);

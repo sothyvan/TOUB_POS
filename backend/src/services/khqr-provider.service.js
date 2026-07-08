@@ -2,11 +2,16 @@ import khqrSdk from 'bakong-khqr';
 
 const { BakongKHQR, IndividualInfo, khqrData } = khqrSdk;
 
-const DEFAULT_ACCOUNT_ID = 'demo@bakong';
 const DEFAULT_MERCHANT_NAME = 'Toub POS';
 const DEFAULT_MERCHANT_CITY = 'PHNOM PENH';
 const DEFAULT_EXPIRATION_MINUTES = 10;
 const DEFAULT_MERCHANT_CATEGORY_CODE = '5999';
+
+function configurationError(message) {
+  const error = new Error(message);
+  error.status = 503;
+  return error;
+}
 
 function getExpirationMinutes() {
   const configured = Number(process.env.KHQR_EXPIRATION_MINUTES || DEFAULT_EXPIRATION_MINUTES);
@@ -19,6 +24,14 @@ function getExpirationMinutes() {
 function normalizeKhqrLabel(value, fallback, maxLength = 25) {
   const normalized = String(value || fallback || '').trim();
   return normalized.slice(0, maxLength);
+}
+
+function getRequiredBakongAccountId() {
+  const accountId = String(process.env.BAKONG_ACCOUNT_ID || '').trim();
+  if (!accountId) {
+    throw configurationError('BAKONG_ACCOUNT_ID is required for KHQR generation.');
+  }
+  return accountId;
 }
 
 function createReference(orderId) {
@@ -34,7 +47,7 @@ function buildPaymentContext({ order, stall, cashier }) {
     amount: Number(order.total_usd).toFixed(2),
     paymentReference,
     expiresAt,
-    accountId: process.env.BAKONG_ACCOUNT_ID || DEFAULT_ACCOUNT_ID,
+    accountId: getRequiredBakongAccountId(),
     merchantName: normalizeKhqrLabel(process.env.KHQR_MERCHANT_NAME, DEFAULT_MERCHANT_NAME),
     merchantCity: normalizeKhqrLabel(process.env.KHQR_MERCHANT_CITY, DEFAULT_MERCHANT_CITY, 15),
     storeLabel: normalizeKhqrLabel(stall?.name, `Stall ${order.stall_id}`),

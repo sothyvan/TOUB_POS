@@ -10,6 +10,7 @@ Update this file after every meaningful implementation change.
 - Phase 4: Backend-Owned Orders, Cash Confirmation, And Audit Logs — **COMPLETE**
 - Phase 4.5: Security Hardening — **COMPLETE**
 - Phase 5: Multi-Owner Data Isolation & Security — **COMPLETE** ✅
+- Phase 5.5: RBAC Hierarchy Cleanup — **COMPLETE** ✅
 - Phase 6: KDS & Live Payment WebSocket Integration — **IN PROGRESS**
   - Telegram KDS Bot (cash payment trigger) — **COMPLETE** ✅
   - Multiple Stall Product Assignment (choose 0 to many stalls per item) — **COMPLETE** ✅
@@ -19,6 +20,21 @@ Update this file after every meaningful implementation change.
   - Webgroup Migration Self-Healing & Done Callback updates — **COMPLETE** ✅
   - WebSocket server for KHQR live notification — **NEXT**
   - KHQR webhook → Telegram dispatch (2-line hook, after WebSocket) — **PENDING**
+
+- **Implemented Phase 5.5 RBAC Hierarchy Cleanup**:
+  - Finalized the active role hierarchy as `platform_admin`, `owner`, `manager`, and `cashier`.
+  - Removed the previous unsafe privileged-user creation path and all active compatibility handling for the former privileged role name.
+  - Added `platform_admin` as a temporary TouB POS team bootstrap role that can create business Owner accounts only.
+  - Confirmed that customer businesses allow one Owner account; extra supervisors should be Managers.
+  - Kept `platform_admin` API-only for now with no frontend platform console.
+  - Updated development startup seeding so an empty dev database creates `platform_admin/platform123`.
+  - Synchronized Sequelize, SQL schema/docs, API docs, Swagger docs, frontend role helpers, and active context documentation.
+
+- **Applied post-RBAC security audit fixes**:
+  - Scoped single-order access so Owner/Manager users can fetch, confirm cash payment, or check KHQR status only for orders belonging to their business owner scope.
+  - Hardened terminal registration so Owner/Manager users can register device tokens only for stalls belonging to their business owner scope.
+  - Removed the KHQR demo account fallback; `BAKONG_ACCOUNT_ID` is now required for KHQR generation and paid-status validation.
+  - Updated API docs, Swagger, payment flow docs, backend README, and architecture notes to reflect same-business order permissions and required Bakong account configuration.
 
 - **Enforced Multi-Owner Data Isolation & Security across Backend Operations**:
   - Added an `owner_id` column to the `users` table to link managers and cashiers to their business owners.
@@ -128,7 +144,7 @@ Update this file after every meaningful implementation change.
 - **Upgraded Phase 5 to real Bakong transaction status checking**:
   - Added backend-only Bakong Open API checking by stored KHQR `qr_md5` through `POST /api/orders/:id/check-khqr-status`.
   - Added `BAKONG_OPEN_API_BASE_URL` and backend-only `BAKONG_OPEN_API_TOKEN` configuration.
-  - Backend calls `/v1/check_transaction_by_md5`, normalizes provider responses, and validates amount/currency before marking an order `paid`.
+  - Backend calls `/v1/check_transaction_by_md5`, normalizes provider responses, and validates amount, currency, and configured destination account before marking an order `paid`.
   - Made already-paid checks idempotent so repeated polling does not duplicate `khqr_payment_confirmed` audit logs.
   - Updated KHQR modal polling to call the TouB backend status-check endpoint instead of passively reading order status.
   - Updated active docs, Swagger, architecture notes, and environment examples to show that the frontend never receives the Bakong Open API token.
@@ -210,54 +226,53 @@ Update this file after every meaningful implementation change.
 - **Implemented Owner / Manager / Cashier RBAC migration**:
   - Replaced active backend role enum and validation with `owner`, `manager`, and `cashier`.
   - Updated management API route guards so Owner and Manager can access operational management APIs, while Cashier remains blocked from management endpoints.
-  - Enforced backend user-management limits: Owner can manage Owner, Manager, and Cashier users; Manager can create/manage Cashier users only.
-  - Changed development default seed account from `admin/admin123` to `owner/owner123`.
+  - Enforced backend user-management limits: Owner can manage Manager and Cashier users; Manager can create/manage Cashier users only.
+  - Changed the development default seed account to `owner/owner123` at that time; Phase 5.5 later changed empty-database bootstrap to `platform_admin/platform123`.
   - Updated frontend route guards, login redirects, permission helpers, demo credential copy, seed users, and staff-management role options for the three-role model.
-  - Kept `/admin-portal` as the existing management route while removing active app-role dependence on `admin`.
+  - Kept the management portal while removing active app-role dependence on the old `admin` role.
   - Synchronized Sequelize role definitions with `docs/database/schema.sql` and `docs/database/queries.sql`.
   - Verified `backend/npm run lint`, `frontend/npm run lint`, and `frontend/npm run build`.
 
 - **Fixed local backend startup after RBAC migration**:
-  - Added a development-only startup compatibility migration that converts existing legacy `admin` user roles to `owner` before Sequelize tightens the `users.role` enum.
+  - Added a development-only startup compatibility migration that originally converted existing legacy `admin` user roles to `owner`; Phase 5.5 now maps old `admin` values to `platform_admin`.
   - Documented the matching raw SQL migration steps in `docs/database/queries.sql`.
 
 - **Implemented Phase 2 frontend JWT authentication integration**:
   - Added a Vite-compatible API client using `VITE_API_BASE_URL` with a `http://localhost:3000/api` fallback and automatic Bearer token attachment.
   - Added an auth/session provider that stores the backend JWT and current user, restores sessions after refresh, and clears sessions on logout or `401` responses.
-  - Replaced localStorage-based admin credential checks with `POST /api/auth/login`; admin portal login now requires a backend-authenticated `admin` user.
-  - Replaced `location.state` route guards with protected route logic for `/admin-portal` (`admin`) and `/cashier` (`cashier`).
+  - Replaced localStorage-based management credential checks with `POST /api/auth/login`; management portal login now requires a backend-authenticated Owner or Manager user.
+  - Replaced `location.state` route guards with protected route logic for the management portal and `/cashier`.
   - Kept the cashier avatar/PIN UI visible as a temporary flow, but stopped creating fake cashier auth sessions until a backend PIN endpoint exists.
   - Hid demo credentials outside development/demo mode and removed active frontend `manager` role options.
 
 - **Approved Owner / Manager / Cashier RBAC model**:
-  - Replaced the previous two-role product direction with three primary roles: Owner, Manager, and Cashier.
-  - Owner has full business/system control and can create Owner, Manager, and Cashier users.
+  - Replaced the previous two-role product direction with customer roles: Owner, Manager, and Cashier.
+  - Owner has full control over one customer business and can create Manager and Cashier users.
   - Manager handles day-to-day operations and can create/manage Cashier users only.
   - Cashier remains limited to stall-scoped POS sales and personal shift/order history.
-  - Updated project, architecture, and UI context to make this the official access-control direction before implementation.
+  - Phase 5.5 later added `platform_admin` as a separate TouB POS team bootstrap role for creating Owner accounts only.
 
 - **Implemented Phase 1 backend auth/security hardening**:
-  - Updated backend RBAC so `authorize()` supports string and array role inputs, while admin-only routes now use `authorize('admin')`.
-  - Removed `manager` from the backend user role model and SQL schema; user API role validation accepts only `admin` or `cashier`.
+  - Updated backend RBAC so `authorize()` supports string and array role inputs. Later phases replaced the early `admin`/`cashier` model with the current `platform_admin`/`owner`/`manager`/`cashier` hierarchy.
   - Added backend startup environment validation for `JWT_SECRET`, core DB settings, production `FRONTEND_ORIGIN`, and optional password-required DB setups.
   - Hardened login to reject inactive users with `403` after credential validation and kept JWT payload limited to `id`, `username`, and `role`.
   - Restricted CORS to `FRONTEND_ORIGIN`, with `http://localhost:5173` as the development fallback.
-  - Made default `admin/admin123` seeding non-production only and removed PIN/password exposure from user API responses.
+  - Made the then-default development seeding non-production only and removed PIN/password exposure from user API responses. Later phases replaced this with `platform_admin/platform123` bootstrap.
 
 - **Fixed cashier stall assignment source mismatch**:
   - Centralized default stall data and default stall assignments in `frontend/src/utils/stallUtils.js`.
   - Updated Cashier, Stall Management, Staff Directory, and Sales Reports assignment reads to use the same shared helper.
-  - Resolved the issue where Cashier Dara could appear assigned in the admin portal but be blocked from the cashier portal until an admin refresh or save.
+  - Resolved the issue where Cashier Dara could appear assigned in the management portal but be blocked from the cashier portal until a refresh or save.
 
 - **Enforced one-stall-per-cashier assignment in Stall Management**:
   - Updated roster drop assignment so assigning a cashier to a new stall first removes that cashier from every other stall roster.
   - Prevented Cashier Dara from appearing assigned to multiple stalls at the same time.
 
-- **Implemented routing for /admin-portal and isolated auth guards**:
-  - Defined `/admin-portal` route in `App.jsx` pointing to `OwnerPortalPage`.
-  - Extracted admin-only workspace, services, and routing hooks from `CashierPage.jsx` into a dedicated page `OwnerPortalPage.jsx`.
-  - Set up bidirectional auth guards on `/cashier` and `/admin-portal` to prevent cross-role access and auto-redirect users to their authorized workspace.
-  - Refactored `LoginPage.jsx` to navigate Admin/Manager users directly to `/admin-portal`.
+- **Implemented routing for the owner/manager portal and isolated auth guards**:
+  - Defined the management portal route in `App.jsx` pointing to `OwnerPortalPage`; the active route is now `/owner-portal`.
+  - Extracted management-only workspace, services, and routing hooks from `CashierPage.jsx` into a dedicated page `OwnerPortalPage.jsx`.
+  - Set up bidirectional auth guards on `/cashier` and the management portal to prevent cross-role access and auto-redirect users to their authorized workspace.
+  - Refactored `LoginPage.jsx` to navigate Owner/Manager users directly to the management portal.
   - Updated `AdminWorkspace.jsx` to delegate logout callbacks to the page router, eliminating inline page reloads.
 
 - **Consolidated and Reused QuantityInput component**:
@@ -432,9 +447,9 @@ Update this file after every meaningful implementation change.
   - Keep cook authorization Telegram-only, not web-app RBAC.
 
 - Future SaaS / Multi-Customer Platform Administration:
-  - Consider adding a separate `platform_admin` role for the TouB POS developer/operator team.
+  - `platform_admin` now exists as a temporary API-only bootstrap role for creating business Owner accounts.
   - Keep `platform_admin` outside customer business roles (`owner`, `manager`, `cashier`).
-  - Implement only when the system supports multiple customer businesses/tenants, subscription or license management, owner recovery, and audited support access.
+  - Build a real platform console only when the system supports subscriptions/licenses, owner recovery, and audited support access.
 
 ## Open Questions
 
@@ -457,8 +472,8 @@ Record of key architectural and product decisions made, with rationale.
 | 6 | **Cart state in `localStorage`** (not server) | Reduces backend round-trips during item selection. Cart is ephemeral — only persisted to DB at checkout. Acceptable trade-off for speed. |
 | 7 | **PIN validated client-side** (Phase 1) | Pragmatic shortcut for the initial build. Fast UX, no extra API call per login. Flagged as tech debt — must move server-side before production. |
 | 8 | **Telegram Bot for kitchen display** (not custom screen) | Eliminates the need for a dedicated kitchen hardware/display build. Cooks already use Telegram. Saves significant scope while delivering real-time order relay. |
-| 9 | **Three-role RBAC: Owner / Manager / Cashier** | Separates full business control from day-to-day operations. Owner can manage all roles and sensitive settings; Manager can operate the store and manage Cashiers only; Cashier remains stall-scoped to POS sales. |
-| 10 | **Future platform_admin is separate from store roles** | TouB POS may later need a developer/operator role for SaaS administration. This must be modeled outside customer RBAC so platform support access does not blur with Owner, Manager, or Cashier permissions. |
+| 9 | **Customer RBAC: Owner / Manager / Cashier** | Separates full business control from day-to-day operations. Each customer business has one Owner; extra supervisors should be Managers; Cashier remains stall-scoped to POS sales. |
+| 10 | **platform_admin is separate from customer roles** | TouB POS needs a developer/operator bootstrap role to create business Owners. It must stay outside customer RBAC so platform support access does not blur with Owner, Manager, or Cashier permissions. |
 | 11 | **KHQR Individual before Merchant KHQR** | Final-project scope does not have official MerchantID and AcquiringBank credentials. Individual KHQR can use owner/stall Bakong account ID and is easier to demo while keeping backend-owned payment status. |
 
 ---

@@ -18,7 +18,7 @@ import {
 } from './bakong-provider.service.js';
 
 const ALLOWED_PAYMENT_METHODS = new Set(['cash', 'khqr']);
-const CASH_CONFIRMATION_ROLES = new Set(['owner', 'manager']);
+const MANAGEMENT_ORDER_ROLES = new Set(['owner', 'manager']);
 const FORBIDDEN_ITEM_FIELDS = [
   'price',
   'price_usd',
@@ -110,9 +110,39 @@ function isVisibleStallProduct(stallProduct) {
   return stallProduct.is_visible === true || stallProduct.is_visible === 1;
 }
 
-function canAccessOrder(order, actorId, actorRole) {
-  return CASH_CONFIRMATION_ROLES.has(actorRole)
-    || (actorRole === 'cashier' && Number(order.cashier_id) === actorId);
+function getActorOwnerId(actor) {
+  const actorRole = String(actor?.role || '').toLowerCase();
+  if (actorRole === 'owner') {
+    return Number(actor.id);
+  }
+  if (actorRole === 'manager') {
+    return Number(actor.owner_id);
+  }
+  return null;
+}
+
+function getOrderOwnerId(order) {
+  return Number(order?.Stall?.owner_id ?? order?.stall?.owner_id);
+}
+
+function canAccessOrder(order, actor) {
+  const actorId = Number(actor?.id);
+  const actorRole = String(actor?.role || '').toLowerCase();
+
+  if (actorRole === 'cashier') {
+    return Number(order.cashier_id) === actorId;
+  }
+
+  if (MANAGEMENT_ORDER_ROLES.has(actorRole)) {
+    const actorOwnerId = getActorOwnerId(actor);
+    const orderOwnerId = getOrderOwnerId(order);
+    return Number.isInteger(actorOwnerId)
+      && Number.isInteger(orderOwnerId)
+      && actorOwnerId > 0
+      && actorOwnerId === orderOwnerId;
+  }
+
+  return false;
 }
 
 function isKhqrExpired(order) {
@@ -138,6 +168,10 @@ function assertBakongPaidResultMatchesOrder(order, providerResult) {
   }
 
   const expectedDestination = normalizeOptionalText(process.env.BAKONG_ACCOUNT_ID)?.toLowerCase();
+  if (!expectedDestination) {
+    throw httpError('BAKONG_ACCOUNT_ID is required for KHQR payment validation.', 503);
+  }
+
   const receivedDestination = normalizeOptionalText(providerResult.destinationAccount)?.toLowerCase();
   if (expectedDestination && receivedDestination && expectedDestination !== receivedDestination) {
     throw httpError('Bakong destination account does not match the configured Bakong account.', 400);
@@ -181,6 +215,15 @@ function buildOrderInclude() {
   ];
 }
 
+function buildOrderAccessInclude() {
+  return [
+    {
+      model: Stall,
+      attributes: ['id', 'owner_id'],
+    },
+  ];
+}
+
 export function getOrderById(orderId) {
   return Order.findByPk(orderId, {
     include: buildOrderInclude(),
@@ -189,19 +232,20 @@ export function getOrderById(orderId) {
 
 export async function getOrderForActor(orderId, actor) {
   const parsedOrderId = parsePositiveInteger(orderId, 'order ID');
-  const actorId = parsePositiveInteger(actor?.id, 'actor ID');
-  const actorRole = String(actor?.role || '').toLowerCase();
-  const order = await getOrderById(parsedOrderId);
+  parsePositiveInteger(actor?.id, 'actor ID');
+  const order = await Order.findByPk(parsedOrderId, {
+    include: buildOrderAccessInclude(),
+  });
 
   if (!order) {
     throw httpError('Order not found.', 404);
   }
 
-  if (!canAccessOrder(order, actorId, actorRole)) {
+  if (!canAccessOrder(order, actor)) {
     throw httpError('You cannot access this order.', 403);
   }
 
-  return order;
+  return getOrderById(parsedOrderId);
 }
 
 /**
@@ -360,6 +404,7 @@ export async function confirmCashPayment(orderId, actor) {
 
   try {
     const order = await Order.findByPk(parsedOrderId, {
+      include: buildOrderAccessInclude(),
       transaction,
       lock: true,
     });
@@ -368,9 +413,7 @@ export async function confirmCashPayment(orderId, actor) {
       throw httpError('Order not found.', 404);
     }
 
-    const isManagementUser = CASH_CONFIRMATION_ROLES.has(actorRole);
-    const isOwningCashier = actorRole === 'cashier' && Number(order.cashier_id) === actorId;
-    if (!isManagementUser && !isOwningCashier) {
+    if (!canAccessOrder(order, actor)) {
       throw httpError('You cannot confirm payment for this order.', 403);
     }
 
@@ -429,13 +472,15 @@ export async function checkKhqrPaymentStatus(orderId, actor) {
   const actorId = parsePositiveInteger(actor?.id, 'actor ID');
   const actorRole = String(actor?.role || '').toLowerCase();
   const checkMode = getBakongCheckMode();
-  const order = await Order.findByPk(parsedOrderId);
+  const order = await Order.findByPk(parsedOrderId, {
+    include: buildOrderAccessInclude(),
+  });
 
   if (!order) {
     throw httpError('Order not found.', 404);
   }
 
-  if (!canAccessOrder(order, actorId, actorRole)) {
+  if (!canAccessOrder(order, actor)) {
     throw httpError('You cannot check payment status for this order.', 403);
   }
 

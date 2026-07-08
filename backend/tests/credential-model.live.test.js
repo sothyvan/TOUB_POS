@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000/api';
 const OWNER_USERNAME = process.env.TEST_OWNER_USERNAME || 'owner';
 const OWNER_PASSWORD = process.env.TEST_OWNER_PASSWORD || 'owner123';
+const PLATFORM_ADMIN_USERNAME = process.env.TEST_PLATFORM_ADMIN_USERNAME || 'platform_admin';
+const PLATFORM_ADMIN_PASSWORD = process.env.TEST_PLATFORM_ADMIN_PASSWORD || 'platform123';
 
 function uniqueName(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -119,12 +121,34 @@ test('credential model rules are enforced through the live API', async (t) => {
   });
   expectStatus(managerWithPin, 400);
 
-  const ownerWithoutPassword = await apiRequest('/users', {
+  const ownerCreateOwner = await apiRequest('/users', {
     method: 'POST',
     token: ownerToken,
-    body: { username: uniqueName('bad_owner_no_password_test'), role: 'owner' },
+    body: { username: uniqueName('bad_owner_create_owner_test'), role: 'owner', password: 'OwnerPass123!' },
   });
-  expectStatus(ownerWithoutPassword, 400);
+  expectStatus(ownerCreateOwner, 403);
+
+  const platformAdminLogin = await apiRequest('/auth/login', {
+    method: 'POST',
+    body: { username: PLATFORM_ADMIN_USERNAME, password: PLATFORM_ADMIN_PASSWORD },
+  });
+
+  if (platformAdminLogin.response.status === 200) {
+    expectNoCredentialFields(platformAdminLogin.payload);
+    const platformAdminToken = platformAdminLogin.payload?.data?.token;
+    assert.ok(platformAdminToken, 'Platform admin login should return a JWT token.');
+
+    const platformOwnerList = await apiRequest('/users', { token: platformAdminToken });
+    expectStatus(platformOwnerList, 200);
+    expectNoCredentialFields(platformOwnerList.payload);
+
+    const platformManagerCreate = await apiRequest('/users', {
+      method: 'POST',
+      token: platformAdminToken,
+      body: { username: uniqueName('bad_platform_manager_test'), role: 'manager', password: 'ManagerPass123!' },
+    });
+    expectStatus(platformManagerCreate, 403);
+  }
 
   const cashierWithPassword = await apiRequest('/users', {
     method: 'POST',

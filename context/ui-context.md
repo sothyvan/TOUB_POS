@@ -4,7 +4,7 @@
 
 - **Target Environments:** Smartphone and tablet form factors deployed in high-noise, crowded, and fast-paced merchant environments.
 - **UI Architecture:** Adaptive layouts utilizing high-contrast visual cues and oversized touch targets.
-- **State Normalization:** All user actions are bounded by role privileges (`owner`, `manager`, `cashier`) encoded within the central JWT session.
+- **State Normalization:** Customer-facing user actions are bounded by role privileges (`owner`, `manager`, `cashier`) encoded within the central JWT session. The temporary `platform_admin` role is API/bootstrap-only and has no management UI yet.
 
 ## Role UI Rules
 

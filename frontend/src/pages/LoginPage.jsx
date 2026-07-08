@@ -25,8 +25,6 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!deviceRegistered || !deviceToken) {
-      setFlowStep('register');
-      setLoginMode('management');
       return;
     }
 
@@ -53,7 +51,7 @@ export default function LoginPage() {
         }
       });
     return () => { mounted = false; };
-  }, [deviceRegistered, deviceToken]);
+  }, [deviceRegistered, deviceToken, setDeviceRegistered, setDeviceToken]);
 
   useEffect(() => {
     if (!isAuthenticated || !currentUser) return;
@@ -233,7 +231,6 @@ export default function LoginPage() {
       setLoginMode={setLoginMode}
       flowStep={flowStep}
       setFlowStep={setFlowStep}
-      deviceRegistered={deviceRegistered}
       onDeregister={handleDeregister}
       activeCashiers={activeCashiers}
       selectedUser={selectedUser}

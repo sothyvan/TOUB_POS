@@ -51,7 +51,7 @@ frontend/src/
 | Path | Access | Description |
 |------|--------|-------------|
 | `/login` | Public | Owner/manager username-password login and cashier PIN login |
-| `/admin-portal` | `owner`, `manager` | Management portal; kept under the existing route name |
+| `/owner-portal` | `owner`, `manager` | Customer business management portal |
 | `/cashier` | `cashier` | Assigned-stall cashier workspace |
 | `*` | Public | Redirects to `/login` or the correct protected workspace |
 
@@ -69,11 +69,13 @@ Frontend route guards improve UX, but backend authorization remains the source o
 
 Credential rules:
 
-- Owner/Manager use username + password.
-- Owner/Manager accounts have no PIN.
+- Platform Admin/Owner/Manager use username + password.
+- Platform Admin/Owner/Manager accounts have no PIN.
 - Cashier uses PIN login.
 - Cashier PINs are hashed in the backend.
 - Cashier accounts do not need a password.
+
+`platform_admin` is API/bootstrap-only in the current project. It is used by the TouB POS team to create Owner accounts and does not have a frontend portal yet.
 
 ---
 

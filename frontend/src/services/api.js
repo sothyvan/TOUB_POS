@@ -226,9 +226,6 @@ export const api = {
       } else if (password) {
         payload.password = password;
       }
-      if (password) {
-        payload.password = password;
-      }
       if (item.id) {
         await apiRequest(`/users/${item.id}`, { method: 'PUT', body: payload });
         return { ...item };

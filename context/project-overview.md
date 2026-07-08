@@ -29,7 +29,7 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 
 ### Authentication & Device Provisioning
 
-- Sub-path routing: `/admin-portal` (owner/manager portal) vs `/` (cashier terminal)
+- Sub-path routing: `/owner-portal` (owner/manager portal) vs `/` (cashier terminal)
 - Stall-locked device registration (owner/manager one-time setup)
 - Avatar-based staff quick-switching per stall roster
 - 4-digit PIN pad for shift unlock
@@ -61,7 +61,8 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 
 - Multi-stall management (add stalls, assign staff to stalls)
 - Role-based staff management:
-  - Owner can create and manage Owner, Manager, and Cashier users.
+  - Platform Admin can create Owner users only as a temporary bootstrap role.
+  - Owner can create and manage Manager and Cashier users only.
   - Manager can create and manage Cashier users only.
 - Menu management with dual-currency pricing (USD / KHR)
 - Stall-scoped menu profile assignment
@@ -73,11 +74,12 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 - Client-side order caching when offline
 - Background sync queue on reconnect
 
-### Platform Administration *(Future SaaS / Multi-Customer Mode)*
+### Platform Administration *(Temporary Bootstrap Now / Future SaaS Mode)*
 
-- A future `platform_admin` role may exist for the TouB POS developer/operator team, separate from customer business users.
-- Platform admins would manage customer businesses, subscriptions/licenses, owner account recovery, and technical support operations.
-- Platform admins must not be mixed with customer store roles (`owner`, `manager`, `cashier`) and should only access customer business data through audited support flows.
+- `platform_admin` exists as a temporary TouB POS team role for creating customer business Owner accounts.
+- It is API/bootstrap-only in the current project and does not have a frontend platform console.
+- Full customer-business administration, subscriptions/licenses, owner recovery, and audited support access remain future work.
+- Platform Admin must not be mixed with customer store roles (`owner`, `manager`, `cashier`).
 
 ## Scope
 
@@ -100,7 +102,7 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 - Credit card or non-QR digital payment processing.
 - Offline-first caching and background sync *(Future)*.
 - Transaction parking *(Future)*.
-- Multi-customer SaaS administration and `platform_admin` tooling *(Future)*.
+- Full multi-customer SaaS administration and `platform_admin` UI/tooling *(Future)*.
 
 ## Success Criteria
 

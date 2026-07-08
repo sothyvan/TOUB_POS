@@ -59,17 +59,20 @@ The app runs at `http://localhost:5173`.
 
 | Role | Meaning | Main Permissions |
 |------|---------|------------------|
-| `owner` | Full system owner | Full management access, including Owner, Manager, and Cashier accounts |
+| `platform_admin` | TouB POS team bootstrap account | API-only creation of business owner accounts |
+| `owner` | Full business owner | Full management access for one customer business, including Manager and Cashier accounts |
 | `manager` | Operational supervisor | Manage daily operations and Cashier accounts only |
 | `cashier` | Frontline POS staff | Use assigned-stall cashier workspace and own order history |
 
 Credential rules:
 
-- Owner/Manager accounts log in with username + password.
-- Owner/Manager accounts have `pin = NULL`.
+- Platform Admin/Owner/Manager accounts log in with username + password.
+- Platform Admin/Owner/Manager accounts have `pin = NULL`.
 - Cashier accounts log in with PIN.
 - Cashier PINs are bcrypt-hashed.
 - Cashier accounts may have `password = NULL`.
+
+TouB POS allows one Owner per customer business. Additional supervisors should be created as Managers, not extra Owners. The temporary `platform_admin` role is for the TouB POS team to bootstrap new Owner accounts before a full platform administration system exists.
 
 ---
 

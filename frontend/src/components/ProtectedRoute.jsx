@@ -3,7 +3,10 @@ import { useAuth } from '../auth/useAuth';
 import { roleToApiRole } from '../utils/permissions';
 
 function homeForRole(role) {
-  return ['owner', 'manager'].includes(roleToApiRole(role)) ? '/owner-portal' : '/cashier';
+  const normalizedRole = roleToApiRole(role);
+  if (['owner', 'manager'].includes(normalizedRole)) return '/owner-portal';
+  if (normalizedRole === 'cashier') return '/cashier';
+  return '/login';
 }
 
 export default function ProtectedRoute({ allowedRoles, children }) {

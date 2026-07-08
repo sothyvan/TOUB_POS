@@ -6,7 +6,7 @@
 
 -- ── 1. USERS / STAFF CRUD (user.repository.js) ──────────────
 
--- Find owner/manager by username (used for password login authentication)
+-- Find platform_admin/owner/manager by username (used for password login authentication)
 SELECT id, username, password AS password_hash, role, owner_id, is_active 
 FROM users 
 WHERE username = 'owner';
@@ -32,6 +32,16 @@ FROM users
 WHERE owner_id = 1
 ORDER BY created_at DESC;
 
+-- List business owner accounts visible to the temporary platform admin
+SELECT id, owner_id, username, role, is_active, created_at, updated_at
+FROM users
+WHERE role = 'owner'
+ORDER BY created_at DESC;
+
+-- Insert a new business owner account from platform_admin
+INSERT INTO users (username, password, pin, role, owner_id, is_active)
+VALUES ('owner_new', '$2b$10$hashedpasswordstring...', NULL, 'owner', NULL, TRUE);
+
 -- Insert a new user account
 INSERT INTO users (username, password, pin, role, owner_id, is_active)
 VALUES ('manager1', '$2b$10$hashedpasswordstring...', NULL, 'manager', 1, TRUE);
@@ -56,17 +66,6 @@ MODIFY password VARCHAR(255) DEFAULT NULL;
 
 ALTER TABLE users
 MODIFY pin VARCHAR(255) DEFAULT NULL;
-
--- Development-only legacy RBAC migration used before Sequelize sync
-ALTER TABLE users
-MODIFY role ENUM('admin', 'owner', 'manager', 'cashier') NOT NULL DEFAULT 'cashier';
-
-UPDATE users
-SET role = 'owner'
-WHERE role = 'admin';
-
-ALTER TABLE users
-MODIFY role ENUM('owner', 'manager', 'cashier') NOT NULL DEFAULT 'cashier';
 
 -- Allow PIN-only cashier accounts to keep password NULL
 ALTER TABLE users
@@ -215,7 +214,7 @@ SET price_usd = 2.75, price_khr = 11000, is_visible = TRUE
 WHERE product_id = 1
   AND stall_id = 1;
 
--- Replace product stall assignments during admin updates
+-- Replace product stall assignments during management updates
 DELETE FROM stall_products
 WHERE product_id = 1;
 

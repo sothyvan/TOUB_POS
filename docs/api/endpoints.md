@@ -6,14 +6,15 @@ All protected routes require the `Authorization: Bearer <token>` header.
 
 Current roles:
 
-- `owner` = full system owner
+- `platform_admin` = TouB POS team bootstrap account for creating business owners only
+- `owner` = full customer business owner
 - `manager` = operational supervisor
 - `cashier` = frontline POS staff
 
 Auth/security notes:
 
 - JWT access tokens are stored in frontend localStorage for this final-project scope.
-- Owner/Manager use username + password.
+- Platform Admin/Owner/Manager use username + password.
 - Cashier uses PIN login.
 - Cashier PINs are bcrypt-hashed.
 - Login and PIN endpoints are rate-limited and may return `429`.
@@ -39,13 +40,13 @@ Auth/security notes:
 
 | Method | Path           | Auth | Role | Description       |
 |--------|----------------|------|------|-------------------|
-| POST   | `/auth/login`  | No   | Owner / Manager | Issue JWT token with username/password |
+| POST   | `/auth/login`  | No   | Platform Admin / Owner / Manager | Issue JWT token with username/password |
 | POST   | `/auth/pin`    | No   | Cashier | Issue JWT token with cashier PIN |
 | GET    | `/auth/cashiers` | No | Public | List active cashier profiles for PIN login |
 
 ### POST `/auth/login`
 
-Owner and Manager accounts use this endpoint. Cashier accounts must use `/auth/pin`.
+Platform Admin, Owner, and Manager accounts use this endpoint. Cashier accounts must use `/auth/pin`. Platform Admin is API/bootstrap-only in the current project and does not access the management portal.
 
 **Request body**
 ```json
@@ -59,11 +60,13 @@ Owner and Manager accounts use this endpoint. Cashier accounts must use `/auth/p
 ```json
 {
   "success": true,
-  "token": "<jwt>",
-  "user": {
-    "id": 1,
-    "username": "owner",
-    "role": "owner"
+  "data": {
+    "token": "<jwt>",
+    "user": {
+      "id": 1,
+      "username": "owner",
+      "role": "owner"
+    }
   }
 }
 ```
@@ -91,11 +94,13 @@ Cashier accounts use this endpoint after selecting a cashier profile in the term
 ```json
 {
   "success": true,
-  "token": "<jwt>",
-  "user": {
-    "id": 2,
-    "username": "cashier1",
-    "role": "cashier"
+  "data": {
+    "token": "<jwt>",
+    "user": {
+      "id": 2,
+      "username": "cashier1",
+      "role": "cashier"
+    }
   }
 }
 ```
@@ -104,7 +109,7 @@ Cashier accounts use this endpoint after selecting a cashier profile in the term
 | Code | Reason |
 |------|--------|
 | 401  | Invalid PIN |
-| 403  | Owner/Manager account used the wrong login method |
+| 403  | Platform Admin/Owner/Manager account used the wrong login method |
 | 429  | Too many PIN attempts |
 
 ---
@@ -213,6 +218,7 @@ Backend behavior:
 - Creates orders as `pending_payment`.
 - For KHQR, generates an Individual KHQR payload from backend-owned order totals.
 - For KHQR, stores `qr_payload`, `qr_md5`, `payment_reference`, and `payment_expires_at`.
+- For KHQR, requires `BAKONG_ACCOUNT_ID`; missing account configuration returns `503`.
 - Writes an `order_created` audit log.
 
 **Response `201`**
@@ -233,11 +239,11 @@ Backend behavior:
 
 ### GET `/orders/:id`
 
-Cashiers can fetch their own orders only. Owner/Manager can fetch any order. This endpoint is a passive order read.
+Cashiers can fetch their own orders only. Owner/Manager can fetch orders only within their own business owner scope. This endpoint is a passive order read.
 
 ### POST `/orders/:id/check-khqr-status`
 
-Cashiers can check their own KHQR orders only. Owner/Manager can check any KHQR order.
+Cashiers can check their own KHQR orders only. Owner/Manager can check KHQR orders only within their own business owner scope.
 
 Frontend KHQR polling should call this endpoint, not Bakong directly.
 
@@ -247,7 +253,7 @@ Backend behavior:
 - Requires `payment_method = "khqr"`.
 - Returns already-paid orders idempotently without adding duplicate audit logs.
 - Calls Bakong Open API by `qr_md5`.
-- If Bakong reports paid, validates amount and currency before marking the order `paid`.
+- If Bakong reports paid, validates amount, currency, and configured Bakong destination account before marking the order `paid`.
 - If Bakong reports not found, keeps the order `pending_payment`.
 - If Bakong reports failed/error, returns a clean response and does not mark the order paid.
 
@@ -275,18 +281,18 @@ Backend behavior:
 **Errors**
 | Code | Reason |
 |------|--------|
-| 400  | Not a KHQR order, missing md5, amount/currency mismatch |
-| 403  | Cashier is not the order owner |
+| 400  | Not a KHQR order, missing md5, amount/currency/destination mismatch |
+| 403  | Actor is not allowed for this order |
 | 404  | Order not found |
-| 503  | Bakong token/base URL is misconfigured |
+| 503  | Bakong token/base URL/account is misconfigured |
 
 ### POST `/orders/:id/confirm-cash`
 
 Allowed for:
 
 - the cashier who created the order
-- owner
-- manager
+- owner within the same business
+- manager within the same business
 
 Only cash orders in `pending_payment` status can be confirmed. Confirmation changes the status to `paid`, sets `completed_at`, and writes a `cash_payment_confirmed` audit log.
 
@@ -324,12 +330,14 @@ Only cash orders in `pending_payment` status can be confirmed. Confirmation chan
 
 ## Users — `/api/users`
 
-User management routes require `owner` or `manager` role. Managers can create/manage Cashier users only. `/users/me/stall` is available to authenticated users so the cashier workspace can load the current backend stall assignment.
+User management routes require `platform_admin`, `owner`, or `manager` role. Platform Admin can create business Owner accounts only. Owners can create/manage Manager and Cashier accounts only. Managers can create/manage Cashier users only. `/users/me/stall` is available to authenticated users so the cashier workspace can load the current backend stall assignment.
 
 | Method | Path       | Auth | Role    | Description           |
 |--------|------------|------|---------|-----------------------|
-| GET    | `/users`   | ✅   | Owner / Manager | List visible staff        |
-| POST   | `/users`   | ✅   | Owner / Manager | Create a staff account |
+| GET    | `/users`   | ✅   | Platform Admin / Owner / Manager | Platform Admin lists owner accounts; Owner/Manager list visible staff |
+| POST   | `/users`   | ✅   | Platform Admin / Owner / Manager | Create a permitted account |
+| PUT    | `/users/:id` | ✅ | Owner / Manager | Update a permitted staff account |
+| DELETE | `/users/:id` | ✅ | Owner / Manager | Delete a permitted staff account |
 | GET    | `/users/me/stall` | ✅ | Cashier / Owner / Manager | Get the authenticated user's assigned stall |
 
 ### GET `/users`
@@ -346,7 +354,18 @@ User management routes require `owner` or `manager` role. Managers can create/ma
 
 ### POST `/users`
 
-Owner/Manager accounts require a password and must not include a PIN.
+Platform Admin may create `owner` accounts only. Owner accounts require a password and must not include a PIN.
+
+**Request body: platform_admin creating owner**
+```json
+{
+  "username": "new_owner",
+  "password": "strong-password",
+  "role": "owner"
+}
+```
+
+Owner may create Manager and Cashier accounts only. Manager may create Cashier accounts only. Owner/Manager accounts require a password and must not include a PIN.
 
 **Request body: owner/manager**
 ```json

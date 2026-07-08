@@ -21,6 +21,14 @@ npm run dev
 
 Server runs at `http://localhost:3000` by default.
 
+When the local development database is empty, startup seeds only the temporary platform bootstrap account:
+
+| Role | Username | Password |
+|------|----------|----------|
+| Platform Admin | `platform_admin` | `platform123` |
+
+Use this account through the API or Swagger to create the first business Owner. The Platform Admin role has no frontend portal yet.
+
 ### Seed Local Demo Data
 
 For local development only, seed a realistic demo database with Faker:
@@ -60,7 +68,7 @@ Do not run this seeder against production or any live merchant database.
 | `DB_NAME` | MySQL database name | `toub_pos` |
 | `JWT_SECRET` | Secret key for signing JWTs | `a_long_random_string` |
 | `JWT_EXPIRES_IN` | JWT expiry duration | `8h` |
-| `BAKONG_ACCOUNT_ID` | Owner/stall Bakong account for Individual KHQR | `owner@bakong` |
+| `BAKONG_ACCOUNT_ID` | Required owner/stall Bakong account for Individual KHQR generation and validation | `owner@bakong` |
 | `KHQR_MERCHANT_NAME` | Name embedded in KHQR payload | `Toub POS` |
 | `KHQR_MERCHANT_CITY` | City embedded in KHQR payload | `PHNOM PENH` |
 | `KHQR_EXPIRATION_MINUTES` | KHQR payment expiration window | `10` |
@@ -100,22 +108,30 @@ backend/
 
 ## Auth And RBAC
 
-TouB POS has three web-app roles:
+TouB POS has four backend roles, split into one TouB POS team bootstrap role and three customer business roles:
 
 | Role | Meaning |
 |------|---------|
-| `owner` | Full system owner |
+| `platform_admin` | TouB POS team bootstrap account; creates business owners only |
+| `owner` | Full business owner; one owner account per business |
 | `manager` | Operational supervisor |
 | `cashier` | Frontline POS staff |
 
 Credential rules:
 
-- Owner/Manager log in with username + password through `POST /api/auth/login`.
-- Owner/Manager accounts must have `pin = NULL`.
+- Platform Admin/Owner/Manager log in with username + password through `POST /api/auth/login`.
+- Platform Admin/Owner/Manager accounts must have `pin = NULL`.
 - Cashier accounts log in with PIN through `POST /api/auth/pin`.
 - Cashier PINs are bcrypt-hashed.
 - Cashier accounts may have `password = NULL`.
 - API responses must not return password hashes, raw PINs, or PIN hashes.
+
+RBAC rules:
+
+- Platform Admin can create Owner accounts only and does not access the management portal.
+- Owner can create/manage Manager and Cashier accounts only.
+- Manager can create/manage Cashier accounts only.
+- Cashier cannot access management APIs.
 
 Security notes:
 
@@ -140,7 +156,7 @@ All endpoints are prefixed with `/api`.
 
 | Method | Path | Auth | Role | Description |
 |--------|------|------|------|-------------|
-| POST | `/api/auth/login` | No | Owner / Manager | Username/password login, returns JWT |
+| POST | `/api/auth/login` | No | Platform Admin / Owner / Manager | Username/password login, returns JWT |
 | POST | `/api/auth/pin` | No | Cashier | PIN login, returns JWT |
 
 Example owner/manager login:
@@ -176,12 +192,12 @@ Rate limit failures return `429`.
 
 | Method | Path | Role | Description |
 |--------|------|------|-------------|
-| GET | `/api/users` | Owner / Manager | List staff accounts |
-| POST | `/api/users` | Owner / Manager | Create staff account |
+| GET | `/api/users` | Platform Admin / Owner / Manager | Platform Admin lists owners; Owner/Manager list staff accounts |
+| POST | `/api/users` | Platform Admin / Owner / Manager | Create permitted account |
 | PUT | `/api/users/:id` | Owner / Manager | Update staff account |
 | DELETE | `/api/users/:id` | Owner / Manager | Delete staff account |
 
-Owners can manage Owner, Manager, and Cashier accounts. Managers can manage Cashier accounts only.
+Platform Admin can create Owner accounts only. Owners can manage Manager and Cashier accounts only. Managers can manage Cashier accounts only.
 
 ### Orders
 
@@ -190,15 +206,15 @@ Owners can manage Owner, Manager, and Cashier accounts. Managers can manage Cash
 | POST | `/api/orders` | Cashier | Create backend-owned pending order |
 | GET | `/api/orders/mine` | Cashier | Fetch own orders |
 | GET | `/api/orders` | Owner / Manager | Fetch all orders |
-| GET | `/api/orders/:id` | Creating Cashier / Owner / Manager | Fetch one order for status polling |
-| POST | `/api/orders/:id/check-khqr-status` | Creating Cashier / Owner / Manager | Check KHQR payment by Bakong md5/hash |
-| POST | `/api/orders/:id/confirm-cash` | Creating Cashier / Owner / Manager | Mark cash order as paid |
+| GET | `/api/orders/:id` | Creating Cashier / Same-Business Owner / Manager | Fetch one order for status polling |
+| POST | `/api/orders/:id/check-khqr-status` | Creating Cashier / Same-Business Owner / Manager | Check KHQR payment by Bakong md5/hash |
+| POST | `/api/orders/:id/confirm-cash` | Creating Cashier / Same-Business Owner / Manager | Mark cash order as paid |
 
 Order creation accepts only product IDs, quantities, optional notes, and payment method. The backend derives cashier/stall, calculates trusted totals from MySQL, snapshots item names/prices, and rejects client-submitted trusted fields such as totals, status, `cashier_id`, and `stall_id`.
 
 Cash orders start as `pending_payment`. Cash confirmation changes the status to `paid` and writes a `cash_payment_confirmed` audit log.
 
-KHQR orders also start as `pending_payment`. The backend generates Individual KHQR data, stores the QR payload, md5, payment reference, and expiry. The frontend asks the backend to run `POST /api/orders/:id/check-khqr-status`; the backend calls Bakong Open API by md5/hash and marks the order `paid` only after amount/currency validation.
+KHQR orders also start as `pending_payment`. The backend requires `BAKONG_ACCOUNT_ID`, generates Individual KHQR data, stores the QR payload, md5, payment reference, and expiry. The frontend asks the backend to run `POST /api/orders/:id/check-khqr-status`; the backend calls Bakong Open API by md5/hash and marks the order `paid` only after amount/currency/destination-account validation.
 
 ### Reports
 

@@ -168,9 +168,13 @@ export async function unassignStaff(req, res, next) {
 export async function registerDevice(req, res, next) {
   try {
     const { id } = req.params;
+    const ownerId = req.user.role === 'owner' ? req.user.id : req.user.owner_id;
     const stall = await stallRepository.findStallById(id);
     if (!stall) {
       return res.status(404).json({ success: false, message: 'Stall not found.' });
+    }
+    if (stall.owner_id !== ownerId) {
+      return res.status(403).json({ success: false, message: 'Forbidden: Stall belongs to another owner.' });
     }
 
     // Generate secure device token

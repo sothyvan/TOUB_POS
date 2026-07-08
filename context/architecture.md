@@ -15,7 +15,7 @@
 ## System Boundaries
 
 - `frontend/src/components/` — Reusable UI elements.
-- `frontend/src/pages/` — Route-level page components (`/`, `/admin-portal`).
+- `frontend/src/pages/` — Route-level page components (`/`, `/owner-portal`).
 - `backend/routes/` — API route definitions and endpoint mapping.
 - `backend/controllers/` — Request handling and response formatting.
 - `backend/services/` — Core business logic, WebSocket session management, Telegram bot logic.
@@ -34,16 +34,17 @@
 - Every web user signs in through a JWT-secured auth endpoint.
 - Owner/Manager username-password login and Cashier PIN login are separate, rate-limited flows.
 - The system uses Role-Based Access Control (RBAC).
-- The primary roles are `owner`, `manager`, and `cashier`.
-- Owners have full business and system control, including creating Owner, Manager, and Cashier users.
+- The active roles are `platform_admin`, `owner`, `manager`, and `cashier`.
+- `platform_admin` is a temporary TouB POS team bootstrap role that can create business Owner accounts only. It is API-only for now and does not access the owner/manager portal.
+- Owners have full control over one customer business and may create Manager and Cashier users only.
 - Managers handle day-to-day operations and may create/manage Cashier users only.
 - Cashiers can only view and mutate transactions linked to their active session.
 - Owners and Managers have access to the management portal, transactions, reports, and operational tools according to their permission level.
-- Owner and Manager accounts store a bcrypt password hash and must have `pin = NULL`.
+- Platform Admin, Owner, and Manager accounts store a bcrypt password hash and must have `pin = NULL`.
 - Cashier accounts store a bcrypt PIN hash and must have `password = NULL`.
 - Password hashes, raw PINs, and PIN hashes are never returned by normal API responses.
 - Express applies Helmet security headers while keeping local Swagger documentation compatible.
-- Future SaaS/multi-customer versions may add a separate `platform_admin` role for the TouB POS developer/operator team. This role is outside the customer business RBAC model and must be implemented with tenant isolation, audit logging, and support-only access rules.
+- Future SaaS/multi-customer versions should expand `platform_admin` into a full audited platform console with tenant isolation, subscription/license management, owner recovery, and support-only access rules.
 
 ## Invariants
 
@@ -67,7 +68,7 @@
 - The backend derives `cashier_id` from the JWT and `stall_id` from the cashier's staff assignment.
 - The backend loads product prices from MySQL, calculates trusted subtotal/total values, snapshots item names/prices, and creates the order as `pending_payment`.
 - Cash confirmation uses `POST /api/orders/:id/confirm-cash`.
-- Cash confirmation is allowed for the creating Cashier, Owner, or Manager.
+- Cash confirmation is allowed for the creating Cashier, or an Owner/Manager within the same business owner scope.
 - Successful cash confirmation changes `orders.status` to `paid`, sets `completed_at`, and writes a `cash_payment_confirmed` audit log.
 - The frontend must not create paid orders locally or submit trusted fields such as totals, status, `cashier_id`, or `stall_id`.
 
@@ -79,9 +80,10 @@
 - The backend calculates trusted totals from MySQL and creates the order as `pending_payment`.
 - The backend stores `qr_payload`, `qr_md5`, `payment_reference`, and `payment_expires_at`.
 - The frontend displays the backend QR payload and polls `POST /api/orders/:id/check-khqr-status` while the modal is open.
+- `BAKONG_ACCOUNT_ID` is required; KHQR generation must fail clearly instead of falling back to a placeholder account.
 - The backend calls Bakong Open API `POST /v1/check_transaction_by_md5` with the stored `qr_md5`.
 - `BAKONG_OPEN_API_TOKEN` is backend-only and must never be sent to the frontend.
-- If Bakong reports payment success, the backend validates amount/currency and optional destination account before marking the order `paid`.
+- If Bakong reports payment success, the backend validates amount, currency, and configured destination account before marking the order `paid`.
 - Already-paid status checks are idempotent and do not duplicate audit logs.
 
 ## Planned Real-Time & Kitchen Flow (Future)
@@ -102,7 +104,7 @@
 
 ## Core Data Entities
 
-- **User / Staff**: Unique username, role (`owner` / `manager` / `cashier`), and exactly one role-appropriate credential: Owner/Manager use a bcrypt password hash; Cashier uses a bcrypt hash of the 4-digit PIN.
+- **User / Staff**: Unique username, role (`platform_admin` / `owner` / `manager` / `cashier`), and exactly one role-appropriate credential: Platform Admin/Owner/Manager use a bcrypt password hash; Cashier uses a bcrypt hash of the 4-digit PIN.
 - **Stall**: A physical booth location. Has a name, assigned menu profile, and registered device token.
 - **StallStaff**: Junction — maps `User` to `Stall` (a cashier can belong to one stall).
 - **Category**: Global menu group shared across stalls.
@@ -132,5 +134,5 @@
 | 8 | **QR amount mismatch** | 🔴 High | A webhook may arrive for the wrong amount or wrong merchant. Never auto-confirm just because a payment event arrived. Webhook handler must assert `webhook.amount === order.total_usd` and `webhook.merchant_id === env.MERCHANT_ID` before marking the order paid. Reject mismatches with a `400` and log them. |
 | 9 | **JWT expiry mid-shift** | 🟡 Medium | Cashier's 8h token can expire while they are mid-order. The next API call returns `401`, the cart is lost, and the cashier is confused. Mitigation: frontend must intercept all `401` responses, store the current cart in `sessionStorage`, redirect to PIN re-entry, and restore the cart after re-authentication. |
 | 10 | **Device token revocation** | 🟡 Medium | No current mechanism to remotely deregister a terminal (e.g., stolen tablet). The device token in `stalls.device_token` remains valid indefinitely. Mitigation: management portal must include an Owner-controlled "Revoke Terminal" action that clears `stalls.device_token = NULL`, immediately invalidating that device's access. |
-| 11 | **Future platform admin data access** | 🔴 High | If TouB POS becomes a multi-customer SaaS product, the developer/operator `platform_admin` role must be separated from customer roles. Add tenant isolation, support-session auditing, and least-privilege access before enabling any cross-customer administration. |
+| 11 | **Future platform admin data access** | 🔴 High | The current `platform_admin` role is limited to owner bootstrap only. If TouB POS becomes a multi-customer SaaS product, expand it with tenant isolation, support-session auditing, and least-privilege access before enabling any broader cross-customer administration. |
 

@@ -1,6 +1,6 @@
 export const SERVICE_RATE = 0.03;
 export const TAX_RATE = 0.08;
-export const ROLES = ['Owner', 'Manager', 'Cashier'];
+export const ROLES = ['Manager', 'Cashier'];
 export const TONES = ['gold', 'green', 'blue', 'rose'];
 
 export const DEFAULT_CATEGORIES = [

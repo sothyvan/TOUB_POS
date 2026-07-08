@@ -10,7 +10,7 @@ function authError(message, status = 401) {
 }
 
 /**
- * Validate credentials and return a signed JWT + public user info.
+ * Validate username/password credentials and return a signed JWT + public user info.
  * Throws a 401 error object on failure.
  */
 export async function loginUser(username, password) {
@@ -25,12 +25,6 @@ export async function loginUser(username, password) {
 
   if (!user.password_hash) {
     throw authError('Invalid credentials.');
-  }
-
-  if (!user.password_hash) {
-    const err = new Error('Invalid credentials.');
-    err.status = 401;
-    throw err;
   }
 
   const valid = await bcrypt.compare(password, user.password_hash);
