@@ -11,15 +11,17 @@ Update this file after every meaningful implementation change.
 - Phase 4.5: Security Hardening — **COMPLETE**
 - Phase 5: Multi-Owner Data Isolation & Security — **COMPLETE** ✅
 - Phase 5.5: RBAC Hierarchy Cleanup — **COMPLETE** ✅
-- Phase 6: KDS & Live Payment WebSocket Integration — **IN PROGRESS**
+- Phase 6: KDS & Live Payment WebSocket Integration — **COMPLETE** ✅
   - Telegram KDS Bot (cash payment trigger) — **COMPLETE** ✅
   - Multiple Stall Product Assignment (choose 0 to many stalls per item) — **COMPLETE** ✅
   - ImageKit product photo upload integration — **COMPLETE** ✅
   - Strict Stall-Scoped Cashier Roster & Device Registration — **COMPLETE** ✅
   - Programmatic Ngrok Tunnel & Webhook Auto-Registration — **COMPLETE** ✅
   - Webgroup Migration Self-Healing & Done Callback updates — **COMPLETE** ✅
-  - WebSocket server for KHQR live notification — **NEXT**
-  - KHQR webhook → Telegram dispatch (2-line hook, after WebSocket) — **PENDING**
+  - WebSocket server for KHQR live notification — **COMPLETE** ✅
+  - KHQR paid-status check → Telegram dispatch — **COMPLETE** ✅
+  - KHQR background status checker — **COMPLETE** ✅
+  - Telegram ticket status and retry — **COMPLETE** ✅
 
 - **Implemented Phase 5.5 RBAC Hierarchy Cleanup**:
   - Finalized the active role hierarchy as `platform_admin`, `owner`, `manager`, and `cashier`.
@@ -41,6 +43,61 @@ Update this file after every meaningful implementation change.
   - Updated `POST /api/orders/:id/confirm-cash` so the cashier submits the cash amount received, while the backend rejects underpayment and calculates the saved change due.
   - Updated the cashier cash confirmation modal to collect cash received, preview change, and show cash/change values on the receipt.
   - Synchronized Sequelize, raw SQL schema/query docs, ERD, API docs, Swagger, payment flow docs, and active architecture notes.
+
+- **Applied Phase 6 readiness cleanup after teammate pull**:
+  - Restored backend startup environment validation for JWT, database, production CORS, and development platform-admin seed settings.
+  - Documented the `PLATFORM_ADMIN_*` development seed variables in `.env.example`, backend README, and getting-started docs.
+  - Fixed the frontend product image fallback state in `MenuCatalog.jsx` so React lint passes before Phase 6 WebSocket work.
+
+- **Implemented Phase 6A cashier-scoped WebSocket payment notifications**:
+  - Installed Socket.IO on the backend and `socket.io-client` on the frontend.
+  - Refactored backend startup to use an HTTP server and initialize `websocket.service.js` beside Express.
+  - Added JWT-authenticated cashier sockets with a strict `cashier_id -> socketIds` mapping.
+  - Connected the KHQR paid-status path so `payment_confirmed` is emitted only to the cashier who created the paid order.
+  - Added a frontend cashier socket client that refreshes the matching order and shows the receipt when the live event arrives.
+  - Kept KHQR polling active as a fallback until a real webhook/background status checker exists.
+
+- **Implemented Phase 6B KHQR-to-Telegram dispatch hook**:
+  - Reused the existing `dispatchToTelegram` kitchen ticket flow after KHQR status checking marks an order as `paid`.
+  - Kept dispatch fire-and-forget so Telegram errors do not roll back or break the paid-order response.
+  - Only newly processed KHQR confirmations dispatch to Telegram; already-paid idempotent status checks do not re-dispatch.
+
+- **Hardened Telegram kitchen dispatch recovery**:
+  - Made `dispatchToTelegram` idempotent by skipping orders that already have a `telegram_tickets` row.
+  - Allowed already-paid KHQR status checks to recover missing Telegram tickets for orders that were paid before the Telegram hook was active or before the backend was restarted with Telegram configuration.
+  - Preserved duplicate protection so repeated status checks do not spam the kitchen chat.
+
+- **Implemented Phase 6C KHQR background status checker**:
+  - Added `khqr-background-checker.service.js` to periodically scan unexpired `pending_payment` KHQR orders.
+  - Reused the existing Bakong validation and paid-confirmation path, including amount/currency/account validation, audit logging, WebSocket notification, and Telegram dispatch.
+  - Added optional environment controls for enabling the checker, interval, and batch size.
+  - Kept frontend QR-modal polling as a fallback instead of the only status detection mechanism.
+
+- **Implemented Phase 6D Telegram ticket visibility and retry**:
+  - Added `POST /api/orders/:id/retry-telegram` with same-business order access checks for Owner/Manager and own-order access checks for Cashier.
+  - Kept pending/sent/done Telegram tickets protected from duplicate dispatch while allowing paid orders with missing or failed tickets to retry.
+  - Added kitchen ticket status badges to the management transaction ledger and retry actions for recoverable tickets.
+  - Added cashier-side "Kitchen issue" warning badges and retry actions when the cashier's own paid order kitchen dispatch is missing or failed.
+
+- **Fixed live Telegram "Done" UI refresh**:
+  - Added a `kitchen_ticket_updated` Socket.IO event after Telegram dispatch finishes as `sent`/`failed` and after callback processing saves a ticket as `done`.
+  - Routed the event to the creating Cashier and same-business Owner/Manager sockets only.
+  - Updated Cashier and Owner/Manager order screens to refresh order history from the backend when the event arrives, so ticket status changes appear without a full page reload.
+  - Stopped treating `pending` tickets as retryable because `pending` means the original dispatch is still in progress.
+
+- **Fixed live Owner/Manager order history refresh**:
+  - Added a management-scoped `order_updated` Socket.IO event for new orders and payment status changes.
+  - Emitted `order_updated` after backend-owned order creation, cash payment confirmation, and KHQR paid confirmation.
+  - Updated Owner/Manager portal sockets to refresh order history from the backend when same-business order events arrive.
+
+- **Fixed cashier-side Telegram ticket refresh state**:
+  - Updated the cashier live ticket handler to reload the exact changed order and replace matching open receipt/KHQR modal state, not only the order list.
+  - Added a short paid-order refresh fallback for cash and KHQR flows so quickly completed Telegram dispatches do not leave the cashier UI showing stale `pending` ticket state.
+
+- **Closed Phase 6 handoff and verification**:
+  - Created `docs/codex-handoff-phase-6.md` for teammate review.
+  - Verified backend lint, frontend lint, and frontend production build after live payment, Telegram ticket, retry, and UI refresh fixes.
+  - Marked Phase 6 complete and moved remaining work into post-Phase 6 monitoring/cook-authorization follow-up.
 
 - **Enforced Multi-Owner Data Isolation & Security across Backend Operations**:
   - Added an `owner_id` column to the `users` table to link managers and cashiers to their business owners.
@@ -132,7 +189,7 @@ Update this file after every meaningful implementation change.
   - Added frontend product-photo upload controls with JPG/PNG/WebP validation, 5MB max size, progress state, error state, preview rendering, and manual URL fallback.
   - Kept v1 persistence scoped to the existing `products.image_url` field; ImageKit `fileId` deletion/cleanup remains out of scope.
 - Phase 5: KHQR Individual Payment Flow — **COMPLETE**
-- Phase 6: KDS, Telegram Kitchen, And Live Payment WebSocket Integration — **NEXT**
+- Phase 6: KDS, Telegram Kitchen, And Live Payment WebSocket Integration — **COMPLETE**
 
 - **Generated current code-backed ERD documentation**:
   - Refreshed `docs/database/erd.md` from the active Sequelize models and canonical SQL schema.
@@ -447,10 +504,10 @@ Update this file after every meaningful implementation change.
 
 ## Next Up
 
-- Phase 6: KDS, Telegram Kitchen, And Live Payment WebSocket Integration.
-  - Set up a WebSocket server in Express for live KHQR payment success notifications instead of frontend polling.
-  - Implement a basic KDS or Telegram kitchen display flow for paid orders.
-  - Keep cook authorization Telegram-only, not web-app RBAC.
+- Post-Phase 6 Operations & Security Hardening.
+  - Add payment monitoring and operational alerting for failed Bakong or Telegram operations.
+  - Keep cook authorization Telegram-only, and strengthen the Telegram cook identity model before production.
+  - Decide whether failed Telegram dispatches need an automatic retry worker or if manual retry is enough for the final demo.
 
 - Future SaaS / Multi-Customer Platform Administration:
   - `platform_admin` now exists as a temporary API-only bootstrap role for creating business Owner accounts.
@@ -495,5 +552,5 @@ Intentional shortcuts taken during development that must be resolved before prod
 | 3 | **No input sanitization on order modifiers** | `order_items.notes` | 🟡 Medium — add max-length enforcement and strip dangerous characters before DB write |
 | 4 | **No auth endpoint rate limiting** | `POST /api/auth/login` / `POST /api/auth/pin` | ✅ Resolved — added `express-rate-limit` |
 | 5 | **Seed owner password is a placeholder hash** | `docs/database/schema.sql` | 🔴 High — generate real bcrypt hash and store securely before any live deployment |
-| 6 | **WebSocket server not yet implemented** | `backend/services/` | 🟡 Medium — current KHQR UI uses polling; WebSocket is the next improvement for instant cashier-specific payment updates |
+| 6 | **KHQR background checker is process-local** | `khqr-background-checker.service.js` | 🟡 Medium — The checker runs inside the API process. For production or multiple server instances, move this to one scheduled worker/queue to avoid duplicate provider calls. |
 

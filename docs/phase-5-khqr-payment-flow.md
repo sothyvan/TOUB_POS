@@ -101,6 +101,7 @@ If Bakong reports payment success, the backend validates amount and currency bef
 5. Frontend polls `POST /api/orders/:id/check-khqr-status` every 2.5 seconds while the modal is open.
 6. If backend status becomes `paid`, the modal closes and the receipt opens.
 7. If order is cancelled or modal closes, polling stops.
+8. The backend background checker can still detect payment for unexpired pending KHQR orders after the modal closes.
 
 Frontend does not have a "mark paid" button for KHQR.
 
@@ -136,9 +137,10 @@ Expected after Bakong finds the transaction:
 - order status becomes `paid`
 - `completed_at` is set
 - one `khqr_payment_confirmed` audit log is created
+- the creating cashier receives a Socket.IO `payment_confirmed` event if their cashier screen is connected
+- the paid order is dispatched to the stall's Telegram kitchen chat
 
 ## 8. Remaining Work
 
-- Add WebSocket push so the cashier screen receives instant payment success instead of polling.
 - Add payment monitoring and operational alerting.
-- Telegram kitchen dispatch remains a later phase.
+- Strengthen Telegram cook identity/authorization before production.

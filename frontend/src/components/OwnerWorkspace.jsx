@@ -55,6 +55,7 @@ export default function OwnerWorkspace({
   categoryById,
   todaysOrders,
   todaysTotal,
+  onRetryTelegramDispatch,
   onLogout,
   currentUser,
   productsLoading,
@@ -190,6 +191,7 @@ export default function OwnerWorkspace({
               orders={orders}
               todaysOrders={todaysOrders}
               todaysTotal={todaysTotal}
+              onRetryTelegramDispatch={onRetryTelegramDispatch}
             />
           )}
 

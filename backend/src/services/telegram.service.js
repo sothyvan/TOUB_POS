@@ -1,5 +1,6 @@
 import fetch from 'node-fetch';
 import { TelegramTicket, Stall } from '../models/index.js';
+import { emitKitchenTicketUpdated } from './websocket.service.js';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_API_BASE = `https://api.telegram.org/bot${BOT_TOKEN}`;
@@ -200,19 +201,35 @@ export async function sendNotification(chatId, text) {
  * IMPORTANT: This function must never throw. A Telegram outage should
  * never affect the HTTP response for a payment confirmation.
  */
-export async function dispatchToTelegram(order) {
-  if (!BOT_TOKEN) {
-    console.warn('[Telegram] TELEGRAM_BOT_TOKEN is not set — skipping dispatch.');
-    return;
+export async function dispatchToTelegram(order, options = {}) {
+  const existingTicket = await TelegramTicket.findOne({
+    where: { order_id: order.id },
+    order: [['id', 'DESC']],
+  });
+
+  if (existingTicket && !options.forceRetry) {
+    console.warn(`[Telegram] Order #${order.id} already has ticket #${existingTicket.id} (${existingTicket.status}) — skipping dispatch.`);
+    return existingTicket;
   }
 
-  // Read the kitchen chat ID from the stall record
-  const stall = order.Stall ?? (await Stall.findByPk(order.stall_id));
-  const chatId = stall?.telegram_chat_id;
+  if (existingTicket && ['sent', 'done'].includes(existingTicket.status)) {
+    console.warn(`[Telegram] Order #${order.id} ticket #${existingTicket.id} is ${existingTicket.status} — skipping retry.`);
+    return existingTicket;
+  }
+
+  if (!BOT_TOKEN) {
+    console.warn('[Telegram] TELEGRAM_BOT_TOKEN is not set — skipping dispatch.');
+    return null;
+  }
+
+  // Read the kitchen chat ID from the authoritative stall record.
+  const stall = await Stall.findByPk(order.stall_id);
+  const chatId = stall?.telegram_chat_id ?? order.Stall?.telegram_chat_id;
+  const ownerId = stall?.owner_id ?? order.Stall?.owner_id;
 
   if (!chatId) {
     console.warn(`[Telegram] Stall #${order.stall_id} has no telegram_chat_id — skipping dispatch.`);
-    return;
+    return null;
   }
 
   // Create a ticket row immediately so we have a record even if sending fails
@@ -245,12 +262,30 @@ export async function dispatchToTelegram(order) {
     ticket.status = 'sent';
     ticket.sent_at = new Date();
     await ticket.save();
+    emitKitchenTicketUpdated({
+      cashierId: order.cashier_id,
+      ownerId,
+      orderId: order.id,
+      ticketId: ticket.id,
+      status: ticket.status,
+      completedAt: ticket.completed_at,
+    });
 
     console.log(`[Telegram] Order #${order.id} dispatched → chat ${finalChatId}, msg ${msgId}`);
   } catch (error) {
     // Mark the ticket as failed for observability, but do not rethrow
     ticket.status = 'failed';
     await ticket.save();
+    emitKitchenTicketUpdated({
+      cashierId: order.cashier_id,
+      ownerId,
+      orderId: order.id,
+      ticketId: ticket.id,
+      status: ticket.status,
+      completedAt: ticket.completed_at,
+    });
     console.error(`[Telegram] Failed to dispatch order #${order.id}:`, error.message);
   }
+
+  return ticket;
 }

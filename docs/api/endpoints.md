@@ -191,6 +191,7 @@ All routes require authentication.
 | GET    | `/orders/:id`    | ✅   | Cashier / Owner / Manager | Fetch one order for status polling |
 | POST   | `/orders/:id/check-khqr-status` | ✅ | Cashier / Owner / Manager | Check KHQR payment status through backend |
 | POST   | `/orders/:id/confirm-cash` | ✅ | Cashier / Owner / Manager | Confirm physical cash received |
+| POST   | `/orders/:id/retry-telegram` | ✅ | Cashier / Owner / Manager | Retry failed/missing Telegram kitchen ticket |
 | GET    | `/orders/mine`   | ✅   | Cashier | Fetch own orders               |
 | GET    | `/orders`        | ✅   | Owner / Manager | Fetch all orders               |
 
@@ -245,7 +246,7 @@ Cashiers can fetch their own orders only. Owner/Manager can fetch orders only wi
 
 Cashiers can check their own KHQR orders only. Owner/Manager can check KHQR orders only within their own business owner scope.
 
-Frontend KHQR polling should call this endpoint, not Bakong directly.
+Frontend KHQR polling should call this endpoint, not Bakong directly. The backend also runs a background checker for unexpired pending KHQR orders, so this endpoint is now a fallback and manual recovery path rather than the only payment detector.
 
 Backend behavior:
 
@@ -254,6 +255,7 @@ Backend behavior:
 - Returns already-paid orders idempotently without adding duplicate audit logs.
 - Calls Bakong Open API by `qr_md5`.
 - If Bakong reports paid, validates amount, currency, and configured Bakong destination account before marking the order `paid`.
+- If Bakong reports paid, emits `payment_confirmed` to the creating cashier socket and dispatches the order to the stall's Telegram kitchen chat.
 - If Bakong reports not found, keeps the order `pending_payment`.
 - If Bakong reports failed/error, returns a clean response and does not mark the order paid.
 
@@ -328,6 +330,41 @@ The frontend must not send trusted fields such as `total`, `status`, `cashier_id
 | 404  | Order not found |
 | 409  | Order is already paid or cancelled |
 
+### POST `/orders/:id/retry-telegram`
+
+Allowed for:
+
+- the cashier who created the order
+- owner within the same business
+- manager within the same business
+
+The backend enforces order ownership/same-business access before retrying.
+
+Use this when a paid order has no Telegram ticket or has a `failed` ticket. `pending` means the original dispatch is still in progress and cannot be retried. Orders with `sent` or `done` Telegram tickets are not resent to avoid duplicate kitchen messages.
+
+**Response `200`**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 42,
+    "status": "paid",
+    "TelegramTickets": [
+      { "id": 10, "status": "sent", "sent_at": "2026-07-09T10:30:00.000Z" }
+    ]
+  }
+}
+```
+
+**Errors**
+| Code | Reason |
+|------|--------|
+| 400  | Order is not paid, or stall has no Telegram chat configured |
+| 403  | Actor is not allowed for this order |
+| 404  | Order not found |
+| 409  | Telegram ticket is already pending, sent, or done |
+| 503  | Telegram bot token is not configured |
+
 ### GET `/orders/mine`
 
 **Response `200`**
@@ -345,6 +382,80 @@ The frontend must not send trusted fields such as `total`, `status`, `cashier_id
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | POST | `/webhook/payment` | No | Legacy placeholder; use `/orders/:id/check-khqr-status` |
+
+---
+
+## Real-Time Events — Socket.IO
+
+TouB POS also exposes a Socket.IO server from the same backend origin, for example `http://localhost:3000`.
+
+Socket authentication:
+
+- The browser sends the existing JWT in the Socket.IO `auth.token` field.
+- Cashier, Owner, and Manager tokens are accepted for live POS events.
+- Platform Admin is API/bootstrap-only and should not connect to live POS events.
+- Payment confirmation events are still sent only to the cashier who created the paid KHQR order.
+
+### Event: `payment_confirmed`
+
+Sent by the backend only to the cashier who created the paid KHQR order.
+
+```json
+{
+  "orderId": 42,
+  "status": "paid",
+  "paymentMethod": "khqr",
+  "totalUsd": 7,
+  "completedAt": "2026-07-09T10:30:00.000Z"
+}
+```
+
+Frontend behavior:
+
+- Keep polling `POST /orders/:id/check-khqr-status` while the KHQR modal is open.
+- If the socket event arrives first, refresh the order from `GET /orders/:id`, close the KHQR modal, and show the receipt.
+- Polling remains the fallback if the socket disconnects.
+
+### Event: `order_updated`
+
+Sent to Owner/Manager sockets when an order in their business is created or changes important state, such as becoming `paid`.
+
+```json
+{
+  "orderId": 42,
+  "status": "paid",
+  "paymentMethod": "cash",
+  "changeType": "paid"
+}
+```
+
+Frontend behavior:
+
+- Owner/Manager order history refreshes from the backend.
+- The event is scoped by business owner; it is not broadcast to unrelated businesses.
+
+### Event: `kitchen_ticket_updated`
+
+Sent when Telegram kitchen ticket state changes, such as when dispatch finishes as `sent`/`failed` or when the cook taps `Mark as Done`.
+
+Recipients:
+
+- the cashier who created the order
+- owner/manager sockets scoped to the same business owner
+
+```json
+{
+  "orderId": 42,
+  "ticketId": 10,
+  "status": "done",
+  "completedAt": "2026-07-09T10:35:00.000Z"
+}
+```
+
+Frontend behavior:
+
+- Refresh order history from the backend.
+- Do not locally fake the ticket state; the backend remains the source of truth.
 
 ---
 

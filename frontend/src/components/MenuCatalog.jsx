@@ -47,12 +47,9 @@ function Toggle({ checked, onChange }) {
 function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete }) {
   const category = categories.find(c => c.id === product.categoryId);
   const [showMenu, setShowMenu] = useState(false);
-  const [imgError, setImgError] = useState(false);
+  const [failedImage, setFailedImage] = useState(null);
   const menuRef = useRef(null);
-
-  useEffect(() => {
-    setImgError(false);
-  }, [product.image]);
+  const shouldShowImage = Boolean(product.image) && failedImage !== product.image;
 
   useEffect(() => {
     if (!showMenu) return;
@@ -109,8 +106,8 @@ function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete 
       <div className="flex flex-col md:flex-row md:items-center gap-0 md:gap-4 w-full h-full md:px-5 md:py-3">
         {/* Thumbnail */}
         <div className="w-full aspect-[4/3] md:aspect-auto md:w-[40px] md:h-10 shrink-0 md:rounded-[9px] overflow-hidden border-b border-gray-100 md:border md:border-gray-100 bg-gray-50">
-          {product.image && !imgError
-            ? <img src={product.image} alt={product.name} className="w-full h-full object-cover" onError={() => setImgError(true)} />
+          {shouldShowImage
+            ? <img src={product.image} alt={product.name} className="w-full h-full object-cover" onError={() => setFailedImage(product.image)} />
             : <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-gray-400">
                 <Icon name="product" className="w-6 h-6 md:hidden" strokeWidth={1.5} />
                 <span className="text-[11px] md:text-[9px] font-bold tracking-widest md:tracking-normal">IMG</span>

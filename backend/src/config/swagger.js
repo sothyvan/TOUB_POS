@@ -343,6 +343,33 @@ export const swaggerDocument = {
                 }
             }
         },
+        '/api/orders/{id}/retry-telegram': {
+            post: {
+                summary: 'Retry Telegram kitchen ticket dispatch',
+                description: [
+                    'Allowed for the creating cashier, or an owner/manager within the same business owner scope.',
+                    'Retries Telegram dispatch for paid orders whose kitchen ticket is missing or failed.',
+                    'Pending tickets are still in progress. Orders with pending, sent, or done Telegram tickets are not resent.'
+                ].join(' '),
+                parameters: [
+                    {
+                        in: 'path',
+                        name: 'id',
+                        required: true,
+                        schema: { type: 'integer' }
+                    }
+                ],
+                responses: {
+                    200: { description: 'Telegram dispatch retried; response contains the refreshed order' },
+                    400: { $ref: '#/components/responses/BadRequest' },
+                    401: { $ref: '#/components/responses/Unauthorized' },
+                    403: { $ref: '#/components/responses/Forbidden' },
+                    404: { $ref: '#/components/responses/NotFound' },
+                    409: { description: 'Telegram ticket is already pending, sent, or done' },
+                    503: { description: 'Telegram bot is not configured' }
+                }
+            }
+        },
         '/api/users': {
             get: {
                 summary: 'List users',

@@ -4,6 +4,7 @@ import {
   answerCallbackQuery,
   sendNotification,
 } from '../services/telegram.service.js';
+import { emitKitchenTicketUpdated } from '../services/websocket.service.js';
 
 const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET;
 
@@ -89,7 +90,7 @@ export async function handleCallback(req, res) {
     const order = await Order.findByPk(orderId, {
       include: [
         { model: OrderItem, as: 'Items' },
-        { model: Stall, attributes: ['id', 'name', 'telegram_chat_id'] },
+        { model: Stall, attributes: ['id', 'name', 'owner_id', 'telegram_chat_id'] },
         { model: User, as: 'Cashier', attributes: ['id', 'username'] },
       ],
     });
@@ -139,6 +140,15 @@ export async function handleCallback(req, res) {
     ticket.status = 'done';
     ticket.completed_at = new Date();
     await ticket.save();
+
+    emitKitchenTicketUpdated({
+      cashierId: order.cashier_id,
+      ownerId: order.Stall?.owner_id,
+      orderId: order.id,
+      ticketId: ticket.id,
+      status: ticket.status,
+      completedAt: ticket.completed_at,
+    });
 
     // Dismiss the loading spinner on the cook's phone with a success message
     await answerCallbackQuery(callbackQueryId, '✅ Order marked as done!').catch(() => {});

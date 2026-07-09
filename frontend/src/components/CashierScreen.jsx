@@ -4,9 +4,14 @@ import ProductCard from './ProductCard';
 import OrderPanel from './OrderPanel';
 import Icon from './ui/Icon';
 
+function hasKitchenDispatchIssue(order) {
+  return order.status === 'paid' && ['failed', 'not_sent'].includes(order.kitchenStatus);
+}
+
 export default function CashierScreen({
   orders = [],
   onViewReceipt,
+  onRetryTelegramDispatch,
   categories,
   categoryById,
   selectedCategory,
@@ -34,6 +39,8 @@ export default function CashierScreen({
   assignedStall,
 }) {
   const [activeTab, setActiveTab] = useState('sale'); // 'sale' | 'my-orders'
+  const [retryingKitchenOrderId, setRetryingKitchenOrderId] = useState(null);
+  const [kitchenRetryError, setKitchenRetryError] = useState('');
 
   // Backend /orders/mine already scopes to this cashier only.
   // We still sort newest-first for display.
@@ -52,6 +59,25 @@ export default function CashierScreen({
       count: todayOrders.length
     };
   }, [myOrders]);
+
+  const handleRetryKitchenTicket = async (order) => {
+    if (!onRetryTelegramDispatch || !hasKitchenDispatchIssue(order)) {
+      return;
+    }
+
+    try {
+      setKitchenRetryError('');
+      setRetryingKitchenOrderId(order.id);
+      const updatedOrder = await onRetryTelegramDispatch(order.id);
+      if (updatedOrder?.kitchenStatus === 'failed') {
+        setKitchenRetryError(`Retry for ${order.orderNo} finished, but the kitchen ticket is still failed.`);
+      }
+    } catch (error) {
+      setKitchenRetryError(error.message || 'Unable to retry kitchen ticket.');
+    } finally {
+      setRetryingKitchenOrderId(null);
+    }
+  };
 
   return (
     <main className={`flex-1 min-h-0 relative pb-20 max-[1100px]:pb-25 md:pb-0 ${
@@ -183,6 +209,12 @@ export default function CashierScreen({
               </div>
             </div>
 
+            {kitchenRetryError && (
+              <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-[12px] font-semibold text-red-700">
+                {kitchenRetryError}
+              </div>
+            )}
+
             {/* Orders Table list */}
             <div className="flex-1 overflow-y-auto">
               {myOrders.length === 0 ? (
@@ -224,6 +256,23 @@ export default function CashierScreen({
                         }`}>
                           {order.status}
                         </span>
+
+                        {hasKitchenDispatchIssue(order) && (
+                          <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wide border bg-red-50 text-red-700 border-red-200">
+                            Kitchen issue
+                          </span>
+                        )}
+
+                        {hasKitchenDispatchIssue(order) && onRetryTelegramDispatch && (
+                          <button
+                            type="button"
+                            onClick={() => handleRetryKitchenTicket(order)}
+                            disabled={retryingKitchenOrderId === order.id}
+                            className="cursor-pointer px-3 py-1.5 rounded-lg border border-blue-100 bg-blue-50 text-[11px] font-bold text-blue-700 hover:bg-blue-100 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-wait"
+                          >
+                            {retryingKitchenOrderId === order.id ? 'Retrying...' : 'Retry ticket'}
+                          </button>
+                        )}
 
                         <button
                           type="button"

@@ -79,20 +79,28 @@
 - Cashier checkout calls `POST /api/orders` with safe item data and `paymentMethod = "khqr"`.
 - The backend calculates trusted totals from MySQL and creates the order as `pending_payment`.
 - The backend stores `qr_payload`, `qr_md5`, `payment_reference`, and `payment_expires_at`.
-- The frontend displays the backend QR payload and polls `POST /api/orders/:id/check-khqr-status` while the modal is open.
+- The frontend displays the backend QR payload and polls `POST /api/orders/:id/check-khqr-status` while the modal is open as a fallback.
 - `BAKONG_ACCOUNT_ID` is required; KHQR generation must fail clearly instead of falling back to a placeholder account.
 - The backend calls Bakong Open API `POST /v1/check_transaction_by_md5` with the stored `qr_md5`.
 - `BAKONG_OPEN_API_TOKEN` is backend-only and must never be sent to the frontend.
 - If Bakong reports payment success, the backend validates amount, currency, and configured destination account before marking the order `paid`.
 - Already-paid status checks are idempotent and do not duplicate audit logs.
+- A backend background checker scans unexpired `pending_payment` KHQR orders and uses the same Bakong validation path as the status-check endpoint.
+- When either the status-check endpoint or background checker marks a KHQR order as `paid`, the backend emits a cashier-scoped `payment_confirmed` WebSocket event to the cashier who created that order and dispatches the paid order to the stall's Telegram kitchen channel.
 
-## Planned Real-Time & Kitchen Flow (Future)
+## Real-Time & Kitchen Flow
 
-- WebSocket payment notifications are not implemented in Phase 5; current frontend uses polling.
-- A future WebSocket service should maintain a strict `Map<cashier_id, socket>` and emit only to the cashier who created the paid order.
-- Telegram kitchen dispatch remains a later phase.
+- `websocket.service.js` initializes a Socket.IO server on the same HTTP server as Express.
+- Cashier, Owner, and Manager sockets authenticate with the existing JWT. Platform Admin sockets are rejected because the temporary bootstrap role has no live POS UI.
+- The service maintains strict socket maps by `cashier_id` and management `owner_id`. It emits `payment_confirmed` only to the cashier who created the paid order. No payment broadcast.
+- Owner/Manager sockets receive `order_updated` for same-business order creation and payment status changes, then refresh order history from the backend.
+- `khqr-background-checker.service.js` periodically checks unexpired pending KHQR orders through Bakong, using system audit metadata instead of pretending a cashier clicked the status-check button.
+- KHQR-paid orders reuse the same `dispatchToTelegram` kitchen ticket flow as confirmed cash orders.
+- Owner/Manager order history surfaces `telegram_tickets.status` and can retry missing or failed Telegram dispatches for paid orders in their business. Cashiers can retry only their own paid orders. Pending tickets are treated as in-progress and are not retryable; sent/done tickets are not resent.
+- When Telegram dispatch finishes as `sent` or `failed`, the backend emits `kitchen_ticket_updated` so the UI does not stay stuck on the temporary `pending` state.
+- When a cook taps "Done" in Telegram, the callback updates the ticket to `done` and emits `kitchen_ticket_updated` to the creating cashier and same-business Owner/Manager sockets so order-history UI can refresh without a page reload.
 - The Telegram bot should post a structured ticket with inline "Done" button after paid order confirmation.
-- Cook taps "Done" → Telegram sends a callback query → backend validates cook authorization through a future Telegram-only cook identity model → edits the message to mark it complete.
+- Cook taps "Done" → Telegram sends a callback query → backend edits the message, persists the ticket as done, emits `kitchen_ticket_updated`, and must later validate cook authorization through a Telegram-only cook identity model before production.
 
 ## Telegram Kitchen Bot Architecture
 
@@ -125,8 +133,8 @@
 | # | Risk | Severity | Mitigation |
 |---|------|----------|------------|
 | 1 | **KHQR / Bakong integration** | 🟡 Medium | Phase 5 now uses SDK-generated Individual KHQR payloads plus backend-only Bakong Open API checking by md5/hash. Production Bakong testing has passed; keep monitoring response contracts, destination account fields, and operational failure handling. |
-| 2 | **WebSocket routing — accidental broadcast to wrong cashier** | 🔴 High | Isolated per-cashier notification is a confirmed core feature. Risk is implementing it incorrectly. `websocket.service.js` must maintain a strict `Map<cashier_id, socket>` and emit only to the mapped socket. Never use `io.emit()` or room broadcasts. Validate `cashier_id` on every emit. |
-| 3 | **Telegram Bot async failures** | 🟡 Medium | Telegram failure must never block or rollback the order. Strategy: (1) Always log the error. (2) Store Telegram dispatch state in `telegram_tickets.status` (`pending` / `sent` / `failed` / `done`) instead of mutating payment state on `orders`. (3) Show a management dashboard badge for failed tickets so an Owner/Manager can manually relay. Auto-retry queue is out of scope (Future). |
+| 2 | **WebSocket routing — accidental broadcast to wrong cashier** | 🔴 High | `websocket.service.js` authenticates cashier sockets with JWT, keeps a strict `Map<cashier_id, socketIds>`, and emits only to the mapped cashier sockets. Continue to avoid broad `io.emit()` payment broadcasts. |
+| 3 | **Telegram Bot async failures** | 🟡 Medium | Telegram failure must never block or rollback the order. Strategy: (1) Always log the error. (2) Store Telegram dispatch state in `telegram_tickets.status` (`pending` / `sent` / `failed` / `done`) instead of mutating payment state on `orders`. (3) Emit live ticket updates when dispatch finishes. (4) Show status in the management ledger, allow Owner/Manager retry for business orders, and allow Cashier retry for their own missing/failed tickets. Pending tickets are in-progress and are not retryable. Auto-retry queue is out of scope (Future). |
 | 4 | **KHR exchange rate — hardcoded vs. live** | 🟡 Medium | Decision required before building the product form. Recommend: hardcode the rate as a `.env` constant (`KHR_RATE=4100`) for now. Add a note in the admin panel showing the current rate. Live rate API is out of scope. |
 | 5 | **Stall data isolation — cross-stall data leak** | 🔴 High | Every query that returns cashier-facing products, orders, or staff must scope by the authenticated user and their backend stall assignment. Never trust a client-supplied stall ID for cashier access. |
 | 6 | **Legacy localStorage fallback regression** | 🟡 Medium | Products, categories, stalls, users, and orders are now backend-owned. Future UI work must not reintroduce localStorage as the source of truth for persisted POS data; localStorage should remain limited to auth/session/device-style browser state. |

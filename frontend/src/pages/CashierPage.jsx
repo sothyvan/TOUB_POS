@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { getPermissions } from '../utils/permissions';
 import { api } from '../services/api';
+import { connectCashierSocket, disconnectCashierSocket } from '../services/socketClient';
 import { useAuth } from '../auth/useAuth';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useCart } from '../hooks/useCart';
@@ -57,6 +58,58 @@ export default function CashierPage() {
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState(null);
   const [pendingKhqrOrder, setPendingKhqrOrder] = useState(null);
   const [khqrPollingError, setKhqrPollingError] = useState(null);
+  const pageMountedRef = useRef(false);
+  const pendingPaymentMethodRef = useRef(null);
+  const pendingKhqrOrderIdRef = useRef(null);
+
+  useEffect(() => {
+    pageMountedRef.current = true;
+    return () => {
+      pageMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    pendingPaymentMethodRef.current = pendingPaymentMethod;
+    pendingKhqrOrderIdRef.current = pendingKhqrOrder?.id ?? null;
+  }, [pendingPaymentMethod, pendingKhqrOrder?.id]);
+
+  const refreshOrderSnapshot = useCallback(async (orderId) => {
+    const parsedOrderId = Number(orderId);
+    if (!Number.isInteger(parsedOrderId) || parsedOrderId <= 0) {
+      await fetchOrders(false);
+      return null;
+    }
+
+    try {
+      const latestOrder = await api.orders.getById(parsedOrderId);
+      if (!pageMountedRef.current) {
+        return null;
+      }
+
+      setActiveReceipt((current) => (
+        Number(current?.id) === parsedOrderId ? latestOrder : current
+      ));
+      setPendingKhqrOrder((current) => (
+        Number(current?.id) === parsedOrderId ? latestOrder : current
+      ));
+      await fetchOrders(false);
+      return latestOrder;
+    } catch {
+      if (pageMountedRef.current) {
+        await fetchOrders(false);
+      }
+      return null;
+    }
+  }, [fetchOrders]);
+
+  const scheduleOrderSnapshotRefresh = useCallback((orderId) => {
+    window.setTimeout(() => {
+      if (pageMountedRef.current) {
+        void refreshOrderSnapshot(orderId);
+      }
+    }, 1200);
+  }, [refreshOrderSnapshot]);
 
   const handleCheckoutWithReceipt = async (method) => {
     if (method === 'KHQR') {
@@ -80,8 +133,15 @@ export default function CashierPage() {
     if (order) {
       setPendingPaymentMethod(null);
       setActiveReceipt(order);
+      scheduleOrderSnapshotRefresh(order.id);
     }
-  }, [pendingPaymentMethod, handleCheckout, setActiveReceipt]);
+  }, [pendingPaymentMethod, handleCheckout, scheduleOrderSnapshotRefresh]);
+
+  const handleRetryTelegramDispatch = useCallback(async (orderId) => {
+    const updatedOrder = await api.orders.retryTelegram(orderId);
+    await fetchOrders(false);
+    return updatedOrder;
+  }, [fetchOrders]);
 
   useEffect(() => {
     if (pendingPaymentMethod !== 'KHQR' || !pendingKhqrOrder?.id) {
@@ -127,6 +187,7 @@ export default function CashierPage() {
           setPendingPaymentMethod(null);
           setPendingKhqrOrder(null);
           setActiveReceipt(latestOrder);
+          scheduleOrderSnapshotRefresh(latestOrder.id);
           await fetchOrders(false);
         }
 
@@ -157,7 +218,67 @@ export default function CashierPage() {
       stopped = true;
       stopPolling();
     };
-  }, [pendingPaymentMethod, pendingKhqrOrder?.id, fetchOrders]);
+  }, [pendingPaymentMethod, pendingKhqrOrder?.id, fetchOrders, scheduleOrderSnapshotRefresh]);
+
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== 'cashier') {
+      return undefined;
+    }
+
+    let mounted = true;
+
+    connectCashierSocket({
+      onKitchenTicketUpdated: async (payload) => {
+        if (mounted) {
+          await refreshOrderSnapshot(payload?.orderId);
+        }
+      },
+      onPaymentConfirmed: async (payload) => {
+        if (!mounted || !payload?.orderId) {
+          return;
+        }
+
+        const orderId = Number(payload.orderId);
+        const isCurrentKhqrOrder = pendingPaymentMethodRef.current === 'KHQR'
+          && Number(pendingKhqrOrderIdRef.current) === orderId;
+
+        try {
+          const latestOrder = await api.orders.getById(orderId);
+          if (!mounted) {
+            return;
+          }
+
+          await fetchOrders(false);
+
+          if (isCurrentKhqrOrder) {
+            setPendingKhqrOrder(latestOrder);
+            setKhqrPollingError(null);
+
+            if (latestOrder.status === 'paid') {
+              setPendingPaymentMethod(null);
+              setPendingKhqrOrder(null);
+              setActiveReceipt(latestOrder);
+              scheduleOrderSnapshotRefresh(latestOrder.id);
+            }
+          }
+        } catch (err) {
+          if (mounted && isCurrentKhqrOrder) {
+            setKhqrPollingError(err.message || 'Payment was confirmed, but the receipt could not be loaded.');
+          }
+        }
+      },
+      onConnectError: (err) => {
+        if (pendingPaymentMethodRef.current === 'KHQR') {
+          setKhqrPollingError(err.message || 'Live payment notification is unavailable. Polling is still active.');
+        }
+      },
+    });
+
+    return () => {
+      mounted = false;
+      disconnectCashierSocket();
+    };
+  }, [currentUser, fetchOrders, refreshOrderSnapshot, scheduleOrderSnapshotRefresh]);
 
   // ── UI state ──────────────────────────────────────────────────────────────
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -246,6 +367,7 @@ export default function CashierPage() {
         checkoutError={checkoutError}
         isOnline={isOnline}
         assignedStall={assignedStall}
+        onRetryTelegramDispatch={handleRetryTelegramDispatch}
       />
 
       <ReceiptModal

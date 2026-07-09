@@ -57,6 +57,9 @@ cp backend/.env.example backend/.env
 | `DB_PASSWORD`    | `yourpassword`         | MySQL password               |
 | `JWT_SECRET`     | `change_me_in_prod`    | JWT signing secret           |
 | `JWT_EXPIRES_IN` | `8h`                   | Token lifetime               |
+| `PLATFORM_ADMIN_USERNAME` | `platform_admin` | Local bootstrap username |
+| `PLATFORM_ADMIN_PASSWORD` | `platform123` | Local bootstrap password |
+| `PLATFORM_ADMIN_ROLE` | `platform_admin` | Local bootstrap role |
 
 ---
 
@@ -82,11 +85,11 @@ npm run dev
 
 ## 5. Default Credentials
 
-> Seed user created by `schema.sql`. Change the password before any real deployment.
+> Local development startup creates this API-only bootstrap account if it does not already exist. Change the password before any real deployment.
 
-| Role    | Username | Password   | PIN  |
-|---------|----------|------------|------|
-| Admin   | `admin`  | `admin123` | —    |
+| Role | Username | Password | PIN |
+|------|----------|----------|-----|
+| Platform Admin | `platform_admin` | `platform123` | — |
 
 ---
 

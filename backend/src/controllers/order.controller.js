@@ -128,6 +128,18 @@ export async function checkKhqrPaymentStatus(req, res, next) {
 }
 
 /**
+ * owner/manager or the creating cashier retries Telegram kitchen dispatch for a paid order.
+ */
+export async function retryTelegramDispatch(req, res, next) {
+  try {
+    const order = await orderService.retryTelegramDispatch(req.params.id, req.user);
+    res.json({ success: true, data: order });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * owner/manager fetches all orders list
  */
 export async function getAllOrders(req, res, next) {

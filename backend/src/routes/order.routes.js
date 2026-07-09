@@ -7,6 +7,7 @@ import {
   getOrder,
   getMyOrders,
   getAllOrders,
+  retryTelegramDispatch,
 } from '../controllers/order.controller.js';
 
 const router = Router();
@@ -27,6 +28,9 @@ router.post('/:id/check-khqr-status', authorize(['owner', 'manager', 'cashier'])
 
 // POST   /api/orders/:id/confirm-cash — confirm physical cash received
 router.post('/:id/confirm-cash', authorize(['owner', 'manager', 'cashier']), confirmCashPayment);
+
+// POST   /api/orders/:id/retry-telegram — owner/manager or creating cashier retries failed kitchen ticket delivery
+router.post('/:id/retry-telegram', authorize(['owner', 'manager', 'cashier']), retryTelegramDispatch);
 
 // GET    /api/orders       — owner/manager fetches all orders
 router.get('/', authorize(['owner', 'manager']), getAllOrders);

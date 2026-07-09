@@ -1,10 +1,16 @@
 import 'dotenv/config';
+import { createServer } from 'node:http';
 import bcrypt from 'bcryptjs';
+import { getPlatformAdminSeedConfig, validateEnvironment } from './config/env.js';
+import { startKhqrBackgroundChecker } from './services/khqr-background-checker.service.js';
+import { initializeWebSocketServer } from './services/websocket.service.js';
 
 const PORT = process.env.PORT || 3000;
 
 async function startServer() {
   try {
+    validateEnvironment();
+
     const { default: app } = await import('./app.js');
     const { default: sequelize, ensureDatabaseExists } = await import('./config/db.js');
     const { User } = await import('./models/index.js');
@@ -26,23 +32,28 @@ async function startServer() {
     // Auto-seed default platform admin user for local development only.
     // Business owner accounts should be created by platform_admin through the user API.
     if (process.env.NODE_ENV !== 'production') {
-      const adminCount = await User.count({ where: { username: process.env.PLATFORM_ADMIN_USERNAME } });
+      const seedConfig = getPlatformAdminSeedConfig();
+      const adminCount = await User.count({ where: { username: seedConfig.username } });
       if (adminCount === 0) {
-        const hashedPassword = await bcrypt.hash(process.env.PLATFORM_ADMIN_PASSWORD, 10);
+        const hashedPassword = await bcrypt.hash(seedConfig.password, 10);
         await User.create({
-          username: process.env.PLATFORM_ADMIN_USERNAME,
+          username: seedConfig.username,
           password: hashedPassword,
           pin: null,
-          role: process.env.PLATFORM_ADMIN_ROLE,
+          role: seedConfig.role,
           owner_id: null,
           is_active: true,
         });
-        console.log(`[server] Seeded default platform admin user (username: ${process.env.PLATFORM_ADMIN_USERNAME}, password: ${process.env.PLATFORM_ADMIN_PASSWORD}).`);
+        console.log(`[server] Seeded default platform admin user (username: ${seedConfig.username}).`);
       }
     }
 
-    // Start server
-    app.listen(PORT, () => {
+    // Start HTTP + WebSocket server
+    const httpServer = createServer(app);
+    initializeWebSocketServer(httpServer);
+    startKhqrBackgroundChecker();
+
+    httpServer.listen(PORT, () => {
       console.log(`[server] Toub POS API running on http://localhost:${PORT}`);
     });
   } catch (err) {

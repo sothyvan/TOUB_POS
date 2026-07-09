@@ -16,6 +16,10 @@ import {
   checkBakongTransactionByMd5,
   getBakongCheckMode,
 } from './bakong-provider.service.js';
+import {
+  emitManagementOrderUpdated,
+  emitPaymentConfirmed,
+} from './websocket.service.js';
 
 const ALLOWED_PAYMENT_METHODS = new Set(['cash', 'khqr']);
 const MANAGEMENT_ORDER_ROLES = new Set(['owner', 'manager']);
@@ -233,6 +237,30 @@ function buildOrderInclude() {
   ];
 }
 
+function buildPaymentConfirmedPayload(order) {
+  return {
+    orderId: order.id,
+    status: order.status,
+    paymentMethod: order.payment_method,
+    totalUsd: Number(order.total_usd),
+    completedAt: order.completed_at,
+  };
+}
+
+function dispatchPaidOrderToTelegram(order, context) {
+  // Fire-and-forget: kitchen dispatch must not affect payment confirmation responses.
+  dispatchToTelegram(order).catch((err) => {
+    console.error(`[Telegram] Unexpected dispatch error after ${context}:`, err);
+  });
+}
+
+function getLatestTelegramTicket(orderId) {
+  return TelegramTicket.findOne({
+    where: { order_id: orderId },
+    order: [['id', 'DESC']],
+  });
+}
+
 function buildOrderAccessInclude() {
   return [
     {
@@ -266,6 +294,47 @@ export async function getOrderForActor(orderId, actor) {
   return getOrderById(parsedOrderId);
 }
 
+export async function retryTelegramDispatch(orderId, actor) {
+  const parsedOrderId = parsePositiveInteger(orderId, 'order ID');
+  parsePositiveInteger(actor?.id, 'actor ID');
+
+  const order = await Order.findByPk(parsedOrderId, {
+    include: buildOrderAccessInclude(),
+  });
+
+  if (!order) {
+    throw httpError('Order not found.', 404);
+  }
+
+  if (!canAccessOrder(order, actor)) {
+    throw httpError('You cannot retry Telegram dispatch for this order.', 403);
+  }
+
+  if (order.status !== 'paid') {
+    throw httpError('Only paid orders can be dispatched to Telegram.', 400);
+  }
+
+  const latestTicket = await getLatestTelegramTicket(parsedOrderId);
+  if (latestTicket && ['sent', 'done'].includes(latestTicket.status)) {
+    throw httpError(`Telegram ticket is already ${latestTicket.status}.`, 409);
+  }
+  if (latestTicket?.status === 'pending') {
+    throw httpError('Telegram ticket dispatch is still pending. Please wait for it to finish.', 409);
+  }
+
+  const fullOrder = await getOrderById(parsedOrderId);
+  if (!process.env.TELEGRAM_BOT_TOKEN) {
+    throw httpError('TELEGRAM_BOT_TOKEN is required before retrying Telegram dispatch.', 503);
+  }
+
+  if (!fullOrder?.Stall?.telegram_chat_id) {
+    throw httpError('This order stall does not have a Telegram kitchen chat configured.', 400);
+  }
+
+  await dispatchToTelegram(fullOrder, { forceRetry: true });
+  return getOrderById(parsedOrderId);
+}
+
 /**
  * Creates a new order along with its order items inside a transaction.
  */
@@ -277,6 +346,7 @@ export async function createOrder(cashierId, items, paymentMethod) {
   const normalizedPaymentMethod = normalizePaymentMethod(paymentMethod);
   const parsedCashierId = parsePositiveInteger(cashierId, 'cashier ID');
   let createdOrderId;
+  let createdOrderOwnerId;
 
   const transaction = await sequelize.transaction();
 
@@ -296,6 +366,7 @@ export async function createOrder(cashierId, items, paymentMethod) {
     if (!stall) {
       throw httpError('Assigned stall was not found.', 404);
     }
+    createdOrderOwnerId = stall.owner_id;
 
     const cashier = await User.findByPk(parsedCashierId, {
       attributes: ['id', 'username', 'role'],
@@ -409,7 +480,16 @@ export async function createOrder(cashierId, items, paymentMethod) {
     throw error;
   }
 
-  return getOrderById(createdOrderId);
+  const createdOrder = await getOrderById(createdOrderId);
+  emitManagementOrderUpdated({
+    ownerId: createdOrderOwnerId,
+    orderId: createdOrder.id,
+    status: createdOrder.status,
+    paymentMethod: createdOrder.payment_method,
+    changeType: 'created',
+  });
+
+  return createdOrder;
 }
 
 export async function confirmCashPayment(orderId, actor, cashReceivedUsd) {
@@ -417,6 +497,7 @@ export async function confirmCashPayment(orderId, actor, cashReceivedUsd) {
   const actorId = parsePositiveInteger(actor?.id, 'actor ID');
   const actorRole = String(actor?.role || '').toLowerCase();
   let confirmedOrderId;
+  let confirmedOrderOwnerId;
 
   const transaction = await sequelize.transaction();
 
@@ -464,6 +545,7 @@ export async function confirmCashPayment(orderId, actor, cashReceivedUsd) {
     order.change_due_usd = centsToUsd(changeDueCents);
     order.completed_at = new Date();
     await order.save({ transaction });
+    confirmedOrderOwnerId = getOrderOwnerId(order);
 
     await AuditLog.create({
       actor_user_id: actorId,
@@ -487,30 +569,50 @@ export async function confirmCashPayment(orderId, actor, cashReceivedUsd) {
   }
 
   const confirmedOrder = await getOrderById(confirmedOrderId);
-
-  // Fire-and-forget: Telegram dispatch must not affect the payment confirmation response.
-  // If the bot is down or the stall has no chat ID, the order is still paid successfully.
-  dispatchToTelegram(confirmedOrder).catch((err) => {
-    console.error('[Telegram] Unexpected dispatch error after cash confirm:', err);
+  emitManagementOrderUpdated({
+    ownerId: confirmedOrderOwnerId,
+    orderId: confirmedOrder.id,
+    status: confirmedOrder.status,
+    paymentMethod: confirmedOrder.payment_method,
+    changeType: 'paid',
   });
+
+  dispatchPaidOrderToTelegram(confirmedOrder, 'cash confirm');
 
   return confirmedOrder;
 }
 
-export async function checkKhqrPaymentStatus(orderId, actor) {
+function resolveKhqrCheckContext(actor, options = {}) {
+  const requireAccess = options.requireAccess !== false;
+  const actorUserId = options.actorUserId === null
+    ? null
+    : parsePositiveInteger(options.actorUserId ?? actor?.id, 'actor ID');
+  const checkedByRole = options.checkedByRole
+    || String(actor?.role || '').toLowerCase()
+    || 'system';
+
+  return {
+    actorUserId,
+    checkedByRole,
+    source: options.source || 'bakong_status_check',
+    requireAccess,
+  };
+}
+
+async function checkKhqrPaymentStatusInternal(orderId, actor, options = {}) {
   const parsedOrderId = parsePositiveInteger(orderId, 'order ID');
-  const actorId = parsePositiveInteger(actor?.id, 'actor ID');
-  const actorRole = String(actor?.role || '').toLowerCase();
+  const checkContext = resolveKhqrCheckContext(actor, options);
   const checkMode = getBakongCheckMode();
   const order = await Order.findByPk(parsedOrderId, {
     include: buildOrderAccessInclude(),
   });
+  const orderOwnerId = getOrderOwnerId(order);
 
   if (!order) {
     throw httpError('Order not found.', 404);
   }
 
-  if (!canAccessOrder(order, actor)) {
+  if (checkContext.requireAccess && !canAccessOrder(order, actor)) {
     throw httpError('You cannot check payment status for this order.', 403);
   }
 
@@ -520,8 +622,11 @@ export async function checkKhqrPaymentStatus(orderId, actor) {
 
   if (order.status === 'paid') {
     logKhqrStatusCheckDebug(order, checkMode);
+    const paidOrder = await getOrderById(order.id);
+    dispatchPaidOrderToTelegram(paidOrder, 'already-paid KHQR status check');
+
     return {
-      order: await getOrderById(order.id),
+      order: paidOrder,
       paymentStatus: 'paid',
       providerStatus: 'already_paid',
       checkMode,
@@ -653,7 +758,7 @@ export async function checkKhqrPaymentStatus(orderId, actor) {
       await lockedOrder.save({ transaction });
 
       await AuditLog.create({
-        actor_user_id: actorId,
+        actor_user_id: checkContext.actorUserId,
         action: 'khqr_payment_confirmed',
         order_id: lockedOrder.id,
         details: {
@@ -662,8 +767,8 @@ export async function checkKhqrPaymentStatus(orderId, actor) {
           amount: providerResult.amount,
           currency: normalizeOptionalText(providerResult.currency)?.toUpperCase() || 'USD',
           hash: providerResult.hash,
-          source: 'bakong_status_check',
-          checked_by_role: actorRole,
+          source: checkContext.source,
+          checked_by_role: checkContext.checkedByRole,
         },
       }, { transaction });
 
@@ -675,14 +780,50 @@ export async function checkKhqrPaymentStatus(orderId, actor) {
     throw error;
   }
 
+  const confirmedOrder = await getOrderById(confirmedOrderId);
+
+  if (!alreadyProcessed) {
+    emitManagementOrderUpdated({
+      ownerId: orderOwnerId,
+      orderId: confirmedOrder.id,
+      status: confirmedOrder.status,
+      paymentMethod: confirmedOrder.payment_method,
+      changeType: 'paid',
+    });
+
+    emitPaymentConfirmed(
+      confirmedOrder.cashier_id,
+      buildPaymentConfirmedPayload(confirmedOrder)
+    );
+    dispatchPaidOrderToTelegram(confirmedOrder, 'KHQR confirm');
+  } else {
+    dispatchPaidOrderToTelegram(confirmedOrder, 'already-paid KHQR confirm');
+  }
+
   return {
-    order: await getOrderById(confirmedOrderId),
+    order: confirmedOrder,
     paymentStatus: 'paid',
     providerStatus: 'paid',
     checkMode,
     alreadyProcessed,
     message: alreadyProcessed ? 'Order was already paid.' : 'KHQR payment confirmed by Bakong.',
   };
+}
+
+export function checkKhqrPaymentStatus(orderId, actor) {
+  return checkKhqrPaymentStatusInternal(orderId, actor, {
+    requireAccess: true,
+    source: 'bakong_status_check',
+  });
+}
+
+export function checkKhqrPaymentStatusAsSystem(orderId) {
+  return checkKhqrPaymentStatusInternal(orderId, null, {
+    requireAccess: false,
+    actorUserId: null,
+    checkedByRole: 'system',
+    source: 'bakong_background_checker',
+  });
 }
 
 /**

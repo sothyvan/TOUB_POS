@@ -2,12 +2,49 @@ import { useState, useMemo } from 'react';
 import { money } from '../utils/format';
 import Icon from './ui/Icon';
 
-export default function OrderHistory({ orders: rawOrders = [] }) {
+const kitchenStatusConfig = {
+  sent: {
+    label: 'Sent',
+    className: 'bg-green-50 text-green-700 border-green-200',
+  },
+  done: {
+    label: 'Done',
+    className: 'bg-slate-50 text-slate-700 border-slate-200',
+  },
+  failed: {
+    label: 'Failed',
+    className: 'bg-red-50 text-red-700 border-red-200',
+  },
+  pending: {
+    label: 'Pending',
+    className: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+  },
+  not_sent: {
+    label: 'Not sent',
+    className: 'bg-orange-50 text-orange-700 border-orange-200',
+  },
+  not_ready: {
+    label: 'Not ready',
+    className: 'bg-gray-50 text-gray-500 border-gray-200',
+  },
+};
+
+function getKitchenStatusConfig(status) {
+  return kitchenStatusConfig[status] || kitchenStatusConfig.not_ready;
+}
+
+function canRetryKitchenTicket(order) {
+  return order.status === 'paid' && ['failed', 'not_sent'].includes(order.kitchenStatus);
+}
+
+export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDispatch }) {
   const [dateFilter, setDateFilter] = useState('today'); // 'today' | 'week' | 'month'
   const [activeSubTab, setActiveSubTab] = useState('analytics'); // 'analytics' | 'ledger'
   const [searchQuery, setSearchQuery] = useState('');
   const [exporting, setExporting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [retryingOrderId, setRetryingOrderId] = useState(null);
+  const [kitchenRetryError, setKitchenRetryError] = useState('');
 
   const allOrders = useMemo(() => {
     return rawOrders.map(o => ({
@@ -125,6 +162,25 @@ export default function OrderHistory({ orders: rawOrders = [] }) {
     }, 800);
   };
 
+  const handleRetryKitchenTicket = async (order) => {
+    if (!onRetryTelegramDispatch || !canRetryKitchenTicket(order)) {
+      return;
+    }
+
+    try {
+      setKitchenRetryError('');
+      setRetryingOrderId(order.id);
+      const updatedOrder = await onRetryTelegramDispatch(order.id);
+      if (updatedOrder?.kitchenStatus === 'failed') {
+        setKitchenRetryError(`Telegram retry for ${order.orderNo} finished, but the ticket is still failed.`);
+      }
+    } catch (error) {
+      setKitchenRetryError(error.message || 'Unable to retry Telegram kitchen ticket.');
+    } finally {
+      setRetryingOrderId(null);
+    }
+  };
+
   // Sparkline SVG Points generator
   const sparklinePoints = useMemo(() => {
     if (filteredOrders.length === 0) return '0,25 20,20 40,30 60,15 80,22 100,5';
@@ -147,7 +203,8 @@ export default function OrderHistory({ orders: rawOrders = [] }) {
     return filteredOrders.filter(o => 
       o.orderNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (o.cashierName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (o.stallName && o.stallName.toLowerCase().includes(searchQuery.toLowerCase()))
+      (o.stallName && o.stallName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (o.kitchenStatus && o.kitchenStatus.toLowerCase().includes(searchQuery.toLowerCase()))
     );
   }, [filteredOrders, searchQuery]);
 
@@ -421,39 +478,49 @@ export default function OrderHistory({ orders: rawOrders = [] }) {
       ) : (
         /* Transaction Ledger sub-tab */
         <div className="bg-white rounded-2xl border border-[#f3f4f6] flex flex-col flex-1 min-h-0 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
-          <div className="flex justify-between items-center px-6 py-4 border-b border-[#f3f4f6]">
-            <div>
-              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#111827', fontFamily: 'Inter' }}>
-                Transaction Ledger
-              </h3>
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af', fontFamily: 'Inter' }}>
-                Review, filter and track individual sales receipts
-              </p>
+          <div className="border-b border-[#f3f4f6]">
+            <div className="flex justify-between items-center px-6 py-4">
+              <div>
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#111827', fontFamily: 'Inter' }}>
+                  Transaction Ledger
+                </h3>
+                <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af', fontFamily: 'Inter' }}>
+                  Review, filter and track individual sales receipts
+                </p>
+              </div>
+
+              {/* Search Input */}
+              <div className="relative">
+                <Icon name="search" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9ca3af]" />
+                <input
+                  type="text"
+                  placeholder="Search orders, cashiers, stalls..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 pr-4 py-2 border border-[#e5e7eb] rounded-xl text-[13px] outline-none w-[280px]"
+                  onFocus={(e) => e.target.style.borderColor = '#003ec7'}
+                  onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+                />
+              </div>
             </div>
 
-            {/* Search Input */}
-            <div className="relative">
-              <Icon name="search" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9ca3af]" />
-              <input
-                type="text"
-                placeholder="Search orders, cashiers, stalls..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-4 py-2 border border-[#e5e7eb] rounded-xl text-[13px] outline-none w-[280px]"
-                onFocus={(e) => e.target.style.borderColor = '#003ec7'}
-                onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
-              />
-            </div>
+            {kitchenRetryError && (
+              <div className="mx-6 mb-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-[12px] font-semibold text-red-700">
+                {kitchenRetryError}
+              </div>
+            )}
           </div>
 
           {/* Ledger Table Header */}
           <div className="flex items-center px-6 py-2.5 bg-[#f9fafb] border-b border-[#f3f4f6] text-[11px] font-bold text-[#9ca3af] tracking-wider uppercase">
             <span className="flex-1">Order ID</span>
             <span className="flex-1">Date &amp; Time</span>
-            <span className="flex-[1.5]">Stall / Cart</span>
+            <span className="flex-[1.35]">Stall / Cart</span>
             <span className="flex-1">Cashier</span>
             <span className="flex-[0.8] text-center">Payment</span>
+            <span className="flex-1 text-center">Kitchen</span>
             <span className="flex-1 text-right">Total Amount</span>
+            <span className="flex-[0.9] text-right">Action</span>
           </div>
 
           {/* Ledger Table Body */}
@@ -468,7 +535,7 @@ export default function OrderHistory({ orders: rawOrders = [] }) {
                 <div key={order.id} className="flex items-center px-6 py-4 border-b border-[#f9fafb] hover:bg-[#fafbff] transition-colors">
                   <span className="flex-1 text-[13px] font-bold text-[#003ec7]">#{order.orderNo}</span>
                   <span className="flex-1 text-[13px] text-[#6b7280]">{new Date(order.createdAt).toLocaleString()}</span>
-                  <span className="flex-[1.5] text-[13px] text-[#374151] font-semibold">{order.stallName || 'Back Office'}</span>
+                  <span className="flex-[1.35] text-[13px] text-[#374151] font-semibold">{order.stallName || 'Back Office'}</span>
                   <span className="flex-1 text-[13px] text-[#374151]">{order.cashierName}</span>
                   
                   <div className="flex-[0.8] flex justify-center">
@@ -483,9 +550,30 @@ export default function OrderHistory({ orders: rawOrders = [] }) {
                     </span>
                   </div>
 
+                  <div className="flex-1 flex justify-center">
+                    <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wide border ${getKitchenStatusConfig(order.kitchenStatus).className}`}>
+                      {getKitchenStatusConfig(order.kitchenStatus).label}
+                    </span>
+                  </div>
+
                   <span className="flex-1 text-right text-[14px] font-extrabold text-[#111827]">
                     {money(order.total)}
                   </span>
+
+                  <div className="flex-[0.9] flex justify-end">
+                    {canRetryKitchenTicket(order) ? (
+                      <button
+                        type="button"
+                        onClick={() => handleRetryKitchenTicket(order)}
+                        disabled={retryingOrderId === order.id}
+                        className="cursor-pointer px-3 py-1.5 rounded-lg border border-blue-100 bg-blue-50 text-[11px] font-bold text-blue-700 hover:bg-blue-100 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-wait"
+                      >
+                        {retryingOrderId === order.id ? 'Retrying...' : 'Retry'}
+                      </button>
+                    ) : (
+                      <span className="text-[11px] font-semibold text-[#cbd5e1]">—</span>
+                    )}
+                  </div>
                 </div>
               ))
             )}

@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getPermissions } from '../utils/permissions';
 import { useAuth } from '../auth/useAuth';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useProducts } from '../hooks/useProducts';
 import { useUsers } from '../hooks/useUsers';
 import { useOrders } from '../hooks/useOrders';
+import { api } from '../services/api';
+import { connectManagementSocket, disconnectManagementSocket } from '../services/socketClient';
 import PageShell from '../components/PageShell';
 import OwnerWorkspace from '../components/OwnerWorkspace';
 
@@ -31,14 +33,43 @@ export default function OwnerPortalPage() {
     loading: usersLoading, error: usersError
   } = useUsers(canManageUsers, currentUser);
 
-  const { orders, todaysOrders, todaysTotal } =
+  const { orders, todaysOrders, todaysTotal, fetchOrders } =
     useOrders(isOnline, [], () => {}, currentUser);
 
   const [ownerTab, setOwnerTab] = useState('dashboard');
 
+  useEffect(() => {
+    if (!currentUser || !canViewOrders) {
+      return undefined;
+    }
+
+    let mounted = true;
+    const refreshOrders = async () => {
+      if (mounted) {
+        await fetchOrders(false);
+      }
+    };
+
+    connectManagementSocket({
+      onKitchenTicketUpdated: refreshOrders,
+      onOrderUpdated: refreshOrders,
+    });
+
+    return () => {
+      mounted = false;
+      disconnectManagementSocket();
+    };
+  }, [currentUser, canViewOrders, fetchOrders]);
+
   // ── Logout ────────────────────────────────────────────────────────────────
   const handleLogout = () => {
     logout();
+  };
+
+  const handleRetryTelegramDispatch = async (orderId) => {
+    const updatedOrder = await api.orders.retryTelegram(orderId);
+    await fetchOrders(false);
+    return updatedOrder;
   };
 
   // ── Owner tab visibility ──────────────────────────────────────────────────
@@ -97,6 +128,7 @@ export default function OwnerPortalPage() {
         usersError={usersError}
         todaysOrders={todaysOrders}
         todaysTotal={todaysTotal}
+        onRetryTelegramDispatch={handleRetryTelegramDispatch}
         onLogout={handleLogout}
       />
     </PageShell>

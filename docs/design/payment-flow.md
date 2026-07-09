@@ -12,6 +12,8 @@ sequenceDiagram
     participant API as Backend API
     participant DB as MySQL
     participant AUD as Audit Logs
+    participant WS as Socket.IO
+    participant TG as Telegram Kitchen
 
     C->>API: POST /api/orders { items, payment_method: "cash" }
     API->>API: Derive cashier_id from JWT
@@ -65,7 +67,7 @@ pending_payment ──▶ paid
 
 Phase 5 uses Generate KHQR (Individual), not Merchant KHQR. This is because the project does not have official MerchantID and AcquiringBank credentials. Individual KHQR requires the configured owner/stall Bakong account ID and is appropriate for final-project/demo scope.
 
-The backend owns QR generation and payment status. The frontend displays the QR and polls the TouB backend status-check endpoint; it never calls Bakong directly and never marks a KHQR order as paid by itself.
+The backend owns QR generation and payment status. The frontend displays the QR and polls the TouB backend status-check endpoint as a fallback; it never calls Bakong directly and never marks a KHQR order as paid by itself. The backend also runs a background checker for unexpired pending KHQR orders.
 
 ```mermaid
 sequenceDiagram
@@ -75,6 +77,9 @@ sequenceDiagram
     participant KHQR as KHQR SDK
     participant B as Bakong Open API
     participant AUD as Audit Logs
+    participant WS as Socket.IO
+    participant TG as Telegram Kitchen
+    participant BG as Background Checker
 
     C->>API: POST /api/orders { items, payment_method: "khqr" }
     API->>API: Derive cashier_id from JWT
@@ -98,9 +103,18 @@ sequenceDiagram
       API-->>C: paymentStatus + latest order
     end
 
+    loop every configured interval
+      BG->>API: Find pending unexpired KHQR orders
+      API->>B: POST /v1/check_transaction_by_md5 { md5 }
+      B-->>API: paid / not_found / failed / error
+      API->>API: Validate amount, currency, and destination account if paid
+    end
+
     Note over B: Customer scans and pays in banking app
     API->>DB: UPDATE orders SET status = "paid", completed_at = NOW()
     API->>AUD: INSERT khqr_payment_confirmed
+    API->>WS: Emit payment_confirmed to creating cashier only
+    API->>TG: Dispatch paid order ticket to stall chat
     C->>API: POST /api/orders/:id/check-khqr-status
     API-->>C: status = "paid"
     C->>C: Close QR modal and show paid receipt
@@ -113,8 +127,10 @@ Important rules:
 - Backend requires `BAKONG_ACCOUNT_ID`; it does not fall back to a demo account.
 - Backend generates and stores the QR payload, QR md5, unique payment reference, and expiry timestamp.
 - `POST /api/orders/:id/check-khqr-status` is the frontend polling endpoint.
+- The background checker uses the same backend validation path so payment detection can continue after the modal closes.
 - The backend calls Bakong Open API by md5/hash.
 - `BAKONG_OPEN_API_TOKEN` must never reach the frontend.
 - `BAKONG_ACCOUNT_ID` is backend-only payment configuration and is required for QR generation and paid-status validation.
-- Already-paid checks are idempotent and do not duplicate audit logs.
-- WebSocket cashier-specific push is still a later enhancement; current Phase 5 frontend uses polling.
+- Already-paid checks are idempotent and do not duplicate audit logs or Telegram dispatch.
+- Socket.IO cashier-specific push is active, and polling remains as a fallback while the modal is open.
+- Newly confirmed KHQR paid orders dispatch to the stall's Telegram kitchen chat using the same ticket flow as confirmed cash orders.

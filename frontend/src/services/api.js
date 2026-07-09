@@ -103,12 +103,26 @@ function mapUserToFrontend(u) {
   };
 }
 
+function mapTelegramTicketsToFrontend(tickets) {
+  return tickets.map(ticket => ({
+    id: ticket.id,
+    status: ticket.status,
+    sentAt: ticket.sent_at || ticket.sentAt || null,
+    completedAt: ticket.completed_at || ticket.completedAt || null,
+  }));
+}
+
 function mapOrderToFrontend(o) {
   const id = o.id ?? o.orderId;
   const paymentMethod = String(o.payment_method || o.paymentMethod || '').toUpperCase();
   const cashier = o.Cashier || o.cashier || {};
   const stall = o.Stall || o.stall || {};
   const items = o.Items || o.items || [];
+  const telegramTickets = mapTelegramTicketsToFrontend(
+    o.TelegramTickets || o.telegramTickets || o.telegram_tickets || []
+  ).sort((a, b) => Number(b.id) - Number(a.id));
+  const latestTelegramTicket = telegramTickets[0] || null;
+  const kitchenStatus = latestTelegramTicket?.status || (o.status === 'paid' ? 'not_sent' : 'not_ready');
 
   return {
     id,
@@ -134,6 +148,9 @@ function mapOrderToFrontend(o) {
     changeDue: o.change_due_usd === null || o.change_due_usd === undefined
       ? null
       : parseFloat(o.change_due_usd),
+    kitchenStatus,
+    telegramTickets,
+    latestTelegramTicket,
     items: items.map(i => ({
       id: i.id,
       productId: i.product_id,
@@ -315,6 +332,10 @@ export const api = {
         method: 'POST',
         body: { cash_received_usd: cashReceivedUsd },
       });
+      return mapOrderToFrontend(res.data);
+    },
+    async retryTelegram(orderId) {
+      const res = await apiRequest(`/orders/${orderId}/retry-telegram`, { method: 'POST' });
       return mapOrderToFrontend(res.data);
     },
   },
