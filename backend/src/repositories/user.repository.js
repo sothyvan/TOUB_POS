@@ -4,7 +4,7 @@ import { User, Stall } from '../models/index.js';
  * Find a user by username. Returns user object with password mapped to password_hash.
  */
 export async function findUserByUsername(username) {
-  const user = await User.findOne({ where: { username } });
+  const user = await User.findOne({ where: { username, is_deleted: false } });
   if (!user) {
     return null;
   }
@@ -22,7 +22,8 @@ export async function findUserByUsername(username) {
  * Find a user by ID.
  */
 export async function findUserById(id) {
-  return User.findByPk(id, {
+  return User.findOne({
+    where: { id, is_deleted: false },
     attributes: { exclude: ['password', 'pin'] },
   });
 }
@@ -31,7 +32,8 @@ export async function findUserById(id) {
  * Find a user by ID including their PIN (for auth).
  */
 export async function findUserWithPinById(id) {
-  return User.findByPk(id, {
+  return User.findOne({
+    where: { id, is_deleted: false },
     attributes: ['id', 'username', 'role', 'pin', 'owner_id', 'is_active'],
   });
 }
@@ -55,6 +57,7 @@ export async function insertUser({ username, password_hash, pin_hash, role, owne
  */
 export async function findAllUsers() {
   return User.findAll({
+    where: { is_deleted: false },
     attributes: { exclude: ['password', 'pin'] },
     order: [['created_at', 'DESC']],
   });
@@ -65,7 +68,7 @@ export async function findAllUsers() {
  */
 export async function findAllUsersByOwnerId(ownerId) {
   return User.findAll({
-    where: { owner_id: ownerId },
+    where: { owner_id: ownerId, is_deleted: false },
     attributes: { exclude: ['password', 'pin'] },
     order: [['created_at', 'DESC']],
   });
@@ -76,7 +79,7 @@ export async function findAllUsersByOwnerId(ownerId) {
  */
 export async function findOwnerUsers() {
   return User.findAll({
-    where: { role: 'owner' },
+    where: { role: 'owner', is_deleted: false },
     attributes: { exclude: ['password', 'pin'] },
     order: [['created_at', 'DESC']],
   });
@@ -99,7 +102,17 @@ export async function updateUserById(id, data) {
  * Delete user by ID.
  */
 export async function deleteUserById(id) {
-  const affectedRows = await User.destroy({ where: { id } });
+  const user = await User.findByPk(id);
+  if (!user) return false;
+
+  const [affectedRows] = await User.update(
+    { 
+      is_deleted: true, 
+      is_active: false,
+      username: `${user.username}_deleted_${Date.now()}`
+    },
+    { where: { id } }
+  );
   return affectedRows > 0;
 }
 
@@ -128,7 +141,7 @@ export async function findCashiersByStallId(stallId) {
       attributes: [],
       through: { attributes: [] }
     }],
-    where: { role: 'cashier', is_active: true }
+    where: { role: 'cashier', is_active: true, is_deleted: false }
   });
 }
 

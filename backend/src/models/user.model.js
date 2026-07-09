@@ -38,6 +38,12 @@ const User = sequelize.define('User', {
     defaultValue: true,
     field: 'is_active',
   },
+  is_deleted: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+    field: 'is_deleted',
+  },
 }, {
   indexes: [
     {
