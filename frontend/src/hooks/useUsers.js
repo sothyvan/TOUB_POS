@@ -1,6 +1,7 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { canManageUserRole, roleToApiRole } from '../utils/permissions';
 import { api } from '../services/api';
+import { useAutoRefresh } from './useAutoRefresh';
 
 const blankUserForm = () => ({
   id: null, name: '', role: 'cashier', password: '', pin: '', active: true,
@@ -19,26 +20,39 @@ export function useUsers(canManageUsers, currentUser) {
   
   const currentUserId = currentUser?.id;
 
-  useEffect(() => {
-    let ignore = false;
-    async function init() {
-      if (canManageUsers) {
-        try {
-          if (!ignore) setLoading(true);
-          const data = await api.users.getAll();
-          if (!ignore) setUsers(data);
-        } catch (err) {
-          if (!ignore) setError(err.message || 'Failed to load users.');
-        } finally {
-          if (!ignore) setLoading(false);
-        }
-      } else {
-        if (!ignore) setLoading(false);
-      }
+  const fetchUsers = useCallback(async (showSpinner = false) => {
+    if (!canManageUsers) {
+      setUsers([]);
+      setLoading(false);
+      return [];
     }
-    init();
-    return () => { ignore = true; };
+
+    try {
+      if (showSpinner) setLoading(true);
+      const data = await api.users.getAll();
+      setUsers(data);
+      setError(null);
+      return data;
+    } catch (err) {
+      setError(err.message || 'Failed to load users.');
+      return [];
+    } finally {
+      if (showSpinner) setLoading(false);
+    }
   }, [canManageUsers]);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      void fetchUsers(true);
+    }, 0);
+
+    return () => window.clearTimeout(timerId);
+  }, [fetchUsers]);
+
+  useAutoRefresh(() => fetchUsers(false), {
+    enabled: canManageUsers,
+    intervalMs: 30000,
+  });
 
   const users = useMemo(
     () => rawUsers
@@ -78,7 +92,7 @@ export function useUsers(canManageUsers, currentUser) {
         pin: isCashier ? pin : '',
       };
       await api.users.save(user);
-      setUsers(await api.users.getAll());
+      await fetchUsers(false);
       setUserForm(blankUserForm());
       return true;
     } catch (err) {
@@ -104,7 +118,7 @@ export function useUsers(canManageUsers, currentUser) {
     if (target) {
       try {
         await api.users.save({ ...target, active: !target.active });
-        setUsers(await api.users.getAll());
+        await fetchUsers(false);
       } catch(err) {
         alert(err.message || 'Failed to toggle user status.');
       }
@@ -125,7 +139,7 @@ export function useUsers(canManageUsers, currentUser) {
     }
     try {
       await api.users.delete(userId);
-      setUsers(await api.users.getAll());
+      await fetchUsers(false);
     } catch(err) {
       alert(err.message || 'Failed to delete user.');
     }

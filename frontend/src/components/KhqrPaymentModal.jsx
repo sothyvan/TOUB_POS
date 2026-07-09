@@ -124,17 +124,22 @@ export default function KhqrPaymentModal({ isOpen, total, order, qrPayload, poll
         </div>
 
         <button
-          className="w-4/5 h-14 bg-state-danger hover:bg-state-danger/90 active:scale-[0.98] text-white text-xl font-bold rounded-2xl transition-all cursor-pointer border-0 shadow-md flex items-center justify-center mt-6"
+          className="w-4/5 h-14 bg-white hover:bg-gray-50 active:scale-[0.98] text-brand-action text-xl font-bold rounded-2xl transition-all cursor-pointer border border-blue-100 shadow-md flex items-center justify-center mt-6"
           type="button"
           onClick={onCancel}
         >
-          Cancel
+          Close QR
         </button>
-        <span className="text-xs font-semibold text-gray-700 mt-3 animate-pulse">
+        <span className="text-xs font-semibold text-gray-700 mt-3">
           {isExpired
             ? 'This QR has expired. Create a new KHQR checkout if the customer has not paid.'
-            : 'Waiting for Bakong payment confirmation...'}
+            : 'Closing this screen keeps the KHQR order pending. Resume it from My Orders if needed.'}
         </span>
+        {!isExpired && (
+          <span className="text-xs font-semibold text-gray-500 mt-1 animate-pulse">
+            Waiting for Bakong payment confirmation...
+          </span>
+        )}
         {pollingError && (
           <span className="text-xs font-semibold text-state-danger mt-2">
             {pollingError}

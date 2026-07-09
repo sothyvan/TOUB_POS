@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import Icon from './ui/Icon';
 import CategoryOwner from './CategoryOwner';
 import { money } from '../utils/format';
@@ -7,6 +7,7 @@ import FormSelect from './ui/FormSelect';
 import StatusBadge from './ui/StatusBadge';
 import TabPills from './ui/TabPills';
 import { api } from '../services/api';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 
 // KHR exchange rate (approx)
 const KHR_RATE = 4000;
@@ -487,22 +488,32 @@ export default function MenuCatalog({
   const [stallFilter, setStallFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
-  useEffect(() => {
-    let ignore = false;
-    async function loadStalls() {
-      try {
-        setStallsLoading(true);
-        const data = await api.stalls.getAll();
-        if (!ignore) setStalls(data);
-      } catch (err) {
-        if (!ignore) setStallsError(err.message || 'Failed to load stalls.');
-      } finally {
-        if (!ignore) setStallsLoading(false);
-      }
+  const loadStalls = useCallback(async (showSpinner = false) => {
+    try {
+      if (showSpinner) setStallsLoading(true);
+      const data = await api.stalls.getAll();
+      setStalls(data);
+      setStallsError('');
+      return data;
+    } catch (err) {
+      setStallsError(err.message || 'Failed to load stalls.');
+      return [];
+    } finally {
+      if (showSpinner) setStallsLoading(false);
     }
-    loadStalls();
-    return () => { ignore = true; };
   }, []);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      void loadStalls(true);
+    }, 0);
+
+    return () => window.clearTimeout(timerId);
+  }, [loadStalls]);
+
+  useAutoRefresh(() => loadStalls(false), {
+    intervalMs: 30000,
+  });
 
   const filtered = useMemo(() => {
     return products.filter(p => {

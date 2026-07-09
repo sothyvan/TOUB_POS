@@ -37,6 +37,68 @@ function canRetryKitchenTicket(order) {
   return order.status === 'paid' && ['failed', 'not_sent'].includes(order.kitchenStatus);
 }
 
+function isPendingKhqrOrder(order) {
+  return order.paymentMethod === 'KHQR' && order.status === 'pending_payment';
+}
+
+function isExpiredKhqrOrder(order) {
+  if (!isPendingKhqrOrder(order) || !order.paymentExpiresAt) {
+    return false;
+  }
+
+  const expiryTime = new Date(order.paymentExpiresAt).getTime();
+  return Number.isFinite(expiryTime) && expiryTime < Date.now();
+}
+
+function matchesOperationalFilter(order, filterId) {
+  if (!filterId) {
+    return true;
+  }
+
+  switch (filterId) {
+    case 'failed-kitchen':
+      return order.status === 'paid' && order.kitchenStatus === 'failed';
+    case 'missing-kitchen':
+      return order.status === 'paid' && order.kitchenStatus === 'not_sent';
+    case 'waiting-kitchen':
+      return (order.status === 'paid' && order.kitchenStatus === 'pending')
+        || (isPendingKhqrOrder(order) && !isExpiredKhqrOrder(order));
+    case 'expired-khqr':
+      return isExpiredKhqrOrder(order);
+    case 'pending-khqr':
+      return isPendingKhqrOrder(order) && !isExpiredKhqrOrder(order);
+    default:
+      return true;
+  }
+}
+
+const alertToneConfig = {
+  danger: {
+    panelClassName: 'border-red-100 bg-red-50',
+    iconClassName: 'bg-red-100 text-red-700',
+    countClassName: 'text-red-700',
+    buttonClassName: 'border-red-200 bg-white text-red-700 hover:bg-red-100',
+  },
+  warning: {
+    panelClassName: 'border-amber-100 bg-amber-50',
+    iconClassName: 'bg-amber-100 text-amber-700',
+    countClassName: 'text-amber-700',
+    buttonClassName: 'border-amber-200 bg-white text-amber-700 hover:bg-amber-100',
+  },
+  info: {
+    panelClassName: 'border-blue-100 bg-blue-50',
+    iconClassName: 'bg-blue-100 text-blue-700',
+    countClassName: 'text-blue-700',
+    buttonClassName: 'border-blue-200 bg-white text-blue-700 hover:bg-blue-100',
+  },
+  success: {
+    panelClassName: 'border-green-100 bg-green-50',
+    iconClassName: 'bg-green-100 text-green-700',
+    countClassName: 'text-green-700',
+    buttonClassName: 'border-green-200 bg-white text-green-700 hover:bg-green-100',
+  },
+};
+
 export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDispatch }) {
   const [dateFilter, setDateFilter] = useState('today'); // 'today' | 'week' | 'month'
   const [activeSubTab, setActiveSubTab] = useState('analytics'); // 'analytics' | 'ledger'
@@ -45,6 +107,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
   const [refreshing, setRefreshing] = useState(false);
   const [retryingOrderId, setRetryingOrderId] = useState(null);
   const [kitchenRetryError, setKitchenRetryError] = useState('');
+  const [activeOperationalFilter, setActiveOperationalFilter] = useState(null);
 
   const allOrders = useMemo(() => {
     return rawOrders.map(o => ({
@@ -200,13 +263,95 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
 
   // Ledger Filtered List
   const ledgerOrders = useMemo(() => {
-    return filteredOrders.filter(o => 
-      o.orderNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (o.cashierName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (o.stallName && o.stallName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (o.kitchenStatus && o.kitchenStatus.toLowerCase().includes(searchQuery.toLowerCase()))
+    const normalizedSearch = searchQuery.toLowerCase();
+    return filteredOrders.filter((order) => {
+      if (!matchesOperationalFilter(order, activeOperationalFilter)) {
+        return false;
+      }
+
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      return order.orderNo.toLowerCase().includes(normalizedSearch) ||
+        (order.cashierName || '').toLowerCase().includes(normalizedSearch) ||
+        (order.stallName && order.stallName.toLowerCase().includes(normalizedSearch)) ||
+        (order.kitchenStatus && order.kitchenStatus.toLowerCase().includes(normalizedSearch)) ||
+        (order.paymentMethod && order.paymentMethod.toLowerCase().includes(normalizedSearch)) ||
+        (order.status && order.status.toLowerCase().includes(normalizedSearch));
+    });
+  }, [filteredOrders, searchQuery, activeOperationalFilter]);
+
+  const operationalAlerts = useMemo(() => {
+    const failedKitchenTickets = filteredOrders.filter(
+      (order) => order.status === 'paid' && order.kitchenStatus === 'failed'
     );
-  }, [filteredOrders, searchQuery]);
+    const missingKitchenTickets = filteredOrders.filter(
+      (order) => order.status === 'paid' && order.kitchenStatus === 'not_sent'
+    );
+    const pendingKitchenTickets = filteredOrders.filter(
+      (order) => order.status === 'paid' && order.kitchenStatus === 'pending'
+    );
+    const expiredKhqrOrders = filteredOrders.filter(isExpiredKhqrOrder);
+    const pendingKhqrOrders = filteredOrders.filter((order) => (
+      isPendingKhqrOrder(order) && !isExpiredKhqrOrder(order)
+    ));
+    const waitingForKitchenTickets = [
+      ...pendingKitchenTickets,
+      ...pendingKhqrOrders,
+    ];
+
+    return [
+      {
+        id: 'failed-kitchen',
+        label: 'Kitchen failed',
+        count: failedKitchenTickets.length,
+        description: 'Telegram send failed. Retry these tickets.',
+        tone: 'danger',
+        filter: 'failed',
+      },
+      {
+        id: 'missing-kitchen',
+        label: 'Kitchen missing',
+        count: missingKitchenTickets.length,
+        description: 'Paid orders without a kitchen ticket.',
+        tone: 'warning',
+        filter: 'not_sent',
+      },
+      {
+        id: 'waiting-kitchen',
+        label: 'Kitchen waiting',
+        count: waitingForKitchenTickets.length,
+        description: 'Waiting on payment or Telegram dispatch.',
+        tone: 'info',
+      },
+      {
+        id: 'expired-khqr',
+        label: 'KHQR expired',
+        count: expiredKhqrOrders.length,
+        description: 'Pending QR payments past expiry.',
+        tone: 'danger',
+        filter: 'KHQR',
+      },
+      {
+        id: 'pending-khqr',
+        label: 'KHQR waiting',
+        count: pendingKhqrOrders.length,
+        description: 'Payments still awaiting Bakong confirmation.',
+        tone: 'info',
+      },
+    ];
+  }, [filteredOrders]);
+
+  const hasOperationalAlerts = operationalAlerts.some((alert) => alert.count > 0);
+
+  const handleOperationalAlertClick = (alert) => {
+    setActiveOperationalFilter(alert.id);
+    setSearchQuery('');
+    setActiveSubTab('ledger');
+  };
+
+  const activeOperationalAlert = operationalAlerts.find((alert) => alert.id === activeOperationalFilter);
 
   return (
     <div className="flex flex-col gap-5 h-full min-h-0">
@@ -255,6 +400,61 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
               </button>
             ))}
           </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-[#f3f4f6] p-4 shadow-[0_4px_20px_rgba(0,0,0,0.02)] shrink-0">
+        <div className="flex items-center justify-between gap-4 mb-3">
+          <div>
+            <h3 className="m-0 text-[15px] font-extrabold text-[#111827] fontFamily-['Inter']">
+              Operations Watch
+            </h3>
+            <p className="m-0 mt-0.5 text-[12px] text-[#9ca3af] fontFamily-['Inter']">
+              Live payment and kitchen handoff signals for the selected date range
+            </p>
+          </div>
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[11px] font-extrabold uppercase ${
+            hasOperationalAlerts
+              ? 'border-amber-200 bg-amber-50 text-amber-700'
+              : 'border-green-200 bg-green-50 text-green-700'
+          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${hasOperationalAlerts ? 'bg-amber-500' : 'bg-green-500'}`} />
+            {hasOperationalAlerts ? 'Needs attention' : 'Healthy'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-5 gap-3 max-[1280px]:grid-cols-3 max-[900px]:grid-cols-1">
+          {operationalAlerts.map((alert) => {
+            const tone = alertToneConfig[alert.count > 0 ? alert.tone : 'success'];
+            return (
+              <button
+                key={alert.id}
+                type="button"
+                onClick={() => handleOperationalAlertClick(alert)}
+                className={`text-left rounded-xl border p-3 cursor-pointer transition-all active:scale-[0.99] ${tone.panelClassName}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <span className="block text-[12px] font-extrabold text-[#374151]">{alert.label}</span>
+                    <span className="block mt-1 text-[11px] font-semibold text-[#6b7280] leading-snug">
+                      {alert.count > 0 ? alert.description : 'No issue in this range.'}
+                    </span>
+                  </div>
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${tone.iconClassName}`}>
+                    <Icon name={alert.count > 0 ? 'warning' : 'check'} className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between mt-3">
+                  <span className={`text-[24px] font-black leading-none ${tone.countClassName}`}>
+                    {alert.count}
+                  </span>
+                  <span className={`px-2.5 py-1 rounded-lg border text-[10px] font-extrabold uppercase ${tone.buttonClassName}`}>
+                    View
+                  </span>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -496,7 +696,10 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
                   type="text"
                   placeholder="Search orders, cashiers, stalls..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setActiveOperationalFilter(null);
+                    setSearchQuery(e.target.value);
+                  }}
                   className="pl-9 pr-4 py-2 border border-[#e5e7eb] rounded-xl text-[13px] outline-none w-[280px]"
                   onFocus={(e) => e.target.style.borderColor = '#003ec7'}
                   onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
@@ -507,6 +710,21 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
             {kitchenRetryError && (
               <div className="mx-6 mb-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-[12px] font-semibold text-red-700">
                 {kitchenRetryError}
+              </div>
+            )}
+
+            {activeOperationalAlert && (
+              <div className="mx-6 mb-4 flex items-center justify-between gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-[12px] font-semibold text-blue-700">
+                <span>
+                  Showing {activeOperationalAlert.label.toLowerCase()} orders only.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setActiveOperationalFilter(null)}
+                  className="rounded-lg border border-blue-200 bg-white px-3 py-1 text-[11px] font-extrabold text-blue-700 hover:bg-blue-100 active:scale-95 transition-all cursor-pointer"
+                >
+                  Clear filter
+                </button>
               </div>
             )}
           </div>

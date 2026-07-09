@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSavedState } from '../hooks/useSavedState';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { getPermissions } from '../utils/permissions';
 import { authApi } from '../services/apiClient';
 import { useAuth } from '../auth/useAuth';
@@ -23,35 +24,46 @@ export default function LoginPage() {
   const [availableStalls, setAvailableStalls] = useState([]);
   const showDemoCredentials = import.meta.env.DEV || import.meta.env.VITE_SHOW_DEMO_CREDENTIALS === 'true';
 
-  useEffect(() => {
+  const loadActiveCashiers = useCallback(async ({ resetDeviceOnFailure = false } = {}) => {
     if (!deviceRegistered || !deviceToken) {
-      return;
+      return [];
     }
 
-    let mounted = true;
-    authApi.getCashiers()
-      .then(res => {
-        if (mounted) {
-          const cashiersList = res?.data || [];
-          setActiveCashiers(cashiersList.map(u => ({
-            ...u,
-            name: u.username,
-            active: true
-          })));
-        }
-      })
-      .catch(err => {
-        console.error('Failed to load cashier roster:', err);
-        if (mounted) {
-          setDeviceRegistered(false);
-          setDeviceToken(null);
-          localStorage.removeItem('toub-device-stall');
-          setFlowStep('register');
-          setLoginMode('management');
-        }
-      });
-    return () => { mounted = false; };
+    try {
+      const res = await authApi.getCashiers();
+      const cashiersList = res?.data || [];
+      const mappedCashiers = cashiersList.map(u => ({
+        ...u,
+        name: u.username,
+        active: true
+      }));
+      setActiveCashiers(mappedCashiers);
+      return mappedCashiers;
+    } catch (err) {
+      console.error('Failed to load cashier roster:', err);
+      if (resetDeviceOnFailure) {
+        setDeviceRegistered(false);
+        setDeviceToken(null);
+        localStorage.removeItem('toub-device-stall');
+        setFlowStep('register');
+        setLoginMode('management');
+      }
+      return [];
+    }
   }, [deviceRegistered, deviceToken, setDeviceRegistered, setDeviceToken]);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      void loadActiveCashiers({ resetDeviceOnFailure: true });
+    }, 0);
+
+    return () => window.clearTimeout(timerId);
+  }, [loadActiveCashiers]);
+
+  useAutoRefresh(() => loadActiveCashiers({ resetDeviceOnFailure: false }), {
+    enabled: Boolean(deviceRegistered && deviceToken),
+    intervalMs: 30000,
+  });
 
   useEffect(() => {
     if (!isAuthenticated || !currentUser) return;

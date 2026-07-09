@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
+import { useAutoRefresh } from './useAutoRefresh';
 
 /**
  * Manages order history and checkout logic.
@@ -43,6 +44,11 @@ export function useOrders(isOnline, cart, clearCart, currentUser) {
 
     return () => window.clearTimeout(timerId);
   }, [fetchOrders]);
+
+  useAutoRefresh(() => fetchOrders(false), {
+    enabled: Boolean(currentUser),
+    intervalMs: currentUser?.role === 'cashier' ? 15000 : 20000,
+  });
 
   const todaysOrders = orders.filter(
     (o) => {

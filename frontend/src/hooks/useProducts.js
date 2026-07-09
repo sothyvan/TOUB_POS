@@ -1,12 +1,24 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { suggestedCode } from '../utils/format';
 import { api } from '../services/api';
+import { useAutoRefresh } from './useAutoRefresh';
 
 export const blankProductForm = (categoryId = '') => ({
   id: null, name: '', code: '', price: '', categoryId, tone: 'gold', available: true, image: '', stallId: '', stallIds: []
 });
 
 const blankCategoryForm = () => ({ id: null, name: '', tone: 'gold' });
+
+const hasProductDraft = (form) => Boolean(
+  form.id
+  || form.name
+  || form.code
+  || form.price
+  || form.categoryId
+  || form.image
+  || form.stallId
+  || (form.stallIds || []).length
+);
 
 /**
  * Manages products and categories — state, filters, and CRUD using backend APIs.
@@ -24,29 +36,42 @@ export function useProducts(canManageMenu) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    let ignore = false;
-    async function loadData() {
-      try {
-        setLoading(true);
-        const [loadedCats, loadedProds] = await Promise.all([
-          api.categories.getAll(),
-          api.products.getAll()
-        ]);
-        if (!ignore) {
-          setCategories(loadedCats);
-          setProducts(loadedProds);
-          setProductForm(blankProductForm(loadedCats[0]?.id || ''));
-        }
-      } catch (err) {
-        if (!ignore) setError(err.message || 'Failed to load products.');
-      } finally {
-        if (!ignore) setLoading(false);
-      }
+  const loadData = useCallback(async (showSpinner = false) => {
+    try {
+      if (showSpinner) setLoading(true);
+      const [loadedCats, loadedProds] = await Promise.all([
+        api.categories.getAll(),
+        api.products.getAll()
+      ]);
+      setCategories(loadedCats);
+      setProducts(loadedProds);
+      setProductForm((current) => (
+        hasProductDraft(current)
+          ? current
+          : blankProductForm(loadedCats[0]?.id || '')
+      ));
+      setError(null);
+      return { categories: loadedCats, products: loadedProds };
+    } catch (err) {
+      setError(err.message || 'Failed to load products.');
+      return null;
+    } finally {
+      if (showSpinner) setLoading(false);
     }
-    loadData();
-    return () => { ignore = true; };
   }, []);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      void loadData(true);
+    }, 0);
+
+    return () => window.clearTimeout(timerId);
+  }, [loadData]);
+
+  useAutoRefresh(() => loadData(false), {
+    enabled: true,
+    intervalMs: canManageMenu ? 30000 : 20000,
+  });
 
   const categoryById = useMemo(
     () => new Map(categories.map((cat) => [cat.id, cat])),
@@ -84,9 +109,7 @@ export function useProducts(canManageMenu) {
         setProductForm((cur) => ({ ...cur, categoryId: newCat.id, tone: newCat.tone }));
       }
       
-      const [nextCats, nextProds] = await Promise.all([api.categories.getAll(), api.products.getAll()]);
-      setCategories(nextCats);
-      setProducts(nextProds);
+      await loadData(false);
       setCategoryForm(blankCategoryForm());
     } catch(err) {
       alert(err.message || 'Failed to save category.');
@@ -109,6 +132,7 @@ export function useProducts(canManageMenu) {
       await api.categories.delete(categoryId);
       const nextCats = await api.categories.getAll();
       setCategories(nextCats);
+      setProducts(await api.products.getAll());
       if (productForm.categoryId === categoryId) {
         setProductForm((prev) => ({
           ...prev,
@@ -144,7 +168,7 @@ export function useProducts(canManageMenu) {
     };
     try {
       const saved = await api.products.save(product);
-      setProducts(await api.products.getAll());
+      await loadData(false);
       setProductForm(blankProductForm(form.categoryId));
       return form.id ? saved.id : 'new'; 
     } catch(err) {
@@ -166,7 +190,7 @@ export function useProducts(canManageMenu) {
     if (target) {
       try {
         await api.products.save({ ...target, available: !target.available });
-        setProducts(await api.products.getAll());
+        await loadData(false);
       } catch(err) {
         alert(err.message || 'Failed to toggle availability.');
       }
@@ -178,7 +202,7 @@ export function useProducts(canManageMenu) {
     if (!canManageMenu) return;
     try {
       await api.products.delete(productId);
-      setProducts(await api.products.getAll());
+      await loadData(false);
       return productId; // signal: remove from cart
     } catch(err) {
       alert(err.message || 'Failed to delete product.');

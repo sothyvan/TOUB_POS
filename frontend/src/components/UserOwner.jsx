@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import TabPills from './ui/TabPills';
 import StaffList from './staff/StaffList';
 import StaffAllocation from './staff/StaffAllocation';
 import { api } from '../services/api';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 
 const TABS = [
   { id: 'list',       label: 'Staff List'       },
@@ -21,22 +22,32 @@ export default function UserOwner({
   const [stallsLoading, setStallsLoading] = useState(true);
   const [stallsError, setStallsError] = useState('');
 
-  useEffect(() => {
-    let ignore = false;
-    async function loadStalls() {
-      try {
-        setStallsLoading(true);
-        const data = await api.stalls.getAll();
-        if (!ignore) setStalls(data);
-      } catch (err) {
-        if (!ignore) setStallsError(err.message || 'Failed to load stall assignments.');
-      } finally {
-        if (!ignore) setStallsLoading(false);
-      }
+  const loadStalls = useCallback(async (showSpinner = false) => {
+    try {
+      if (showSpinner) setStallsLoading(true);
+      const data = await api.stalls.getAll();
+      setStalls(data);
+      setStallsError('');
+      return data;
+    } catch (err) {
+      setStallsError(err.message || 'Failed to load stall assignments.');
+      return [];
+    } finally {
+      if (showSpinner) setStallsLoading(false);
     }
-    loadStalls();
-    return () => { ignore = true; };
   }, []);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      void loadStalls(true);
+    }, 0);
+
+    return () => window.clearTimeout(timerId);
+  }, [loadStalls]);
+
+  useAutoRefresh(() => loadStalls(false), {
+    intervalMs: 30000,
+  });
 
   return (
     <div className="flex flex-col gap-4 h-full min-h-0">

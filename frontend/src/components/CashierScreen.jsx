@@ -8,10 +8,28 @@ function hasKitchenDispatchIssue(order) {
   return order.status === 'paid' && ['failed', 'not_sent'].includes(order.kitchenStatus);
 }
 
+function isKhqrPendingPayment(order) {
+  return order.paymentMethod === 'KHQR' && order.status === 'pending_payment';
+}
+
+function isKhqrExpired(order) {
+  if (!isKhqrPendingPayment(order) || !order.paymentExpiresAt) {
+    return false;
+  }
+
+  const expiryTime = new Date(order.paymentExpiresAt).getTime();
+  return Number.isFinite(expiryTime) && expiryTime <= Date.now();
+}
+
+function canResumeKhqrPayment(order) {
+  return isKhqrPendingPayment(order) && Boolean(order.qrPayload) && !isKhqrExpired(order);
+}
+
 export default function CashierScreen({
   orders = [],
   onViewReceipt,
   onRetryTelegramDispatch,
+  onResumeKhqrPayment,
   categories,
   categoryById,
   selectedCategory,
@@ -272,6 +290,22 @@ export default function CashierScreen({
                           >
                             {retryingKitchenOrderId === order.id ? 'Retrying...' : 'Retry ticket'}
                           </button>
+                        )}
+
+                        {canResumeKhqrPayment(order) && onResumeKhqrPayment && (
+                          <button
+                            type="button"
+                            onClick={() => onResumeKhqrPayment(order)}
+                            className="cursor-pointer px-3 py-1.5 rounded-lg border border-blue-100 bg-blue-50 text-[11px] font-bold text-blue-700 hover:bg-blue-100 active:scale-95 transition-all"
+                          >
+                            Resume QR
+                          </button>
+                        )}
+
+                        {isKhqrPendingPayment(order) && isKhqrExpired(order) && (
+                          <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wide border bg-red-50 text-red-700 border-red-200">
+                            QR expired
+                          </span>
                         )}
 
                         <button

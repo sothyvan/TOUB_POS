@@ -7,11 +7,13 @@ import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useCart } from '../hooks/useCart';
 import { useProducts } from '../hooks/useProducts';
 import { useOrders } from '../hooks/useOrders';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import PageShell from '../components/PageShell';
 import CashierScreen from '../components/CashierScreen';
 import ReceiptModal from '../components/ReceiptModal';
 import CashConfirmationModal from '../components/CashConfirmationModal';
 import KhqrPaymentModal from '../components/KhqrPaymentModal';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import Icon from '../components/ui/Icon';
 
 export default function CashierPage() {
@@ -22,21 +24,38 @@ export default function CashierPage() {
   const [assignedStall, setAssignedStall] = useState(null);
   const [loadingStall, setLoadingStall] = useState(isCashier);
 
-  useEffect(() => {
+  const loadAssignedStall = useCallback(async (showSpinner = false) => {
     if (!isCashier) {
-      return;
+      setAssignedStall(null);
+      setLoadingStall(false);
+      return null;
     }
-    let mounted = true;
-    api.auth.getMyStall()
-      .then(stall => {
-        if (mounted) setAssignedStall(stall);
-      })
-      .catch(console.error)
-      .finally(() => {
-        if (mounted) setLoadingStall(false);
-      });
-    return () => { mounted = false; };
+
+    try {
+      if (showSpinner) setLoadingStall(true);
+      const stall = await api.auth.getMyStall();
+      setAssignedStall(stall);
+      return stall;
+    } catch (err) {
+      console.error(err);
+      return null;
+    } finally {
+      if (showSpinner) setLoadingStall(false);
+    }
   }, [isCashier]);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      void loadAssignedStall(true);
+    }, 0);
+
+    return () => window.clearTimeout(timerId);
+  }, [loadAssignedStall]);
+
+  useAutoRefresh(() => loadAssignedStall(false), {
+    enabled: isCashier,
+    intervalMs: 30000,
+  });
 
   // ── Hooks ─────────────────────────────────────────────────────────────────
   const isOnline = useOnlineStatus();
@@ -57,6 +76,7 @@ export default function CashierPage() {
   const [activeReceipt, setActiveReceipt] = useState(null);
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState(null);
   const [pendingKhqrOrder, setPendingKhqrOrder] = useState(null);
+  const [isKhqrConfirmOpen, setIsKhqrConfirmOpen] = useState(false);
   const [khqrPollingError, setKhqrPollingError] = useState(null);
   const pageMountedRef = useRef(false);
   const pendingPaymentMethodRef = useRef(null);
@@ -113,17 +133,23 @@ export default function CashierPage() {
 
   const handleCheckoutWithReceipt = async (method) => {
     if (method === 'KHQR') {
-      const order = await handleCheckout(method);
-      if (order) {
-        setKhqrPollingError(null);
-        setPendingKhqrOrder(order);
-        setPendingPaymentMethod(method);
-      }
+      setKhqrPollingError(null);
+      setIsKhqrConfirmOpen(true);
       return;
     }
 
     setPendingPaymentMethod(method);
   };
+
+  const handleCreateKhqrPayment = useCallback(async () => {
+    const order = await handleCheckout('KHQR');
+    if (order) {
+      setKhqrPollingError(null);
+      setPendingKhqrOrder(order);
+      setPendingPaymentMethod('KHQR');
+      setIsKhqrConfirmOpen(false);
+    }
+  }, [handleCheckout]);
 
   const handleConfirmPayment = useCallback(async (cashReceivedUsd) => {
     if (!pendingPaymentMethod) return;
@@ -141,6 +167,47 @@ export default function CashierPage() {
     const updatedOrder = await api.orders.retryTelegram(orderId);
     await fetchOrders(false);
     return updatedOrder;
+  }, [fetchOrders]);
+
+  const handleResumeKhqrPayment = useCallback(async (order) => {
+    if (!order?.id) {
+      return;
+    }
+
+    try {
+      setKhqrPollingError(null);
+      const latestOrder = await api.orders.getById(order.id);
+      await fetchOrders(false);
+
+      if (latestOrder.status === 'paid') {
+        setPendingPaymentMethod(null);
+        setPendingKhqrOrder(null);
+        setActiveReceipt(latestOrder);
+        return;
+      }
+
+      if (
+        latestOrder.paymentMethod !== 'KHQR'
+        || latestOrder.status !== 'pending_payment'
+        || !latestOrder.qrPayload
+      ) {
+        alert('This KHQR order can no longer be resumed.');
+        return;
+      }
+
+      const expiryTime = latestOrder.paymentExpiresAt
+        ? new Date(latestOrder.paymentExpiresAt).getTime()
+        : null;
+      const isExpired = Number.isFinite(expiryTime) && expiryTime <= Date.now();
+
+      setPendingKhqrOrder(latestOrder);
+      setPendingPaymentMethod('KHQR');
+      setKhqrPollingError(isExpired
+        ? 'This QR has expired. Create a new KHQR checkout if the customer has not paid.'
+        : null);
+    } catch (err) {
+      alert(err.message || 'Unable to resume KHQR payment.');
+    }
   }, [fetchOrders]);
 
   useEffect(() => {
@@ -368,6 +435,7 @@ export default function CashierPage() {
         isOnline={isOnline}
         assignedStall={assignedStall}
         onRetryTelegramDispatch={handleRetryTelegramDispatch}
+        onResumeKhqrPayment={handleResumeKhqrPayment}
       />
 
       <ReceiptModal
@@ -387,6 +455,46 @@ export default function CashierPage() {
           onConfirm={handleConfirmPayment}
         />
       ) : null}
+
+      <ConfirmDialog
+        isOpen={isKhqrConfirmOpen}
+        size="compact"
+        title="Create KHQR payment?"
+        message={(
+          <div className="flex flex-col gap-3 text-left">
+            <p className="m-0">
+              This will create a backend order and generate a KHQR for the customer to scan.
+            </p>
+            <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
+              <div className="flex items-center justify-between text-sm font-bold text-blue-700">
+                <span>Items</span>
+                <span>{itemCount}</span>
+              </div>
+              <div className="mt-2 flex items-center justify-between text-sm font-bold text-blue-700">
+                <span>Total</span>
+                <span>${Number(total || 0).toFixed(2)}</span>
+              </div>
+            </div>
+            <p className="m-0 text-[12px] font-semibold text-brand-subtext">
+              Use Back to cart if the KHQR button was clicked by accident.
+            </p>
+          </div>
+        )}
+        icon={(
+          <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-brand-action mb-4">
+            <Icon name="khqr" className="w-7 h-7" />
+          </div>
+        )}
+        cancelLabel="Back to cart"
+        confirmLabel="Create KHQR"
+        cancelTone="secondary"
+        confirmTone="primary"
+        isBusy={checkoutLoading}
+        onCancel={() => {
+          if (!checkoutLoading) setIsKhqrConfirmOpen(false);
+        }}
+        onConfirm={handleCreateKhqrPayment}
+      />
 
       <KhqrPaymentModal
         isOpen={pendingPaymentMethod === 'KHQR'}

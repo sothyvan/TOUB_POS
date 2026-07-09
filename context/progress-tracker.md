@@ -22,6 +22,11 @@ Update this file after every meaningful implementation change.
   - KHQR paid-status check → Telegram dispatch — **COMPLETE** ✅
   - KHQR background status checker — **COMPLETE** ✅
   - Telegram ticket status and retry — **COMPLETE** ✅
+- Post-Phase 6 Operations & Security Hardening — **IN PROGRESS**
+  - Owner/Manager Operations Watch for KHQR and Telegram ticket issues — **COMPLETE** ✅
+  - Safe KHQR close and resume flow — **COMPLETE** ✅
+  - KHQR pre-checkout confirmation — **COMPLETE** ✅
+  - Backend-backed UI auto-refresh fallback — **COMPLETE** ✅
 
 - **Implemented Phase 5.5 RBAC Hierarchy Cleanup**:
   - Finalized the active role hierarchy as `platform_admin`, `owner`, `manager`, and `cashier`.
@@ -98,6 +103,32 @@ Update this file after every meaningful implementation change.
   - Created `docs/codex-handoff-phase-6.md` for teammate review.
   - Verified backend lint, frontend lint, and frontend production build after live payment, Telegram ticket, retry, and UI refresh fixes.
   - Marked Phase 6 complete and moved remaining work into post-Phase 6 monitoring/cook-authorization follow-up.
+
+- **Implemented Owner/Manager Operations Watch**:
+  - Added a compact operations alert panel to the management order screen.
+  - Surfaces failed/missing/pending Telegram kitchen tickets and pending/expired KHQR orders using existing backend-owned order data.
+  - Added quick filters into the transaction ledger so Owner/Manager users can jump directly to affected orders and retry recoverable kitchen tickets.
+
+- **Fixed Operations Watch filtering semantics**:
+  - Replaced broad text-search filtering with exact operational filters for each alert card.
+  - `KHQR waiting` now shows only unexpired `pending_payment` KHQR orders instead of all KHQR orders.
+  - Renamed the kitchen in-progress card to `Kitchen waiting` and included KHQR orders that are waiting for payment before kitchen dispatch.
+
+- **Implemented safe KHQR close and resume flow**:
+  - Renamed the KHQR modal action from destructive-looking `Cancel` to `Close QR`.
+  - Closing the QR screen now clearly keeps the backend order in `pending_payment`.
+  - Added a cashier-side `Resume QR` action for unexpired pending KHQR orders with an existing QR payload.
+  - Resume fetches the latest backend order first, reopening the QR if still pending or showing the receipt if payment already completed.
+
+- **Implemented KHQR pre-checkout confirmation**:
+  - Clicking the KHQR checkout button now opens a confirmation dialog instead of immediately creating a backend order.
+  - The confirmation shows item count and total, with `Back to cart` and `Create KHQR` actions.
+  - Backend order creation and QR generation now happen only after the cashier confirms `Create KHQR`.
+
+- **Added backend-backed UI auto-refresh fallback**:
+  - Added a shared frontend `useAutoRefresh` hook that refreshes server-owned data when the tab regains focus, becomes visible, and on a quiet interval.
+  - Wired products/categories, staff users, orders, stall lists, stall assignments, cashier assigned-stall lookup, and cashier login roster to refresh without requiring a full page reload.
+  - Kept existing WebSocket order/payment updates as the primary live path while adding polling/focus refresh as a safety net for screens that do not yet receive specific socket events.
 
 - **Enforced Multi-Owner Data Isolation & Security across Backend Operations**:
   - Added an `owner_id` column to the `users` table to link managers and cashiers to their business owners.

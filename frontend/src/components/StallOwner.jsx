@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Icon from './ui/Icon';
 import { initials } from '../utils/format';
 import { roleToApiRole } from '../utils/permissions';
 import { api } from '../services/api';
 import ConfirmDialog from './ui/ConfirmDialog';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 
 // ── Seed data ─────────────────────────────────────────────────────────────────
 const AVATAR_COLORS = ['#eef2ff','#dcfce7','#f3e8ff','#fff1f2','#fef3c7','#e0f2fe'];
@@ -190,24 +191,37 @@ export default function StallOwner({ users = [] }) {
   const [, setIsDraggingFromRoster] = useState(false);
   const [isPoolOver, setIsPoolOver] = useState(false);
 
-  useEffect(() => {
-    let ignore = false;
-    async function loadStalls() {
-      try {
-        const data = await api.stalls.getAll();
-        if (!ignore) {
-          setStalls(data);
-          if (data.length > 0) setSelectedStallId(data[0].id);
+  const loadStalls = useCallback(async (showSpinner = false) => {
+    try {
+      if (showSpinner) setLoading(true);
+      const data = await api.stalls.getAll();
+      setStalls(data);
+      setSelectedStallId((current) => {
+        if (current && data.some((stall) => stall.id === current)) {
+          return current;
         }
-      } catch (err) {
-        if (!ignore) console.error(err);
-      } finally {
-        if (!ignore) setLoading(false);
-      }
+        return data[0]?.id ?? null;
+      });
+      return data;
+    } catch (err) {
+      console.error(err);
+      return [];
+    } finally {
+      if (showSpinner) setLoading(false);
     }
-    loadStalls();
-    return () => { ignore = true; };
   }, []);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      void loadStalls(true);
+    }, 0);
+
+    return () => window.clearTimeout(timerId);
+  }, [loadStalls]);
+
+  useAutoRefresh(() => loadStalls(false), {
+    intervalMs: 30000,
+  });
 
   const assignments = useMemo(() => {
     const map = {};
@@ -292,6 +306,7 @@ export default function StallOwner({ users = [] }) {
     try {
       await api.stalls.assignStaff(toStallId, userId);
       updateAssignmentsLocally(toStallId, userId, null);
+      await loadStalls(false);
     } catch (err) {
       alert(err.message || 'Failed to assign staff');
     }
@@ -308,6 +323,7 @@ export default function StallOwner({ users = [] }) {
     try {
       await api.stalls.unassignStaff(selectedStallId, userId);
       updateAssignmentsLocally(selectedStallId, null, userId);
+      await loadStalls(false);
     } catch (err) {
       alert(err.message || 'Failed to unassign staff');
     }
@@ -316,8 +332,9 @@ export default function StallOwner({ users = [] }) {
   const handleAddStall = async (stallData) => {
     try {
       const saved = await api.stalls.save(stallData);
-      setStalls([...stalls, saved]);
+      setStalls((current) => [...current, saved]);
       setSelectedStallId(saved.id);
+      await loadStalls(false);
     } catch (err) {
       alert(err.message || 'Failed to create stall');
     }
