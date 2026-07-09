@@ -157,7 +157,7 @@ export default function OwnerWorkspace({
         <main className="flex-1 p-[clamp(18px,2.4vw,30px)] overflow-y-auto max-[768px]:p-4 flex flex-col gap-6">
         {/* Tab Subcomponents */}
         <div className="flex-1">
-          {visibleOwnerTab === 'dashboard' && <OwnerDashboard />}
+          {visibleOwnerTab === 'dashboard' && <OwnerDashboard orders={orders} />}
 
           {visibleOwnerTab === 'products' && (
             <MenuCatalog

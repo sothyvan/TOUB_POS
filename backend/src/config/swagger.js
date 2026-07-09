@@ -434,6 +434,50 @@ export const swaggerDocument = {
                 description: 'Owner/Manager only.'
             }
         },
+        '/api/reports/sales': {
+            get: {
+                summary: 'Filtered sales report',
+                description: 'Owner/Manager only. Supports range, custom date window, stall, and cashier filters. Returns backend-scoped summary, stall/cashier/hourly breakdowns, and ledger rows for the sales report UI.',
+                parameters: [
+                    {
+                        name: 'range',
+                        in: 'query',
+                        schema: { type: 'string', enum: ['today', 'week', 'month', 'custom'] },
+                        description: 'Report range. Defaults to today.'
+                    },
+                    {
+                        name: 'start_date',
+                        in: 'query',
+                        schema: { type: 'string', format: 'date' },
+                        description: 'Required when range is custom.'
+                    },
+                    {
+                        name: 'end_date',
+                        in: 'query',
+                        schema: { type: 'string', format: 'date' },
+                        description: 'Required when range is custom.'
+                    },
+                    {
+                        name: 'stall_id',
+                        in: 'query',
+                        schema: { type: 'integer' },
+                        description: 'Optional same-business stall filter.'
+                    },
+                    {
+                        name: 'cashier_id',
+                        in: 'query',
+                        schema: { type: 'integer' },
+                        description: 'Optional cashier filter.'
+                    }
+                ],
+                responses: {
+                    200: { description: 'Sales report summary and ledger rows' },
+                    400: { description: 'Invalid filter input' },
+                    401: { description: 'Unauthenticated' },
+                    403: { description: 'Owner/Manager role required' }
+                }
+            }
+        },
         '/api/webhook/payment': {
             post: {
                 summary: 'Legacy payment webhook placeholder',

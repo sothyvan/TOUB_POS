@@ -27,6 +27,8 @@ Update this file after every meaningful implementation change.
   - Safe KHQR close and resume flow — **COMPLETE** ✅
   - KHQR pre-checkout confirmation — **COMPLETE** ✅
   - Backend-backed UI auto-refresh fallback — **COMPLETE** ✅
+- Phase 7A: Dashboard/Reports UI Cleanup & API Client Migration — **COMPLETE** ✅
+- Phase 7B: Reporting Hardening — **COMPLETE** ✅
 
 - **Implemented Phase 5.5 RBAC Hierarchy Cleanup**:
   - Finalized the active role hierarchy as `platform_admin`, `owner`, `manager`, and `cashier`.
@@ -129,6 +131,25 @@ Update this file after every meaningful implementation change.
   - Added a shared frontend `useAutoRefresh` hook that refreshes server-owned data when the tab regains focus, becomes visible, and on a quiet interval.
   - Wired products/categories, staff users, orders, stall lists, stall assignments, cashier assigned-stall lookup, and cashier login roster to refresh without requiring a full page reload.
   - Kept existing WebSocket order/payment updates as the primary live path while adding polling/focus refresh as a safety net for screens that do not yet receive specific socket events.
+
+- **Implemented Phase 7A dashboard/report cleanup and API client migration**:
+  - Replaced frontend `fetch()` usage with the centralized Axios-backed API client while preserving JWT and device-token header behavior.
+  - Added Recharts for Owner/Manager reporting visualizations and replaced the dashboard's static SVG revenue chart with a data-driven Recharts area chart.
+  - Cleaned the dashboard tab by removing Average Ticket Prep Time, Recent System Events, and Quick Tasks.
+  - Cleaned Sales Report analytics by removing fake prep-speed metrics and replacing them with backend-order-derived stall activity and payment mix.
+  - Added a Receipt action to each Owner/Manager transaction ledger row using the existing receipt modal.
+
+- **Implemented Phase 7B reporting hardening**:
+  - Added `GET /api/reports/sales` for Owner/Manager sales reporting with backend-enforced same-business scoping.
+  - Added date range, stall, and cashier filters plus backend-calculated revenue, payment mix, stall/cashier breakdowns, hourly revenue, and ledger rows.
+  - Wired the Owner/Manager Sales Reports screen to the backend report endpoint with loading/error states, auto-refresh, real CSV export, and backend report filters.
+  - Removed remaining fake cashier status/prep-speed style reporting from the sales matrix and kept receipt viewing available from the transaction ledger.
+  - Synchronized API docs, Swagger docs, raw SQL query examples, and architecture notes.
+
+- **Fixed local backend startup after repeated Sequelize alter syncs**:
+  - Moved `orders.payment_reference` and `stalls.device_token` to named Sequelize unique indexes.
+  - Added a development-only startup cleanup that drops duplicate generated MySQL unique indexes and keeps the canonical named index.
+  - Synchronized `schema.sql` and `queries.sql` so raw SQL docs match the named-index model definitions.
 
 - **Enforced Multi-Owner Data Isolation & Security across Backend Operations**:
   - Added an `owner_id` column to the `users` table to link managers and cashiers to their business owners.
@@ -539,6 +560,11 @@ Update this file after every meaningful implementation change.
   - Add payment monitoring and operational alerting for failed Bakong or Telegram operations.
   - Keep cook authorization Telegram-only, and strengthen the Telegram cook identity model before production.
   - Decide whether failed Telegram dispatches need an automatic retry worker or if manual retry is enough for the final demo.
+
+- Phase 7C Demo Stabilization & Polish.
+  - Manually test the Owner/Manager report filters against seeded and real orders.
+  - Review tablet/mobile spacing on dashboard, reports, and cashier live-order screens.
+  - Consider route-level code splitting for chart-heavy dashboard bundles if the production bundle warning becomes a concern.
 
 - Future SaaS / Multi-Customer Platform Administration:
   - `platform_admin` now exists as a temporary API-only bootstrap role for creating business Owner accounts.

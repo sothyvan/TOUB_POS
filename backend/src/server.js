@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { createServer } from 'node:http';
 import bcrypt from 'bcryptjs';
 import { getPlatformAdminSeedConfig, validateEnvironment } from './config/env.js';
+import { cleanupDevelopmentDuplicateUniqueIndexes } from './services/development-schema-cleanup.service.js';
 import { startKhqrBackgroundChecker } from './services/khqr-background-checker.service.js';
 import { initializeWebSocketServer } from './services/websocket.service.js';
 
@@ -26,6 +27,9 @@ async function startServer() {
 
     // Sync schema in development
     const syncOptions = process.env.NODE_ENV === 'development' ? { alter: true } : {};
+    if (process.env.NODE_ENV === 'development') {
+      await cleanupDevelopmentDuplicateUniqueIndexes(sequelize);
+    }
     await sequelize.sync(syncOptions);
     console.log('[server] Database models synchronized successfully.');
 

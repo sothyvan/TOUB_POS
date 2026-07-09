@@ -61,7 +61,6 @@ const Order = sequelize.define('Order', {
   payment_reference: {
     type: DataTypes.STRING(100),
     defaultValue: null,
-    unique: true,
     field: 'payment_reference',
   },
   payment_expires_at: {
@@ -74,6 +73,14 @@ const Order = sequelize.define('Order', {
     defaultValue: null,
     field: 'completed_at',
   },
+}, {
+  indexes: [
+    {
+      name: 'uq_orders_payment_reference',
+      unique: true,
+      fields: ['payment_reference'],
+    },
+  ],
 });
 
 export default Order;

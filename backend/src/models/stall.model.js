@@ -23,7 +23,6 @@ const Stall = sequelize.define('Stall', {
   device_token: {
     type: DataTypes.STRING(255),
     defaultValue: null,
-    unique: true,
     field: 'device_token',
   },
   telegram_chat_id: {
@@ -31,6 +30,14 @@ const Stall = sequelize.define('Stall', {
     defaultValue: null,
     field: 'telegram_chat_id',
   },
+}, {
+  indexes: [
+    {
+      name: 'uq_stalls_device_token',
+      unique: true,
+      fields: ['device_token'],
+    },
+  ],
 });
 
 export default Stall;

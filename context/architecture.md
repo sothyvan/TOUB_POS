@@ -5,6 +5,8 @@
 | Layer        | Technology              | Role                                              |
 | ------------ | ----------------------- | ------------------------------------------------- |
 | Frontend     | ReactJS + Vite          | UI rendering and state management                 |
+| API Client   | Axios                   | Centralized HTTP requests, auth/device headers, and error normalization |
+| Charts       | Recharts                | Owner/Manager dashboard and reporting visualizations |
 | Backend      | Node.js + Express.js    | REST API, WebSocket server, webhook handler       |
 | Database     | MySQL                   | Relational data storage                           |
 | Auth         | JWT                     | Secure authentication and session management      |
@@ -59,8 +61,14 @@
 ## Frontend State Management
 
 - **UI State**: Handled locally within components using `useState` and `useEffect` (e.g., active modals, UI toggles).
-- **Global/Server State**: Abstracted into custom hooks (e.g., `useProducts`, `useOrders`) which interface with the central API service.
+- **Global/Server State**: Abstracted into custom hooks (e.g., `useProducts`, `useOrders`) which interface with the central Axios-backed API service.
 - **Cart Management**: Cart state is managed globally or passed down from a parent POS container to ensure synchronization between the product grid and the order panel.
+
+## Reporting Flow
+
+- Owner/Manager sales reports use `GET /api/reports/sales` instead of frontend-only calculations.
+- The backend applies same-business owner scope, date range filters, optional stall/cashier filters, and returns summary totals, payment mix, stall/cashier breakdowns, hourly revenue, and ledger rows.
+- The frontend report UI may still use loaded order details for receipt viewing, but report totals/export rows should come from the backend report response whenever it is available.
 
 ## Current Payment Flow (Phase 4)
 

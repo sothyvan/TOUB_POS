@@ -12,10 +12,12 @@
   "dependencies": {
     "@imagekit/javascript": "^5.4.1",
     "@tailwindcss/vite": "^4.3.0",
+    "axios": "^1.18.1",
     "lucide-react": "^1.18.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.16.0",
+    "recharts": "^3.9.2",
     "socket.io-client": "^4.8.3",
     "tailwindcss": "^4.3.0"
   },

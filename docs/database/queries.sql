@@ -360,6 +360,63 @@ WHERE o.status = 'paid'
   AND s.owner_id = 1
   AND o.created_at BETWEEN '2026-06-19 00:00:00' AND '2026-06-19 23:59:59';
 
+-- Phase 7B sales report base query with same-business scope and optional filters
+SELECT
+  o.id,
+  o.stall_id,
+  o.cashier_id,
+  o.payment_method,
+  o.status,
+  o.subtotal_usd,
+  o.total_usd,
+  o.created_at,
+  o.completed_at,
+  s.name AS stall_name,
+  s.location AS stall_location,
+  u.username AS cashier_name,
+  tt.status AS latest_kitchen_status
+FROM orders o
+INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = 1
+LEFT JOIN users u ON u.id = o.cashier_id
+LEFT JOIN telegram_tickets tt ON tt.id = (
+  SELECT tt2.id
+  FROM telegram_tickets tt2
+  WHERE tt2.order_id = o.id
+  ORDER BY tt2.id DESC
+  LIMIT 1
+)
+WHERE o.created_at BETWEEN '2026-06-01 00:00:00' AND '2026-06-30 23:59:59'
+  AND (1 IS NULL OR o.stall_id = 1)
+  AND (2 IS NULL OR o.cashier_id = 2)
+ORDER BY o.created_at DESC, o.id DESC;
+
+-- Phase 7B sales report stall breakdown
+SELECT
+  s.id AS stall_id,
+  CONCAT(s.name, IF(s.location IS NULL, '', CONCAT(' — ', s.location))) AS stall_name,
+  COUNT(*) AS order_count,
+  SUM(o.total_usd) AS revenue
+FROM orders o
+INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = 1
+WHERE o.status = 'paid'
+  AND o.created_at BETWEEN '2026-06-01 00:00:00' AND '2026-06-30 23:59:59'
+GROUP BY s.id, s.name, s.location
+ORDER BY revenue DESC;
+
+-- Phase 7B sales report cashier breakdown
+SELECT
+  u.id AS cashier_id,
+  u.username AS cashier_name,
+  COUNT(*) AS order_count,
+  SUM(o.total_usd) AS revenue
+FROM orders o
+INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = 1
+LEFT JOIN users u ON u.id = o.cashier_id
+WHERE o.status = 'paid'
+  AND o.created_at BETWEEN '2026-06-01 00:00:00' AND '2026-06-30 23:59:59'
+GROUP BY u.id, u.username
+ORDER BY revenue DESC;
+
 -- Development-only legacy order status migration used before Sequelize sync
 ALTER TABLE orders
 MODIFY status ENUM('pending', 'completed', 'pending_payment', 'paid', 'cancelled') NOT NULL DEFAULT 'pending';
@@ -392,7 +449,8 @@ WHERE p.category_id IS NULL
 ALTER TABLE products
 MODIFY category_id INT NOT NULL;
 
--- Development-only duplicate unique-index cleanup for repeated Sequelize alter sync
+-- Development-only duplicate unique-index cleanup for repeated Sequelize alter sync.
+-- Keep one canonical named unique index for each column and drop old generated duplicates.
 SELECT INDEX_NAME
 FROM INFORMATION_SCHEMA.STATISTICS
 WHERE TABLE_SCHEMA = DATABASE()
@@ -403,11 +461,31 @@ WHERE TABLE_SCHEMA = DATABASE()
 
 ALTER TABLE stalls
 DROP INDEX device_token_2;
+
+ALTER TABLE stalls
+ADD UNIQUE INDEX uq_stalls_device_token (device_token);
+
+SELECT INDEX_NAME
+FROM INFORMATION_SCHEMA.STATISTICS
+WHERE TABLE_SCHEMA = DATABASE()
+  AND TABLE_NAME = 'orders'
+  AND COLUMN_NAME = 'payment_reference'
+  AND NON_UNIQUE = 0
+  AND INDEX_NAME <> 'PRIMARY';
+
+ALTER TABLE orders
+DROP INDEX payment_reference_2;
+
+ALTER TABLE orders
+ADD UNIQUE INDEX uq_orders_payment_reference (payment_reference);
 -- Development-only Phase 5 KHQR metadata migration
 ALTER TABLE orders
 ADD COLUMN qr_md5 VARCHAR(64) DEFAULT NULL AFTER qr_payload,
-ADD COLUMN payment_reference VARCHAR(100) DEFAULT NULL UNIQUE AFTER qr_md5,
+ADD COLUMN payment_reference VARCHAR(100) DEFAULT NULL AFTER qr_md5,
 ADD COLUMN payment_expires_at DATETIME DEFAULT NULL AFTER payment_reference;
+
+ALTER TABLE orders
+ADD UNIQUE INDEX uq_orders_payment_reference (payment_reference);
 
 ALTER TABLE audit_logs
 MODIFY action ENUM('order_created', 'cash_payment_confirmed', 'khqr_payment_confirmed', 'order_cancelled') NOT NULL;

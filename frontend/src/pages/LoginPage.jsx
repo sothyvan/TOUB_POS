@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSavedState } from '../hooks/useSavedState';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { getPermissions } from '../utils/permissions';
-import { authApi } from '../services/apiClient';
+import { apiRequest, authApi } from '../services/apiClient';
 import { useAuth } from '../auth/useAuth';
 import LoginScreen from '../components/LoginScreen';
 
@@ -90,17 +90,9 @@ export default function LoginPage() {
           return false;
         }
 
-        // Fetch stalls using Owner/Manager JWT
-        const stallsResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'}/stalls`, {
-          headers: {
-            'Authorization': `Bearer ${authData.token}`,
-            'Accept': 'application/json'
-          }
+        const stallsData = await apiRequest('/stalls', {
+          authToken: authData.token,
         });
-        if (!stallsResponse.ok) {
-          throw new Error('Failed to fetch available stalls.');
-        }
-        const stallsData = await stallsResponse.json();
 
         setOwnerToken(authData.token);
         setAvailableStalls(stallsData.data || []);
@@ -125,18 +117,10 @@ export default function LoginPage() {
   const handleRegisterDevice = async (stallId) => {
     setLoginError('');
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'}/stalls/${stallId}/register-device`, {
+      const payload = await apiRequest(`/stalls/${stallId}/register-device`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${ownerToken}`,
-          'Accept': 'application/json'
-        }
+        authToken: ownerToken,
       });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData?.message || 'Device registration failed.');
-      }
-      const payload = await response.json();
       const { device_token, stall } = payload.data;
 
       // Write synchronously to localStorage before updating state to prevent race conditions

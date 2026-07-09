@@ -1,6 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { money } from '../utils/format';
 import Icon from './ui/Icon';
+import ReceiptModal from './ReceiptModal';
+import { useSalesReport } from '../hooks/useSalesReport';
 
 const kitchenStatusConfig = {
   sent: {
@@ -41,16 +43,16 @@ function isPendingKhqrOrder(order) {
   return order.paymentMethod === 'KHQR' && order.status === 'pending_payment';
 }
 
-function isExpiredKhqrOrder(order) {
+function isExpiredKhqrOrder(order, nowMs) {
   if (!isPendingKhqrOrder(order) || !order.paymentExpiresAt) {
     return false;
   }
 
   const expiryTime = new Date(order.paymentExpiresAt).getTime();
-  return Number.isFinite(expiryTime) && expiryTime < Date.now();
+  return Number.isFinite(expiryTime) && expiryTime < Number(nowMs || 0);
 }
 
-function matchesOperationalFilter(order, filterId) {
+function matchesOperationalFilter(order, filterId, nowMs) {
   if (!filterId) {
     return true;
   }
@@ -62,11 +64,11 @@ function matchesOperationalFilter(order, filterId) {
       return order.status === 'paid' && order.kitchenStatus === 'not_sent';
     case 'waiting-kitchen':
       return (order.status === 'paid' && order.kitchenStatus === 'pending')
-        || (isPendingKhqrOrder(order) && !isExpiredKhqrOrder(order));
+        || (isPendingKhqrOrder(order) && !isExpiredKhqrOrder(order, nowMs));
     case 'expired-khqr':
-      return isExpiredKhqrOrder(order);
+      return isExpiredKhqrOrder(order, nowMs);
     case 'pending-khqr':
-      return isPendingKhqrOrder(order) && !isExpiredKhqrOrder(order);
+      return isPendingKhqrOrder(order) && !isExpiredKhqrOrder(order, nowMs);
     default:
       return true;
   }
@@ -99,25 +101,72 @@ const alertToneConfig = {
   },
 };
 
+function escapeCsv(value) {
+  const text = String(value ?? '');
+  if (/[",\n\r]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+}
+
 export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDispatch }) {
   const [dateFilter, setDateFilter] = useState('today'); // 'today' | 'week' | 'month'
   const [activeSubTab, setActiveSubTab] = useState('analytics'); // 'analytics' | 'ledger'
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStallId, setSelectedStallId] = useState('');
+  const [selectedCashierId, setSelectedCashierId] = useState('');
   const [exporting, setExporting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [retryingOrderId, setRetryingOrderId] = useState(null);
   const [kitchenRetryError, setKitchenRetryError] = useState('');
   const [activeOperationalFilter, setActiveOperationalFilter] = useState(null);
+  const [activeReceipt, setActiveReceipt] = useState(null);
+  const [nowMs, setNowMs] = useState(0);
+
+  useEffect(() => {
+    const refreshNow = () => setNowMs(Date.now());
+    refreshNow();
+    const intervalId = window.setInterval(refreshNow, 30000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const allOrders = useMemo(() => {
-    return rawOrders.map(o => ({
-      ...o,
-      prepTimeSecs: o.prepTimeSecs || (120 + (parseInt(String(o.id).replace(/\D/g, '') || '0') % 100)),
-    }));
+    return rawOrders;
   }, [rawOrders]);
 
+  const {
+    report,
+    loading: reportLoading,
+    error: reportError,
+    refetch: refetchReport,
+  } = useSalesReport({
+    range: dateFilter,
+    stallId: selectedStallId,
+    cashierId: selectedCashierId,
+  });
+
+  const stallFilterOptions = useMemo(() => {
+    const map = new Map();
+    allOrders.forEach((order) => {
+      if (order.stallId) {
+        map.set(order.stallId, order.stallName || `Stall #${order.stallId}`);
+      }
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [allOrders]);
+
+  const cashierFilterOptions = useMemo(() => {
+    const map = new Map();
+    allOrders.forEach((order) => {
+      if (order.cashierId) {
+        map.set(order.cashierId, order.cashierName || `Cashier #${order.cashierId}`);
+      }
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [allOrders]);
+
   // Filter orders by date range
-  const filteredOrders = useMemo(() => {
+  const fallbackFilteredOrders = useMemo(() => {
     const now = new Date();
     const todayStr = now.toDateString();
 
@@ -131,6 +180,12 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
 
     return allOrders.filter(order => {
       const orderDate = new Date(order.createdAt);
+      if (selectedStallId && Number(order.stallId) !== Number(selectedStallId)) {
+        return false;
+      }
+      if (selectedCashierId && Number(order.cashierId) !== Number(selectedCashierId)) {
+        return false;
+      }
       if (dateFilter === 'today') {
         return orderDate.toDateString() === todayStr;
       } else if (dateFilter === 'week') {
@@ -140,46 +195,70 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
       }
       return true;
     });
-  }, [allOrders, dateFilter]);
+  }, [allOrders, dateFilter, selectedStallId, selectedCashierId]);
+
+  const filteredOrders = report?.orders || fallbackFilteredOrders;
 
   // Compute Revenue KPIs
   const paidFilteredOrders = useMemo(() => {
     return filteredOrders.filter((order) => order.status === 'paid');
   }, [filteredOrders]);
 
-  const totalRevenue = useMemo(() => {
+  const localTotalRevenue = useMemo(() => {
     return paidFilteredOrders.reduce((sum, o) => sum + o.total, 0);
   }, [paidFilteredOrders]);
 
-  const yesterdayRevenue = useMemo(() => {
-    const now = new Date();
-    const yesterday = new Date();
-    yesterday.setDate(now.getDate() - 1);
-    const yesterdayStr = yesterday.toDateString();
-    return allOrders
-      .filter(o => o.status === 'paid' && new Date(o.createdAt).toDateString() === yesterdayStr)
-      .reduce((sum, o) => sum + o.total, 0);
-  }, [allOrders]);
+  const totalRevenue = report?.summary?.totalRevenue ?? localTotalRevenue;
 
-  const stallStatuses = [];
-  const activeCartsCount = 0;
+  const activeStallNames = useMemo(() => {
+    if (report?.byStall) {
+      return report.byStall.map((stall) => stall.stallName).filter(Boolean);
+    }
 
-  // Avg Prep Time logic
-  const avgPrepTimeSecs = useMemo(() => {
-    if (filteredOrders.length === 0) return 192; // fallback average
-    const totalSecs = filteredOrders.reduce((sum, o) => sum + o.prepTimeSecs, 0);
-    return Math.round(totalSecs / filteredOrders.length);
-  }, [filteredOrders]);
+    return Array.from(new Set(
+      paidFilteredOrders
+        .map((order) => order.stallName)
+        .filter(Boolean)
+    ));
+  }, [paidFilteredOrders, report]);
 
-  const formattedPrepTime = useMemo(() => {
-    const mins = Math.floor(avgPrepTimeSecs / 60);
-    const secs = avgPrepTimeSecs % 60;
-    return { mins, secs };
-  }, [avgPrepTimeSecs]);
+  const paymentBreakdown = useMemo(() => {
+    if (report?.summary?.paymentMethods) {
+      return {
+        cash: {
+          count: report.summary.paymentMethods.cash?.count || 0,
+          total: report.summary.paymentMethods.cash?.revenue || 0,
+        },
+        khqr: {
+          count: report.summary.paymentMethods.khqr?.count || 0,
+          total: report.summary.paymentMethods.khqr?.revenue || 0,
+        },
+      };
+    }
+
+    return paidFilteredOrders.reduce((summary, order) => {
+      const method = order.paymentMethod === 'KHQR' ? 'khqr' : 'cash';
+      summary[method].count += 1;
+      summary[method].total += Number(order.total || 0);
+      return summary;
+    }, {
+      cash: { count: 0, total: 0 },
+      khqr: { count: 0, total: 0 },
+    });
+  }, [paidFilteredOrders, report]);
 
   // Employee Efficiency Table Data
   const employeeEfficiency = useMemo(() => {
-    // Group orders by cashier name
+    if (report?.byCashier) {
+      return report.byCashier.map((cashier) => ({
+        name: cashier.cashierName,
+        stallName: cashier.stallName || '—',
+        ordersCount: cashier.orderCount,
+        salesTotal: cashier.revenue,
+        averageTicket: cashier.orderCount > 0 ? cashier.revenue / cashier.orderCount : 0,
+      }));
+    }
+
     const cashierData = {};
     paidFilteredOrders.forEach(order => {
       const name = order.cashierName || 'Cashier';
@@ -188,41 +267,62 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
           name,
           stallName: order.stallName || '—',
           ordersCount: 0,
-          totalPrepTime: 0,
+          salesTotal: 0,
+          averageTicket: 0,
         };
       }
       cashierData[name].ordersCount += 1;
-      cashierData[name].totalPrepTime += order.prepTimeSecs;
+      cashierData[name].salesTotal += Number(order.total || 0);
     });
 
-    return Object.values(cashierData).map((c, i) => {
-      const avg = Math.round(c.ordersCount ? c.totalPrepTime / c.ordersCount : 172);
-      // Determine state active or break
-      const state = i % 3 === 2 ? 'On Break' : 'Active';
+    return Object.values(cashierData).map((c) => {
       return {
         ...c,
-        avgPrep: avg,
-        status: state,
+        averageTicket: c.ordersCount > 0 ? c.salesTotal / c.ordersCount : 0,
       };
     });
-  }, [paidFilteredOrders]);
+  }, [paidFilteredOrders, report]);
 
-  const totalCompletedOrders = paidFilteredOrders.length;
-  const activeEmployeesCount = employeeEfficiency.filter(e => e.status === 'Active').length;
+  const totalCompletedOrders = report?.summary?.paidOrders ?? paidFilteredOrders.length;
 
   const handleExport = () => {
     setExporting(true);
-    setTimeout(() => {
+    try {
+      const headers = ['Order ID', 'Date', 'Stall', 'Cashier', 'Payment', 'Status', 'Kitchen', 'Total'];
+      const rows = ledgerOrders.map((order) => [
+        order.orderNo,
+        new Date(order.createdAt).toLocaleString(),
+        order.stallName || '',
+        order.cashierName || '',
+        order.paymentMethod || '',
+        order.status || '',
+        getKitchenStatusConfig(order.kitchenStatus).label,
+        Number(order.total || 0).toFixed(2),
+      ]);
+      const csv = [headers, ...rows]
+        .map((row) => row.map(escapeCsv).join(','))
+        .join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `toub-sales-${dateFilter}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } finally {
       setExporting(false);
-      alert('Report exported successfully as CSV!');
-    }, 1200);
+    }
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setRefreshing(true);
-    setTimeout(() => {
+    try {
+      await refetchReport(false);
+    } finally {
       setRefreshing(false);
-    }, 800);
+    }
   };
 
   const handleRetryKitchenTicket = async (order) => {
@@ -244,43 +344,52 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
     }
   };
 
-  // Sparkline SVG Points generator
+  const handleViewReceipt = (order) => {
+    const detailedOrder = allOrders.find((item) => Number(item.id) === Number(order.id));
+    setActiveReceipt(detailedOrder || { ...order, items: [] });
+  };
+
   const sparklinePoints = useMemo(() => {
-    if (filteredOrders.length === 0) return '0,25 20,20 40,30 60,15 80,22 100,5';
-    // Group orders into 6 slots
-    const slots = [0, 0, 0, 0, 0, 0];
-    filteredOrders.forEach((o, index) => {
-      const slotIndex = index % 6;
-      slots[slotIndex] += o.total;
-    });
+    const slots = report?.byHour?.length
+      ? report.byHour.map((hour) => Number(hour.revenue || 0))
+      : filteredOrders.reduce((bucket, order) => {
+          const hour = new Date(order.createdAt).getHours();
+          if (Number.isInteger(hour) && hour >= 0 && hour < 24 && order.status === 'paid') {
+            bucket[hour] += Number(order.total || 0);
+          }
+          return bucket;
+        }, Array(24).fill(0));
+
+    if (!slots.some((value) => value > 0)) {
+      return '0,30 22,30 44,30 66,30 88,30 110,30';
+    }
+
     const maxVal = Math.max(...slots) || 1;
+    const step = 110 / Math.max(slots.length - 1, 1);
     return slots.map((val, idx) => {
-      const x = idx * 20;
-      const y = 35 - (val / maxVal) * 30; // Scale to fit 38px height SVG
+      const x = idx * step;
+      const y = 35 - (val / maxVal) * 30;
       return `${x},${y}`;
     }).join(' ');
-  }, [filteredOrders]);
+  }, [filteredOrders, report]);
 
-  // Ledger Filtered List
-  const ledgerOrders = useMemo(() => {
-    const normalizedSearch = searchQuery.toLowerCase();
-    return filteredOrders.filter((order) => {
-      if (!matchesOperationalFilter(order, activeOperationalFilter)) {
-        return false;
-      }
+  const normalizedSearch = searchQuery.toLowerCase();
+  const ledgerOrders = filteredOrders.filter((order) => {
+    if (!matchesOperationalFilter(order, activeOperationalFilter, nowMs)) {
+      return false;
+    }
 
-      if (!normalizedSearch) {
-        return true;
-      }
+    if (!normalizedSearch) {
+      return true;
+    }
 
-      return order.orderNo.toLowerCase().includes(normalizedSearch) ||
-        (order.cashierName || '').toLowerCase().includes(normalizedSearch) ||
-        (order.stallName && order.stallName.toLowerCase().includes(normalizedSearch)) ||
-        (order.kitchenStatus && order.kitchenStatus.toLowerCase().includes(normalizedSearch)) ||
-        (order.paymentMethod && order.paymentMethod.toLowerCase().includes(normalizedSearch)) ||
-        (order.status && order.status.toLowerCase().includes(normalizedSearch));
-    });
-  }, [filteredOrders, searchQuery, activeOperationalFilter]);
+    return order.orderNo.toLowerCase().includes(normalizedSearch) ||
+      (order.cashierName || '').toLowerCase().includes(normalizedSearch) ||
+      (order.stallName && order.stallName.toLowerCase().includes(normalizedSearch)) ||
+      (order.kitchenStatus && order.kitchenStatus.toLowerCase().includes(normalizedSearch)) ||
+      (order.paymentMethod && order.paymentMethod.toLowerCase().includes(normalizedSearch)) ||
+      (order.status && order.status.toLowerCase().includes(normalizedSearch));
+  });
 
   const operationalAlerts = useMemo(() => {
     const failedKitchenTickets = filteredOrders.filter(
@@ -292,9 +401,9 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
     const pendingKitchenTickets = filteredOrders.filter(
       (order) => order.status === 'paid' && order.kitchenStatus === 'pending'
     );
-    const expiredKhqrOrders = filteredOrders.filter(isExpiredKhqrOrder);
+    const expiredKhqrOrders = filteredOrders.filter((order) => isExpiredKhqrOrder(order, nowMs));
     const pendingKhqrOrders = filteredOrders.filter((order) => (
-      isPendingKhqrOrder(order) && !isExpiredKhqrOrder(order)
+      isPendingKhqrOrder(order) && !isExpiredKhqrOrder(order, nowMs)
     ));
     const waitingForKitchenTickets = [
       ...pendingKitchenTickets,
@@ -341,7 +450,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
         tone: 'info',
       },
     ];
-  }, [filteredOrders]);
+  }, [filteredOrders, nowMs]);
 
   const hasOperationalAlerts = operationalAlerts.some((alert) => alert.count > 0);
 
@@ -379,12 +488,36 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
           </button>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap justify-end">
           {/* Live indicator badge */}
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#f0fdf4] border border-[#dcfce7]">
-            <span className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse" />
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#15803d', fontFamily: 'Inter' }}>Live metrics</span>
+            <span className={`w-2 h-2 rounded-full ${reportLoading ? 'bg-amber-500' : 'bg-[#22c55e]'} animate-pulse`} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: reportLoading ? '#b45309' : '#15803d', fontFamily: 'Inter' }}>
+              {reportLoading ? 'Loading report' : 'Backend report'}
+            </span>
           </div>
+
+          <select
+            value={selectedStallId}
+            onChange={(event) => setSelectedStallId(event.target.value)}
+            className="h-9 rounded-xl border border-[#e5e7eb] bg-white px-3 text-[12px] font-bold text-[#374151] outline-none focus:border-[#003ec7]"
+          >
+            <option value="">All Stalls</option>
+            {stallFilterOptions.map((stall) => (
+              <option key={stall.id} value={stall.id}>{stall.name}</option>
+            ))}
+          </select>
+
+          <select
+            value={selectedCashierId}
+            onChange={(event) => setSelectedCashierId(event.target.value)}
+            className="h-9 rounded-xl border border-[#e5e7eb] bg-white px-3 text-[12px] font-bold text-[#374151] outline-none focus:border-[#003ec7]"
+          >
+            <option value="">All Cashiers</option>
+            {cashierFilterOptions.map((cashier) => (
+              <option key={cashier.id} value={cashier.id}>{cashier.name}</option>
+            ))}
+          </select>
 
           <div className="flex items-center gap-1 bg-[#f3f4f6] p-1 rounded-xl">
             {['today', 'week', 'month'].map((t) => (
@@ -402,6 +535,12 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
           </div>
         </div>
       </div>
+
+      {reportError && (
+        <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-[12px] font-semibold text-red-700">
+          {reportError}
+        </div>
+      )}
 
       <div className="bg-white rounded-2xl border border-[#f3f4f6] p-4 shadow-[0_4px_20px_rgba(0,0,0,0.02)] shrink-0">
         <div className="flex items-center justify-between gap-4 mb-3">
@@ -467,7 +606,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
             <div className="bg-white p-5 rounded-2xl border border-[#f3f4f6] flex flex-col justify-between h-[180px] shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
               <div className="flex justify-between items-start">
                 <div>
-                  <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#6b7280', fontFamily: 'Inter' }}>Total Revenue Today</h4>
+                  <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#6b7280', fontFamily: 'Inter' }}>Total Revenue</h4>
                   <span className="block mt-1" style={{ fontSize: 28, fontWeight: 800, color: '#111827', fontFamily: 'Inter' }}>
                     {money(totalRevenue)}
                   </span>
@@ -479,7 +618,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
               
               <div className="flex items-center justify-between mt-auto">
                 <span className="text-[12px] text-[#9ca3af] fontFamily-['Inter']">
-                  vs. yesterday {money(yesterdayRevenue)}
+                  Backend-owned paid orders in this range
                 </span>
                 
                 {/* SVG Sparkline */}
@@ -498,13 +637,13 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
               </div>
             </div>
 
-            {/* CardCarts */}
+            {/* CardStalls */}
             <div className="bg-white p-5 rounded-2xl border border-[#f3f4f6] flex flex-col justify-between h-[180px] shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
               <div className="flex justify-between items-start">
                 <div>
-                  <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#6b7280', fontFamily: 'Inter' }}>Active Stalls Running</h4>
+                  <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#6b7280', fontFamily: 'Inter' }}>Selling Stalls</h4>
                   <span className="block mt-1" style={{ fontSize: 28, fontWeight: 800, color: '#111827', fontFamily: 'Inter' }}>
-                    {activeCartsCount} / 0
+                    {activeStallNames.length}
                   </span>
                 </div>
                 <div className="w-9 h-9 rounded-xl bg-[#e0f2fe] flex items-center justify-center text-[#0284c7]">
@@ -512,77 +651,62 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
                 </div>
               </div>
 
-              {/* Individual Carts mini circles */}
-              <div className="flex gap-2.5 my-2">
-                {stallStatuses.map((stall, idx) => (
+              <div className="flex flex-wrap gap-2.5 my-2">
+                {activeStallNames.length > 0 ? activeStallNames.slice(0, 4).map((stallName) => (
                   <div 
-                    key={stall.id} 
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-bold"
-                    style={{
-                      backgroundColor: stall.active ? '#f0fdf4' : '#fef2f2',
-                      borderColor: stall.active ? '#dcfce7' : '#fee2e2',
-                      color: stall.active ? '#15803d' : '#ef4444'
-                    }}
+                    key={stallName}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-blue-100 bg-blue-50 text-[11px] font-bold text-blue-700"
                   >
-                    <span className={`w-1.5 h-1.5 rounded-full ${stall.active ? 'bg-[#22c55e]' : 'bg-[#ef4444]'}`} />
-                    Stall {idx + 1}
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                    {stallName}
                   </div>
-                ))}
+                )) : (
+                  <span className="text-[12px] font-semibold text-[#9ca3af]">No paid stall activity in this range.</span>
+                )}
               </div>
               
               <div className="text-[12px] text-[#9ca3af] fontFamily-['Inter']">
-                Stall runtime status needs the Phase 4 live device/WebSocket flow.
+                Based on paid orders in the selected date range.
               </div>
             </div>
 
-            {/* CardPrepTime */}
+            {/* CardPaymentMix */}
             <div className="bg-white p-5 rounded-2xl border border-[#f3f4f6] flex flex-col justify-between h-[180px] shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
               <div className="flex justify-between items-start">
                 <div>
-                  <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#6b7280', fontFamily: 'Inter' }}>Avg Kitchen Prep Time</h4>
-                  <div className="flex items-baseline gap-1 mt-1">
-                    <span style={{ fontSize: 28, fontWeight: 800, color: '#111827', fontFamily: 'Inter' }}>
-                      {formattedPrepTime.mins}m
-                    </span>
-                    <span style={{ fontSize: 20, fontWeight: 700, color: '#6b7280', fontFamily: 'Inter' }}>
-                      {formattedPrepTime.secs}s
-                    </span>
-                  </div>
+                  <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#6b7280', fontFamily: 'Inter' }}>Payment Mix</h4>
+                  <span className="block mt-1" style={{ fontSize: 28, fontWeight: 800, color: '#111827', fontFamily: 'Inter' }}>
+                    {paymentBreakdown.cash.count + paymentBreakdown.khqr.count} Paid
+                  </span>
                 </div>
                 <div className="w-9 h-9 rounded-xl bg-[#fef3c7] flex items-center justify-center text-[#d97706]">
-                  <Icon name="clock" className="w-4 h-4" />
+                  <Icon name="khqr" className="w-4 h-4" />
                 </div>
               </div>
 
-              {/* Progress bar to target */}
-              <div className="w-full">
-                <div className="flex justify-between text-[11px] text-[#9ca3af] font-semibold mb-1">
-                  <span>Current vs. target</span>
-                  <span>Target: &lt; 5m</span>
+              <div className="grid gap-2">
+                <div className="flex items-center justify-between text-[12px] font-bold text-[#374151]">
+                  <span>Cash</span>
+                  <span>{paymentBreakdown.cash.count} · {money(paymentBreakdown.cash.total)}</span>
                 </div>
-                <div className="w-full h-2 rounded-full bg-[#f3f4f6] overflow-hidden">
-                  <div 
-                    className="h-full rounded-full transition-all duration-500" 
-                    style={{
-                      width: `${Math.min(100, (avgPrepTimeSecs / 300) * 100)}%`,
-                      backgroundColor: avgPrepTimeSecs < 300 ? '#22c55e' : '#f59e0b'
-                    }}
-                  />
+                <div className="flex items-center justify-between text-[12px] font-bold text-[#374151]">
+                  <span>KHQR</span>
+                  <span>{paymentBreakdown.khqr.count} · {money(paymentBreakdown.khqr.total)}</span>
                 </div>
               </div>
             </div>
 
           </div>
 
-          {/* Employee Efficiency Metrics Table */}
+          {/* Cashier Sales Matrix */}
           <div className="bg-white rounded-2xl border border-[#f3f4f6] flex flex-col flex-1 min-h-0 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
             <div className="flex justify-between items-center px-6 py-4 border-b border-[#f3f4f6]">
               <div>
                 <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#111827', fontFamily: 'Inter' }}>
-                  Employee Efficiency Metrics
+                  Cashier Sales Matrix
                 </h3>
                 <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af', fontFamily: 'Inter' }}>
-                  {employeeEfficiency.length} active cashiers today · {totalCompletedOrders} paid orders
+                  {employeeEfficiency.length} cashiers with paid sales · {totalCompletedOrders} paid orders
                 </p>
               </div>
 
@@ -611,13 +735,18 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
               <span className="flex-[2] min-w-[200px]">Employee Name</span>
               <span className="flex-1">Assigned Stall</span>
               <span className="flex-1 text-center">Orders Completed</span>
-              <span className="flex-1 text-center">Avg Prep Speed</span>
-              <span className="flex-1 text-center">Status</span>
+              <span className="flex-1 text-center">Sales Total</span>
+              <span className="flex-1 text-center">Avg Ticket</span>
             </div>
 
             {/* Table Body */}
             <div className="flex-1 overflow-y-auto">
-              {employeeEfficiency.map((emp) => (
+              {employeeEfficiency.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-[#9ca3af]">
+                  <Icon name="users" className="w-8 h-8 mb-2" />
+                  <span className="text-[13px] font-medium">No paid cashier sales in this range</span>
+                </div>
+              ) : employeeEfficiency.map((emp) => (
                 <div key={emp.name} className="flex items-center px-6 py-3.5 border-b border-[#f9fafb] hover:bg-[#fafbff] transition-colors">
                   <div className="flex-[2] min-w-[200px] flex items-center gap-3">
                     <div className="w-[36px] h-[36px] rounded-full bg-[#eef2ff] text-[#003ec7] flex items-center justify-center font-bold text-[12px]">
@@ -635,28 +764,13 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
                     {emp.ordersCount} Orders
                   </span>
                   
-                  <div className="flex-1 flex justify-center">
-                    <span 
-                      className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[11px] font-bold"
-                      style={{
-                        backgroundColor: emp.avgPrep < 150 ? '#dcfce7' : emp.avgPrep < 200 ? '#fef3c7' : '#fee2e2',
-                        color: emp.avgPrep < 150 ? '#15803d' : emp.avgPrep < 200 ? '#b45309' : '#b91c1c',
-                      }}
-                    >
-                      {emp.avgPrep}s
-                    </span>
-                  </div>
+                  <span className="flex-1 text-center text-[13px] font-extrabold text-[#111827]">
+                    {money(emp.salesTotal)}
+                  </span>
 
-                  <div className="flex-1 flex justify-center">
-                    <span 
-                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                        emp.status === 'Active' ? 'bg-[#f0fdf4] text-[#15803d]' : 'bg-[#fffbeb] text-[#d97706]'
-                      }`}
-                    >
-                      <span className={`w-1.5 h-1.5 rounded-full ${emp.status === 'Active' ? 'bg-[#22c55e]' : 'bg-[#f59e0b]'}`} />
-                      {emp.status}
-                    </span>
-                  </div>
+                  <span className="flex-1 text-center text-[13px] font-extrabold text-[#111827]">
+                    {money(emp.averageTicket)}
+                  </span>
                 </div>
               ))}
             </div>
@@ -668,8 +782,8 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
               </span>
               <div className="flex gap-4 text-[12px] font-bold text-[#374151]">
                 <span>Total Orders: <span className="text-[#003ec7] font-black">{totalCompletedOrders}</span></span>
-                <span>Avg Prep Speed: <span className="text-[#003ec7] font-black">{avgPrepTimeSecs}s</span></span>
-                <span>Active Now: <span className="text-[#003ec7] font-black">{activeEmployeesCount} / {employeeEfficiency.length}</span></span>
+                <span>Total Sales: <span className="text-[#003ec7] font-black">{money(totalRevenue)}</span></span>
+                <span>Cashiers: <span className="text-[#003ec7] font-black">{employeeEfficiency.length}</span></span>
               </div>
             </div>
 
@@ -738,7 +852,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
             <span className="flex-[0.8] text-center">Payment</span>
             <span className="flex-1 text-center">Kitchen</span>
             <span className="flex-1 text-right">Total Amount</span>
-            <span className="flex-[0.9] text-right">Action</span>
+            <span className="flex-[1.3] text-right">Actions</span>
           </div>
 
           {/* Ledger Table Body */}
@@ -778,7 +892,14 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
                     {money(order.total)}
                   </span>
 
-                  <div className="flex-[0.9] flex justify-end">
+                  <div className="flex-[1.3] flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleViewReceipt(order)}
+                      className="cursor-pointer px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-[11px] font-bold text-slate-700 hover:bg-slate-50 active:scale-95 transition-all"
+                    >
+                      Receipt
+                    </button>
                     {canRetryKitchenTicket(order) ? (
                       <button
                         type="button"
@@ -788,9 +909,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
                       >
                         {retryingOrderId === order.id ? 'Retrying...' : 'Retry'}
                       </button>
-                    ) : (
-                      <span className="text-[11px] font-semibold text-[#cbd5e1]">—</span>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               ))
@@ -802,6 +921,11 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
           </div>
         </div>
       )}
+
+      <ReceiptModal
+        activeReceipt={activeReceipt}
+        onClose={() => setActiveReceipt(null)}
+      />
     </div>
   );
 }

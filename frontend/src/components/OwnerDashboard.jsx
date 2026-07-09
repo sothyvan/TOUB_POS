@@ -1,22 +1,43 @@
+import { useMemo } from 'react';
 import MetricCard from './dashboard/MetricCard';
 import RevenueChart from './dashboard/RevenueChart';
-import LiveEvents from './dashboard/LiveEvents';
-import QuickActions from './dashboard/QuickActions';
 import Icon from './ui/Icon';
+import { money } from '../utils/format';
 
-export default function OwnerDashboard() {
+function isToday(dateValue) {
+  const date = new Date(dateValue);
+  return !Number.isNaN(date.getTime()) && date.toDateString() === new Date().toDateString();
+}
+
+export default function OwnerDashboard({ orders = [] }) {
+  const dashboardStats = useMemo(() => {
+    const todaysOrders = orders.filter((order) => isToday(order.createdAt));
+    const paidOrders = todaysOrders.filter((order) => order.status === 'paid');
+    const revenue = paidOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+    const activeStalls = new Set(
+      todaysOrders
+        .map((order) => order.stallName)
+        .filter(Boolean)
+    );
+    const khqrOrders = paidOrders.filter((order) => order.paymentMethod === 'KHQR').length;
+    const cashOrders = paidOrders.filter((order) => order.paymentMethod === 'CASH').length;
+
+    return {
+      revenue,
+      paidOrdersCount: paidOrders.length,
+      activeStallsCount: activeStalls.size,
+      khqrOrders,
+      cashOrders,
+    };
+  }, [orders]);
+
   return (
     <div className="flex-1 flex flex-col justify-start items-start gap-5">
-      <div className="w-full flex justify-start items-stretch gap-3.5 flex-wrap max-[1024px]:flex-col">
+      <div className="w-full grid grid-cols-3 gap-3.5 max-[1024px]:grid-cols-1">
         <MetricCard
-          title="Gross Revenue (Today)"
-          value={
-            <div>
-              <span>$1,240.00 </span>
-              <span className="text-gray-400 text-xs font-medium">KHR</span>
-            </div>
-          }
-          subtitle="↑ Up 15% from yesterday"
+          title="Gross Revenue Today"
+          value={money(dashboardStats.revenue)}
+          subtitle="Backend-owned paid orders only"
           subtitleColor="text-green-700"
           iconBgColor="bg-green-100"
           icon={
@@ -24,44 +45,28 @@ export default function OwnerDashboard() {
           }
         />
         <MetricCard
-          title="Total Orders Processed"
-          value="184 Orders"
-          subtitle="0 pending in kitchen"
-          subtitleColor="text-green-700"
+          title="Paid Orders"
+          value={`${dashboardStats.paidOrdersCount} Orders`}
+          subtitle="Cash and KHQR completed payments"
+          subtitleColor="text-blue-700"
           iconBgColor="bg-blue-100"
           icon={
             <Icon name="cart" className="w-4.5 h-4.5 text-blue-700" strokeWidth={2.2} />
           }
         />
         <MetricCard
-          title="Active Locations"
-          value="3 / 4 Online"
-          subtitle="Stall 3 (Toul Tom Poung) is offline"
+          title="Selling Stalls Today"
+          value={`${dashboardStats.activeStallsCount} Stalls`}
+          subtitle={`Cash ${dashboardStats.cashOrders} · KHQR ${dashboardStats.khqrOrders}`}
           subtitleColor="text-amber-700"
           iconBgColor="bg-amber-100"
           icon={
             <Icon name="location" className="w-4.5 h-4.5 text-amber-700" strokeWidth={2.2} />
           }
         />
-        <MetricCard
-          title="Average Ticket Prep Time"
-          value="3m 45s"
-          subtitle="Optimal operational speed"
-          subtitleColor="text-blue-700"
-          iconBgColor="bg-violet-100"
-          icon={
-            <Icon name="clock" className="w-4.5 h-4.5 text-[#003EC7]" strokeWidth={2.2} />
-          }
-        />
-      </div>
-      
-      <div className="w-full flex justify-start items-stretch gap-4 flex-wrap max-[1024px]:flex-col">
-        <RevenueChart />
-        <LiveEvents />
       </div>
 
-      <QuickActions />
+      <RevenueChart orders={orders} />
     </div>
   );
 }
-

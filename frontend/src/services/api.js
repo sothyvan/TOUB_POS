@@ -122,16 +122,16 @@ function mapOrderToFrontend(o) {
     o.TelegramTickets || o.telegramTickets || o.telegram_tickets || []
   ).sort((a, b) => Number(b.id) - Number(a.id));
   const latestTelegramTicket = telegramTickets[0] || null;
-  const kitchenStatus = latestTelegramTicket?.status || (o.status === 'paid' ? 'not_sent' : 'not_ready');
+  const kitchenStatus = o.kitchen_status || o.kitchenStatus || latestTelegramTicket?.status || (o.status === 'paid' ? 'not_sent' : 'not_ready');
 
   return {
     id,
     orderNo: `ORD-${String(id).padStart(4, '0')}`,
     createdAt: o.created_at || o.createdAt,
     cashierId: o.cashier_id || o.cashierId,
-    cashierName: cashier.username || cashier.name || o.cashierName || 'Cashier',
+    cashierName: cashier.username || cashier.name || o.cashier_name || o.cashierName || 'Cashier',
     stallId: o.stall_id || o.stallId,
-    stallName: stall.location ? `${stall.name} — ${stall.location}` : (stall.name || o.stallName || 'Stall'),
+    stallName: stall.location ? `${stall.name} — ${stall.location}` : (stall.name || o.stall_name || o.stallName || 'Stall'),
     paymentMethod,
     status: o.status,
     qrPayload: o.qr_payload || o.qrPayload || null,
@@ -161,6 +161,18 @@ function mapOrderToFrontend(o) {
       notes: i.notes || '',
     }))
   };
+}
+
+function buildQueryString(params = {}) {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      query.set(key, value);
+    }
+  });
+
+  const queryString = query.toString();
+  return queryString ? `?${queryString}` : '';
 }
 
 export const api = {
@@ -337,6 +349,15 @@ export const api = {
     async retryTelegram(orderId) {
       const res = await apiRequest(`/orders/${orderId}/retry-telegram`, { method: 'POST' });
       return mapOrderToFrontend(res.data);
+    },
+  },
+  reports: {
+    async getSales(filters = {}) {
+      const res = await apiRequest(`/reports/sales${buildQueryString(filters)}`);
+      return {
+        ...res.data,
+        orders: (res.data?.orders || []).map(mapOrderToFrontend),
+      };
     },
   },
 };

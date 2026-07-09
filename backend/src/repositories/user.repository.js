@@ -103,7 +103,9 @@ export async function updateUserById(id, data) {
  */
 export async function deleteUserById(id) {
   const user = await User.findByPk(id);
-  if (!user) return false;
+  if (!user) {
+    return false;
+  }
 
   const [affectedRows] = await User.update(
     { 

@@ -1,8 +1,15 @@
+import axios from 'axios';
 import { AUTH_STORAGE_KEYS } from '../auth/authStorage';
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
 let onUnauthorized = null;
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    Accept: 'application/json',
+  },
+});
 
 export class ApiError extends Error {
   constructor(message, status, payload) {
@@ -17,60 +24,64 @@ export function setUnauthorizedHandler(handler) {
   onUnauthorized = handler;
 }
 
-function apiUrl(path) {
+function normalizePath(path) {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  return `${API_BASE_URL}${normalizedPath}`;
+  return normalizedPath;
 }
 
-async function parseResponse(response) {
-  const text = await response.text();
-  if (!text) {
+function readDeviceToken() {
+  let deviceToken = localStorage.getItem('toub-device-token');
+  if (!deviceToken) {
     return null;
   }
-
   try {
-    return JSON.parse(text);
+    return JSON.parse(deviceToken);
   } catch {
-    return text;
+    return deviceToken;
   }
 }
 
 export async function apiRequest(path, options = {}) {
-  const token = localStorage.getItem(AUTH_STORAGE_KEYS.TOKEN);
-  let deviceToken = localStorage.getItem('toub-device-token');
-  if (deviceToken) {
-    try {
-      deviceToken = JSON.parse(deviceToken);
-    } catch {
-      // Fallback if the token was stored as a raw plain string
-    }
-  }
+  const {
+    authToken,
+    body,
+    headers: customHeaders,
+    method = 'GET',
+    ...requestOptions
+  } = options;
+  const token = authToken ?? localStorage.getItem(AUTH_STORAGE_KEYS.TOKEN);
+  const deviceToken = readDeviceToken();
   const headers = {
-    Accept: 'application/json',
-    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+    ...(body ? { 'Content-Type': 'application/json' } : {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(deviceToken ? { 'X-Device-Token': deviceToken } : {}),
-    ...options.headers,
+    ...customHeaders,
   };
 
-  const response = await fetch(apiUrl(path), {
-    ...options,
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
+  try {
+    const response = await apiClient.request({
+      ...requestOptions,
+      url: normalizePath(path),
+      method,
+      headers,
+      data: body,
+    });
 
-  const payload = await parseResponse(response);
+    return response.data ?? null;
+  } catch (error) {
+    if (!axios.isAxiosError(error)) {
+      throw error;
+    }
 
-  if (!response.ok) {
-    if (response.status === 401 && onUnauthorized) {
+    const status = error.response?.status || 0;
+    const payload = error.response?.data || null;
+    if (status === 401 && onUnauthorized) {
       onUnauthorized();
     }
 
-    const message = payload?.message || payload?.error || `Request failed with status ${response.status}.`;
-    throw new ApiError(message, response.status, payload);
+    const message = payload?.message || payload?.error || error.message || `Request failed with status ${status}.`;
+    throw new ApiError(message, status, payload);
   }
-
-  return payload;
 }
 
 export const authApi = {

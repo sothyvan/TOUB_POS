@@ -550,6 +550,7 @@ Requires `owner` or `manager` role.
 | Method | Path              | Auth | Role    | Description              |
 |--------|-------------------|------|---------|--------------------------|
 | GET    | `/reports/daily`  | ✅   | Owner / Manager | Daily sales summary      |
+| GET    | `/reports/sales`  | ✅   | Owner / Manager | Filtered sales report for dashboard/ledger |
 
 ### GET `/reports/daily?date=YYYY-MM-DD`
 
@@ -564,10 +565,73 @@ Requires `owner` or `manager` role.
   "success": true,
   "data": {
     "date": "2026-06-15",
-    "total_revenue": 1240.00,
-    "total_orders": 38,
-    "by_cashier": [
-      { "cashier": "john", "orders": 15, "revenue": 520.00 }
+    "totalOrders": 38,
+    "totalRevenue": 1240.00,
+    "breakdown": {
+      "cash": { "count": 20, "revenue": 650.00 },
+      "khqr": { "count": 18, "revenue": 590.00 }
+    },
+    "stalls": [
+      { "stallName": "Main Stall", "orderCount": 20, "revenue": 720.00 }
+    ]
+  }
+}
+```
+
+### GET `/reports/sales?range=today|week|month|custom&start_date=YYYY-MM-DD&end_date=YYYY-MM-DD&stall_id=1&cashier_id=2`
+
+Backs the Owner/Manager sales report screen. The backend scopes all results to the authenticated user's customer business.
+
+**Query params**
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| range | string | No | `today`, `week`, `month`, or `custom`. Defaults to `today`. |
+| start_date | string | Only for custom | Start date in `YYYY-MM-DD` format. |
+| end_date | string | Only for custom | End date in `YYYY-MM-DD` format. |
+| stall_id | number | No | Filters to one same-business stall. |
+| cashier_id | number | No | Filters to one cashier's orders. |
+
+**Response `200`**
+```json
+{
+  "success": true,
+  "data": {
+    "filters": {
+      "range": "today",
+      "startDate": "2026-07-09",
+      "endDate": "2026-07-09",
+      "stallId": null,
+      "cashierId": null
+    },
+    "summary": {
+      "totalOrders": 12,
+      "paidOrders": 10,
+      "totalRevenue": 84.50,
+      "averageOrderValue": 8.45,
+      "paymentMethods": {
+        "cash": { "count": 4, "revenue": 30.00 },
+        "khqr": { "count": 6, "revenue": 54.50 }
+      }
+    },
+    "byStall": [
+      { "stallId": 1, "stallName": "Main Stall", "orderCount": 7, "revenue": 52.00 }
+    ],
+    "byCashier": [
+      { "cashierId": 3, "cashierName": "cashier", "stallName": "Main Stall", "orderCount": 7, "revenue": 52.00 }
+    ],
+    "byHour": [
+      { "hour": 9, "label": "9AM", "orderCount": 2, "revenue": 14.00 }
+    ],
+    "orders": [
+      {
+        "id": 42,
+        "status": "paid",
+        "payment_method": "khqr",
+        "total_usd": 12.50,
+        "stall_name": "Main Stall",
+        "cashier_name": "cashier",
+        "kitchen_status": "sent"
+      }
     ]
   }
 }
