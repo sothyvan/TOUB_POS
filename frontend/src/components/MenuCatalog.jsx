@@ -6,6 +6,7 @@ import FormInput from './ui/FormInput';
 import FormSelect from './ui/FormSelect';
 import StatusBadge from './ui/StatusBadge';
 import TabPills from './ui/TabPills';
+import Switch from './ui/Switch';
 import { api } from '../services/api';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 
@@ -15,34 +16,6 @@ const PRODUCT_IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp';
 
 function toKHR(usd) {
   return Math.round(parseFloat(usd || 0) * KHR_RATE).toLocaleString();
-}
-
-// ── Toggle switch ─────────────────────────────────────────────────────────────
-function Toggle({ checked, onChange }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className="cursor-pointer border-0 p-0 transition-all duration-200 active:scale-95 shrink-0"
-      style={{
-        width: 38, height: 22, borderRadius: 999,
-        background: checked ? '#22c55e' : '#d1d5db',
-        position: 'relative',
-      }}
-    >
-      <span style={{
-        position: 'absolute', top: 2,
-        left: checked ? 18 : 2,
-        width: 18, height: 18,
-        borderRadius: '50%',
-        background: '#ffffff',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-        transition: 'left 0.2s',
-      }} />
-    </button>
-  );
 }
 
 function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete }) {
@@ -425,7 +398,7 @@ function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsE
               <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#374151', fontFamily: 'Inter, sans-serif' }}>Available for sale</p>
               <p style={{ margin: 0, fontSize: 11, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}>Visible to cashiers</p>
             </div>
-            <Toggle checked={form.available} onChange={v => setForm(f => ({ ...f, available: v }))} />
+            <Switch checked={form.available} onChange={v => setForm(f => ({ ...f, available: v }))} />
           </div>
         </div>
 

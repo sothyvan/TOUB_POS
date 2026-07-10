@@ -12,8 +12,18 @@
   /* --color-brand-yellow: #ebc02b; */
   --color-brand-blue: #0047cc;
   --color-brand-action: #003ec7;
+  --color-brand-action-hover: #0034a6;
   --color-state-danger: #c70000;
   --color-state-success: #157811;
+  --color-state-warning: #d97706;
+
+  --color-ui-bg: #f8fafc;
+  --color-ui-surface: #ffffff;
+  --color-ui-muted: #f3f4f6;
+  --color-ui-border: #e5e7eb;
+  --color-text-strong: #111827;
+  --color-text-soft: #6b7280;
+  --color-text-muted: #9ca3af;
 
   --color-tone-gold-bg: #fcf6e5;
   --color-tone-gold-border: #e6c382;

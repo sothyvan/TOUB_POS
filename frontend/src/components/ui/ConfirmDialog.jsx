@@ -1,15 +1,5 @@
 import ModalShell from './ModalShell';
-
-const actionClasses = {
-  danger:
-    'bg-state-danger hover:bg-state-danger/90 text-white border-0 shadow-sm',
-  success:
-    'bg-state-success hover:bg-state-success/90 text-white border-0 shadow-sm',
-  primary:
-    'bg-brand-action hover:bg-brand-action/90 text-white border-0 shadow-sm',
-  secondary:
-    'bg-white hover:bg-gray-50 text-brand-text border border-brand-border',
-};
+import Button from './Button';
 
 const sizeClasses = {
   compact: {
@@ -47,7 +37,7 @@ export default function ConfirmDialog({
   onCancel,
   onConfirm,
 }) {
-  const styles = sizeClasses[size];
+  const styles = sizeClasses[size] || sizeClasses.large;
   const titleId = `confirm-dialog-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
 
   return (
@@ -68,22 +58,25 @@ export default function ConfirmDialog({
           </div>
         ) : null}
         <div className={`flex items-center justify-center w-full mb-2 ${styles.actions}`}>
-          <button
-            className={`flex-1 transition-all cursor-pointer active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${styles.button} ${actionClasses[cancelTone]}`}
-            type="button"
+          <Button
+            className={`flex-1 ${styles.button}`}
             disabled={isBusy}
+            size="md"
+            variant={cancelTone}
             onClick={onCancel}
           >
             {cancelLabel}
-          </button>
-          <button
-            className={`flex-1 transition-all cursor-pointer active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${styles.button} ${actionClasses[confirmTone]}`}
-            type="button"
-            disabled={isBusy || isConfirmDisabled}
+          </Button>
+          <Button
+            className={`flex-1 ${styles.button}`}
+            disabled={isConfirmDisabled}
+            loading={isBusy}
+            size="md"
+            variant={confirmTone}
             onClick={onConfirm}
           >
             {isBusy ? 'Processing...' : confirmLabel}
-          </button>
+          </Button>
         </div>
       </div>
     </ModalShell>

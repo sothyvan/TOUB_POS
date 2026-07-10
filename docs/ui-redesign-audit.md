@@ -454,6 +454,12 @@ Checkpoint:
 - No business behavior changes.
 - `npm run lint` and `npm run build` pass.
 
+Implementation status:
+- **Completed.** Phase UI-1 added shared `Button`, `Alert`, `Badge`, `Switch`, `EmptyState`, and `LoadingState` primitives.
+- `ModalShell`, `ConfirmDialog`, `FormInput`, and `FormSelect` were improved while preserving existing callers.
+- `FormActions`, `StatusBadge`, `TabPills`, `OwnerCrudTable`, and the product editor availability switch now use the shared foundation layer where safe.
+- Frontend lint and production build passed. The build still reports a large JavaScript bundle warning, which should be handled later through code splitting if needed.
+
 ### Phase UI-2: Cashier POS Flow
 
 Goal:
@@ -643,4 +649,4 @@ Likely utility files:
 
 Recommended next decision:
 
-Choose one UI phase to implement first. The safest starting point is **Phase UI-1: Design System Cleanup**, because it improves consistency without touching backend or business workflows.
+Phase UI-1 is complete. The next recommended UI phase is **Phase UI-2: Cashier POS Flow**, focused on cashier alerts, product grid polish, cart/payment modal clarity, and better loading/error/empty states.

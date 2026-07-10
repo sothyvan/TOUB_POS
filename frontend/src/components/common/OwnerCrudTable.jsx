@@ -1,5 +1,9 @@
 import OwnerFormModal from '../ui/OwnerFormModal';
 import Icon from '../ui/Icon';
+import Alert from '../ui/Alert';
+import Button from '../ui/Button';
+import EmptyState from '../ui/EmptyState';
+import LoadingState from '../ui/LoadingState';
 
 export default function OwnerCrudTable({
   title,
@@ -43,18 +47,24 @@ export default function OwnerCrudTable({
         <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-2">
           <div className="flex items-center gap-3">
             <h3 className="m-0 text-brand-dark text-lg font-black tracking-tight">{title}</h3>
-            {loading && <span className="text-sm text-gray-500 animate-pulse">Loading...</span>}
-            {error && <span className="text-sm text-red-500">{error}</span>}
+            {loading && <LoadingState label="Loading..." size="sm" className="text-xs" />}
           </div>
-          <button
-            type="button"
+          <Button
             onClick={onAdd}
-            className="min-h-9.5 px-4 rounded-full bg-brand-action text-white text-xs font-bold hover:bg-brand-action/90 active:scale-95 transition-all cursor-pointer shadow-sm flex items-center gap-1"
+            iconName="plusCompact"
+            iconClassName="w-4.5 h-4.5"
+            size="sm"
+            className="rounded-full"
           >
-            <Icon name="plusCompact" className="w-4.5 h-4.5" strokeWidth={3} />
             {label}
-          </button>
+          </Button>
         </div>
+
+        {error && (
+          <Alert variant="danger" className="rounded-xl px-3 py-2 text-xs">
+            {error}
+          </Alert>
+        )}
 
         {items.map((item) => (
           <div key={item.id} className="py-4.5 px-0 border-t border-gray-100 grid grid-cols-[minmax(0,1fr)_auto] gap-4 items-center first-of-type:border-t-0">
@@ -108,10 +118,16 @@ export default function OwnerCrudTable({
             </div>
           </div>
         ))}
+        {loading && items.length === 0 && (
+          <LoadingState label={`Loading ${title.toLowerCase()}...`} className="py-10" />
+        )}
         {!loading && items.length === 0 && (
-          <div className="py-8 text-center text-gray-400 font-medium">
-            No {title.toLowerCase()} found.
-          </div>
+          <EmptyState
+            iconName="orders"
+            title={`No ${title.toLowerCase()} found`}
+            message={`Create the first ${itemLabel} when you are ready.`}
+            className="my-2"
+          />
         )}
       </div>
 

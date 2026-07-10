@@ -29,6 +29,16 @@ Update this file after every meaningful implementation change.
   - Backend-backed UI auto-refresh fallback — **COMPLETE** ✅
 - Phase 7A: Dashboard/Reports UI Cleanup & API Client Migration — **COMPLETE** ✅
 - Phase 7B: Reporting Hardening — **COMPLETE** ✅
+- Phase UI-1: Design System Cleanup — **COMPLETE** ✅
+
+- **Implemented Phase UI-1 Design System Cleanup**:
+  - Added shared frontend primitives: `Button`, `Alert`, `Badge`, `Switch`, `EmptyState`, and `LoadingState`.
+  - Expanded Tailwind theme tokens for primary hover, warning state, UI surfaces, borders, and text colors.
+  - Improved `ModalShell` with optional size classes and close-button support.
+  - Improved `FormInput` and `FormSelect` with helper text, error text, required markers, disabled styling, and accessible error metadata.
+  - Refactored `ConfirmDialog`, `FormActions`, `StatusBadge`, `TabPills`, and `OwnerCrudTable` to use the shared foundation components where safe.
+  - Replaced the private product editor availability toggle in `MenuCatalog.jsx` with the shared `Switch`.
+  - Verified frontend lint and production build; build still reports the existing large bundle warning for future code-splitting consideration.
 
 - **Implemented Phase 5.5 RBAC Hierarchy Cleanup**:
   - Finalized the active role hierarchy as `platform_admin`, `owner`, `manager`, and `cashier`.
@@ -560,6 +570,11 @@ Update this file after every meaningful implementation change.
   - Add payment monitoring and operational alerting for failed Bakong or Telegram operations.
   - Keep cook authorization Telegram-only, and strengthen the Telegram cook identity model before production.
   - Decide whether failed Telegram dispatches need an automatic retry worker or if manual retry is enough for the final demo.
+
+- Phase UI-2 Cashier POS Flow polish.
+  - Replace cashier native `alert()` usage with inline `Alert` or toast-style UI.
+  - Improve product grid, cart drawer, payment confirmation, KHQR modal wording/status hierarchy, and cashier loading/error/empty states.
+  - Manually test cashier flow on mobile, tablet, laptop, and desktop viewports.
 
 - Phase 7C Demo Stabilization & Polish.
   - Manually test the Owner/Manager report filters against seeded and real orders.
