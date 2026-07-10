@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { money } from '../utils/format';
+import Alert from './ui/Alert';
+import Button from './ui/Button';
 import ModalShell from './ui/ModalShell';
 
 export default function CashConfirmationModal({
@@ -43,9 +45,6 @@ export default function CashConfirmationModal({
         <h3 id="cash-confirmation-title" className="m-0 text-2xl font-black text-brand-dark tracking-tight">
           Cash received
         </h3>
-        <p className="mt-2 mb-6 text-sm font-semibold text-brand-subtext">
-          Enter the customer's cash amount. TouB POS will calculate the change and the backend will verify it.
-        </p>
 
         <div className="rounded-2xl bg-gray-50 border border-gray-100 p-4 mb-4 text-left space-y-3">
           <div className="flex items-center justify-between text-sm font-bold text-gray-500 mb-2">
@@ -118,34 +117,37 @@ export default function CashConfirmationModal({
         </div>
 
         {isUnderpaid ? (
-          <p className="mt-0 mb-4 text-sm font-bold text-state-danger">
+          <Alert variant="warning" className="mb-4 text-left" title="Cash is short">
             Cash received must be at least {money(totalAmount)}.
-          </p>
+          </Alert>
         ) : null}
 
         {error ? (
-          <p className="mt-0 mb-4 text-sm font-bold text-state-danger">
+          <Alert variant="danger" className="mb-4 text-left" title="Payment failed">
             {error}
-          </p>
+          </Alert>
         ) : null}
 
         <div className="flex gap-3">
-          <button
-            className="flex-1 h-13 rounded-xl border-0 bg-state-danger text-white font-bold cursor-pointer hover:bg-state-danger/90 disabled:cursor-not-allowed disabled:opacity-60"
+          <Button
+            className="h-13 flex-1"
             type="button"
             disabled={isBusy}
+            variant="secondary"
             onClick={onCancel}
           >
             Cancel
-          </button>
-          <button
-            className="flex-1 h-13 rounded-xl border-0 bg-state-success text-white font-bold cursor-pointer hover:bg-state-success/90 disabled:cursor-not-allowed disabled:opacity-60"
+          </Button>
+          <Button
+            className="h-13 flex-1"
             type="button"
             disabled={!canConfirm}
+            loading={isBusy}
+            variant="success"
             onClick={handleConfirm}
           >
             {isBusy ? 'Processing...' : 'Confirm paid'}
-          </button>
+          </Button>
         </div>
       </div>
     </ModalShell>

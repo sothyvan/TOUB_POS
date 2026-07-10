@@ -30,6 +30,7 @@ Update this file after every meaningful implementation change.
 - Phase 7A: Dashboard/Reports UI Cleanup & API Client Migration — **COMPLETE** ✅
 - Phase 7B: Reporting Hardening — **COMPLETE** ✅
 - Phase UI-1: Design System Cleanup — **COMPLETE** ✅
+- Phase UI-2: Cashier POS Flow Redesign — **COMPLETE** ✅
 
 - **Implemented Phase UI-1 Design System Cleanup**:
   - Added shared frontend primitives: `Button`, `Alert`, `Badge`, `Switch`, `EmptyState`, and `LoadingState`.
@@ -39,6 +40,18 @@ Update this file after every meaningful implementation change.
   - Refactored `ConfirmDialog`, `FormActions`, `StatusBadge`, `TabPills`, and `OwnerCrudTable` to use the shared foundation components where safe.
   - Replaced the private product editor availability toggle in `MenuCatalog.jsx` with the shared `Switch`.
   - Verified frontend lint and production build; build still reports the existing large bundle warning for future code-splitting consideration.
+  - Verification pass restored the existing `brand-yellow` token used by login/dialog classes and added pointer cursor affordance to the shared `Button`.
+  - Re-ran frontend lint and production build after the verification fixes; both passed with the same non-blocking large bundle warning.
+
+- **Implemented Phase UI-2 Cashier POS Flow Redesign**:
+  - Redesigned the cashier workspace into a clearer POS layout with stronger Quick Sale/My Orders separation, responsive product browsing, and a more touch-friendly cart panel.
+  - Improved product cards, category filters, search, empty states, loading states, and backend error presentation for the cashier selling flow.
+  - Upgraded cart rows, quantity controls, totals display, checkout disabled states, and clear-cart confirmation using shared UI primitives.
+  - Replaced cashier checkout/resume native `alert()` usage with inline `Alert` feedback and page-level cashier notices.
+  - Polished cash confirmation and KHQR payment modal UX while keeping backend-owned payment status and KHQR checking behavior unchanged.
+  - UI-2 verification corrected narrow-phone product cards to use one column below 460px so touch-sized quantity controls are not clipped.
+  - UI-2 verification made the global cart action return to Quick Sale and close the cart when entering My Orders, avoiding a no-op tablet/mobile cart button.
+  - Verified frontend lint and production build; build still reports the existing non-blocking large bundle warning.
 
 - **Implemented Phase 5.5 RBAC Hierarchy Cleanup**:
   - Finalized the active role hierarchy as `platform_admin`, `owner`, `manager`, and `cashier`.
@@ -571,10 +584,10 @@ Update this file after every meaningful implementation change.
   - Keep cook authorization Telegram-only, and strengthen the Telegram cook identity model before production.
   - Decide whether failed Telegram dispatches need an automatic retry worker or if manual retry is enough for the final demo.
 
-- Phase UI-2 Cashier POS Flow polish.
-  - Replace cashier native `alert()` usage with inline `Alert` or toast-style UI.
-  - Improve product grid, cart drawer, payment confirmation, KHQR modal wording/status hierarchy, and cashier loading/error/empty states.
-  - Manually test cashier flow on mobile, tablet, laptop, and desktop viewports.
+- Phase UI-3 Owner/Manager Screens polish.
+  - Improve tables, management filters, destructive confirmations, empty states, and receipt viewing consistency.
+  - Review dashboard/report spacing and responsive behavior now that the cashier POS flow is polished.
+  - Keep shared UI primitives as the default building blocks for future admin/manager screen cleanup.
 
 - Phase 7C Demo Stabilization & Polish.
   - Manually test the Owner/Manager report filters against seeded and real orders.

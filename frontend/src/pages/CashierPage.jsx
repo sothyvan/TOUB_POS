@@ -15,6 +15,8 @@ import CashConfirmationModal from '../components/CashConfirmationModal';
 import KhqrPaymentModal from '../components/KhqrPaymentModal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import Icon from '../components/ui/Icon';
+import Button from '../components/ui/Button';
+import LoadingState from '../components/ui/LoadingState';
 
 export default function CashierPage() {
   const { user: currentUser, logout } = useAuth();
@@ -63,6 +65,8 @@ export default function CashierPage() {
   const {
     categories, categoryById, filteredProducts,
     selectedCategory, setSelectedCategory, searchQuery, setSearchQuery,
+    loading: productsLoading,
+    error: productsError,
   } = useProducts(false);
 
   const {
@@ -70,10 +74,19 @@ export default function CashierPage() {
     addToCart, updateQuantity, setCartItemQuantity, clearCart,
   } = useCart(categoryById);
 
-  const { orders, handleCheckout, fetchOrders, checkoutLoading, checkoutError } =
+  const {
+    orders,
+    handleCheckout,
+    fetchOrders,
+    loading: ordersLoading,
+    error: ordersError,
+    checkoutLoading,
+    checkoutError,
+  } =
     useOrders(isOnline, cart, clearCart, currentUser);
 
   const [activeReceipt, setActiveReceipt] = useState(null);
+  const [cashierNotice, setCashierNotice] = useState(null);
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState(null);
   const [pendingKhqrOrder, setPendingKhqrOrder] = useState(null);
   const [isKhqrConfirmOpen, setIsKhqrConfirmOpen] = useState(false);
@@ -132,6 +145,7 @@ export default function CashierPage() {
   }, [refreshOrderSnapshot]);
 
   const handleCheckoutWithReceipt = async (method) => {
+    setCashierNotice(null);
     if (method === 'KHQR') {
       setKhqrPollingError(null);
       setIsKhqrConfirmOpen(true);
@@ -191,7 +205,11 @@ export default function CashierPage() {
         || latestOrder.status !== 'pending_payment'
         || !latestOrder.qrPayload
       ) {
-        alert('This KHQR order can no longer be resumed.');
+        setCashierNotice({
+          variant: 'warning',
+          title: 'QR cannot be resumed',
+          message: 'This KHQR order can no longer be resumed.',
+        });
         return;
       }
 
@@ -206,7 +224,11 @@ export default function CashierPage() {
         ? 'This QR has expired. Create a new KHQR checkout if the customer has not paid.'
         : null);
     } catch (err) {
-      alert(err.message || 'Unable to resume KHQR payment.');
+      setCashierNotice({
+        variant: 'danger',
+        title: 'Unable to resume QR',
+        message: err.message || 'Unable to resume KHQR payment.',
+      });
     }
   }, [fetchOrders]);
 
@@ -348,6 +370,7 @@ export default function CashierPage() {
   }, [currentUser, fetchOrders, refreshOrderSnapshot, scheduleOrderSnapshotRefresh]);
 
   // ── UI state ──────────────────────────────────────────────────────────────
+  const [activeCashierTab, setActiveCashierTab] = useState('sale');
   const [isCartOpen, setIsCartOpen] = useState(false);
 
   // ── Logout ────────────────────────────────────────────────────────────────
@@ -365,7 +388,7 @@ export default function CashierPage() {
     if (loadingStall) {
       return (
         <div className="h-svh flex items-center justify-center bg-[#f8fafc]">
-          <div className="w-8 h-8 border-4 border-[#003ec7] border-t-transparent rounded-full animate-spin"></div>
+          <LoadingState label="Loading your assigned stall..." />
         </div>
       );
     }
@@ -383,14 +406,13 @@ export default function CashierPage() {
             You haven't been assigned to a stall yet. Ask an owner or manager to assign you in Stall Management.
           </p>
         </div>
-        <button
-          type="button"
+        <Button
           onClick={handleLogout}
-          className="mt-2 px-6 py-2.5 rounded-xl border-0 cursor-pointer hover:opacity-80 transition-all"
-          style={{ background: '#fff1f2', fontSize: 13, fontWeight: 600, color: '#dc2626', fontFamily: 'Inter, sans-serif' }}
+          className="mt-2"
+          variant="danger"
         >
           Back to Login
-        </button>
+        </Button>
       </div>
     );
   }
@@ -401,11 +423,16 @@ export default function CashierPage() {
       currentUser={currentUser}
       isCashier={isCashier}
       itemCount={itemCount}
-      onCartOpen={() => setIsCartOpen(true)}
+      onCartOpen={() => {
+        setActiveCashierTab('sale');
+        setIsCartOpen(true);
+      }}
       onLogout={handleLogout}
       assignedStall={assignedStall}
     >
       <CashierScreen
+        activeTab={activeCashierTab}
+        setActiveTab={setActiveCashierTab}
         currentUser={currentUser}
         orders={orders}
         onViewReceipt={setActiveReceipt}
@@ -416,6 +443,8 @@ export default function CashierPage() {
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         filteredProducts={filteredProducts}
+        productsLoading={productsLoading}
+        productsError={productsError}
         cart={cart}
         cartById={cartById}
         addToCart={addToCart}
@@ -432,6 +461,10 @@ export default function CashierPage() {
         handleCheckout={handleCheckoutWithReceipt}
         checkoutLoading={checkoutLoading}
         checkoutError={checkoutError}
+        ordersLoading={ordersLoading}
+        ordersError={ordersError}
+        cashierNotice={cashierNotice}
+        onDismissCashierNotice={() => setCashierNotice(null)}
         isOnline={isOnline}
         assignedStall={assignedStall}
         onRetryTelegramDispatch={handleRetryTelegramDispatch}
@@ -462,9 +495,6 @@ export default function CashierPage() {
         title="Create KHQR payment?"
         message={(
           <div className="flex flex-col gap-3 text-left">
-            <p className="m-0">
-              This will create a backend order and generate a KHQR for the customer to scan.
-            </p>
             <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
               <div className="flex items-center justify-between text-sm font-bold text-blue-700">
                 <span>Items</span>
@@ -475,9 +505,6 @@ export default function CashierPage() {
                 <span>${Number(total || 0).toFixed(2)}</span>
               </div>
             </div>
-            <p className="m-0 text-[12px] font-semibold text-brand-subtext">
-              Use Back to cart if the KHQR button was clicked by accident.
-            </p>
           </div>
         )}
         icon={(

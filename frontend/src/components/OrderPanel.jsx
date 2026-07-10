@@ -1,4 +1,9 @@
+import { useState } from 'react';
 import CartItem from './CartItem';
+import Alert from './ui/Alert';
+import Button from './ui/Button';
+import ConfirmDialog from './ui/ConfirmDialog';
+import EmptyState from './ui/EmptyState';
 import Icon from './ui/Icon';
 import TotalsBreakdown from './ui/TotalsBreakdown';
 
@@ -18,31 +23,46 @@ export default function OrderPanel({
   checkoutError,
   isOnline,
 }) {
+  const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
+  const hasItems = cart.length > 0;
+  const paymentDisabled = !hasItems || checkoutLoading;
+  const khqrDisabled = !isOnline || !hasItems || checkoutLoading;
+
+  const handleClearCart = () => {
+    clearCart();
+    setIsClearConfirmOpen(false);
+  };
+
   return (
     <aside
-      className={`min-h-0 bg-white text-[#1a1c1e] flex flex-col border-l border-gray-200 max-[1100px]:fixed max-[1100px]:top-0 max-[1100px]:right-0 max-[1100px]:bottom-0 max-[1100px]:z-30 max-[1100px]:w-[min(430px,92vw)] max-[1100px]:border-l-0 max-[1100px]:shadow-[-24px_0_52px_rgba(25,23,21,0.34)] max-[1100px]:transition-transform max-[1100px]:duration-220 max-[1100px]:ease-in-out max-sm:top-auto max-sm:w-full max-sm:max-h-[88svh] max-sm:rounded-t-2xl max-sm:shadow-[0_-24px_52px_rgba(25,23,21,0.34)] ${
+      className={`min-h-0 bg-white text-[#1a1c1e] flex flex-col border-l border-ui-border shadow-sm max-[1180px]:fixed max-[1180px]:top-0 max-[1180px]:right-0 max-[1180px]:bottom-0 max-[1180px]:z-30 max-[1180px]:w-[min(430px,92vw)] max-[1180px]:border-l-0 max-[1180px]:shadow-[-24px_0_52px_rgba(25,23,21,0.34)] max-[1180px]:transition-transform max-[1180px]:duration-200 max-[1180px]:ease-in-out max-sm:top-auto max-sm:w-full max-sm:max-h-[88svh] max-sm:rounded-t-2xl max-sm:shadow-[0_-24px_52px_rgba(25,23,21,0.34)] ${
         isCartOpen
-          ? 'max-[1100px]:translate-x-0 max-sm:translate-y-0'
-          : 'max-[1100px]:translate-x-[110%] max-sm:translate-y-[110%]'
+          ? 'max-[1180px]:translate-x-0 max-sm:translate-y-0'
+          : 'max-[1180px]:translate-x-[110%] max-sm:translate-y-[110%]'
       }`}
       aria-label="Current order"
     >
       {/* Header */}
       <div className="py-5 px-6 flex items-center justify-between border-b border-gray-100 shrink-0">
-        <h2 className="m-0 text-2xl font-bold text-[#1a1c1e] tracking-tight">Current Order</h2>
+        <div>
+          <h2 className="m-0 text-2xl font-black text-text-strong tracking-tight">Current Order</h2>
+          <p className="m-0 mt-1 text-xs font-semibold text-text-muted">
+            {hasItems ? `${cart.length} line item${cart.length === 1 ? '' : 's'} ready for payment` : 'Build the ticket from the menu'}
+          </p>
+        </div>
         <div className="flex items-center gap-3">
-          {cart.length > 0 && (
+          {hasItems && (
             <button
-              onClick={clearCart}
+              onClick={() => setIsClearConfirmOpen(true)}
               className="flex items-center gap-1 text-state-danger hover:text-state-danger/80 text-sm font-semibold cursor-pointer border-0 bg-transparent p-0 transition-colors"
               type="button"
             >
               <Icon name="delete" className="w-4.5 h-4.5" strokeWidth={2.2} />
-              Clear All
+              Clear
             </button>
           )}
           <button
-            className="hidden max-[1100px]:grid max-[1100px]:place-items-center w-8 h-8 border border-gray-200 rounded-full bg-gray-50 text-gray-500 text-sm font-bold cursor-pointer hover:bg-gray-100 transition-colors"
+            className="hidden max-[1180px]:grid max-[1180px]:place-items-center w-8 h-8 border border-gray-200 rounded-full bg-gray-50 text-gray-500 text-sm font-bold cursor-pointer hover:bg-gray-100 transition-colors"
             type="button"
             aria-label="Close cart"
             onClick={() => setIsCartOpen(false)}
@@ -54,13 +74,13 @@ export default function OrderPanel({
 
       {/* Cart Items List */}
       <div className="flex-1 min-h-0 overflow-auto py-3 px-6 space-y-2">
-        {cart.length === 0 ? (
-          <div className="h-full min-h-55 border border-dashed border-gray-200 rounded-xl grid place-content-center gap-1.5 text-center text-gray-400 p-6">
-            <strong className="text-gray-900 font-bold">No items yet</strong>
-            <span className="max-w-57.5 text-xs font-semibold leading-relaxed">
-              Choose a product from the menu to start the ticket.
-            </span>
-          </div>
+        {!hasItems ? (
+          <EmptyState
+            iconName="cart"
+            title="No items yet"
+            message="Tap a product card to start this customer's order."
+            className="h-full min-h-55"
+          />
         ) : (
           cart.map((item) => (
             <CartItem
@@ -70,17 +90,6 @@ export default function OrderPanel({
               setCartItemQuantity={setCartItemQuantity}
             />
           ))
-        )}
-
-        {/* Discount Button */}
-        {cart.length > 0 && (
-          <button
-            className="w-full mt-5 py-3.5 px-4 border border-dashed border-[#c3c5d9] rounded-xl flex items-center justify-center gap-2 text-[#1a1c1e] bg-transparent hover:bg-gray-50 active:scale-[0.99] font-bold text-base transition-all cursor-pointer"
-            type="button"
-          >
-            <Icon name="discount" className="w-5 h-5 text-gray-800" />
-            Add Discount or Promo
-          </button>
         )}
       </div>
 
@@ -95,32 +104,59 @@ export default function OrderPanel({
         />
 
         {checkoutError ? (
-          <p className="mt-3 mb-3 text-xs font-bold text-state-danger">
+          <Alert variant="danger" title="Checkout error" className="mb-4 text-xs">
             {checkoutError}
+          </Alert>
+        ) : null}
+
+        {!hasItems ? (
+          <p className="m-0 mb-4 rounded-xl bg-ui-muted px-3 py-2 text-xs font-bold text-text-muted">
+            Add at least one item to enable payment.
+          </p>
+        ) : !isOnline ? (
+          <p className="m-0 mb-4 rounded-xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700">
+            Offline mode: cash is available, KHQR is disabled.
           </p>
         ) : null}
 
-        <div className="flex items-center gap-3">
-          <button
-            className="flex-1 h-13 border-0 rounded-xl text-white text-base font-bold cursor-pointer bg-state-success hover:bg-state-success/90 disabled:cursor-not-allowed disabled:opacity-45 flex items-center justify-center gap-2 shadow-sm transition-all"
+        <div className="grid grid-cols-2 gap-3">
+          <Button
+            className="h-13 text-base"
             type="button"
-            disabled={cart.length === 0 || checkoutLoading}
+            disabled={paymentDisabled}
+            loading={checkoutLoading}
+            variant="success"
+            iconName={checkoutLoading ? undefined : 'cash'}
             onClick={() => handleCheckout('CASH')}
           >
-            <Icon name="cash" />
             {checkoutLoading ? 'Processing...' : 'Cash'}
-          </button>
-          <button
-            className="flex-1 h-13 border-0 rounded-xl text-white text-base font-bold cursor-pointer bg-state-danger hover:bg-state-danger/90 disabled:cursor-not-allowed disabled:opacity-45 flex items-center justify-center gap-2 shadow-sm transition-all"
+          </Button>
+          <Button
+            className="h-13 text-base"
             type="button"
-            disabled={!isOnline || cart.length === 0 || checkoutLoading}
+            disabled={khqrDisabled}
+            loading={checkoutLoading}
+            variant="danger"
+            iconName={checkoutLoading ? undefined : 'khqr'}
             onClick={() => handleCheckout('KHQR')}
           >
-            <Icon name="khqr" />
             {checkoutLoading ? 'Processing...' : 'KHQR'}
-          </button>
+          </Button>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={isClearConfirmOpen}
+        size="compact"
+        title="Clear current order?"
+        message="This removes every item from the cart. The customer order has not been saved yet."
+        cancelLabel="Keep items"
+        confirmLabel="Clear cart"
+        cancelTone="secondary"
+        confirmTone="danger"
+        onCancel={() => setIsClearConfirmOpen(false)}
+        onConfirm={handleClearCart}
+      />
     </aside>
   );
 }

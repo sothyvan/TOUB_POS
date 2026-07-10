@@ -57,7 +57,7 @@ export default function Button({
       disabled={isNativeButton ? isDisabled : undefined}
       aria-disabled={!isNativeButton && isDisabled ? 'true' : undefined}
       aria-busy={loading ? 'true' : undefined}
-      className={`inline-flex items-center justify-center gap-2 border font-bold leading-none transition-all duration-150 focus-visible:outline-none focus-visible:ring-4 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${fullWidth ? 'w-full' : ''} ${resolvedSize} ${resolvedVariant} ${className}`}
+      className={`inline-flex cursor-pointer items-center justify-center gap-2 border font-bold leading-none transition-all duration-150 focus-visible:outline-none focus-visible:ring-4 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${fullWidth ? 'w-full' : ''} ${resolvedSize} ${resolvedVariant} ${className}`}
     >
       {resolvedIcon && iconPosition !== 'right' ? resolvedIcon : null}
       {children}

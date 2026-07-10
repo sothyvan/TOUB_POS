@@ -62,13 +62,15 @@ export function useOrders(isOnline, cart, clearCart, currentUser) {
     .reduce((sum, o) => sum + (o.total || 0), 0);
 
   const handleCheckout = async (method, options = {}) => {
+    setCheckoutError(null);
+
     if (!cart.length) {
-      alert('Add at least one item before checkout.');
+      setCheckoutError('Add at least one item before checkout.');
       return null;
     }
     const normalizedMethod = String(method || '').toUpperCase();
     if (normalizedMethod === 'KHQR' && !isOnline) {
-      alert('KHQR needs an internet connection. Take cash or reconnect the terminal.');
+      setCheckoutError('KHQR needs an internet connection. Take cash or reconnect the terminal.');
       return null;
     }
 
@@ -96,7 +98,6 @@ export function useOrders(isOnline, cart, clearCart, currentUser) {
     } catch(err) {
       const message = err.message || 'Failed to checkout.';
       setCheckoutError(message);
-      alert(message);
       return null;
     } finally {
       setCheckoutLoading(false);

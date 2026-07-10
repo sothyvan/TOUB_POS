@@ -1,4 +1,6 @@
 import { money } from '../utils/format';
+import Badge from './ui/Badge';
+import Icon from './ui/Icon';
 import QuantityInput from './QuantityInput';
 
 export default function ProductCard({
@@ -10,7 +12,12 @@ export default function ProductCard({
   setCartItemQuantity,
 }) {
   return (
-    <article className={`group relative bg-white border rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:translate-y-0.5 transition-all duration-200 flex flex-col justify-between ${cartItem ? 'border-state-success border-3' : 'border-[#c3c5d9]/60'}`}>
+    <article
+      className={`group relative bg-white border rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between ${
+        cartItem ? 'border-state-success ring-4 ring-state-success/10' : 'border-ui-border'
+      }`}
+      aria-label={`${product.name}, ${money(product.price)}`}
+    >
       {/* Background Tap Target to Add to Cart */}
       <button
         className="absolute inset-0 w-full h-full border-0 bg-transparent z-10 cursor-pointer rounded-2xl"
@@ -32,20 +39,26 @@ export default function ProductCard({
             {product.code}
           </div>
         )}
-        <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded bg-black/60 backdrop-blur-sm text-white text-[10px] font-extrabold tracking-wider uppercase z-10">
+        <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded bg-black/65 backdrop-blur-sm text-white text-[10px] font-extrabold tracking-wider uppercase z-10">
           {product.code}
         </span>
+        {cartItem ? (
+          <span className="absolute top-2.5 right-2.5 z-20 inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-state-success px-2 text-xs font-black text-white shadow-sm">
+            {cartItem.quantity}
+          </span>
+        ) : null}
       </div>
 
       {/* Card Info & Action */}
-      <div className="p-3.5 flex flex-col flex-1 justify-between gap-3">
+      <div className="p-4 flex flex-col flex-1 justify-between gap-3">
         <div>
           <h3 className="m-0 text-[15px] font-bold text-gray-900 leading-snug group-hover:text-brand-action transition-colors line-clamp-2">
             {product.name}
           </h3>
-          <span className="block mt-1 text-gray-400 text-xs font-semibold">
-            {category?.name || 'Menu'}
-          </span>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <Badge variant="neutral">{category?.name || 'Menu'}</Badge>
+            {cartItem ? <Badge variant="success" dot>In cart</Badge> : null}
+          </div>
         </div>
 
         <div className="flex items-center justify-between gap-2 mt-auto">
@@ -63,10 +76,12 @@ export default function ProductCard({
             />
           ) : (
             <button
-              className="relative z-20 pointer-events-auto h-8 px-4 rounded-full bg-brand-action hover:bg-brand-action/90 active:scale-95 text-white text-xs font-bold transition-all cursor-pointer shadow-sm"
+              className="relative z-20 pointer-events-auto min-h-10 px-4 rounded-full bg-brand-action hover:bg-brand-action-hover active:scale-95 text-white text-xs font-bold transition-all cursor-pointer shadow-sm inline-flex items-center gap-1.5"
               onClick={() => addToCart(product)}
               type="button"
+              aria-label={`Add ${product.name}`}
             >
+              <Icon name="plus" className="h-3.5 w-3.5" strokeWidth={3} />
               Add
             </button>
           )}
