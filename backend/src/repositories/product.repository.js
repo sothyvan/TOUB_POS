@@ -45,7 +45,7 @@ function buildAssignments(productId, stallIds, assignmentData) {
  */
 export function findAllProducts(whereClause = {}) {
   return Product.findAll({
-    where: whereClause,
+    where: { ...whereClause, is_deleted: false },
     include: buildProductIncludes(),
     order: [['created_at', 'DESC']],
   });
@@ -56,6 +56,7 @@ export function findAllProducts(whereClause = {}) {
  */
 export function findAllProductsByOwnerId(ownerId) {
   return Product.findAll({
+    where: { is_deleted: false },
     include: [
       {
         model: Category,
@@ -109,7 +110,7 @@ export async function checkProductOwnership(productId, ownerId) {
  */
 export function findAllProductsForStall(stallId, assignmentWhereClause = {}) {
   return Product.findAll({
-    where: {},
+    where: { is_deleted: false, is_active: true },
     include: buildProductIncludes({ stall_id: stallId, ...assignmentWhereClause }),
     order: [['created_at', 'DESC']],
   });
@@ -119,7 +120,8 @@ export function findAllProductsForStall(stallId, assignmentWhereClause = {}) {
  * Find a single product by ID.
  */
 export function findProductById(id) {
-  return Product.findByPk(id, {
+  return Product.findOne({
+    where: { id, is_deleted: false },
     include: buildProductIncludes(),
   });
 }
@@ -133,6 +135,7 @@ export function findStallProduct(productId, stallId, options = {}) {
     include: [
       {
         model: Product,
+        where: { is_deleted: false, is_active: true },
         include: [
           {
             model: Category,
@@ -228,6 +231,18 @@ export function updateProductById(id, productData, assignmentData) {
  * Delete a product by ID.
  */
 export async function deleteProductById(id) {
-  const affectedRows = await Product.destroy({ where: { id } });
+  const product = await Product.findByPk(id);
+  if (!product) {
+    return false;
+  }
+
+  const [affectedRows] = await Product.update(
+    { 
+      is_deleted: true, 
+      is_active: false,
+      name: `${product.name}_deleted_${Date.now()}`
+    },
+    { where: { id } }
+  );
   return affectedRows > 0;
 }
