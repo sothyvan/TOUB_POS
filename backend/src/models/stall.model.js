@@ -30,6 +30,16 @@ const Stall = sequelize.define('Stall', {
     defaultValue: null,
     field: 'telegram_chat_id',
   },
+  is_active: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true,
+  },
+  is_deleted: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  },
 }, {
   indexes: [
     {

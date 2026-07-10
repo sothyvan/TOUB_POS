@@ -21,6 +21,16 @@ const Product = sequelize.define('Product', {
     defaultValue: null,
     field: 'image_url',
   },
+  is_active: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true,
+  },
+  is_deleted: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  },
 });
 
 export default Product;

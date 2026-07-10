@@ -5,6 +5,7 @@ import { Stall, User, StallStaff } from '../models/index.js';
  */
 export async function findAllStalls() {
   return Stall.findAll({
+    where: { is_deleted: false },
     include: [
       { 
         model: User, 
@@ -21,7 +22,7 @@ export async function findAllStalls() {
  */
 export async function findAllStallsByOwnerId(ownerId) {
   return Stall.findAll({
-    where: { owner_id: ownerId },
+    where: { owner_id: ownerId, is_deleted: false },
     include: [
       { 
         model: User, 
@@ -37,7 +38,7 @@ export async function findAllStallsByOwnerId(ownerId) {
  * Find a stall by ID.
  */
 export async function findStallById(id) {
-  return Stall.findByPk(id);
+  return Stall.findOne({ where: { id, is_deleted: false } });
 }
 
 /**
@@ -59,7 +60,20 @@ export async function updateStallById(id, data) {
  * Delete a stall by ID.
  */
 export async function deleteStallById(id) {
-  const affectedRows = await Stall.destroy({ where: { id } });
+  const stall = await Stall.findByPk(id);
+  if (!stall) {
+    return false;
+  }
+
+  const [affectedRows] = await Stall.update(
+    { 
+      is_deleted: true, 
+      is_active: false,
+      device_token: null,
+      name: `${stall.name}_deleted_${Date.now()}`
+    },
+    { where: { id } }
+  );
   return affectedRows > 0;
 }
 
