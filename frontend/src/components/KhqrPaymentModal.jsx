@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import Alert from './ui/Alert';
 import Badge from './ui/Badge';
 import Button from './ui/Button';
-import Icon from './ui/Icon';
 import ModalShell from './ui/ModalShell';
+import khqrLogoRed from '../assets/khqr-logo-red.png';
 
 const QR_CODE_API_BASE = 'https://api.qrserver.com/v1/create-qr-code/';
 
@@ -53,119 +53,57 @@ export default function KhqrPaymentModal({ isOpen, total, order, qrPayload, poll
       isOpen={isOpen}
       onClose={onCancel}
       labelledBy="khqr-payment-title"
-      panelClassName="bg-white rounded-3xl w-[min(94vw,520px)] max-h-[92svh] overflow-y-auto p-6 flex flex-col items-center text-center shadow-[0_24px_64px_rgba(0,0,0,0.24)] border border-ui-border"
+      panelClassName="w-[min(92vw,430px)] max-h-[94svh] overflow-y-auto rounded-2xl bg-white p-4 shadow-[0_24px_64px_rgba(0,0,0,0.24)] border border-ui-border max-[420px]:p-3"
     >
-        <div className="mb-4 flex flex-col items-center gap-2">
-          <div className="grid h-12 w-12 place-items-center rounded-2xl bg-red-50 text-state-danger">
-            <Icon name="khqr" className="h-6 w-6" />
-          </div>
-          <h3 id="khqr-payment-title" className="m-0 text-[26px] font-extrabold text-brand-dark tracking-tight">
-            Scan KHQR To Pay
+        <div className="flex flex-col items-center text-center">
+          <img
+            src={khqrLogoRed}
+            alt="KHQR"
+            className="mt-1 h-auto w-28"
+          />
+
+          <h3 id="khqr-payment-title" className="m-0 mt-3 text-xl font-black uppercase tracking-tight text-brand-dark">
+            TOUB POS MERCHANT
           </h3>
-          <p className="m-0 text-sm font-semibold text-gray-600">
-            Waiting for customer payment confirmation.
+          <p className="m-0 mt-1 text-2xl font-black text-brand-action">
+            ${Number(order?.total ?? total ?? 0).toFixed(2)}
           </p>
-        </div>
-
-        {/* KHQR Poster Slip */}
-        <div
-          className="bg-white rounded-3xl p-5 w-full shadow-lg flex flex-col items-center border border-ui-border relative overflow-hidden"
-        >
-          <div className="flex w-full items-center justify-between gap-3">
-            <div className="text-left">
-              <span className="block text-[24px] font-black tracking-tight text-state-danger uppercase leading-none">
-                TOUB PAY
-              </span>
-              <span className="mt-1 block text-[11px] font-bold text-gray-400 tracking-wide uppercase">
-                Scan. Pay. Wait for confirmation.
-              </span>
-            </div>
+          <div className="mt-2 flex items-center gap-2">
             <Badge variant={statusVariant} dot>{statusLabel}</Badge>
+            {formatExpiresAt(order?.paymentExpiresAt) ? (
+              <span className="text-xs font-bold text-gray-500">
+                Expires {formatExpiresAt(order.paymentExpiresAt)}
+              </span>
+            ) : null}
           </div>
 
-          {/* QR Code Graphic */}
-          <div className="border border-gray-200 rounded-3xl p-4 my-5 bg-white relative shadow-sm">
+          <div className="relative my-3 rounded-2xl border border-gray-200 bg-white p-2 shadow-sm">
             <img
               src={`${QR_CODE_API_BASE}?size=220x220&data=${qrData}`}
-              alt="KHQR Code"
-              className="w-52 h-52 max-[380px]:w-45 max-[380px]:h-45 block"
+              alt={`KHQR payment code for ${order?.orderNo || 'current order'}`}
+              className="block aspect-square w-[min(64vw,220px)]"
             />
-            {/* Simulated center badge icon */}
             <div className="absolute inset-0 m-auto w-9 h-9 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center font-bold text-red-600 text-xs">
               T
             </div>
           </div>
 
-          <div className="text-center">
-            <span className="text-lg font-black text-[#0f2c59] tracking-tight uppercase leading-none">
-              TOUB POS MERCHANT
-            </span>
-            <span className="block text-[11px] font-bold text-gray-400 mt-1">
-              {order ? `Order ${order.orderNo}` : 'Preparing order'}
-            </span>
-          </div>
+          {pollingError ? (
+            <Alert variant="danger" className="mb-3 w-full text-left">
+              {pollingError}
+            </Alert>
+          ) : null}
 
-          <div className="w-full mt-4 rounded-2xl bg-gray-50 border border-gray-100 p-4 text-left space-y-2">
-            <div className="flex justify-between gap-3 text-sm items-baseline">
-              <span className="font-semibold text-gray-500">Amount</span>
-              <span className="font-black text-2xl text-brand-action">${Number(order?.total ?? total ?? 0).toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between gap-3 text-sm items-center">
-              <span className="font-semibold text-gray-500">Status</span>
-              <Badge variant={statusVariant} dot>{statusLabel}</Badge>
-            </div>
-            {order?.paymentReference && (
-              <div className="text-xs">
-                <span className="font-semibold text-gray-500">Reference</span>
-                <p className="m-0 mt-1 font-mono text-gray-800 break-all">{order.paymentReference}</p>
-              </div>
-            )}
-            {order?.qrMd5 && (
-              <div className="text-xs">
-                <span className="font-semibold text-gray-500">QR fingerprint</span>
-                <p className="m-0 mt-1 font-mono text-gray-800 break-all">{order.qrMd5}</p>
-              </div>
-            )}
-            {formatExpiresAt(order?.paymentExpiresAt) && (
-              <div className="flex justify-between gap-3 text-xs">
-                <span className="font-semibold text-gray-500">Expires</span>
-                <span className="font-bold text-gray-800">{formatExpiresAt(order.paymentExpiresAt)}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Member of KHQR footer */}
-          <div className="w-full flex justify-between items-center mt-5 pt-3 border-t border-gray-100 text-gray-400">
-            <span className="text-[10px] font-bold uppercase tracking-wider">Member of</span>
-            <span className="text-base font-black text-state-danger tracking-tighter leading-none">KHQR</span>
-          </div>
+          <Button
+            className="min-h-11 rounded-xl"
+            type="button"
+            variant="secondary"
+            fullWidth
+            onClick={onCancel}
+          >
+            Close QR
+          </Button>
         </div>
-
-        {pollingError ? (
-          <Alert variant="danger" className="mt-4 w-full text-left" title="Payment status check">
-            {pollingError}
-          </Alert>
-        ) : null}
-
-        <Button
-          className="mt-5 h-13 rounded-2xl"
-          type="button"
-          variant="secondary"
-          fullWidth
-          onClick={onCancel}
-        >
-          Close QR
-        </Button>
-        <span className="text-xs font-semibold text-gray-700 mt-3">
-          {isExpired
-            ? 'This QR has expired. Create a new KHQR checkout if the customer has not paid.'
-            : 'Closing this screen keeps the KHQR order pending. Resume it from My Orders if needed.'}
-        </span>
-        {!isExpired && (
-          <span className="text-xs font-semibold text-gray-500 mt-1 animate-pulse">
-            Waiting for Bakong payment confirmation...
-          </span>
-        )}
     </ModalShell>
   );
 }

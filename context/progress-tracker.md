@@ -40,7 +40,13 @@ Update this file after every meaningful implementation change.
   - Loaded PDF dependencies only when export is requested so normal portal loading remains lean.
   - Fixed the dashboard Hourly Revenue Breakdown to use the backend report's complete 24-hour buckets and added clear loading, error, and no-paid-sales states.
   - Corrected report date-only response formatting so local calendar dates are not shifted backward by UTC conversion.
+  - Restored CSV export alongside PDF so teams can choose a spreadsheet-ready ledger or a presentation-ready report.
   - Frontend lint, production build, and a jsPDF/AutoTable runtime smoke test pass.
+
+- **Simplified the cashier KHQR payment modal**:
+  - Rebuilt the modal around the provided official KHQR asset with merchant name, amount, payment status/expiry, and QR as the only primary information.
+  - Removed duplicated instructions, payment reference, QR fingerprint, poster footer, and long close guidance that crowded narrow screens.
+  - Made QR sizing viewport-aware so the complete code stays visible on mobile.
 
 - **Implemented Phase UI-1 Design System Cleanup**:
   - Added shared frontend primitives: `Button`, `Alert`, `Badge`, `Switch`, `EmptyState`, and `LoadingState`.

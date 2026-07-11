@@ -129,6 +129,14 @@ function formatDateRange(startDate, endDate) {
   return `${formatter.format(start)} - ${endFormatter.format(end)}`;
 }
 
+function escapeCsv(value) {
+  const text = String(value ?? '');
+  if (/[",\n\r]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+}
+
 export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDispatch }) {
   const today = localDateValue();
   const [dateFilter, setDateFilter] = useState('today'); // 'today' | 'week' | 'month' | 'custom'
@@ -139,6 +147,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
   const [selectedStallId, setSelectedStallId] = useState('');
   const [selectedCashierId, setSelectedCashierId] = useState('');
   const [exporting, setExporting] = useState(false);
+  const [exportingCsv, setExportingCsv] = useState(false);
   const [exportError, setExportError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [retryingOrderId, setRetryingOrderId] = useState(null);
@@ -314,6 +323,49 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
   }, [paidFilteredOrders, report]);
 
   const totalCompletedOrders = report?.summary?.paidOrders ?? paidFilteredOrders.length;
+
+  const handleCsvExport = () => {
+    setExportingCsv(true);
+    setExportError('');
+
+    try {
+      if (!report) {
+        throw new Error('Wait for the backend report to finish loading before exporting.');
+      }
+
+      const headers = ['Order ID', 'Date', 'Stall', 'Cashier', 'Payment', 'Status', 'Kitchen', 'Total USD'];
+      const rows = filteredOrders.map((order) => [
+        order.orderNo,
+        new Date(order.createdAt).toLocaleString(),
+        order.stallName || '',
+        order.cashierName || '',
+        order.paymentMethod || '',
+        order.status || '',
+        getKitchenStatusConfig(order.kitchenStatus).label,
+        Number(order.total || 0).toFixed(2),
+      ]);
+      const csv = [headers, ...rows]
+        .map((row) => row.map(escapeCsv).join(','))
+        .join('\n');
+      const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const fileStart = report.filters?.startDate || dateFilter;
+      const fileEnd = report.filters?.endDate;
+      const fileRange = fileEnd && fileEnd !== fileStart ? `${fileStart}-to-${fileEnd}` : fileStart;
+
+      link.href = url;
+      link.download = `toub-sales-${fileRange}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setExportError(error.message || 'Unable to export this report as CSV.');
+    } finally {
+      setExportingCsv(false);
+    }
+  };
 
   const handleExport = async () => {
     setExporting(true);
@@ -867,7 +919,15 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
                 </p>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={handleCsvExport}
+                  disabled={exportingCsv || reportLoading || !report}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#e5e7eb] bg-white text-[12px] font-bold text-[#6b7280] cursor-pointer hover:bg-gray-50 active:scale-95 transition-all disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {exportingCsv ? 'Creating CSV...' : 'Export CSV'}
+                </button>
                 <button
                   type="button"
                   onClick={handleExport}
