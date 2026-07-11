@@ -1,4 +1,5 @@
 import { User, Stall } from '../models/index.js';
+import { parsePagination, buildOrderClause, paginatedResponse } from '../utils/pagination.js';
 
 /**
  * Find a user by username. Returns user object with password mapped to password_hash.
@@ -55,34 +56,52 @@ export async function insertUser({ username, password_hash, pin_hash, role, owne
 /**
  * Fetch all users (excluding sensitive credentials).
  */
-export async function findAllUsers() {
-  return User.findAll({
+export async function findAllUsers(queryOptions = {}) {
+  const pagination = parsePagination(queryOptions);
+  const orderClause = buildOrderClause(pagination, ['created_at', 'id', 'username', 'role'], [['created_at', 'DESC']]);
+
+  const { rows, count } = await User.findAndCountAll({
     where: { is_deleted: false },
     attributes: { exclude: ['password', 'pin'] },
-    order: [['created_at', 'DESC']],
+    order: orderClause,
+    limit: pagination.limit,
+    offset: pagination.offset,
   });
+  return paginatedResponse({ rows, count }, pagination);
 }
 
 /**
  * Fetch all users belonging to a specific owner.
  */
-export async function findAllUsersByOwnerId(ownerId) {
-  return User.findAll({
+export async function findAllUsersByOwnerId(ownerId, queryOptions = {}) {
+  const pagination = parsePagination(queryOptions);
+  const orderClause = buildOrderClause(pagination, ['created_at', 'id', 'username', 'role'], [['created_at', 'DESC']]);
+
+  const { rows, count } = await User.findAndCountAll({
     where: { owner_id: ownerId, is_deleted: false },
     attributes: { exclude: ['password', 'pin'] },
-    order: [['created_at', 'DESC']],
+    order: orderClause,
+    limit: pagination.limit,
+    offset: pagination.offset,
   });
+  return paginatedResponse({ rows, count }, pagination);
 }
 
 /**
  * Fetch business owner accounts visible to the temporary platform admin.
  */
-export async function findOwnerUsers() {
-  return User.findAll({
+export async function findOwnerUsers(queryOptions = {}) {
+  const pagination = parsePagination(queryOptions);
+  const orderClause = buildOrderClause(pagination, ['created_at', 'id', 'username'], [['created_at', 'DESC']]);
+
+  const { rows, count } = await User.findAndCountAll({
     where: { role: 'owner', is_deleted: false },
     attributes: { exclude: ['password', 'pin'] },
-    order: [['created_at', 'DESC']],
+    order: orderClause,
+    limit: pagination.limit,
+    offset: pagination.offset,
   });
+  return paginatedResponse({ rows, count }, pagination);
 }
 
 /**

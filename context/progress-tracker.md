@@ -33,6 +33,7 @@ Update this file after every meaningful implementation change.
 - Phase UI-2: Cashier POS Flow Redesign — **COMPLETE** ✅
 - Phase UI-3: Owner/Manager Screens — **COMPLETE** ✅
 - Phase UI-4: Responsive & Polish — **COMPLETE** ✅
+- Pagination & Performance Optimization — **COMPLETE** ✅
 
 - **Implemented Owner/Manager reporting UX upgrade**:
   - Kept Today, Week, and Month report presets and added a responsive custom date-range dialog backed by the existing validated `range=custom` report API.
@@ -612,6 +613,20 @@ Update this file after every meaningful implementation change.
   - Updated `docs/database/queries.sql` with exact raw SQL query conversions for orders, webhooks, row-locks, and report calculations.
   - Tested and verified order creation, listing, webhook completion, and report metrics using curl scripts.
 - Verified client compilation builds successfully.
+
+- **Implemented server-side pagination & performance improvements**:
+  - Created `backend/src/utils/pagination.js` shared utility (`parsePagination`, `buildOrderClause`, `buildPaginationMeta`, `paginatedResponse`).
+  - Converted `order.service.js` `getAllOrders()` and `getOrdersByUser()` to `findAndCountAll` with server-side pagination, search, and date/status filters.
+  - Converted `product.repository.js` (`findAllProducts`, `findAllProductsByOwnerId`, `findAllProductsForStall`), `user.repository.js` (`findAllUsers`, `findAllUsersByOwnerId`, `findOwnerUsers`), `stall.repository.js` (`findAllStalls`, `findAllStallsByOwnerId`), and `category.repository.js` (`findAllCategories`) to accept pagination options and use `findAndCountAll`.
+  - Updated `order`, `product`, `user`, `stall`, and `category` controllers to pass `req.query` pagination parameters through to services/repositories.
+  - Rewrote `report.service.js` summary, breakdown, and hourly aggregations to use raw SQL `GROUP BY` via `sequelize.query()` instead of in-memory iteration. `fetchLedgerOrders()` uses paginated `findAndCountAll`.
+  - Added `page`/`limit` pagination support to API client methods (`products.getAll`, `categories.getAll`, `users.getAll`, `stalls.getAll`, `orders.getAll`) with dual-mode: no params returns flat array (backward compatible), with `{ page, limit }` returns `{ data, pagination }`.
+  - Created `frontend/src/components/ui/Pagination.jsx` reusable pagination component with prev/next buttons, page numbers, ellipsis, and aria labels.
+  - Created `frontend/src/hooks/usePaginatedQuery.js` generic paginated data-fetching hook (available for future use).
+  - Wired `OrderHistory.jsx` ledger to server-side pagination via `useSalesReport` hook with `ledgerPage`/`ledgerLimit` params and `<Pagination>` component.
+  - Added client-side pagination to `OwnerCrudTable.jsx` (20 per page), `StaffList.jsx` (15 per page), and `CashierScreen.jsx` My Orders tab (10 per page).
+  - Added `loading="lazy"` to product images in `ProductCard.jsx`, `ProductOwner.jsx`, and `MenuCatalog.jsx`.
+  - Frontend lint and production build pass cleanly. Backend lint has only pre-existing `no-console` warnings.
 
 ## Next Up
 

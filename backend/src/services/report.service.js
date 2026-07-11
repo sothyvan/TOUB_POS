@@ -1,5 +1,6 @@
-import { Op } from 'sequelize';
-import { Order, Stall, TelegramTicket, User } from '../models/index.js';
+import { Op, fn, col, literal } from 'sequelize';
+import { sequelize, Order, Stall, TelegramTicket, User } from '../models/index.js';
+import { parsePagination, buildOrderClause, buildPaginationMeta } from '../utils/pagination.js';
 
 const REPORT_RANGES = new Set(['today', 'week', 'month', 'custom']);
 
@@ -106,15 +107,9 @@ function formatDate(date) {
 }
 
 function formatHour(hour) {
-  if (hour === 0) {
-    return '12AM';
-  }
-  if (hour === 12) {
-    return '12PM';
-  }
-  if (hour > 12) {
-    return `${hour - 12}PM`;
-  }
+  if (hour === 0) return '12AM';
+  if (hour === 12) return '12PM';
+  if (hour > 12) return `${hour - 12}PM`;
   return `${hour}AM`;
 }
 
@@ -154,133 +149,200 @@ function mapReportOrder(order) {
   };
 }
 
-function summarizePaidOrders(orders) {
-  const summary = {
-    totalOrders: orders.length,
-    paidOrders: 0,
-    totalRevenue: 0,
-    averageOrderValue: 0,
+/**
+ * SQL-based summary aggregation — runs COUNT + SUM over the matched orders.
+ */
+async function fetchSqlSummary(ownerId, orderWhere) {
+  const results = await sequelize.query(`
+    SELECT
+      COUNT(o.id) AS totalOrders,
+      SUM(CASE WHEN o.status = 'paid' THEN 1 ELSE 0 END) AS paidOrders,
+      COALESCE(SUM(CASE WHEN o.status = 'paid' THEN o.total_usd ELSE 0 END), 0) AS totalRevenue,
+      SUM(CASE WHEN o.status = 'paid' AND o.payment_method = 'khqr' THEN 1 ELSE 0 END) AS cashCount,
+      COALESCE(SUM(CASE WHEN o.status = 'paid' AND o.payment_method = 'khqr' THEN o.total_usd ELSE 0 END), 0) AS khqrRevenue,
+      SUM(CASE WHEN o.status = 'paid' AND o.payment_method != 'khqr' THEN 1 ELSE 0 END) AS cashPaidCount,
+      COALESCE(SUM(CASE WHEN o.status = 'paid' AND o.payment_method != 'khqr' THEN o.total_usd ELSE 0 END), 0) AS cashRevenue
+    FROM orders o
+    INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = :ownerId AND s.is_deleted = 0
+    WHERE o.created_at BETWEEN :startDate AND :endDate
+      ${orderWhere.stall_id ? 'AND o.stall_id = :stallId' : ''}
+      ${orderWhere.cashier_id ? 'AND o.cashier_id = :cashierId' : ''}
+  `, {
+    replacements: {
+      ownerId,
+      startDate: orderWhere.startDate,
+      endDate: orderWhere.endDate,
+      ...(orderWhere.stall_id ? { stallId: orderWhere.stall_id } : {}),
+      ...(orderWhere.cashier_id ? { cashierId: orderWhere.cashier_id } : {}),
+    },
+    type: sequelize.QueryTypes.SELECT,
+  });
+
+  const row = results[0] || {};
+  const paidOrders = Number(row.paidOrders || 0);
+  const totalRevenue = roundUsd(row.totalRevenue || 0);
+
+  return {
+    totalOrders: Number(row.totalOrders || 0),
+    paidOrders,
+    totalRevenue,
+    averageOrderValue: paidOrders > 0 ? roundUsd(totalRevenue / paidOrders) : 0,
     paymentMethods: {
-      cash: { count: 0, revenue: 0 },
-      khqr: { count: 0, revenue: 0 },
+      cash: {
+        count: Number(row.cashPaidCount || 0),
+        revenue: roundUsd(row.cashRevenue || 0),
+      },
+      khqr: {
+        count: Number(row.cashCount || 0),
+        revenue: roundUsd(row.khqrRevenue || 0),
+      },
     },
   };
-
-  for (const order of orders) {
-    if (order.status !== 'paid') {
-      continue;
-    }
-
-    const amount = Number(order.total_usd || 0);
-    const method = order.payment_method === 'khqr' ? 'khqr' : 'cash';
-    summary.paidOrders += 1;
-    summary.totalRevenue += amount;
-    summary.paymentMethods[method].count += 1;
-    summary.paymentMethods[method].revenue += amount;
-  }
-
-  summary.totalRevenue = roundUsd(summary.totalRevenue);
-  summary.averageOrderValue = summary.paidOrders > 0
-    ? roundUsd(summary.totalRevenue / summary.paidOrders)
-    : 0;
-  summary.paymentMethods.cash.revenue = roundUsd(summary.paymentMethods.cash.revenue);
-  summary.paymentMethods.khqr.revenue = roundUsd(summary.paymentMethods.khqr.revenue);
-
-  return summary;
 }
 
-function buildStallBreakdown(orders) {
-  const byStall = new Map();
+/**
+ * SQL-based stall breakdown aggregation.
+ */
+async function fetchSqlStallBreakdown(ownerId, orderWhere) {
+  const rows = await sequelize.query(`
+    SELECT
+      s.id AS stallId,
+      CASE
+        WHEN s.location IS NOT NULL AND s.location != '' THEN CONCAT(s.name, ' — ', s.location)
+        ELSE s.name
+      END AS stallName,
+      COUNT(o.id) AS orderCount,
+      COALESCE(SUM(o.total_usd), 0) AS revenue
+    FROM orders o
+    INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = :ownerId AND s.is_deleted = 0
+    WHERE o.created_at BETWEEN :startDate AND :endDate
+      AND o.status = 'paid'
+      ${orderWhere.stall_id ? 'AND o.stall_id = :stallId' : ''}
+      ${orderWhere.cashier_id ? 'AND o.cashier_id = :cashierId' : ''}
+    GROUP BY s.id, s.name, s.location
+    ORDER BY revenue DESC
+  `, {
+    replacements: {
+      ownerId,
+      startDate: orderWhere.startDate,
+      endDate: orderWhere.endDate,
+      ...(orderWhere.stall_id ? { stallId: orderWhere.stall_id } : {}),
+      ...(orderWhere.cashier_id ? { cashierId: orderWhere.cashier_id } : {}),
+    },
+    type: sequelize.QueryTypes.SELECT,
+  });
 
-  for (const order of orders) {
-    if (order.status !== 'paid') {
-      continue;
-    }
-
-    const stall = order.Stall;
-    const stallId = order.stall_id;
-    const current = byStall.get(stallId) || {
-      stallId,
-      stallName: stall?.location ? `${stall.name} — ${stall.location}` : stall?.name || `Stall #${stallId}`,
-      orderCount: 0,
-      revenue: 0,
-    };
-    current.orderCount += 1;
-    current.revenue += Number(order.total_usd || 0);
-    byStall.set(stallId, current);
-  }
-
-  return Array.from(byStall.values())
-    .map((entry) => ({ ...entry, revenue: roundUsd(entry.revenue) }))
-    .sort((a, b) => b.revenue - a.revenue);
+  return rows.map((r) => ({
+    stallId: r.stallId,
+    stallName: r.stallName,
+    orderCount: Number(r.orderCount),
+    revenue: roundUsd(r.revenue),
+  }));
 }
 
-function buildCashierBreakdown(orders) {
-  const byCashier = new Map();
+/**
+ * SQL-based cashier breakdown aggregation.
+ */
+async function fetchSqlCashierBreakdown(ownerId, orderWhere) {
+  const rows = await sequelize.query(`
+    SELECT
+      o.cashier_id AS cashierId,
+      u.username AS cashierName,
+      CASE
+        WHEN s.location IS NOT NULL AND s.location != '' THEN CONCAT(s.name, ' — ', s.location)
+        ELSE s.name
+      END AS stallName,
+      COUNT(o.id) AS orderCount,
+      COALESCE(SUM(o.total_usd), 0) AS revenue
+    FROM orders o
+    INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = :ownerId AND s.is_deleted = 0
+    LEFT JOIN users u ON u.id = o.cashier_id
+    WHERE o.created_at BETWEEN :startDate AND :endDate
+      AND o.status = 'paid'
+      ${orderWhere.stall_id ? 'AND o.stall_id = :stallId' : ''}
+      ${orderWhere.cashier_id ? 'AND o.cashier_id = :cashierId' : ''}
+    GROUP BY o.cashier_id, u.username, s.name, s.location
+    ORDER BY revenue DESC
+  `, {
+    replacements: {
+      ownerId,
+      startDate: orderWhere.startDate,
+      endDate: orderWhere.endDate,
+      ...(orderWhere.stall_id ? { stallId: orderWhere.stall_id } : {}),
+      ...(orderWhere.cashier_id ? { cashierId: orderWhere.cashier_id } : {}),
+    },
+    type: sequelize.QueryTypes.SELECT,
+  });
 
-  for (const order of orders) {
-    if (order.status !== 'paid') {
-      continue;
-    }
-
-    const cashierId = order.cashier_id;
-    const current = byCashier.get(cashierId) || {
-      cashierId,
-      cashierName: order.Cashier?.username || `Cashier #${cashierId}`,
-      stallName: order.Stall?.location ? `${order.Stall.name} — ${order.Stall.location}` : order.Stall?.name || '—',
-      orderCount: 0,
-      revenue: 0,
-    };
-    current.orderCount += 1;
-    current.revenue += Number(order.total_usd || 0);
-    byCashier.set(cashierId, current);
-  }
-
-  return Array.from(byCashier.values())
-    .map((entry) => ({ ...entry, revenue: roundUsd(entry.revenue) }))
-    .sort((a, b) => b.revenue - a.revenue);
+  return rows.map((r) => ({
+    cashierId: r.cashierId,
+    cashierName: r.cashierName || `Cashier #${r.cashierId}`,
+    stallName: r.stallName || '—',
+    orderCount: Number(r.orderCount),
+    revenue: roundUsd(r.revenue),
+  }));
 }
 
-function buildHourlyRevenue(orders) {
-  const buckets = Array.from({ length: 24 }, (_, hour) => ({
+/**
+ * SQL-based hourly revenue aggregation (24 buckets).
+ */
+async function fetchSqlHourlyRevenue(ownerId, orderWhere) {
+  const rows = await sequelize.query(`
+    SELECT
+      HOUR(o.created_at) AS hour,
+      COUNT(o.id) AS orderCount,
+      COALESCE(SUM(o.total_usd), 0) AS revenue
+    FROM orders o
+    INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = :ownerId AND s.is_deleted = 0
+    WHERE o.created_at BETWEEN :startDate AND :endDate
+      AND o.status = 'paid'
+      ${orderWhere.stall_id ? 'AND o.stall_id = :stallId' : ''}
+      ${orderWhere.cashier_id ? 'AND o.cashier_id = :cashierId' : ''}
+    GROUP BY HOUR(o.created_at)
+    ORDER BY hour ASC
+  `, {
+    replacements: {
+      ownerId,
+      startDate: orderWhere.startDate,
+      endDate: orderWhere.endDate,
+      ...(orderWhere.stall_id ? { stallId: orderWhere.stall_id } : {}),
+      ...(orderWhere.cashier_id ? { cashierId: orderWhere.cashier_id } : {}),
+    },
+    type: sequelize.QueryTypes.SELECT,
+  });
+
+  const revenueByHour = new Map();
+  for (const r of rows) {
+    revenueByHour.set(Number(r.hour), {
+      orderCount: Number(r.orderCount),
+      revenue: roundUsd(r.revenue),
+    });
+  }
+
+  return Array.from({ length: 24 }, (_, hour) => ({
     hour,
     label: formatHour(hour),
-    orderCount: 0,
-    revenue: 0,
-  }));
-
-  for (const order of orders) {
-    if (order.status !== 'paid') {
-      continue;
-    }
-
-    const hour = new Date(order.created_at || order.createdAt).getHours();
-    buckets[hour].orderCount += 1;
-    buckets[hour].revenue += Number(order.total_usd || 0);
-  }
-
-  return buckets.map((entry) => ({
-    ...entry,
-    revenue: roundUsd(entry.revenue),
+    orderCount: revenueByHour.get(hour)?.orderCount || 0,
+    revenue: revenueByHour.get(hour)?.revenue || 0,
   }));
 }
 
-export async function getSalesReport(user, query = {}) {
-  const ownerId = getOwnerScope(user);
-  const { range, startDate, endDate } = resolveDateRange(query);
-  const stallId = parsePositiveId(query.stall_id, 'stall_id');
-  const cashierId = parsePositiveId(query.cashier_id, 'cashier_id');
+/**
+ * Fetch paginated ledger rows with Sequelize includes.
+ */
+async function fetchLedgerOrders(ownerId, orderWhere, pagination) {
+  const orderClause = buildOrderClause(
+    pagination,
+    ['created_at', 'id', 'status', 'total_usd'],
+    [['created_at', 'DESC'], ['id', 'DESC']],
+  );
 
-  const orderWhere = {
-    created_at: {
-      [Op.between]: [startDate, endDate],
+  const { rows, count } = await Order.findAndCountAll({
+    where: {
+      created_at: { [Op.between]: [orderWhere.startDate, orderWhere.endDate] },
+      ...(orderWhere.stall_id ? { stall_id: orderWhere.stall_id } : {}),
+      ...(orderWhere.cashier_id ? { cashier_id: orderWhere.cashier_id } : {}),
     },
-    ...(stallId ? { stall_id: stallId } : {}),
-    ...(cashierId ? { cashier_id: cashierId } : {}),
-  };
-
-  const orders = await Order.findAll({
-    where: orderWhere,
     include: [
       {
         model: Stall,
@@ -298,8 +360,39 @@ export async function getSalesReport(user, query = {}) {
         attributes: ['id', 'status', 'sent_at', 'completed_at'],
       },
     ],
-    order: [['created_at', 'DESC'], ['id', 'DESC']],
+    order: orderClause,
+    limit: pagination.limit,
+    offset: pagination.offset,
+    distinct: true,
   });
+
+  return {
+    orders: rows.map(mapReportOrder),
+    pagination: buildPaginationMeta(pagination, count),
+  };
+}
+
+export async function getSalesReport(user, query = {}) {
+  const ownerId = getOwnerScope(user);
+  const { range, startDate, endDate } = resolveDateRange(query);
+  const stallId = parsePositiveId(query.stall_id, 'stall_id');
+  const cashierId = parsePositiveId(query.cashier_id, 'cashier_id');
+  const pagination = parsePagination(query);
+
+  const orderWhere = {
+    startDate,
+    endDate,
+    ...(stallId ? { stall_id: stallId } : {}),
+    ...(cashierId ? { cashier_id: cashierId } : {}),
+  };
+
+  const [summary, byStall, byCashier, byHour, ledgerResult] = await Promise.all([
+    fetchSqlSummary(ownerId, orderWhere),
+    fetchSqlStallBreakdown(ownerId, orderWhere),
+    fetchSqlCashierBreakdown(ownerId, orderWhere),
+    fetchSqlHourlyRevenue(ownerId, orderWhere),
+    fetchLedgerOrders(ownerId, orderWhere, pagination),
+  ]);
 
   return {
     filters: {
@@ -309,10 +402,11 @@ export async function getSalesReport(user, query = {}) {
       stallId,
       cashierId,
     },
-    summary: summarizePaidOrders(orders),
-    byStall: buildStallBreakdown(orders),
-    byCashier: buildCashierBreakdown(orders),
-    byHour: buildHourlyRevenue(orders),
-    orders: orders.map(mapReportOrder),
+    summary,
+    byStall,
+    byCashier,
+    byHour,
+    orders: ledgerResult.orders,
+    pagination: ledgerResult.pagination,
   };
 }

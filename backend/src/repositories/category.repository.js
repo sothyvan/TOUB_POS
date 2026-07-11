@@ -1,13 +1,20 @@
 import { Category } from '../models/index.js';
+import { parsePagination, buildOrderClause, paginatedResponse } from '../utils/pagination.js';
 
 /**
  * Fetch all global categories.
  */
-export function findAllCategories(whereClause = {}) {
-  return Category.findAll({
+export async function findAllCategories(whereClause = {}, queryOptions = {}) {
+  const pagination = parsePagination(queryOptions);
+  const orderClause = buildOrderClause(pagination, ['created_at', 'id', 'name'], [['created_at', 'DESC']]);
+
+  const { rows, count } = await Category.findAndCountAll({
     where: whereClause,
-    order: [['created_at', 'DESC']],
+    order: orderClause,
+    limit: pagination.limit,
+    offset: pagination.offset,
   });
+  return paginatedResponse({ rows, count }, pagination);
 }
 
 /**

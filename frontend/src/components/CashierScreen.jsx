@@ -8,6 +8,7 @@ import Button from './ui/Button';
 import EmptyState from './ui/EmptyState';
 import Icon from './ui/Icon';
 import LoadingState from './ui/LoadingState';
+import Pagination from './ui/Pagination';
 import TabPills from './ui/TabPills';
 
 const TABS = [
@@ -102,6 +103,14 @@ export default function CashierScreen({
   const myOrders = useMemo(() => (
     [...orders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
   ), [orders]);
+
+  const ORDERS_PAGE_SIZE = 10;
+  const [ordersPage, setOrdersPage] = useState(1);
+  const ordersTotalPages = Math.ceil(myOrders.length / ORDERS_PAGE_SIZE) || 1;
+  const paginatedOrders = useMemo(() => {
+    const start = (ordersPage - 1) * ORDERS_PAGE_SIZE;
+    return myOrders.slice(start, start + ORDERS_PAGE_SIZE);
+  }, [myOrders, ordersPage]);
 
   const myShiftStats = useMemo(() => {
     const todayStr = new Date().toDateString();
@@ -324,8 +333,9 @@ export default function CashierScreen({
                   className="min-h-[260px]"
                 />
               ) : (
+                <>
                 <div className="grid gap-3">
-                  {myOrders.map((order) => (
+                  {paginatedOrders.map((order) => (
                     <article
                       key={order.id}
                       className="rounded-2xl border border-ui-border bg-white p-4 shadow-sm transition-colors hover:border-brand-action/20 hover:bg-blue-50/20"
@@ -400,6 +410,16 @@ export default function CashierScreen({
                     </article>
                   ))}
                 </div>
+
+                {ordersTotalPages > 1 && (
+                  <div className="mt-4 px-1">
+                    <div className="text-center text-xs text-text-muted mb-2">
+                      Page {ordersPage} of {ordersTotalPages}
+                    </div>
+                    <Pagination currentPage={ordersPage} totalPages={ordersTotalPages} onPageChange={setOrdersPage} />
+                  </div>
+                )}
+                </>
               )}
             </div>
           </div>

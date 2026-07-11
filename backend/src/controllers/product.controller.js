@@ -82,12 +82,13 @@ export async function getProducts(req, res, next) {
       if (!stall) {
         return res.json({ success: true, data: [] });
       }
+      // Cashier gets ALL stall products — no pagination (full menu must be visible at once)
       const products = await productRepository.findAllProductsForStall(stall.id, { is_visible: true });
       return res.json({ success: true, data: products });
     }
     const ownerId = req.user.role === 'owner' ? req.user.id : req.user.owner_id;
-    const products = await productRepository.findAllProductsByOwnerId(ownerId);
-    res.json({ success: true, data: products });
+    const result = await productRepository.findAllProductsByOwnerId(ownerId, req.query);
+    res.json({ success: true, ...result });
   } catch (err) {
     next(err);
   }

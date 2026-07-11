@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { ROLES } from '../../data/seedData';
 import { canManageUserRole, getManageableDisplayRoles, roleToApiRole } from '../../utils/permissions';
 import Icon from '../ui/Icon';
+import Pagination from '../ui/Pagination';
 import FormInput from '../ui/FormInput';
 import FormSelect from '../ui/FormSelect';
 import FormCheckbox from '../ui/FormCheckbox';
@@ -163,6 +164,14 @@ export default function StaffList({
   const activeCount = users.filter(u=>u.active).length;
   const assignedCount = Object.keys(userStallMap).length;
 
+  const STAFF_PAGE_SIZE = 10;
+  const [staffPage, setStaffPage] = useState(1);
+  const staffTotalPages = Math.ceil(filtered.length / STAFF_PAGE_SIZE) || 1;
+  const paginatedStaff = useMemo(() => {
+    const start = (staffPage - 1) * STAFF_PAGE_SIZE;
+    return filtered.slice(start, start + STAFF_PAGE_SIZE);
+  }, [filtered, staffPage]);
+
   const openNew  = ()=>{ clearActionError?.(); setUserForm({ ...EMPTY, role: roleOptions[0] ?? 'Cashier' }); setIsNew(true);  setShowModal(true); };
   const openEdit = u=>{ clearActionError?.(); onEdit(u); setIsNew(false); setShowModal(true); };
   const close    = ()=>{ setShowModal(false); onCancel(); };
@@ -222,7 +231,7 @@ export default function StaffList({
              <div className="flex flex-col items-center justify-center h-40 gap-2 text-[#9ca3af]">
                 <span style={{ fontSize: 13, fontFamily: 'Inter, sans-serif' }}>No staff found</span>
              </div>
-          ) : filtered.map((user,idx)=>{
+          ) : paginatedStaff.map((user,idx)=>{
             return (
               <div key={user.id} className="grid grid-cols-[200px_100px_minmax(160px,1fr)_80px_190px] items-center gap-4 border-b border-[#f9fafb] hover:bg-[#fafafa] transition-colors max-[1200px]:grid-cols-[minmax(0,1fr)_auto] max-[1200px]:gap-3 max-[640px]:px-4"
                 style={{padding:'12px 24px',minHeight:69}}>
@@ -271,8 +280,16 @@ export default function StaffList({
         </div>
 
         <div className="flex items-center justify-between px-6 py-3 border-t border-[#f3f4f6] shrink-0" style={{background:'#fafafa'}}>
-          <p style={{margin:0,fontSize:12,color:'#9ca3af',fontFamily:'Inter,sans-serif'}}>Showing {filtered.length} of {users.length} employees</p>
+          <p style={{margin:0,fontSize:12,color:'#9ca3af',fontFamily:'Inter,sans-serif'}}>
+            Page {staffPage} of {staffTotalPages} &middot; Showing {paginatedStaff.length} of {filtered.length} employees
+          </p>
         </div>
+
+        {staffTotalPages > 1 && (
+          <div className="px-6 py-3 border-t border-[#f3f4f6] shrink-0" style={{background:'#fff'}}>
+            <Pagination currentPage={staffPage} totalPages={staffTotalPages} onPageChange={setStaffPage} />
+          </div>
+        )}
       </div>
 
       {showModal && <UserModal form={userForm} setForm={setUserForm} onSave={onSave} onClose={close} isNew={isNew} roleOptions={roleOptions} actionError={actionError}/>}
