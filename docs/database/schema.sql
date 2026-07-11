@@ -32,6 +32,8 @@ CREATE TABLE stalls (
   location        VARCHAR(150) DEFAULT NULL,           -- physical location label
   device_token    VARCHAR(255) DEFAULT NULL,           -- registered terminal token
   telegram_chat_id BIGINT DEFAULT NULL,               -- kitchen Telegram channel ID
+  is_active       BOOLEAN NOT NULL DEFAULT TRUE,
+  is_deleted      BOOLEAN NOT NULL DEFAULT FALSE,
   created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_stalls_device_token (device_token),

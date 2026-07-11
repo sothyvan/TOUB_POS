@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { money } from '../utils/format';
 import Icon from './ui/Icon';
+import Pagination from './ui/Pagination';
 import ReceiptModal from './ReceiptModal';
 import { useSalesReport } from '../hooks/useSalesReport';
 import DateRangeDialog from './reports/DateRangeDialog';
@@ -51,28 +52,6 @@ function isExpiredKhqrOrder(order, nowMs) {
 
   const expiryTime = new Date(order.paymentExpiresAt).getTime();
   return Number.isFinite(expiryTime) && expiryTime < Number(nowMs || 0);
-}
-
-function matchesOperationalFilter(order, filterId, nowMs) {
-  if (!filterId) {
-    return true;
-  }
-
-  switch (filterId) {
-    case 'failed-kitchen':
-      return order.status === 'paid' && order.kitchenStatus === 'failed';
-    case 'missing-kitchen':
-      return order.status === 'paid' && order.kitchenStatus === 'not_sent';
-    case 'waiting-kitchen':
-      return (order.status === 'paid' && order.kitchenStatus === 'pending')
-        || (isPendingKhqrOrder(order) && !isExpiredKhqrOrder(order, nowMs));
-    case 'expired-khqr':
-      return isExpiredKhqrOrder(order, nowMs);
-    case 'pending-khqr':
-      return isPendingKhqrOrder(order) && !isExpiredKhqrOrder(order, nowMs);
-    default:
-      return true;
-  }
 }
 
 const alertToneConfig = {
@@ -146,6 +125,16 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
   const [activeOperationalFilter, setActiveOperationalFilter] = useState(null);
   const [activeReceipt, setActiveReceipt] = useState(null);
   const [nowMs, setNowMs] = useState(0);
+  const LEDGER_PAGE_SIZE = 15;
+
+  const filterKey = `${dateFilter}|${customDateRange.startDate}|${customDateRange.endDate}|${selectedStallId}|${selectedCashierId}`;
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  const [ledgerPage, setLedgerPage] = useState(1);
+
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey);
+    setLedgerPage(1);
+  }
 
   useEffect(() => {
     const refreshNow = () => setNowMs(Date.now());
@@ -169,6 +158,8 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
     endDate: customDateRange.endDate,
     stallId: selectedStallId,
     cashierId: selectedCashierId,
+    ledgerPage,
+    ledgerLimit: LEDGER_PAGE_SIZE,
   });
 
   const stallFilterOptions = useMemo(() => {
@@ -497,24 +488,6 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
       return `${x},${y}`;
     }).join(' ');
   }, [filteredOrders, report]);
-
-  const normalizedSearch = searchQuery.toLowerCase();
-  const ledgerOrders = filteredOrders.filter((order) => {
-    if (!matchesOperationalFilter(order, activeOperationalFilter, nowMs)) {
-      return false;
-    }
-
-    if (!normalizedSearch) {
-      return true;
-    }
-
-    return order.orderNo.toLowerCase().includes(normalizedSearch) ||
-      (order.cashierName || '').toLowerCase().includes(normalizedSearch) ||
-      (order.stallName && order.stallName.toLowerCase().includes(normalizedSearch)) ||
-      (order.kitchenStatus && order.kitchenStatus.toLowerCase().includes(normalizedSearch)) ||
-      (order.paymentMethod && order.paymentMethod.toLowerCase().includes(normalizedSearch)) ||
-      (order.status && order.status.toLowerCase().includes(normalizedSearch));
-  });
 
   const operationalAlerts = useMemo(() => {
     const failedKitchenTickets = filteredOrders.filter(
@@ -1014,13 +987,13 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
 
           {/* Ledger Table Body */}
           <div className="flex-1 overflow-y-auto">
-            {ledgerOrders.length === 0 ? (
+            {(report?.orders || []).length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-[#9ca3af]">
                 <Icon name="orders" className="w-8 h-8 mb-2" />
                 <span className="text-[13px] font-medium">No transactions found matching the filter</span>
               </div>
             ) : (
-              ledgerOrders.map((order) => (
+              (report?.orders || []).map((order) => (
                 <div key={order.id} className="flex items-center px-6 py-4 border-b border-[#f9fafb] hover:bg-[#fafbff] transition-colors max-[900px]:grid max-[900px]:grid-cols-2 max-[900px]:gap-3 max-[640px]:px-4">
                   <span className="flex-1 text-[13px] font-bold text-[#003ec7]">#{order.orderNo}</span>
                   <span className="flex-1 text-[13px] text-[#6b7280] max-[900px]:text-right">{new Date(order.createdAt).toLocaleString()}</span>
@@ -1073,8 +1046,20 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
             )}
           </div>
 
-          <div className="px-6 py-4 bg-[#fafafa] border-t border-[#f3f4f6] text-[12px] text-[#9ca3af]">
-            Total matching transactions: <span className="text-[#111827] font-bold">{ledgerOrders.length}</span>
+          <div className="px-6 py-4 bg-[#fafafa] border-t border-[#f3f4f6] flex flex-wrap items-center justify-between gap-3 text-[12px] text-[#9ca3af]">
+            <span>
+              Page {report?.pagination?.page || 1} of {report?.pagination?.totalPages || 1}
+              {' '}&middot;{' '}
+              Total: <span className="text-[#111827] font-bold">{report?.pagination?.total || 0}</span> transactions
+            </span>
+          </div>
+
+          <div className="px-6 py-3 bg-white border-t border-[#f3f4f6]">
+            <Pagination
+              currentPage={report?.pagination?.page || 1}
+              totalPages={report?.pagination?.totalPages || 1}
+              onPageChange={setLedgerPage}
+            />
           </div>
         </div>
       )}

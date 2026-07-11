@@ -6,6 +6,7 @@ import FormInput from './ui/FormInput';
 import FormSelect from './ui/FormSelect';
 import StatusBadge from './ui/StatusBadge';
 import TabPills from './ui/TabPills';
+import Pagination from './ui/Pagination';
 import Switch from './ui/Switch';
 import Alert from './ui/Alert';
 import { api } from '../services/api';
@@ -13,18 +14,20 @@ import { useAutoRefresh } from '../hooks/useAutoRefresh';
 
 // KHR exchange rate (approx)
 const KHR_RATE = 4000;
+const PRODUCT_PAGE_SIZE = 10;
 const PRODUCT_IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp';
 
 function toKHR(usd) {
   return Math.round(parseFloat(usd || 0) * KHR_RATE).toLocaleString();
 }
 
-function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete }) {
+function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete, viewMode = 'list' }) {
   const category = categories.find(c => c.id === product.categoryId);
   const [showMenu, setShowMenu] = useState(false);
   const [failedImage, setFailedImage] = useState(null);
   const menuRef = useRef(null);
   const shouldShowImage = Boolean(product.image) && failedImage !== product.image;
+  const isGrid = viewMode === 'grid';
 
   useEffect(() => {
     if (!showMenu) return;
@@ -45,60 +48,64 @@ function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete 
 
   return (
     <div
-      className={`relative flex flex-col min-[1200px]:flex-row min-[1200px]:items-center gap-0 min-[1200px]:gap-4 cursor-pointer transition-all duration-200 rounded-2xl min-[1200px]:rounded-none border border-gray-200 min-[1200px]:border-0 min-[1200px]:border-b min-[1200px]:border-b-gray-50 bg-white min-[1200px]:bg-transparent overflow-hidden ${isSelected ? 'min-[1200px]:bg-indigo-50/50 border-indigo-200 shadow-sm ring-2 ring-indigo-500/20' : 'hover:shadow-lg min-[1200px]:hover:shadow-none hover:-translate-y-0.5 min-[1200px]:hover:translate-y-0 shadow-sm min-[1200px]:shadow-none'}`}
-      style={{
-        padding: '0', // Mobile relies on internal padding, desktop uses custom md: padding class
-        background: isSelected ? '#f5f3ff' : undefined,
-      }}
+      className={`relative flex ${isGrid ? 'flex-col gap-0 rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm min-[1200px]:w-[270px] min-[1200px]:h-[290px]' : 'flex-row items-center gap-4 rounded-none border-0 border-b border-b-gray-50 bg-transparent'} cursor-pointer transition-all duration-200 ${isSelected ? (isGrid ? 'border-indigo-200 shadow-sm ring-2 ring-indigo-500/20' : 'bg-indigo-50/50 ring-2 ring-indigo-500/20') : (isGrid ? 'hover:shadow-lg hover:-translate-y-0.5' : 'hover:bg-gray-50/60')}`}
+      style={{ background: isSelected ? '#f5f3ff' : undefined }}
       onClick={() => onEdit(product)}
     >
-      <div className="min-[1200px]:hidden absolute top-3 left-3 z-10">
-        <StatusBadge active={product.available} activeLabel="In Stock" inactiveLabel="Out of Stock" className="shadow-sm" />
-      </div>
-
-      <div className="min-[1200px]:hidden flex items-center justify-center absolute top-3 right-3 z-10" ref={menuRef}>
-        <button 
-          type="button" 
-          onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
-          className="w-8 h-8 rounded-full bg-white/90 backdrop-blur shadow-sm flex items-center justify-center text-gray-700 hover:bg-white active:scale-95 transition-all border border-gray-100 cursor-pointer"
-        >
-           <Icon name="moreVertical" className="w-4 h-4 text-gray-600" />
-        </button>
-        {showMenu && (
-          <div className="absolute top-10 right-0 w-36 bg-white rounded-xl shadow-xl border border-gray-100 p-1 flex flex-col gap-1">
-             <button type="button" onClick={(e) => { e.stopPropagation(); setShowMenu(false); onEdit(product); }} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 text-left border-0 bg-transparent cursor-pointer">
-               <Icon name="edit" className="w-3.5 h-3.5 text-blue-600" strokeWidth={2} />
-               <span className="text-sm font-medium text-blue-600">Edit</span>
-             </button>
-             <button type="button" onClick={(e) => { e.stopPropagation(); setShowMenu(false); onDelete(product.id); }} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-50 text-left border-0 bg-transparent cursor-pointer">
-               <Icon name="delete" className="w-3.5 h-3.5 text-red-600" strokeWidth={2} />
-               <span className="text-sm font-medium text-red-600">Delete</span>
-             </button>
+      {/* Card-mode overlay badges & menu */}
+      {isGrid && (
+        <>
+          <div className="absolute top-3 left-3 z-10">
+            <StatusBadge active={product.available} activeLabel="In Stock" inactiveLabel="Out of Stock" className="shadow-sm" />
           </div>
-        )}
-      </div>
+          <div className="flex items-center justify-center absolute top-3 right-3 z-10" ref={menuRef}>
+            <button 
+              type="button" 
+              onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
+              className="w-8 h-8 rounded-full bg-white/90 backdrop-blur shadow-sm flex items-center justify-center text-gray-700 hover:bg-white active:scale-95 transition-all border border-gray-100 cursor-pointer"
+            >
+              <Icon name="moreVertical" className="w-4 h-4 text-gray-600" />
+            </button>
+            {showMenu && (
+              <div className="absolute top-10 right-0 w-36 bg-white rounded-xl shadow-xl border border-gray-100 p-1 flex flex-col gap-1">
+                <button type="button" onClick={(e) => { e.stopPropagation(); setShowMenu(false); onEdit(product); }} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 text-left border-0 bg-transparent cursor-pointer">
+                  <Icon name="edit" className="w-3.5 h-3.5 text-blue-600" strokeWidth={2} />
+                  <span className="text-sm font-medium text-blue-600">Edit</span>
+                </button>
+                <button type="button" onClick={(e) => { e.stopPropagation(); setShowMenu(false); onDelete(product.id); }} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-50 text-left border-0 bg-transparent cursor-pointer">
+                  <Icon name="delete" className="w-3.5 h-3.5 text-red-600" strokeWidth={2} />
+                  <span className="text-sm font-medium text-red-600">Delete</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
-      <div className="flex flex-col min-[1200px]:flex-row min-[1200px]:items-center gap-0 min-[1200px]:gap-4 w-full h-full min-[1200px]:px-5 min-[1200px]:py-3">
+      <div className={`flex ${isGrid ? 'flex-col gap-0 w-full h-full' : 'flex-row items-center gap-3 w-full h-full px-4 pr-5 py-3'}`}>
         {/* Thumbnail */}
-        <div className="w-full aspect-[4/3] min-[1200px]:aspect-auto min-[1200px]:w-[40px] min-[1200px]:h-10 shrink-0 min-[1200px]:rounded-[9px] overflow-hidden border-b border-gray-100 min-[1200px]:border min-[1200px]:border-gray-100 bg-gray-50">
+        <div className={isGrid
+          ? 'w-full aspect-[4/3] min-[1200px]:aspect-auto min-[1200px]:h-[170px] shrink-0 overflow-hidden border-b border-gray-100 bg-gray-50'
+          : 'w-[40px] h-10 shrink-0 rounded-[9px] overflow-hidden border border-gray-100 bg-gray-50'
+        }>
           {shouldShowImage
-            ? <img src={product.image} alt={product.name} className="w-full h-full object-cover" onError={() => setFailedImage(product.image)} />
+            ? <img src={product.image} alt={product.name} className="w-full h-full object-cover" loading="lazy" onError={() => setFailedImage(product.image)} />
             : <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-gray-400">
-                <Icon name="product" className="w-6 h-6 min-[1200px]:hidden" strokeWidth={1.5} />
-                <span className="text-[11px] min-[1200px]:text-[9px] font-bold tracking-widest min-[1200px]:tracking-normal">IMG</span>
+                {isGrid && <Icon name="product" className="w-6 h-6" strokeWidth={1.5} />}
+                <span className={`font-bold ${isGrid ? 'text-[11px] tracking-widest' : 'text-[9px] tracking-normal'}`}>IMG</span>
               </div>
           }
         </div>
 
         {/* Info Area */}
-        <div className="flex flex-col min-[1200px]:flex-row min-[1200px]:items-center gap-1.5 min-[1200px]:gap-4 p-3.5 min-[1200px]:p-0 flex-1 min-w-0 bg-white">
+        <div className={`flex ${isGrid ? 'flex-col p-4 bg-white h-[120px]' : 'flex-row items-center gap-4 p-0'} flex-1 min-w-0`}>
           {/* Name */}
-          <div className="flex-1 min-w-[200px]">
-            <p className="truncate" style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
+          <div className="flex-1 min-w-0">
+            <p className="truncate" style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
               {product.name}
             </p>
             {stalls && stalls.length > 0 && (
-              <p className="truncate" style={{ margin: '2px 0 0', fontSize: 11, color: '#6b7280', fontFamily: 'Inter, sans-serif' }}>
+              <p className="truncate" style={{ margin: '4px 0 0', fontSize: 11, color: '#6b7280', fontFamily: 'Inter, sans-serif', lineHeight: 1.2 }}>
                 {product.stallIds && product.stallIds.length > 0
                   ? stalls.filter(s => product.stallIds.includes(s.id)).map(s => s.name).join(', ')
                   : 'No stalls'}
@@ -106,15 +113,17 @@ function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete 
             )}
           </div>
 
-          {/* Category */}
-          <div className="hidden min-[1200px]:block w-[90px] shrink-0">
-            <span style={{ fontSize: 12, fontWeight: 500, color: '#6b7280', fontFamily: 'Inter, sans-serif' }}>
-              {category?.name ?? '—'}
-            </span>
-          </div>
+          {/* Category — list only */}
+          {!isGrid && (
+            <div className="w-[90px] shrink-0">
+              <span style={{ fontSize: 12, fontWeight: 500, color: '#6b7280', fontFamily: 'Inter, sans-serif' }}>
+                {category?.name ?? '\u2014'}
+              </span>
+            </div>
+          )}
 
           {/* Price USD + KHR */}
-          <div className="w-[110px] shrink-0 flex items-center justify-between min-[1200px]:block">
+          <div className={isGrid ? 'w-full flex items-baseline justify-between mt-auto pt-2 border-t border-gray-100/50' : 'w-[110px] shrink-0'}>
             <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
               {money(product.price)}
             </p>
@@ -123,25 +132,29 @@ function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete 
             </p>
           </div>
 
-          {/* Status badge */}
-          <div className="hidden min-[1200px]:block w-[90px] shrink-0">
-            <StatusBadge active={product.available} activeLabel="In Stock" inactiveLabel="Out of Stock" />
-          </div>
+          {/* Status badge — list only */}
+          {!isGrid && (
+            <div className="w-[90px] shrink-0">
+              <StatusBadge active={product.available} activeLabel="In Stock" inactiveLabel="Out of Stock" />
+            </div>
+          )}
 
-          {/* Actions */}
-          <div className="hidden min-[1200px]:flex items-center gap-1 w-[80px] shrink-0" onClick={e => e.stopPropagation()}>
-            <button type="button" onClick={() => onEdit(product)}
-              className="flex items-center gap-1 cursor-pointer border-0 bg-transparent hover:opacity-70 transition-all px-1 py-0.5">
-              <Icon name="edit" className="w-3 h-3" style={{ color: '#003ec7' }} strokeWidth={2} />
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#003ec7', fontFamily: 'Inter, sans-serif' }}>Edit</span>
-            </button>
-            <span style={{ color: '#e5e7eb', fontSize: 16, lineHeight: 1, userSelect: 'none' }}>|</span>
-            <button type="button" onClick={() => onDelete(product.id)}
-              className="flex items-center gap-1 cursor-pointer border-0 bg-transparent hover:opacity-70 transition-all px-1 py-0.5">
-              <Icon name="delete" className="w-3 h-3" style={{ color: '#ef4444' }} strokeWidth={2} />
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#ef4444', fontFamily: 'Inter, sans-serif' }}>Del</span>
-            </button>
-          </div>
+          {/* Actions — list only */}
+          {!isGrid && (
+            <div className="flex items-center gap-1 w-[96px] shrink-0" onClick={e => e.stopPropagation()}>
+              <button type="button" onClick={() => onEdit(product)}
+                className="flex items-center gap-1 cursor-pointer border-0 bg-transparent hover:opacity-70 transition-all px-1 py-0.5">
+                <Icon name="edit" className="w-3 h-3" style={{ color: '#003ec7' }} strokeWidth={2} />
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#003ec7', fontFamily: 'Inter, sans-serif' }}>Edit</span>
+              </button>
+              <span style={{ color: '#e5e7eb', fontSize: 16, lineHeight: 1, userSelect: 'none' }}>|</span>
+              <button type="button" onClick={() => onDelete(product.id)}
+                className="flex items-center gap-1 cursor-pointer border-0 bg-transparent hover:opacity-70 transition-all px-1 py-0.5">
+                <Icon name="delete" className="w-3 h-3" style={{ color: '#ef4444' }} strokeWidth={2} />
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#ef4444', fontFamily: 'Inter, sans-serif' }}>Del</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -464,6 +477,19 @@ export default function MenuCatalog({
   const [categoryFilter, setCategoryFilter] = useState('');
   const [stallFilter, setStallFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [productPage, setProductPage] = useState(1);
+  const [viewMode, setViewMode] = useState('list');
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1200);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 1200);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const effectiveViewMode = isDesktop ? viewMode : 'grid';
 
   const loadStalls = useCallback(async (showSpinner = false) => {
     try {
@@ -510,6 +536,17 @@ export default function MenuCatalog({
       return matchesSearch && matchesCategory && matchesStall && matchesStatus;
     });
   }, [products, search, categoryFilter, stallFilter, statusFilter]);
+
+  // Reset to page 1 when filters/search change
+  useEffect(() => {
+    setProductPage(1);
+  }, [search, categoryFilter, stallFilter, statusFilter]);
+
+  const productTotalPages = Math.ceil(filtered.length / PRODUCT_PAGE_SIZE) || 1;
+  const paginatedProducts = useMemo(() => {
+    const start = (productPage - 1) * PRODUCT_PAGE_SIZE;
+    return filtered.slice(start, start + PRODUCT_PAGE_SIZE);
+  }, [filtered, productPage]);
 
   const openEditor = (product) => {
     clearActionError?.();
@@ -606,17 +643,54 @@ export default function MenuCatalog({
         <div className="flex flex-col bg-white rounded-2xl overflow-hidden flex-1 min-w-0 border border-[#e5e7eb]">
           {/* Panel header */}
           <div className="px-5 py-4 border-b border-[#f3f4f6] flex items-center justify-between gap-4 flex-wrap" style={{ minHeight: 80 }}>
-            <div>
-              <div className="flex items-center gap-3">
-                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
-                  Menu Items
-                </h3>
-                {loading && <span className="text-xs text-[#6b7280] animate-pulse">Loading...</span>}
-                {error && <span className="text-xs text-[#ef4444]">{error}</span>}
+            <div className="flex items-center justify-between w-full">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
+                    Menu Items
+                  </h3>
+                  {loading && <span className="text-xs text-[#6b7280] animate-pulse">Loading...</span>}
+                  {error && <span className="text-xs text-[#ef4444]">{error}</span>}
+                </div>
+                <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}>
+                  {filtered.length} product{filtered.length !== 1 ? 's' : ''} · click {effectiveViewMode === 'list' ? 'a row' : 'a card'} to edit
+                </p>
               </div>
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}>
-                {filtered.length} product{filtered.length !== 1 ? 's' : ''} · click a row to edit
-              </p>
+
+              {/* View toggle — Desktop only */}
+              <div className="hidden min-[1200px]:flex items-center bg-gray-100 rounded-lg p-0.5 gap-0.5">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  className={`flex items-center justify-center w-8 h-8 rounded-md border-0 cursor-pointer transition-all ${
+                    viewMode === 'list' ? 'bg-white shadow-sm text-[#111827]' : 'bg-transparent text-gray-400 hover:text-gray-600'
+                  }`}
+                  title="List view"
+                  aria-label="List view"
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                    <line x1="1" y1="3" x2="15" y2="3" />
+                    <line x1="1" y1="8" x2="15" y2="8" />
+                    <line x1="1" y1="13" x2="15" y2="13" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('grid')}
+                  className={`flex items-center justify-center w-8 h-8 rounded-md border-0 cursor-pointer transition-all ${
+                    viewMode === 'grid' ? 'bg-white shadow-sm text-[#111827]' : 'bg-transparent text-gray-400 hover:text-gray-600'
+                  }`}
+                  title="Grid view"
+                  aria-label="Grid view"
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="1" y="1" width="5.5" height="5.5" rx="1" />
+                    <rect x="9.5" y="1" width="5.5" height="5.5" rx="1" />
+                    <rect x="1" y="9.5" width="5.5" height="5.5" rx="1" />
+                    <rect x="9.5" y="9.5" width="5.5" height="5.5" rx="1" />
+                  </svg>
+                </button>
+              </div>
             </div>
 
             {/* Filters */}
@@ -655,18 +729,20 @@ export default function MenuCatalog({
             </div>
           </div>
 
-          {/* Column headers */}
-          <div className="hidden min-[1200px]:flex items-center gap-4 px-5 py-2 border-b border-[#f3f4f6] bg-[#fafafa]">
-            <span className="w-[40px] shrink-0 text-[11px] font-bold text-gray-400 uppercase tracking-wider font-sans">Photo</span>
-            <span className="flex-1 min-w-[200px] text-[11px] font-bold text-gray-400 uppercase tracking-wider font-sans">Name</span>
-            <span className="w-[90px] shrink-0 text-[11px] font-bold text-gray-400 uppercase tracking-wider font-sans">Category</span>
-            <span className="w-[110px] shrink-0 text-[11px] font-bold text-gray-400 uppercase tracking-wider font-sans">Price</span>
-            <span className="w-[90px] shrink-0 text-[11px] font-bold text-gray-400 uppercase tracking-wider font-sans">Status</span>
-            <span className="w-[80px] shrink-0 text-[11px] font-bold text-gray-400 uppercase tracking-wider font-sans">Actions</span>
-          </div>
+          {/* Column headers — list mode only */}
+          {effectiveViewMode === 'list' && (
+            <div className="flex items-center gap-3 px-4 pr-5 py-2 border-b border-[#f3f4f6] bg-[#fafafa]">
+              <span className="w-[40px] shrink-0 text-[11px] font-bold text-gray-400 uppercase tracking-wider font-sans">Photo</span>
+              <span className="flex-1 min-w-0 text-[11px] font-bold text-gray-400 uppercase tracking-wider font-sans">Name</span>
+              <span className="w-[90px] shrink-0 text-[11px] font-bold text-gray-400 uppercase tracking-wider font-sans">Category</span>
+              <span className="w-[110px] shrink-0 text-[11px] font-bold text-gray-400 uppercase tracking-wider font-sans">Price</span>
+              <span className="w-[90px] shrink-0 text-[11px] font-bold text-gray-400 uppercase tracking-wider font-sans">Status</span>
+              <span className="w-[96px] shrink-0 text-[11px] font-bold text-gray-400 uppercase tracking-wider font-sans">Actions</span>
+            </div>
+          )}
 
           {/* Rows */}
-          <div className="flex-1 overflow-y-auto p-4 min-[1200px]:p-0">
+          <div className={`flex-1 overflow-y-auto ${effectiveViewMode === 'grid' ? 'p-4' : 'p-0'}`}>
             {loading ? (
               <div className="flex flex-col items-center justify-center h-40 gap-2 text-[#9ca3af]">
                 <span style={{ fontSize: 13, fontFamily: 'Inter, sans-serif' }} className="animate-pulse">Loading products...</span>
@@ -677,8 +753,15 @@ export default function MenuCatalog({
                 <span style={{ fontSize: 13, fontFamily: 'Inter, sans-serif' }}>No products found</span>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 min-[1200px]:flex min-[1200px]:flex-col gap-4 min-[1200px]:gap-0">
-                {filtered.map(product => (
+              <div
+                className={effectiveViewMode === 'grid' ? (isDesktop ? '' : 'grid grid-cols-2 sm:grid-cols-3 gap-4') : 'flex flex-col gap-0'}
+                style={effectiveViewMode === 'grid' && isDesktop ? {
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, 270px)',
+                  gap: '16px'
+                } : undefined}
+              >
+                {paginatedProducts.map(product => (
                   <ProductRow
                     key={product.id}
                     product={product}
@@ -688,11 +771,26 @@ export default function MenuCatalog({
                     onEdit={openEditor}
                     onDelete={handleDelete}
                     onToggle={onToggleProductAvailability}
+                    viewMode={effectiveViewMode}
                   />
                 ))}
               </div>
             )}
           </div>
+
+          {/* Pagination */}
+          {productTotalPages > 1 && (
+            <div className="px-5 py-3 border-t border-[#f3f4f6] flex items-center justify-between">
+              <span className="text-[12px] text-gray-400">
+                Page {productPage} of {productTotalPages} · {filtered.length} product{filtered.length !== 1 ? 's' : ''}
+              </span>
+              <Pagination
+                currentPage={productPage}
+                totalPages={productTotalPages}
+                onPageChange={setProductPage}
+              />
+            </div>
+          )}
         </div>
 
         {/* Right — editor panel (shown when editing) */}

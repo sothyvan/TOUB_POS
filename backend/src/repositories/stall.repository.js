@@ -1,37 +1,50 @@
 import { Stall, User, StallStaff } from '../models/index.js';
+import { parsePagination, buildOrderClause, paginatedResponse } from '../utils/pagination.js';
 
 /**
  * Fetch all stalls.
  */
-export async function findAllStalls() {
-  return Stall.findAll({
+export async function findAllStalls(queryOptions = {}) {
+  const pagination = parsePagination(queryOptions);
+  const orderClause = buildOrderClause(pagination, ['created_at', 'id', 'name'], [['created_at', 'DESC']]);
+
+  const { rows, count } = await Stall.findAndCountAll({
     where: { is_deleted: false },
     include: [
-      { 
-        model: User, 
+      {
+        model: User,
         attributes: ['id', 'username', 'role'],
-        through: { attributes: [] } // omit the join table attributes
+        through: { attributes: [] }
       }
     ],
-    order: [['created_at', 'DESC']],
+    order: orderClause,
+    limit: pagination.limit,
+    offset: pagination.offset,
   });
+  return paginatedResponse({ rows, count }, pagination);
 }
 
 /**
  * Fetch all stalls owned by a specific owner.
  */
-export async function findAllStallsByOwnerId(ownerId) {
-  return Stall.findAll({
+export async function findAllStallsByOwnerId(ownerId, queryOptions = {}) {
+  const pagination = parsePagination(queryOptions);
+  const orderClause = buildOrderClause(pagination, ['created_at', 'id', 'name'], [['created_at', 'DESC']]);
+
+  const { rows, count } = await Stall.findAndCountAll({
     where: { owner_id: ownerId, is_deleted: false },
     include: [
-      { 
-        model: User, 
+      {
+        model: User,
         attributes: ['id', 'username', 'role'],
         through: { attributes: [] }
       }
     ],
-    order: [['created_at', 'DESC']],
+    order: orderClause,
+    limit: pagination.limit,
+    offset: pagination.offset,
   });
+  return paginatedResponse({ rows, count }, pagination);
 }
 
 /**

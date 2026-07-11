@@ -177,9 +177,14 @@ function buildQueryString(params = {}) {
 
 export const api = {
   products: {
-    async getAll() {
-      const res = await apiRequest('/products');
-      return res.data.map(mapProductToFrontend);
+    async getAll(paginationParams) {
+      const qs = paginationParams ? buildQueryString(paginationParams) : '';
+      const res = await apiRequest(`/products${qs}`);
+      const mapped = res.data.map(mapProductToFrontend);
+      if (paginationParams && res.pagination) {
+        return { data: mapped, pagination: res.pagination };
+      }
+      return mapped;
     },
     async getImageUploadAuth() {
       const res = await apiRequest('/products/imagekit-auth');
@@ -225,9 +230,14 @@ export const api = {
     }
   },
   categories: {
-    async getAll() {
-      const res = await apiRequest('/categories');
-      return res.data.map(mapCategoryToFrontend);
+    async getAll(paginationParams) {
+      const qs = paginationParams ? buildQueryString(paginationParams) : '';
+      const res = await apiRequest(`/categories${qs}`);
+      const mapped = res.data.map(mapCategoryToFrontend);
+      if (paginationParams && res.pagination) {
+        return { data: mapped, pagination: res.pagination };
+      }
+      return mapped;
     },
     async save(item) {
       const payload = {
@@ -247,9 +257,14 @@ export const api = {
     }
   },
   users: {
-    async getAll() {
-      const res = await apiRequest('/users');
-      return res.data.map(mapUserToFrontend);
+    async getAll(paginationParams) {
+      const qs = paginationParams ? buildQueryString(paginationParams) : '';
+      const res = await apiRequest(`/users${qs}`);
+      const mapped = res.data.map(mapUserToFrontend);
+      if (paginationParams && res.pagination) {
+        return { data: mapped, pagination: res.pagination };
+      }
+      return mapped;
     },
     async save(item) {
       const role = String(item.role || '').trim().toLowerCase();
@@ -274,9 +289,14 @@ export const api = {
     }
   },
   stalls: {
-    async getAll() {
-      const res = await apiRequest('/stalls');
-      return res.data.map(mapStallToFrontend);
+    async getAll(paginationParams) {
+      const qs = paginationParams ? buildQueryString(paginationParams) : '';
+      const res = await apiRequest(`/stalls${qs}`);
+      const mapped = res.data.map(mapStallToFrontend);
+      if (paginationParams && res.pagination) {
+        return { data: mapped, pagination: res.pagination };
+      }
+      return mapped;
     },
     async save(item) {
       const payload = { name: item.name };
@@ -310,11 +330,16 @@ export const api = {
     }
   },
   orders: {
-    async getAll(role) {
+    async getAll(role, paginationParams) {
       const normalizedRole = String(role || '').toLowerCase();
       const endpoint = (normalizedRole === 'cashier') ? '/orders/mine' : '/orders';
-      const res = await apiRequest(endpoint);
-      return res.data.map(mapOrderToFrontend);
+      const qs = paginationParams ? buildQueryString(paginationParams) : '';
+      const res = await apiRequest(`${endpoint}${qs}`);
+      const mapped = res.data.map(mapOrderToFrontend);
+      if (paginationParams && res.pagination) {
+        return { data: mapped, pagination: res.pagination };
+      }
+      return mapped;
     },
     async getById(orderId) {
       const res = await apiRequest(`/orders/${orderId}`);
@@ -357,6 +382,7 @@ export const api = {
       return {
         ...res.data,
         orders: (res.data?.orders || []).map(mapOrderToFrontend),
+        pagination: res.data?.pagination || null,
       };
     },
   },

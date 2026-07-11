@@ -145,8 +145,8 @@ export async function retryTelegramDispatch(req, res, next) {
 export async function getAllOrders(req, res, next) {
   try {
     const ownerId = req.user.role === 'owner' ? req.user.id : req.user.owner_id;
-    const orders = await orderService.getAllOrders(ownerId);
-    res.json({ success: true, data: orders });
+    const result = await orderService.getAllOrders(ownerId, req.query);
+    res.json({ success: true, ...result });
   } catch (error) {
     next(error);
   }
@@ -158,8 +158,8 @@ export async function getAllOrders(req, res, next) {
 export async function getMyOrders(req, res, next) {
   try {
     const cashierId = req.user.id;
-    const orders = await orderService.getOrdersByUser(cashierId);
-    res.json({ success: true, data: orders });
+    const result = await orderService.getOrdersByUser(cashierId, req.query);
+    res.json({ success: true, ...result });
   } catch (error) {
     next(error);
   }

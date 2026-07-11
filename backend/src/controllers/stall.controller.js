@@ -13,8 +13,8 @@ function parsePositiveInteger(value) {
 export async function getStalls(req, res, next) {
   try {
     const ownerId = req.user.role === 'owner' ? req.user.id : req.user.owner_id;
-    const stalls = await stallRepository.findAllStallsByOwnerId(ownerId);
-    res.json({ success: true, data: stalls });
+    const result = await stallRepository.findAllStallsByOwnerId(ownerId, req.query);
+    res.json({ success: true, ...result });
   } catch (err) {
     next(err);
   }
