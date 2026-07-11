@@ -17,9 +17,11 @@ async function startServer() {
     const { User } = await import('./models/index.js');
 
     console.log('[server] Initializing database...');
-    // Ensure database exists
-    await ensureDatabaseExists();
-    console.log('[server] Database checked/created successfully.');
+    // Ensure database exists (Only locally, cloud providers provision the DB for you)
+    if (process.env.NODE_ENV !== 'production') {
+      await ensureDatabaseExists();
+      console.log('[server] Database checked/created successfully.');
+    }
 
     // Authenticate Sequelize connection
     await sequelize.authenticate();
