@@ -16,6 +16,8 @@ export default function UserOwner({
   currentUser,
   loading,
   error,
+  actionError,
+  clearActionError,
 }) {
   const [tab, setTab] = useState('list');
   const [stalls, setStalls] = useState([]);
@@ -71,6 +73,8 @@ export default function UserOwner({
           stalls={stalls}
           stallsLoading={stallsLoading}
           stallsError={stallsError}
+          actionError={actionError}
+          clearActionError={clearActionError}
         />
       ) : (
         <StaffAllocation users={users} stalls={stalls} />

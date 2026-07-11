@@ -10,11 +10,6 @@ const MAIN_MENU = [
   { id: 'orders',      label: 'Sales Reports',    icon: 'orders'     },
 ];
 
-// System section
-const SYSTEM_MENU = [
-  { id: 'settings', label: 'Settings', icon: 'settings' },
-];
-
 /**
  * OwnerSidebar — pixel-perfect match of Figma "Owner Dashboard - Computer" sidebar
  *
@@ -23,7 +18,7 @@ const SYSTEM_MENU = [
  *  allowedTabs   : string[] — tabs this user can see
  *  onTabChange   : (id) => void
  *  userName      : string  (default "Owner Account")
- *  userRole      : string  (default "Owneristrator")
+ *  userRole      : string
  *  onLogout      : () => void
  */
 export default function OwnerSidebar({
@@ -31,17 +26,13 @@ export default function OwnerSidebar({
   allowedTabs = [],
   onTabChange,
   userName = 'Owner Account',
-  userRole = 'Owneristrator',
+  userRole = 'Owner',
   onLogout,
 }) {
-  const visibleMain   = MAIN_MENU.filter((item) => allowedTabs.includes(item.id));
-  const visibleSystem = SYSTEM_MENU.filter((item) => allowedTabs.includes(item.id));
+  const visibleMain = MAIN_MENU.filter((item) => allowedTabs.includes(item.id));
 
   return (
-    <aside
-      style={{ width: 260, minWidth: 260 }}
-      className="flex flex-col bg-white border-r border-[#f3f4f6] h-full select-none shrink-0"
-    >
+    <aside className="flex h-full w-64 min-w-64 shrink-0 select-none flex-col border-r border-brand-border bg-white">
       {/* ── Logo / Brand ── */}
       <div className="px-5 pt-5 pb-4">
         <div className="flex items-center gap-3 px-2">
@@ -51,7 +42,7 @@ export default function OwnerSidebar({
             className="text-[#191b23] font-bold leading-none"
             style={{ fontSize: 18, fontFamily: 'Inter, sans-serif', fontWeight: 700 }}
           >
-            POS OWNER
+            TOUB POS
           </span>
         </div>
       </div>
@@ -79,32 +70,6 @@ export default function OwnerSidebar({
           </>
         )}
 
-        {/* Divider */}
-        {visibleSystem.length > 0 && (
-          <div className="mx-2 my-3.5">
-            <div className="h-px bg-[#f3f4f6]" />
-          </div>
-        )}
-
-        {/* SYSTEM section */}
-        {visibleSystem.length > 0 && (
-          <>
-            <p
-              className="px-2.5 pb-1"
-              style={{ fontSize: 10, fontWeight: 700, color: '#c4c9d4', fontFamily: 'Inter, sans-serif', letterSpacing: '0.08em', textTransform: 'uppercase' }}
-            >
-              System
-            </p>
-            {visibleSystem.map((item) => (
-              <NavItem
-                key={item.id}
-                item={item}
-                isActive={activeTab === item.id}
-                onClick={() => onTabChange?.(item.id)}
-              />
-            ))}
-          </>
-        )}
       </nav>
 
       {/* ── User Footer ── */}

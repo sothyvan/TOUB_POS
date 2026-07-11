@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { money } from '../utils/format';
 import Badge from './ui/Badge';
 import Icon from './ui/Icon';
@@ -11,6 +12,9 @@ export default function ProductCard({
   updateQuantity,
   setCartItemQuantity,
 }) {
+  const [failedImage, setFailedImage] = useState(null);
+  const shouldShowImage = Boolean(product.image) && failedImage !== product.image;
+
   return (
     <article
       className={`group relative bg-white border rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between ${
@@ -28,15 +32,17 @@ export default function ProductCard({
 
       {/* Card Image */}
       <div className="relative aspect-4/3 w-full bg-gray-50 overflow-hidden border-b border-gray-100">
-        {product.image ? (
+        {shouldShowImage ? (
           <img
             src={product.image}
             alt={product.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            onError={() => setFailedImage(product.image)}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-[#eeeef0] text-[#776f63] font-bold text-xs">
-            {product.code}
+          <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-[#eeeef0] text-[#776f63] font-bold text-xs">
+            <Icon name="product" className="h-7 w-7 text-gray-400" strokeWidth={1.5} />
+            <span>{product.code}</span>
           </div>
         )}
         <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded bg-black/65 backdrop-blur-sm text-white text-[10px] font-extrabold tracking-wider uppercase z-10">

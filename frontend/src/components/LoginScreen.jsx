@@ -392,14 +392,14 @@ export default function LoginScreen({
   );
 
   return (
-    <main className="relative min-h-svh p-6 grid place-items-center bg-brand-yellow text-gray-800 selection:bg-brand-blue/20">
+    <main className="relative min-h-svh p-6 grid place-items-center bg-brand-yellow text-gray-800 selection:bg-brand-blue/20 max-[640px]:flex max-[640px]:flex-col max-[640px]:items-center max-[640px]:justify-center max-[640px]:gap-4">
       {loginMode === 'management' && renderManagementLogin()}
       {loginMode === 'cashier' && flowStep === 'register' && (ownerToken ? renderSelectStall() : renderRegister())}
       {loginMode === 'cashier' && flowStep === 'select-profile' && renderSelectProfile()}
       {loginMode === 'cashier' && flowStep === 'pin-pad' && renderPinPad()}
 
       {showDemoCredentials && (
-        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex flex-wrap justify-center gap-3 bg-white/20 backdrop-blur-md px-4 py-2.5 rounded-full border border-white/25 text-[11px] font-semibold text-brand-blue shadow-sm">
+        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex flex-wrap justify-center gap-3 bg-white/20 backdrop-blur-md px-4 py-2.5 rounded-full border border-white/25 text-[11px] font-semibold text-brand-blue shadow-sm max-[640px]:static max-[640px]:w-[min(100%,380px)] max-[640px]:translate-x-0 max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2 max-[640px]:rounded-2xl">
           <span className="opacity-80">Development Credentials:</span>
           <span className="bg-white/35 px-2 py-0.5 rounded-full">Bootstrap API: platform_admin / platform123</span>
           <span className="bg-white/35 px-2 py-0.5 rounded-full">Demo seed owner: owner / owner123</span>

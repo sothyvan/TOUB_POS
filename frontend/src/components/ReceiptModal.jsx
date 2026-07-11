@@ -11,6 +11,7 @@ export default function ReceiptModal({ activeReceipt, onClose }) {
   return (
     <ModalShell
       isOpen={Boolean(activeReceipt)}
+      onClose={onClose}
       labelledBy="receipt-modal-title"
       panelClassName="bg-white rounded-2xl w-full max-w-105 overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
     >
@@ -99,7 +100,7 @@ export default function ReceiptModal({ activeReceipt, onClose }) {
             type="button"
             onClick={onClose}
           >
-            New Order
+            Close Receipt
           </button>
         </div>
         </>

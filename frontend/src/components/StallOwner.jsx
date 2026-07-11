@@ -4,6 +4,7 @@ import { initials } from '../utils/format';
 import { roleToApiRole } from '../utils/permissions';
 import { api } from '../services/api';
 import ConfirmDialog from './ui/ConfirmDialog';
+import Alert from './ui/Alert';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 
 // ── Seed data ─────────────────────────────────────────────────────────────────
@@ -16,13 +17,19 @@ function avatarStyle(idx) {
 }
 
 // ── Add Stall modal ───────────────────────────────────────────────────────────
-function AddStallModal({ onClose, onAdd }) {
+function AddStallModal({ onClose, onAdd, error }) {
   const [form, setForm] = useState({ name: '' });
-  const handleSubmit = (e) => {
+  const [isSaving, setIsSaving] = useState(false);
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name.trim()) return;
-    onAdd({ name: form.name.trim() });
-    onClose();
+    if (!form.name.trim() || isSaving) return;
+    setIsSaving(true);
+    try {
+      const saved = await onAdd({ name: form.name.trim() });
+      if (saved) onClose();
+    } finally {
+      setIsSaving(false);
+    }
   };
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
@@ -31,6 +38,7 @@ function AddStallModal({ onClose, onAdd }) {
           Add New Location
         </h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          {error && <Alert variant="danger">{error}</Alert>}
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', fontFamily: 'Inter, sans-serif' }}>Stall Name</label>
             <input type="text" required placeholder="Stall 4" value={form.name}
@@ -44,10 +52,10 @@ function AddStallModal({ onClose, onAdd }) {
               style={{ fontSize: 13, fontWeight: 600, color: '#6b7280', fontFamily: 'Inter, sans-serif', background: 'white' }}>
               Cancel
             </button>
-            <button type="submit"
-              className="flex-1 rounded-lg py-2 cursor-pointer hover:opacity-90 border-0"
+            <button type="submit" disabled={isSaving}
+              className="flex-1 rounded-lg py-2 cursor-pointer hover:opacity-90 border-0 disabled:cursor-not-allowed disabled:opacity-60"
               style={{ fontSize: 13, fontWeight: 600, color: '#fff', background: '#003ec7', fontFamily: 'Inter, sans-serif' }}>
-              Add Stall
+              {isSaving ? 'Adding...' : 'Add Stall'}
             </button>
           </div>
         </form>
@@ -184,6 +192,7 @@ export default function StallOwner({ users = [] }) {
   const [stalls, setStalls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedStallId, setSelectedStallId] = useState(null);
+  const [actionError, setActionError] = useState('');
   
   const [staffSearch, setStaffSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -196,6 +205,7 @@ export default function StallOwner({ users = [] }) {
       if (showSpinner) setLoading(true);
       const data = await api.stalls.getAll();
       setStalls(data);
+      setActionError('');
       setSelectedStallId((current) => {
         if (current && data.some((stall) => stall.id === current)) {
           return current;
@@ -204,7 +214,7 @@ export default function StallOwner({ users = [] }) {
       });
       return data;
     } catch (err) {
-      console.error(err);
+      setActionError(err.message || 'Failed to load stalls.');
       return [];
     } finally {
       if (showSpinner) setLoading(false);
@@ -303,12 +313,15 @@ export default function StallOwner({ users = [] }) {
   };
 
   const performAssign = async (userId, toStallId) => {
+    setActionError('');
     try {
       await api.stalls.assignStaff(toStallId, userId);
       updateAssignmentsLocally(toStallId, userId, null);
       await loadStalls(false);
+      return true;
     } catch (err) {
-      alert(err.message || 'Failed to assign staff');
+      setActionError(err.message || 'Failed to assign staff.');
+      return false;
     }
   };
 
@@ -320,23 +333,27 @@ export default function StallOwner({ users = [] }) {
   };
 
   const handleUnassign = async (userId) => {
+    setActionError('');
     try {
       await api.stalls.unassignStaff(selectedStallId, userId);
       updateAssignmentsLocally(selectedStallId, null, userId);
       await loadStalls(false);
     } catch (err) {
-      alert(err.message || 'Failed to unassign staff');
+      setActionError(err.message || 'Failed to unassign staff.');
     }
   };
 
   const handleAddStall = async (stallData) => {
+    setActionError('');
     try {
       const saved = await api.stalls.save(stallData);
       setStalls((current) => [...current, saved]);
       setSelectedStallId(saved.id);
       await loadStalls(false);
+      return true;
     } catch (err) {
-      alert(err.message || 'Failed to create stall');
+      setActionError(err.message || 'Failed to create stall.');
+      return false;
     }
   };
 
@@ -350,9 +367,14 @@ export default function StallOwner({ users = [] }) {
 
   return (
     <div
-      className="flex flex-col xl:flex-row gap-4 h-full min-h-0 xl:overflow-hidden overflow-y-auto overflow-x-hidden pb-6 xl:pb-0"
+      className="relative flex flex-col xl:flex-row gap-4 h-full min-h-0 xl:overflow-hidden overflow-y-auto overflow-x-hidden pb-6 xl:pb-0"
       onDragEnd={() => { setIsDraggingFromRoster(false); setIsDropZoneOver(false); setIsPoolOver(false); }}
     >
+      {actionError && !showAddModal && (
+        <Alert variant="danger" className="fixed left-1/2 top-20 z-40 w-[min(92vw,520px)] -translate-x-1/2 shadow-lg">
+          {actionError}
+        </Alert>
+      )}
       <div className="flex flex-col bg-white rounded-2xl shrink-0 w-full xl:w-[280px] xl:min-w-[240px] max-h-[300px] xl:max-h-none xl:h-auto xl:overflow-hidden">
         <div className="flex flex-col gap-1 px-5 pt-5 pb-3.5 border-b border-[#f3f4f6]">
           <div className="flex items-center gap-2">
@@ -403,8 +425,7 @@ export default function StallOwner({ users = [] }) {
 
         <div className="px-4 py-3.5 bg-[#fafafa] border-t border-[#f3f4f6]">
           <button type="button" onClick={() => setShowAddModal(true)}
-            className="w-full flex items-center justify-center gap-2 rounded-[9px] cursor-pointer hover:opacity-90 active:scale-[0.98] border-0"
-            style={{ height: 39, background: '#5855ea' }}>
+            className="w-full flex h-10 items-center justify-center gap-2 rounded-lg border-0 bg-brand-action cursor-pointer hover:bg-brand-action-hover active:scale-[0.98]">
             <Icon name="plus" className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
             <span style={{ fontSize: 13, fontWeight: 600, color: '#ffffff', fontFamily: 'Inter, sans-serif' }}>Add Location</span>
           </button>
@@ -541,7 +562,7 @@ export default function StallOwner({ users = [] }) {
       </div>
 
       {showAddModal && (
-        <AddStallModal onClose={() => setShowAddModal(false)} onAdd={handleAddStall} />
+        <AddStallModal onClose={() => { setShowAddModal(false); setActionError(''); }} onAdd={handleAddStall} error={actionError} />
       )}
 
       {transferConfirm && (

@@ -3,6 +3,7 @@ import MetricCard from './dashboard/MetricCard';
 import RevenueChart from './dashboard/RevenueChart';
 import Icon from './ui/Icon';
 import { money } from '../utils/format';
+import { useSalesReport } from '../hooks/useSalesReport';
 
 function isToday(dateValue) {
   const date = new Date(dateValue);
@@ -10,7 +11,23 @@ function isToday(dateValue) {
 }
 
 export default function OwnerDashboard({ orders = [] }) {
+  const {
+    report,
+    loading: reportLoading,
+    error: reportError,
+  } = useSalesReport({ range: 'today' });
+
   const dashboardStats = useMemo(() => {
+    if (report) {
+      return {
+        revenue: Number(report.summary?.totalRevenue || 0),
+        paidOrdersCount: Number(report.summary?.paidOrders || 0),
+        activeStallsCount: report.byStall?.length || 0,
+        khqrOrders: Number(report.summary?.paymentMethods?.khqr?.count || 0),
+        cashOrders: Number(report.summary?.paymentMethods?.cash?.count || 0),
+      };
+    }
+
     const todaysOrders = orders.filter((order) => isToday(order.createdAt));
     const paidOrders = todaysOrders.filter((order) => order.status === 'paid');
     const revenue = paidOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
@@ -29,11 +46,11 @@ export default function OwnerDashboard({ orders = [] }) {
       khqrOrders,
       cashOrders,
     };
-  }, [orders]);
+  }, [orders, report]);
 
   return (
     <div className="flex-1 flex flex-col justify-start items-start gap-5">
-      <div className="w-full grid grid-cols-3 gap-3.5 max-[1024px]:grid-cols-1">
+      <div className="w-full grid grid-cols-3 gap-3.5 max-[1100px]:grid-cols-2 max-[680px]:grid-cols-1">
         <MetricCard
           title="Gross Revenue Today"
           value={money(dashboardStats.revenue)}
@@ -66,7 +83,12 @@ export default function OwnerDashboard({ orders = [] }) {
         />
       </div>
 
-      <RevenueChart orders={orders} />
+      <RevenueChart
+        hourlyData={report?.byHour || []}
+        orders={orders}
+        loading={reportLoading}
+        error={reportError}
+      />
     </div>
   );
 }

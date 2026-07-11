@@ -525,6 +525,14 @@ Checkpoint:
 - Sales reports still use backend report data.
 - Destructive delete still requires typing `DELETE`.
 
+Implementation status:
+- **Completed.** The management shell now has responsive navigation, mobile logout access, clearer page labels, and consistent TouB POS branding.
+- Product, user, and stall mutation errors use shared alerts instead of native browser alerts; failed product/staff saves keep their editors open.
+- Staff rows, product filters, report controls, cashier sales metrics, and transaction ledger rows now adapt to mobile without horizontal overflow.
+- Dashboard/report typography uses the shared sans-serif system, and the shift-allocation placeholder now communicates future scope without internal implementation language.
+- The cashier WebSocket role guard was normalized as a supporting reliability fix discovered during UI-3.
+- Frontend lint/build passed, with only the existing non-blocking bundle-size warning.
+
 ### Phase UI-4: Responsive & Polish
 
 Goal:
@@ -542,6 +550,14 @@ Checkpoint:
 - Login, cashier, owner dashboard, product management, stall management, staff management, and reports are visually stable at target sizes.
 - No page requires browser refresh to show normal updates.
 - `npm run lint` and `npm run build` pass.
+
+Implementation status:
+- **Completed.** Browser checks covered 390px, 768px, 1024px, and 1280px across login, cashier, product, stall, staff, report, cart, and modal views.
+- Product management now uses cards at constrained tablet/laptop widths and switches to the complete table only when all columns and actions fit.
+- Shared dialogs support Escape, focus containment, and focus restoration; the terminal deregistration flow no longer uses a native browser confirmation.
+- Mobile development credentials no longer overlap login cards, failed cashier product images use a clean fallback, and global focus-visible styling covers custom controls.
+- Login, cashier, and management routes are lazy-loaded. The initial production chunk is about 283 KB, and the previous Vite bundle-size warning is resolved.
+- Frontend lint/build passed and browser checks reported no console errors or horizontal overflow.
 
 ## 7. Verification Checklist
 
@@ -649,4 +665,4 @@ Likely utility files:
 
 Recommended next decision:
 
-Phase UI-1 is complete. The next recommended UI phase is **Phase UI-2: Cashier POS Flow**, focused on cashier alerts, product grid polish, cart/payment modal clarity, and better loading/error/empty states.
+Phases UI-1 through UI-4 are complete. The next recommended step is **Phase 7C: Demo Stabilization & Polish**, focused on one final end-to-end demo script, presentation evidence, and a concise known-risks list.

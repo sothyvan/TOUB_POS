@@ -51,6 +51,7 @@ export default function KhqrPaymentModal({ isOpen, total, order, qrPayload, poll
   return (
     <ModalShell
       isOpen={isOpen}
+      onClose={onCancel}
       labelledBy="khqr-payment-title"
       panelClassName="bg-white rounded-3xl w-[min(94vw,520px)] max-h-[92svh] overflow-y-auto p-6 flex flex-col items-center text-center shadow-[0_24px_64px_rgba(0,0,0,0.24)] border border-ui-border"
     >

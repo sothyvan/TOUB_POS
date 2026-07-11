@@ -31,6 +31,16 @@ Update this file after every meaningful implementation change.
 - Phase 7B: Reporting Hardening — **COMPLETE** ✅
 - Phase UI-1: Design System Cleanup — **COMPLETE** ✅
 - Phase UI-2: Cashier POS Flow Redesign — **COMPLETE** ✅
+- Phase UI-3: Owner/Manager Screens — **COMPLETE** ✅
+- Phase UI-4: Responsive & Polish — **COMPLETE** ✅
+
+- **Implemented Owner/Manager reporting UX upgrade**:
+  - Kept Today, Week, and Month report presets and added a responsive custom date-range dialog backed by the existing validated `range=custom` report API.
+  - Replaced CSV export with a direct PDF report containing the selected date/filter context, backend summary totals, stall and cashier breakdowns, and transaction ledger rows.
+  - Loaded PDF dependencies only when export is requested so normal portal loading remains lean.
+  - Fixed the dashboard Hourly Revenue Breakdown to use the backend report's complete 24-hour buckets and added clear loading, error, and no-paid-sales states.
+  - Corrected report date-only response formatting so local calendar dates are not shifted backward by UTC conversion.
+  - Frontend lint, production build, and a jsPDF/AutoTable runtime smoke test pass.
 
 - **Implemented Phase UI-1 Design System Cleanup**:
   - Added shared frontend primitives: `Button`, `Alert`, `Badge`, `Switch`, `EmptyState`, and `LoadingState`.
@@ -52,6 +62,26 @@ Update this file after every meaningful implementation change.
   - UI-2 verification corrected narrow-phone product cards to use one column below 460px so touch-sized quantity controls are not clipped.
   - UI-2 verification made the global cart action return to Quick Sale and close the cart when entering My Orders, avoiding a no-op tablet/mobile cart button.
   - Verified frontend lint and production build; build still reports the existing non-blocking large bundle warning.
+
+- **Implemented Phase UI-3 Owner/Manager Screens**:
+  - Polished the management shell with clearer page titles, consistent TouB POS branding, responsive navigation, and mobile logout access.
+  - Replaced native product, user, and stall mutation alerts with shared inline feedback while preserving backend authorization and CRUD behavior.
+  - Kept product and staff editors open after failed saves so validation errors remain actionable.
+  - Made staff statistics, employee rows, product filters, report filters, cashier sales metrics, and transaction ledger rows responsive for desktop and mobile.
+  - Replaced technical shift-allocation placeholder language with a demo-ready future-scope empty state.
+  - Fixed the cashier WebSocket role guard to use normalized role values, restoring real-time cashier order and kitchen updates.
+  - Verified at 1440px desktop and 390px mobile with Playwright; checked dashboard, catalog, staff management, sales reports, ledger, mobile navigation, and horizontal overflow.
+
+- **Implemented Phase UI-4 Responsive & Polish**:
+  - Added route-level lazy loading for login, cashier, and management pages; the initial production chunk is now about 283 KB and the previous bundle-size warning is gone.
+  - Added shared modal keyboard behavior: Escape closes cancellable dialogs, Tab stays inside the active dialog, and focus returns to the triggering control.
+  - Replaced the final native terminal deregistration confirmation with the shared confirmation dialog.
+  - Added a global focus-visible fallback for buttons, links, inputs, selects, textareas, and custom interactive controls.
+  - Fixed mobile development credentials so they remain in document flow instead of overlapping login/register cards.
+  - Adjusted product management breakpoints so 768px and 1024px use responsive cards while 1280px uses the complete table without clipped actions.
+  - Added clean cashier product-image fallbacks for failed media URLs and aligned the Stall Management primary action with the shared TouB blue.
+  - Verified login, cashier catalog/cart/payment dialogs, dashboard, products, stalls, staff, reports, and destructive dialogs at 390px, 768px, 1024px, and 1280px with no horizontal overflow or browser console errors.
+  - Frontend lint and production build pass with no bundle-size warning.
 
 - **Implemented Phase 5.5 RBAC Hierarchy Cleanup**:
   - Finalized the active role hierarchy as `platform_admin`, `owner`, `manager`, and `cashier`.
@@ -165,7 +195,7 @@ Update this file after every meaningful implementation change.
 - **Implemented Phase 7B reporting hardening**:
   - Added `GET /api/reports/sales` for Owner/Manager sales reporting with backend-enforced same-business scoping.
   - Added date range, stall, and cashier filters plus backend-calculated revenue, payment mix, stall/cashier breakdowns, hourly revenue, and ledger rows.
-  - Wired the Owner/Manager Sales Reports screen to the backend report endpoint with loading/error states, auto-refresh, real CSV export, and backend report filters.
+  - Wired the Owner/Manager Sales Reports screen to the backend report endpoint with loading/error states, auto-refresh, direct PDF export, preset/custom date ranges, and backend report filters.
   - Removed remaining fake cashier status/prep-speed style reporting from the sales matrix and kept receipt viewing available from the transaction ledger.
   - Synchronized API docs, Swagger docs, raw SQL query examples, and architecture notes.
 
@@ -584,15 +614,10 @@ Update this file after every meaningful implementation change.
   - Keep cook authorization Telegram-only, and strengthen the Telegram cook identity model before production.
   - Decide whether failed Telegram dispatches need an automatic retry worker or if manual retry is enough for the final demo.
 
-- Phase UI-3 Owner/Manager Screens polish.
-  - Improve tables, management filters, destructive confirmations, empty states, and receipt viewing consistency.
-  - Review dashboard/report spacing and responsive behavior now that the cashier POS flow is polished.
-  - Keep shared UI primitives as the default building blocks for future admin/manager screen cleanup.
-
 - Phase 7C Demo Stabilization & Polish.
   - Manually test the Owner/Manager report filters against seeded and real orders.
-  - Review tablet/mobile spacing on dashboard, reports, and cashier live-order screens.
-  - Consider route-level code splitting for chart-heavy dashboard bundles if the production bundle warning becomes a concern.
+  - Run the final end-to-end demo script with real cash, KHQR, Telegram, receipt, and retry flows.
+  - Prepare presentation screenshots and a concise known-risks list for the final defense.
 
 - Future SaaS / Multi-Customer Platform Administration:
   - `platform_admin` now exists as a temporary API-only bootstrap role for creating business Owner accounts.

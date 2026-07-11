@@ -8,8 +8,11 @@ import {
   YAxis,
 } from 'recharts';
 import { money } from '../../utils/format';
+import Alert from '../ui/Alert';
+import EmptyState from '../ui/EmptyState';
+import LoadingState from '../ui/LoadingState';
 
-const HOURS = Array.from({ length: 15 }, (_, index) => index + 6);
+const HOURS = Array.from({ length: 24 }, (_, index) => index);
 
 function isToday(dateValue) {
   const date = new Date(dateValue);
@@ -43,8 +46,14 @@ function buildHourlyData(orders) {
   return slots;
 }
 
-export default function RevenueChart({ orders = [] }) {
-  const data = buildHourlyData(orders);
+export default function RevenueChart({ hourlyData = [], orders = [], loading = false, error = '' }) {
+  const data = hourlyData.length > 0
+    ? hourlyData.map((slot) => ({
+        hour: Number(slot.hour),
+        label: slot.label || formatHour(Number(slot.hour)),
+        revenue: Number(slot.revenue || 0),
+      }))
+    : buildHourlyData(orders);
   const total = data.reduce((sum, item) => sum + item.revenue, 0);
   const peak = data.reduce((best, item) => (
     item.revenue > best.revenue ? item : best
@@ -54,62 +63,78 @@ export default function RevenueChart({ orders = [] }) {
     <div className="w-full min-h-96 bg-white rounded-2xl shadow-[0px_1px_4px_0px_rgba(0,0,0,0.04)] outline outline-[0.80px] outline-offset-[-0.80px] outline-gray-200 flex flex-col justify-start items-start overflow-hidden">
       <div className="self-stretch px-5 py-4 border-b-[0.80px] border-gray-100 flex justify-between items-center gap-4 max-[640px]:items-start max-[640px]:flex-col">
         <div className="flex flex-col justify-start items-start">
-          <div className="text-gray-900 text-base font-bold font-['Inter'] leading-6">
+          <div className="text-gray-900 text-base font-bold font-sans leading-6">
             Hourly Revenue Breakdown
           </div>
-          <div className="pt-[3px] text-gray-400 text-xs font-normal font-['Inter'] leading-4">
+          <div className="pt-[3px] text-gray-400 text-xs font-normal font-sans leading-4">
             Today total {money(total)}{peak?.revenue > 0 ? ` · Peak ${peak.label} at ${money(peak.revenue)}` : ''}
           </div>
         </div>
-        <div className="px-3 py-1.5 bg-white rounded-lg outline outline-[0.80px] outline-offset-[-0.80px] outline-gray-200 text-center text-gray-700 text-xs font-semibold font-['Inter'] leading-5">
+        <div className="px-3 py-1.5 bg-white rounded-lg outline outline-[0.80px] outline-offset-[-0.80px] outline-gray-200 text-center text-gray-700 text-xs font-semibold font-sans leading-5">
           Today
         </div>
       </div>
 
       <div className="w-full flex-1 min-h-[280px] px-4 pt-5 pb-3">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 12, right: 16, left: 0, bottom: 8 }}>
-            <defs>
-              <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#003EC7" stopOpacity={0.22} />
-                <stop offset="90%" stopColor="#003EC7" stopOpacity={0.02} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid stroke="#F0F2F5" strokeDasharray="3 3" vertical={false} />
-            <XAxis
-              dataKey="label"
-              tick={{ fill: '#9ca3af', fontSize: 12, fontFamily: 'Inter' }}
-              tickLine={false}
-              axisLine={false}
-              interval={1}
-            />
-            <YAxis
-              tickFormatter={(value) => `$${value}`}
-              tick={{ fill: '#9ca3af', fontSize: 12, fontFamily: 'Inter' }}
-              tickLine={false}
-              axisLine={false}
-              width={48}
-            />
-            <Tooltip
-              formatter={(value) => [money(value), 'Revenue']}
-              labelFormatter={(label) => `${label} today`}
-              contentStyle={{
-                borderRadius: 12,
-                border: '1px solid #e5e7eb',
-                boxShadow: '0 8px 24px rgba(15,23,42,0.08)',
-                fontFamily: 'Inter',
-              }}
-            />
-            <Area
-              type="monotone"
-              dataKey="revenue"
-              stroke="#003EC7"
-              strokeWidth={2.5}
-              fill="url(#revenueFill)"
-              activeDot={{ r: 4, fill: '#003EC7' }}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+        {loading && hourlyData.length === 0 && orders.length === 0 ? (
+          <LoadingState className="h-full" label="Loading hourly revenue..." />
+        ) : error && hourlyData.length === 0 && orders.length === 0 ? (
+          <Alert variant="danger" className="mt-8">
+            {error}
+          </Alert>
+        ) : total === 0 ? (
+          <EmptyState
+            className="h-full border-0 bg-gray-50/70"
+            iconName="trendUp"
+            title="No paid sales today yet"
+            message="Revenue will appear here by hour after the first cash or KHQR payment is confirmed."
+          />
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={data} margin={{ top: 12, right: 16, left: 0, bottom: 8 }}>
+              <defs>
+                <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#003EC7" stopOpacity={0.22} />
+                  <stop offset="90%" stopColor="#003EC7" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke="#F0F2F5" strokeDasharray="3 3" vertical={false} />
+              <XAxis
+                dataKey="label"
+                tick={{ fill: '#9ca3af', fontSize: 11, fontFamily: 'Inter' }}
+                tickLine={false}
+                axisLine={false}
+                interval={2}
+              />
+              <YAxis
+                tickFormatter={(value) => `$${value}`}
+                tick={{ fill: '#9ca3af', fontSize: 12, fontFamily: 'Inter' }}
+                tickLine={false}
+                axisLine={false}
+                width={48}
+                allowDecimals={false}
+              />
+              <Tooltip
+                formatter={(value) => [money(value), 'Revenue']}
+                labelFormatter={(label) => `${label} today`}
+                contentStyle={{
+                  borderRadius: 12,
+                  border: '1px solid #e5e7eb',
+                  boxShadow: '0 8px 24px rgba(15,23,42,0.08)',
+                  fontFamily: 'Inter',
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="revenue"
+                stroke="#003EC7"
+                strokeWidth={2.5}
+                fill="url(#revenueFill)"
+                activeDot={{ r: 4, fill: '#003EC7' }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </div>
   );

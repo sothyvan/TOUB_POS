@@ -25,12 +25,14 @@ export default function OwnerPortalPage() {
     saveCategory, editCategory, deleteCategory, cancelCategoryEdit,
     saveProduct, editProduct, toggleProductAvailability, deleteProduct, cancelProductEdit,
     loading: productsLoading, error: productsError,
+    actionError: productsActionError, clearActionError: clearProductsActionError,
   } = useProducts(canManageMenu);
 
   const {
     users, userForm, setUserForm,
     saveUser, editUser, cancelUserEdit, toggleUserActive, deleteUser,
-    loading: usersLoading, error: usersError
+    loading: usersLoading, error: usersError,
+    actionError: usersActionError, clearActionError: clearUsersActionError,
   } = useUsers(canManageUsers, currentUser);
 
   const { orders, todaysOrders, todaysTotal, fetchOrders } =
@@ -124,8 +126,12 @@ export default function OwnerPortalPage() {
         categoryById={categoryById}
         productsLoading={productsLoading}
         productsError={productsError}
+        productsActionError={productsActionError}
+        clearProductsActionError={clearProductsActionError}
         usersLoading={usersLoading}
         usersError={usersError}
+        usersActionError={usersActionError}
+        clearUsersActionError={clearUsersActionError}
         todaysOrders={todaysOrders}
         todaysTotal={todaysTotal}
         onRetryTelegramDispatch={handleRetryTelegramDispatch}

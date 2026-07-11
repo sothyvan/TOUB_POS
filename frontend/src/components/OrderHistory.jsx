@@ -3,6 +3,7 @@ import { money } from '../utils/format';
 import Icon from './ui/Icon';
 import ReceiptModal from './ReceiptModal';
 import { useSalesReport } from '../hooks/useSalesReport';
+import DateRangeDialog from './reports/DateRangeDialog';
 
 const kitchenStatusConfig = {
   sent: {
@@ -101,21 +102,44 @@ const alertToneConfig = {
   },
 };
 
-function escapeCsv(value) {
-  const text = String(value ?? '');
-  if (/[",\n\r]/.test(text)) {
-    return `"${text.replace(/"/g, '""')}"`;
-  }
-  return text;
+function localDateValue(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatDateRange(startDate, endDate) {
+  if (!startDate || !endDate) return 'Custom dates';
+
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+  const formatter = new Intl.DateTimeFormat(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: start.getFullYear() === end.getFullYear() ? undefined : 'numeric',
+  });
+  const endFormatter = new Intl.DateTimeFormat(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+
+  if (startDate === endDate) return endFormatter.format(start);
+  return `${formatter.format(start)} - ${endFormatter.format(end)}`;
 }
 
 export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDispatch }) {
-  const [dateFilter, setDateFilter] = useState('today'); // 'today' | 'week' | 'month'
+  const today = localDateValue();
+  const [dateFilter, setDateFilter] = useState('today'); // 'today' | 'week' | 'month' | 'custom'
+  const [customDateRange, setCustomDateRange] = useState({ startDate: today, endDate: today });
+  const [isDateRangeOpen, setIsDateRangeOpen] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState('analytics'); // 'analytics' | 'ledger'
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStallId, setSelectedStallId] = useState('');
   const [selectedCashierId, setSelectedCashierId] = useState('');
   const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [retryingOrderId, setRetryingOrderId] = useState(null);
   const [kitchenRetryError, setKitchenRetryError] = useState('');
@@ -141,6 +165,8 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
     refetch: refetchReport,
   } = useSalesReport({
     range: dateFilter,
+    startDate: customDateRange.startDate,
+    endDate: customDateRange.endDate,
     stallId: selectedStallId,
     cashierId: selectedCashierId,
   });
@@ -177,6 +203,8 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
 
     // Start of month
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const customStart = new Date(`${customDateRange.startDate}T00:00:00`);
+    const customEnd = new Date(`${customDateRange.endDate}T23:59:59.999`);
 
     return allOrders.filter(order => {
       const orderDate = new Date(order.createdAt);
@@ -192,10 +220,12 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
         return orderDate >= startOfWeek;
       } else if (dateFilter === 'month') {
         return orderDate >= startOfMonth;
+      } else if (dateFilter === 'custom') {
+        return orderDate >= customStart && orderDate <= customEnd;
       }
       return true;
     });
-  }, [allOrders, dateFilter, selectedStallId, selectedCashierId]);
+  }, [allOrders, customDateRange, dateFilter, selectedStallId, selectedCashierId]);
 
   const filteredOrders = report?.orders || fallbackFilteredOrders;
 
@@ -285,32 +315,127 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
 
   const totalCompletedOrders = report?.summary?.paidOrders ?? paidFilteredOrders.length;
 
-  const handleExport = () => {
+  const handleExport = async () => {
     setExporting(true);
+    setExportError('');
     try {
-      const headers = ['Order ID', 'Date', 'Stall', 'Cashier', 'Payment', 'Status', 'Kitchen', 'Total'];
-      const rows = ledgerOrders.map((order) => [
-        order.orderNo,
-        new Date(order.createdAt).toLocaleString(),
-        order.stallName || '',
-        order.cashierName || '',
-        order.paymentMethod || '',
-        order.status || '',
-        getKitchenStatusConfig(order.kitchenStatus).label,
-        Number(order.total || 0).toFixed(2),
+      if (!report) {
+        throw new Error('Wait for the backend report to finish loading before exporting.');
+      }
+
+      const [{ jsPDF }, autoTableModule] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable'),
       ]);
-      const csv = [headers, ...rows]
-        .map((row) => row.map(escapeCsv).join(','))
-        .join('\n');
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `toub-sales-${dateFilter}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
+      const autoTable = autoTableModule.default;
+      const document = new jsPDF({ unit: 'pt', format: 'a4' });
+      const summary = report.summary || {};
+      const rangeLabel = formatDateRange(report.filters?.startDate, report.filters?.endDate);
+      const stallLabel = stallFilterOptions.find(
+        (stall) => Number(stall.id) === Number(selectedStallId)
+      )?.name || 'All stalls';
+      const cashierLabel = cashierFilterOptions.find(
+        (cashier) => Number(cashier.id) === Number(selectedCashierId)
+      )?.name || 'All cashiers';
+      const tableStyles = {
+        fontSize: 8,
+        cellPadding: 5,
+        textColor: [55, 65, 81],
+      };
+      const headStyles = {
+        fillColor: [0, 62, 199],
+        textColor: 255,
+        fontStyle: 'bold',
+      };
+
+      document.setTextColor(17, 24, 39);
+      document.setFontSize(20);
+      document.setFont('helvetica', 'bold');
+      document.text('TouB POS Sales Report', 40, 48);
+      document.setFontSize(9);
+      document.setFont('helvetica', 'normal');
+      document.setTextColor(107, 114, 128);
+      document.text(`Date range: ${rangeLabel}`, 40, 68);
+      document.text(`Filters: ${stallLabel} | ${cashierLabel}`, 40, 82);
+      document.text(`Generated: ${new Date().toLocaleString()}`, 40, 96);
+
+      autoTable(document, {
+        startY: 114,
+        head: [['Total revenue', 'Paid orders', 'Average order', 'Cash', 'KHQR']],
+        body: [[
+          money(summary.totalRevenue || 0),
+          String(summary.paidOrders || 0),
+          money(summary.averageOrderValue || 0),
+          `${summary.paymentMethods?.cash?.count || 0} / ${money(summary.paymentMethods?.cash?.revenue || 0)}`,
+          `${summary.paymentMethods?.khqr?.count || 0} / ${money(summary.paymentMethods?.khqr?.revenue || 0)}`,
+        ]],
+        styles: tableStyles,
+        headStyles,
+        theme: 'grid',
+      });
+
+      autoTable(document, {
+        startY: document.lastAutoTable.finalY + 18,
+        head: [['Stall', 'Paid orders', 'Revenue']],
+        body: report.byStall?.length
+          ? report.byStall.map((stall) => [stall.stallName, stall.orderCount, money(stall.revenue)])
+          : [['No paid stall sales in this range', '0', money(0)]],
+        styles: tableStyles,
+        headStyles,
+        theme: 'striped',
+      });
+
+      autoTable(document, {
+        startY: document.lastAutoTable.finalY + 18,
+        head: [['Cashier', 'Stall', 'Paid orders', 'Revenue', 'Average ticket']],
+        body: employeeEfficiency.length
+          ? employeeEfficiency.map((cashier) => [
+              cashier.name,
+              cashier.stallName,
+              cashier.ordersCount,
+              money(cashier.salesTotal),
+              money(cashier.averageTicket),
+            ])
+          : [['No paid cashier sales in this range', '-', '0', money(0), money(0)]],
+        styles: tableStyles,
+        headStyles,
+        theme: 'striped',
+      });
+
+      autoTable(document, {
+        startY: document.lastAutoTable.finalY + 18,
+        head: [['Order', 'Date and time', 'Stall', 'Cashier', 'Payment', 'Status', 'Total']],
+        body: filteredOrders.length
+          ? filteredOrders.map((order) => [
+              `#${order.orderNo}`,
+              new Date(order.createdAt).toLocaleString(),
+              order.stallName || '-',
+              order.cashierName || '-',
+              order.paymentMethod || '-',
+              order.status || '-',
+              money(order.total || 0),
+            ])
+          : [['No transactions in this range', '-', '-', '-', '-', '-', money(0)]],
+        styles: tableStyles,
+        headStyles,
+        theme: 'grid',
+        margin: { left: 32, right: 32 },
+      });
+
+      const pageCount = document.getNumberOfPages();
+      for (let page = 1; page <= pageCount; page += 1) {
+        document.setPage(page);
+        document.setFontSize(8);
+        document.setTextColor(156, 163, 175);
+        document.text(`TouB POS | Page ${page} of ${pageCount}`, 40, 816);
+      }
+
+      const fileStart = report.filters?.startDate || dateFilter;
+      const fileEnd = report.filters?.endDate;
+      const fileRange = fileEnd && fileEnd !== fileStart ? `${fileStart}-to-${fileEnd}` : fileStart;
+      document.save(`toub-sales-${fileRange}.pdf`);
+    } catch (error) {
+      setExportError(error.message || 'Unable to export this report as PDF.');
     } finally {
       setExporting(false);
     }
@@ -466,12 +591,12 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
     <div className="flex flex-col gap-5 h-full min-h-0">
       
       {/* Tab Switcher & Date Filters */}
-      <div className="flex items-center justify-between gap-4 bg-white p-3 rounded-2xl border border-[#f3f4f6] shrink-0">
-        <div className="flex items-center gap-1 bg-[#f3f4f6] p-1 rounded-xl w-fit">
+      <div className="flex items-center justify-between gap-4 bg-white p-3 rounded-2xl border border-[#f3f4f6] shrink-0 max-[900px]:flex-col max-[900px]:items-stretch">
+        <div className="flex items-center gap-1 bg-[#f3f4f6] p-1 rounded-xl w-fit max-[900px]:grid max-[900px]:w-full max-[900px]:grid-cols-2">
           <button
             type="button"
             onClick={() => setActiveSubTab('analytics')}
-            className={`cursor-pointer px-4 py-1.5 rounded-lg border-none text-[13px] font-bold fontFamily-['Inter'] transition-all ${
+            className={`cursor-pointer px-4 py-1.5 rounded-lg border-none text-[13px] font-bold font-sans transition-all max-[480px]:px-2 ${
               activeSubTab === 'analytics' ? 'bg-white text-[#003ec7] shadow-sm' : 'text-[#6b7280]'
             }`}
           >
@@ -480,7 +605,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
           <button
             type="button"
             onClick={() => setActiveSubTab('ledger')}
-            className={`cursor-pointer px-4 py-1.5 rounded-lg border-none text-[13px] font-bold fontFamily-['Inter'] transition-all ${
+            className={`cursor-pointer px-4 py-1.5 rounded-lg border-none text-[13px] font-bold font-sans transition-all max-[480px]:px-2 ${
               activeSubTab === 'ledger' ? 'bg-white text-[#003ec7] shadow-sm' : 'text-[#6b7280]'
             }`}
           >
@@ -488,11 +613,11 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
           </button>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap justify-end">
+        <div className="flex items-center gap-3 flex-wrap justify-end max-[900px]:grid max-[900px]:grid-cols-2 max-[900px]:justify-stretch">
           {/* Live indicator badge */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#f0fdf4] border border-[#dcfce7]">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#f0fdf4] border border-[#dcfce7] max-[900px]:col-span-2 max-[900px]:w-fit">
             <span className={`w-2 h-2 rounded-full ${reportLoading ? 'bg-amber-500' : 'bg-[#22c55e]'} animate-pulse`} />
-            <span style={{ fontSize: 11, fontWeight: 700, color: reportLoading ? '#b45309' : '#15803d', fontFamily: 'Inter' }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: reportLoading ? '#b45309' : '#15803d', fontFamily: 'Inter, sans-serif' }}>
               {reportLoading ? 'Loading report' : 'Backend report'}
             </span>
           </div>
@@ -500,7 +625,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
           <select
             value={selectedStallId}
             onChange={(event) => setSelectedStallId(event.target.value)}
-            className="h-9 rounded-xl border border-[#e5e7eb] bg-white px-3 text-[12px] font-bold text-[#374151] outline-none focus:border-[#003ec7]"
+            className="h-9 min-w-0 rounded-xl border border-[#e5e7eb] bg-white px-3 text-[12px] font-bold text-[#374151] outline-none focus:border-[#003ec7]"
           >
             <option value="">All Stalls</option>
             {stallFilterOptions.map((stall) => (
@@ -511,7 +636,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
           <select
             value={selectedCashierId}
             onChange={(event) => setSelectedCashierId(event.target.value)}
-            className="h-9 rounded-xl border border-[#e5e7eb] bg-white px-3 text-[12px] font-bold text-[#374151] outline-none focus:border-[#003ec7]"
+            className="h-9 min-w-0 rounded-xl border border-[#e5e7eb] bg-white px-3 text-[12px] font-bold text-[#374151] outline-none focus:border-[#003ec7]"
           >
             <option value="">All Cashiers</option>
             {cashierFilterOptions.map((cashier) => (
@@ -519,22 +644,48 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
             ))}
           </select>
 
-          <div className="flex items-center gap-1 bg-[#f3f4f6] p-1 rounded-xl">
+          <div className="flex items-center gap-1 bg-[#f3f4f6] p-1 rounded-xl max-[900px]:col-span-2 max-[900px]:grid max-[900px]:grid-cols-4 max-[520px]:grid-cols-2">
             {['today', 'week', 'month'].map((t) => (
               <button
                 key={t}
                 type="button"
                 onClick={() => setDateFilter(t)}
-                className={`cursor-pointer px-3.5 py-1.5 rounded-lg border-none text-[12px] font-extrabold uppercase tracking-wider fontFamily-['Inter'] transition-all ${
+                aria-pressed={dateFilter === t}
+                className={`cursor-pointer px-3.5 py-1.5 rounded-lg border-none text-[12px] font-extrabold uppercase tracking-wider font-sans transition-all ${
                   dateFilter === t ? 'bg-white text-[#003ec7] shadow-sm' : 'text-[#6b7280]'
                 }`}
               >
                 {t}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() => setIsDateRangeOpen(true)}
+              aria-pressed={dateFilter === 'custom'}
+              className={`cursor-pointer px-3.5 py-1.5 rounded-lg border-none text-[12px] font-extrabold uppercase tracking-wider font-sans transition-all ${
+                dateFilter === 'custom' ? 'bg-white text-[#003ec7] shadow-sm' : 'text-[#6b7280]'
+              }`}
+            >
+              Custom
+            </button>
           </div>
         </div>
       </div>
+
+      {dateFilter === 'custom' ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-blue-100 bg-blue-50 px-4 py-2.5 text-[12px] font-semibold text-blue-900">
+          <span>
+            Showing {formatDateRange(customDateRange.startDate, customDateRange.endDate)}
+          </span>
+          <button
+            type="button"
+            onClick={() => setIsDateRangeOpen(true)}
+            className="cursor-pointer rounded-lg border border-blue-200 bg-white px-3 py-1.5 font-extrabold text-blue-700 transition-colors hover:bg-blue-100"
+          >
+            Change dates
+          </button>
+        </div>
+      ) : null}
 
       {reportError && (
         <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-[12px] font-semibold text-red-700">
@@ -542,13 +693,19 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
         </div>
       )}
 
+      {exportError && (
+        <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-[12px] font-semibold text-red-700">
+          {exportError}
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl border border-[#f3f4f6] p-4 shadow-[0_4px_20px_rgba(0,0,0,0.02)] shrink-0">
-        <div className="flex items-center justify-between gap-4 mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
           <div>
-            <h3 className="m-0 text-[15px] font-extrabold text-[#111827] fontFamily-['Inter']">
+            <h3 className="m-0 text-[15px] font-extrabold text-[#111827] font-sans">
               Operations Watch
             </h3>
-            <p className="m-0 mt-0.5 text-[12px] text-[#9ca3af] fontFamily-['Inter']">
+            <p className="m-0 mt-0.5 text-[12px] text-[#9ca3af] font-sans">
               Live payment and kitchen handoff signals for the selected date range
             </p>
           </div>
@@ -606,8 +763,8 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
             <div className="bg-white p-5 rounded-2xl border border-[#f3f4f6] flex flex-col justify-between h-[180px] shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
               <div className="flex justify-between items-start">
                 <div>
-                  <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#6b7280', fontFamily: 'Inter' }}>Total Revenue</h4>
-                  <span className="block mt-1" style={{ fontSize: 28, fontWeight: 800, color: '#111827', fontFamily: 'Inter' }}>
+                  <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#6b7280', fontFamily: 'Inter, sans-serif' }}>Total Revenue</h4>
+                  <span className="block mt-1" style={{ fontSize: 28, fontWeight: 800, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
                     {money(totalRevenue)}
                   </span>
                 </div>
@@ -617,7 +774,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
               </div>
               
               <div className="flex items-center justify-between mt-auto">
-                <span className="text-[12px] text-[#9ca3af] fontFamily-['Inter']">
+                <span className="text-[12px] text-[#9ca3af] font-sans">
                   Backend-owned paid orders in this range
                 </span>
                 
@@ -641,8 +798,8 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
             <div className="bg-white p-5 rounded-2xl border border-[#f3f4f6] flex flex-col justify-between h-[180px] shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
               <div className="flex justify-between items-start">
                 <div>
-                  <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#6b7280', fontFamily: 'Inter' }}>Selling Stalls</h4>
-                  <span className="block mt-1" style={{ fontSize: 28, fontWeight: 800, color: '#111827', fontFamily: 'Inter' }}>
+                  <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#6b7280', fontFamily: 'Inter, sans-serif' }}>Selling Stalls</h4>
+                  <span className="block mt-1" style={{ fontSize: 28, fontWeight: 800, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
                     {activeStallNames.length}
                   </span>
                 </div>
@@ -665,7 +822,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
                 )}
               </div>
               
-              <div className="text-[12px] text-[#9ca3af] fontFamily-['Inter']">
+              <div className="text-[12px] text-[#9ca3af] font-sans">
                 Based on paid orders in the selected date range.
               </div>
             </div>
@@ -674,8 +831,8 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
             <div className="bg-white p-5 rounded-2xl border border-[#f3f4f6] flex flex-col justify-between h-[180px] shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
               <div className="flex justify-between items-start">
                 <div>
-                  <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#6b7280', fontFamily: 'Inter' }}>Payment Mix</h4>
-                  <span className="block mt-1" style={{ fontSize: 28, fontWeight: 800, color: '#111827', fontFamily: 'Inter' }}>
+                  <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#6b7280', fontFamily: 'Inter, sans-serif' }}>Payment Mix</h4>
+                  <span className="block mt-1" style={{ fontSize: 28, fontWeight: 800, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
                     {paymentBreakdown.cash.count + paymentBreakdown.khqr.count} Paid
                   </span>
                 </div>
@@ -700,12 +857,12 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
 
           {/* Cashier Sales Matrix */}
           <div className="bg-white rounded-2xl border border-[#f3f4f6] flex flex-col flex-1 min-h-0 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-[#f3f4f6]">
+            <div className="flex flex-wrap justify-between items-center gap-3 px-6 py-4 border-b border-[#f3f4f6] max-[640px]:px-4">
               <div>
-                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#111827', fontFamily: 'Inter' }}>
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
                   Cashier Sales Matrix
                 </h3>
-                <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af', fontFamily: 'Inter' }}>
+                <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}>
                   {employeeEfficiency.length} cashiers with paid sales · {totalCompletedOrders} paid orders
                 </p>
               </div>
@@ -714,10 +871,10 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
                 <button
                   type="button"
                   onClick={handleExport}
-                  disabled={exporting}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#e5e7eb] bg-white text-[12px] font-bold text-[#6b7280] cursor-pointer hover:bg-gray-50 active:scale-95 transition-all"
+                  disabled={exporting || reportLoading || !report}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#e5e7eb] bg-white text-[12px] font-bold text-[#6b7280] cursor-pointer hover:bg-gray-50 active:scale-95 transition-all disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {exporting ? 'Exporting...' : 'Export'}
+                  {exporting ? 'Creating PDF...' : 'Export PDF'}
                 </button>
                 <button
                   type="button"
@@ -731,7 +888,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
             </div>
 
             {/* Table Headers */}
-            <div className="flex items-center px-6 py-2.5 bg-[#f9fafb] border-b border-[#f3f4f6] text-[11px] font-bold text-[#9ca3af] tracking-wider uppercase">
+            <div className="flex items-center px-6 py-2.5 bg-[#f9fafb] border-b border-[#f3f4f6] text-[11px] font-bold text-[#9ca3af] tracking-wider uppercase max-[900px]:hidden">
               <span className="flex-[2] min-w-[200px]">Employee Name</span>
               <span className="flex-1">Assigned Stall</span>
               <span className="flex-1 text-center">Orders Completed</span>
@@ -747,8 +904,8 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
                   <span className="text-[13px] font-medium">No paid cashier sales in this range</span>
                 </div>
               ) : employeeEfficiency.map((emp) => (
-                <div key={emp.name} className="flex items-center px-6 py-3.5 border-b border-[#f9fafb] hover:bg-[#fafbff] transition-colors">
-                  <div className="flex-[2] min-w-[200px] flex items-center gap-3">
+                <div key={emp.name} className="flex items-center px-6 py-3.5 border-b border-[#f9fafb] hover:bg-[#fafbff] transition-colors max-[900px]:grid max-[900px]:grid-cols-2 max-[900px]:gap-3 max-[640px]:px-4">
+                  <div className="flex-[2] min-w-[200px] flex items-center gap-3 max-[900px]:col-span-2 max-[900px]:min-w-0">
                     <div className="w-[36px] h-[36px] rounded-full bg-[#eef2ff] text-[#003ec7] flex items-center justify-center font-bold text-[12px]">
                       {emp.name.substring(0, 2).toUpperCase()}
                     </div>
@@ -758,17 +915,17 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
                     </div>
                   </div>
 
-                  <span className="flex-1 text-[13px] font-medium text-[#374151]">{emp.stallName}</span>
+                  <span className="flex-1 text-[13px] font-medium text-[#374151]"><span className="hidden text-[10px] uppercase text-[#9ca3af] max-[900px]:block">Stall</span>{emp.stallName}</span>
                   
-                  <span className="flex-1 text-center text-[13px] font-semibold text-[#111827]">
+                  <span className="flex-1 text-center text-[13px] font-semibold text-[#111827] max-[900px]:text-left"><span className="hidden text-[10px] uppercase text-[#9ca3af] max-[900px]:block">Orders</span>
                     {emp.ordersCount} Orders
                   </span>
                   
-                  <span className="flex-1 text-center text-[13px] font-extrabold text-[#111827]">
+                  <span className="flex-1 text-center text-[13px] font-extrabold text-[#111827] max-[900px]:text-left"><span className="hidden text-[10px] uppercase text-[#9ca3af] max-[900px]:block">Sales</span>
                     {money(emp.salesTotal)}
                   </span>
 
-                  <span className="flex-1 text-center text-[13px] font-extrabold text-[#111827]">
+                  <span className="flex-1 text-center text-[13px] font-extrabold text-[#111827] max-[900px]:text-left"><span className="hidden text-[10px] uppercase text-[#9ca3af] max-[900px]:block">Avg ticket</span>
                     {money(emp.averageTicket)}
                   </span>
                 </div>
@@ -776,11 +933,11 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
             </div>
 
             {/* Table Footer */}
-            <div className="flex justify-between items-center px-6 py-4 bg-[#fafafa] border-t border-[#f3f4f6]">
+            <div className="flex flex-wrap justify-between items-center gap-3 px-6 py-4 bg-[#fafafa] border-t border-[#f3f4f6] max-[640px]:px-4">
               <span className="text-[12px] text-[#9ca3af]">
                 Showing {employeeEfficiency.length} of {employeeEfficiency.length} employees · Updated just now
               </span>
-              <div className="flex gap-4 text-[12px] font-bold text-[#374151]">
+              <div className="flex flex-wrap gap-4 text-[12px] font-bold text-[#374151]">
                 <span>Total Orders: <span className="text-[#003ec7] font-black">{totalCompletedOrders}</span></span>
                 <span>Total Sales: <span className="text-[#003ec7] font-black">{money(totalRevenue)}</span></span>
                 <span>Cashiers: <span className="text-[#003ec7] font-black">{employeeEfficiency.length}</span></span>
@@ -793,18 +950,18 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
         /* Transaction Ledger sub-tab */
         <div className="bg-white rounded-2xl border border-[#f3f4f6] flex flex-col flex-1 min-h-0 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
           <div className="border-b border-[#f3f4f6]">
-            <div className="flex justify-between items-center px-6 py-4">
+            <div className="flex flex-wrap justify-between items-center gap-3 px-6 py-4 max-[640px]:px-4">
               <div>
-                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#111827', fontFamily: 'Inter' }}>
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
                   Transaction Ledger
                 </h3>
-                <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af', fontFamily: 'Inter' }}>
+                <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}>
                   Review, filter and track individual sales receipts
                 </p>
               </div>
 
               {/* Search Input */}
-              <div className="relative">
+              <div className="relative max-[640px]:w-full">
                 <Icon name="search" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9ca3af]" />
                 <input
                   type="text"
@@ -814,7 +971,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
                     setActiveOperationalFilter(null);
                     setSearchQuery(e.target.value);
                   }}
-                  className="pl-9 pr-4 py-2 border border-[#e5e7eb] rounded-xl text-[13px] outline-none w-[280px]"
+                  className="pl-9 pr-4 py-2 border border-[#e5e7eb] rounded-xl text-[13px] outline-none w-[280px] max-[640px]:w-full"
                   onFocus={(e) => e.target.style.borderColor = '#003ec7'}
                   onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
                 />
@@ -844,7 +1001,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
           </div>
 
           {/* Ledger Table Header */}
-          <div className="flex items-center px-6 py-2.5 bg-[#f9fafb] border-b border-[#f3f4f6] text-[11px] font-bold text-[#9ca3af] tracking-wider uppercase">
+          <div className="flex items-center px-6 py-2.5 bg-[#f9fafb] border-b border-[#f3f4f6] text-[11px] font-bold text-[#9ca3af] tracking-wider uppercase max-[900px]:hidden">
             <span className="flex-1">Order ID</span>
             <span className="flex-1">Date &amp; Time</span>
             <span className="flex-[1.35]">Stall / Cart</span>
@@ -864,13 +1021,13 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
               </div>
             ) : (
               ledgerOrders.map((order) => (
-                <div key={order.id} className="flex items-center px-6 py-4 border-b border-[#f9fafb] hover:bg-[#fafbff] transition-colors">
+                <div key={order.id} className="flex items-center px-6 py-4 border-b border-[#f9fafb] hover:bg-[#fafbff] transition-colors max-[900px]:grid max-[900px]:grid-cols-2 max-[900px]:gap-3 max-[640px]:px-4">
                   <span className="flex-1 text-[13px] font-bold text-[#003ec7]">#{order.orderNo}</span>
-                  <span className="flex-1 text-[13px] text-[#6b7280]">{new Date(order.createdAt).toLocaleString()}</span>
-                  <span className="flex-[1.35] text-[13px] text-[#374151] font-semibold">{order.stallName || 'Back Office'}</span>
-                  <span className="flex-1 text-[13px] text-[#374151]">{order.cashierName}</span>
+                  <span className="flex-1 text-[13px] text-[#6b7280] max-[900px]:text-right">{new Date(order.createdAt).toLocaleString()}</span>
+                  <span className="flex-[1.35] text-[13px] text-[#374151] font-semibold"><span className="hidden text-[10px] uppercase text-[#9ca3af] max-[900px]:block">Stall</span>{order.stallName || 'Back Office'}</span>
+                  <span className="flex-1 text-[13px] text-[#374151]"><span className="hidden text-[10px] uppercase text-[#9ca3af] max-[900px]:block">Cashier</span>{order.cashierName}</span>
                   
-                  <div className="flex-[0.8] flex justify-center">
+                  <div className="flex-[0.8] flex justify-center max-[900px]:justify-start">
                     <span 
                       className={`inline-flex px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wide border ${
                         order.paymentMethod === 'KHQR' 
@@ -882,17 +1039,17 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
                     </span>
                   </div>
 
-                  <div className="flex-1 flex justify-center">
+                  <div className="flex-1 flex justify-center max-[900px]:justify-start">
                     <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wide border ${getKitchenStatusConfig(order.kitchenStatus).className}`}>
                       {getKitchenStatusConfig(order.kitchenStatus).label}
                     </span>
                   </div>
 
-                  <span className="flex-1 text-right text-[14px] font-extrabold text-[#111827]">
+                  <span className="flex-1 text-right text-[14px] font-extrabold text-[#111827] max-[900px]:text-left"><span className="hidden text-[10px] uppercase text-[#9ca3af] max-[900px]:block">Total</span>
                     {money(order.total)}
                   </span>
 
-                  <div className="flex-[1.3] flex justify-end gap-2">
+                  <div className="flex-[1.3] flex justify-end gap-2 max-[900px]:justify-start">
                     <button
                       type="button"
                       onClick={() => handleViewReceipt(order)}
@@ -926,6 +1083,20 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
         activeReceipt={activeReceipt}
         onClose={() => setActiveReceipt(null)}
       />
+
+      {isDateRangeOpen ? (
+        <DateRangeDialog
+          isOpen
+          initialStartDate={customDateRange.startDate}
+          initialEndDate={customDateRange.endDate}
+          onClose={() => setIsDateRangeOpen(false)}
+          onApply={(range) => {
+            setCustomDateRange(range);
+            setDateFilter('custom');
+            setIsDateRangeOpen(false);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import Icon from './Icon';
 
 const sizeClasses = {
@@ -20,6 +21,60 @@ export default function ModalShell({
   showCloseButton = false,
   size,
 }) {
+  const panelRef = useRef(null);
+  const closeHandlersRef = useRef({ onClose, onBackdropClick });
+
+  useEffect(() => {
+    closeHandlersRef.current = { onClose, onBackdropClick };
+  }, [onBackdropClick, onClose]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    const previouslyFocused = document.activeElement;
+    const panel = panelRef.current;
+    panel?.focus({ preventScroll: true });
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        const closeDialog = closeHandlersRef.current.onClose || closeHandlersRef.current.onBackdropClick;
+        if (closeDialog) {
+          event.preventDefault();
+          closeDialog();
+        }
+        return;
+      }
+
+      if (event.key !== 'Tab' || !panel) return;
+      const focusable = Array.from(panel.querySelectorAll(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+      ));
+      if (focusable.length === 0) {
+        event.preventDefault();
+        panel.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      if (previouslyFocused instanceof HTMLElement) {
+        previouslyFocused.focus({ preventScroll: true });
+      }
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const resolvedPanelClass = size ? sizeClasses[size] || sizeClasses.md : '';
@@ -38,6 +93,8 @@ export default function ModalShell({
         />
       ) : null}
       <div
+        ref={panelRef}
+        tabIndex={-1}
         className={`relative animate-in fade-in zoom-in-95 duration-200 ${resolvedPanelClass} ${panelClassName}`}
         role="dialog"
         aria-modal="true"

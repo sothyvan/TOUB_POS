@@ -43,6 +43,7 @@ export default function ConfirmDialog({
   return (
     <ModalShell
       isOpen={isOpen}
+      onClose={onCancel}
       labelledBy={titleId}
       overlayClassName={overlayClassName}
       panelClassName={`${styles.panel} ${panelClassName}`}

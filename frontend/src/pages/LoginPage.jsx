@@ -6,6 +6,7 @@ import { getPermissions } from '../utils/permissions';
 import { apiRequest, authApi } from '../services/apiClient';
 import { useAuth } from '../auth/useAuth';
 import LoginScreen from '../components/LoginScreen';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ export default function LoginPage() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [typedPin, setTypedPin] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [showDeregisterConfirm, setShowDeregisterConfirm] = useState(false);
   
   const [activeCashiers, setActiveCashiers] = useState([]);
   const [ownerToken, setOwnerToken] = useState(null);
@@ -148,19 +150,21 @@ export default function LoginPage() {
   };
 
   const handleDeregister = () => {
-    if (confirm('Are you sure you want to deregister this terminal? You will need owner or manager credentials to register it again.')) {
-      // Clear synchronously to prevent race conditions
-      localStorage.removeItem('toub-device-token');
-      localStorage.removeItem('toub-device-stall');
-      localStorage.removeItem('toub-device-registered');
+    setShowDeregisterConfirm(true);
+  };
 
-      setDeviceRegistered(false);
-      setDeviceToken(null);
-      setLoginMode('management');
-      setFlowStep('register');
-      setSelectedUser(null);
-      setActiveCashiers([]);
-    }
+  const confirmDeregister = () => {
+    localStorage.removeItem('toub-device-token');
+    localStorage.removeItem('toub-device-stall');
+    localStorage.removeItem('toub-device-registered');
+
+    setDeviceRegistered(false);
+    setDeviceToken(null);
+    setLoginMode('management');
+    setFlowStep('register');
+    setSelectedUser(null);
+    setActiveCashiers([]);
+    setShowDeregisterConfirm(false);
   };
 
   // Cashier profile tap in Step 2
@@ -222,7 +226,8 @@ export default function LoginPage() {
   }, [flowStep]);
 
   return (
-    <LoginScreen
+    <>
+      <LoginScreen
       loginMode={loginMode}
       setLoginMode={setLoginMode}
       flowStep={flowStep}
@@ -243,6 +248,18 @@ export default function LoginPage() {
       availableStalls={availableStalls}
       onRegisterDevice={handleRegisterDevice}
       onCancelRegistration={handleCancelRegistration}
-    />
+      />
+      <ConfirmDialog
+        isOpen={showDeregisterConfirm}
+        size="compact"
+        title="Deregister this terminal?"
+        message="Owner or manager credentials will be required before cashiers can use this terminal again."
+        cancelTone="secondary"
+        confirmTone="danger"
+        confirmLabel="Deregister"
+        onCancel={() => setShowDeregisterConfirm(false)}
+        onConfirm={confirmDeregister}
+      />
+    </>
   );
 }

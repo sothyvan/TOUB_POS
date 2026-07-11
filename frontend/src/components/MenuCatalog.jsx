@@ -7,6 +7,7 @@ import FormSelect from './ui/FormSelect';
 import StatusBadge from './ui/StatusBadge';
 import TabPills from './ui/TabPills';
 import Switch from './ui/Switch';
+import Alert from './ui/Alert';
 import { api } from '../services/api';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 
@@ -44,18 +45,18 @@ function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete 
 
   return (
     <div
-      className={`relative flex flex-col md:flex-row md:items-center gap-0 md:gap-4 cursor-pointer transition-all duration-200 rounded-2xl md:rounded-none border border-gray-200 md:border-0 md:border-b md:border-b-gray-50 bg-white md:bg-transparent overflow-hidden ${isSelected ? 'md:bg-indigo-50/50 border-indigo-200 shadow-sm ring-2 ring-indigo-500/20' : 'hover:shadow-lg md:hover:shadow-none hover:-translate-y-0.5 md:hover:translate-y-0 shadow-sm md:shadow-none'}`}
+      className={`relative flex flex-col min-[1200px]:flex-row min-[1200px]:items-center gap-0 min-[1200px]:gap-4 cursor-pointer transition-all duration-200 rounded-2xl min-[1200px]:rounded-none border border-gray-200 min-[1200px]:border-0 min-[1200px]:border-b min-[1200px]:border-b-gray-50 bg-white min-[1200px]:bg-transparent overflow-hidden ${isSelected ? 'min-[1200px]:bg-indigo-50/50 border-indigo-200 shadow-sm ring-2 ring-indigo-500/20' : 'hover:shadow-lg min-[1200px]:hover:shadow-none hover:-translate-y-0.5 min-[1200px]:hover:translate-y-0 shadow-sm min-[1200px]:shadow-none'}`}
       style={{
         padding: '0', // Mobile relies on internal padding, desktop uses custom md: padding class
         background: isSelected ? '#f5f3ff' : undefined,
       }}
       onClick={() => onEdit(product)}
     >
-      <div className="md:hidden absolute top-3 left-3 z-10">
+      <div className="min-[1200px]:hidden absolute top-3 left-3 z-10">
         <StatusBadge active={product.available} activeLabel="In Stock" inactiveLabel="Out of Stock" className="shadow-sm" />
       </div>
 
-      <div className="md:hidden flex items-center justify-center absolute top-3 right-3 z-10" ref={menuRef}>
+      <div className="min-[1200px]:hidden flex items-center justify-center absolute top-3 right-3 z-10" ref={menuRef}>
         <button 
           type="button" 
           onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
@@ -77,20 +78,20 @@ function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete 
         )}
       </div>
 
-      <div className="flex flex-col md:flex-row md:items-center gap-0 md:gap-4 w-full h-full md:px-5 md:py-3">
+      <div className="flex flex-col min-[1200px]:flex-row min-[1200px]:items-center gap-0 min-[1200px]:gap-4 w-full h-full min-[1200px]:px-5 min-[1200px]:py-3">
         {/* Thumbnail */}
-        <div className="w-full aspect-[4/3] md:aspect-auto md:w-[40px] md:h-10 shrink-0 md:rounded-[9px] overflow-hidden border-b border-gray-100 md:border md:border-gray-100 bg-gray-50">
+        <div className="w-full aspect-[4/3] min-[1200px]:aspect-auto min-[1200px]:w-[40px] min-[1200px]:h-10 shrink-0 min-[1200px]:rounded-[9px] overflow-hidden border-b border-gray-100 min-[1200px]:border min-[1200px]:border-gray-100 bg-gray-50">
           {shouldShowImage
             ? <img src={product.image} alt={product.name} className="w-full h-full object-cover" onError={() => setFailedImage(product.image)} />
             : <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-gray-400">
-                <Icon name="product" className="w-6 h-6 md:hidden" strokeWidth={1.5} />
-                <span className="text-[11px] md:text-[9px] font-bold tracking-widest md:tracking-normal">IMG</span>
+                <Icon name="product" className="w-6 h-6 min-[1200px]:hidden" strokeWidth={1.5} />
+                <span className="text-[11px] min-[1200px]:text-[9px] font-bold tracking-widest min-[1200px]:tracking-normal">IMG</span>
               </div>
           }
         </div>
 
         {/* Info Area */}
-        <div className="flex flex-col md:flex-row md:items-center gap-1.5 md:gap-4 p-3.5 md:p-0 flex-1 min-w-0 bg-white">
+        <div className="flex flex-col min-[1200px]:flex-row min-[1200px]:items-center gap-1.5 min-[1200px]:gap-4 p-3.5 min-[1200px]:p-0 flex-1 min-w-0 bg-white">
           {/* Name */}
           <div className="flex-1 min-w-[200px]">
             <p className="truncate" style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
@@ -106,14 +107,14 @@ function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete 
           </div>
 
           {/* Category */}
-          <div className="hidden md:block w-[90px] shrink-0">
+          <div className="hidden min-[1200px]:block w-[90px] shrink-0">
             <span style={{ fontSize: 12, fontWeight: 500, color: '#6b7280', fontFamily: 'Inter, sans-serif' }}>
               {category?.name ?? '—'}
             </span>
           </div>
 
           {/* Price USD + KHR */}
-          <div className="w-[110px] shrink-0 flex items-center justify-between md:block">
+          <div className="w-[110px] shrink-0 flex items-center justify-between min-[1200px]:block">
             <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
               {money(product.price)}
             </p>
@@ -123,12 +124,12 @@ function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete 
           </div>
 
           {/* Status badge */}
-          <div className="hidden md:block w-[90px] shrink-0">
+          <div className="hidden min-[1200px]:block w-[90px] shrink-0">
             <StatusBadge active={product.available} activeLabel="In Stock" inactiveLabel="Out of Stock" />
           </div>
 
           {/* Actions */}
-          <div className="hidden md:flex items-center gap-1 w-[80px] shrink-0" onClick={e => e.stopPropagation()}>
+          <div className="hidden min-[1200px]:flex items-center gap-1 w-[80px] shrink-0" onClick={e => e.stopPropagation()}>
             <button type="button" onClick={() => onEdit(product)}
               className="flex items-center gap-1 cursor-pointer border-0 bg-transparent hover:opacity-70 transition-all px-1 py-0.5">
               <Icon name="edit" className="w-3 h-3" style={{ color: '#003ec7' }} strokeWidth={2} />
@@ -148,7 +149,7 @@ function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete 
 }
 
 // ── Editor panel ──────────────────────────────────────────────────────────────
-function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsError, onSave, onCancel, isNew }) {
+function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsError, onSave, onCancel, isNew, actionError }) {
   const [uploadProgress, setUploadProgress] = useState(null);
   const [uploadError, setUploadError] = useState('');
   const [isUploading, setIsUploading] = useState(false);
@@ -186,7 +187,7 @@ function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsE
   };
 
   return (
-    <div className="flex flex-col bg-white rounded-2xl overflow-hidden h-full border border-[#e5e7eb] shadow-2xl md:shadow-none w-full md:min-w-[340px] md:max-w-[465px]">
+    <div className="flex flex-col bg-white rounded-2xl overflow-hidden h-full border border-[#e5e7eb] shadow-2xl min-[1200px]:shadow-none w-full min-[1200px]:min-w-[340px] min-[1200px]:max-w-[465px]">
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-[#f3f4f6]" style={{ minHeight: 80 }}>
         <div>
@@ -207,6 +208,7 @@ function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsE
       {/* Scrollable body */}
       <form onSubmit={handleSave} className="flex-1 overflow-y-auto flex flex-col">
         <div className="flex flex-col gap-4.5 p-5">
+          {actionError && <Alert variant="danger">{actionError}</Alert>}
 
           {/* Product Photo */}
           <div className="grid gap-1.5">
@@ -448,6 +450,8 @@ export default function MenuCatalog({
   onCancelCategory,
   loading,
   error,
+  actionError,
+  clearActionError,
 }) {
   const [subTab, setSubTab]         = useState('products');
   const [search, setSearch]         = useState('');
@@ -508,6 +512,7 @@ export default function MenuCatalog({
   }, [products, search, categoryFilter, stallFilter, statusFilter]);
 
   const openEditor = (product) => {
+    clearActionError?.();
     setEditing({
       ...product,
       stallIds: product.stallIds || (product.stallId ? [Number(product.stallId)] : [])
@@ -516,15 +521,16 @@ export default function MenuCatalog({
   };
 
   const openNew = () => {
+    clearActionError?.();
     const blank = emptyForm();
     setEditing(blank);
     setProductForm(blank);
   };
 
-  const handleSave = (formData) => {
+  const handleSave = async (formData) => {
     setProductForm(formData);
-    onSaveProduct(formData);
-    setEditing(null);
+    const saved = await onSaveProduct(formData);
+    if (saved) setEditing(null);
   };
 
   const handleCancel = () => {
@@ -543,6 +549,7 @@ export default function MenuCatalog({
       <div className="flex flex-col gap-4">
         {/* Tab pills */}
         <TabPills tabs={TABS} activeId={subTab} onChange={setSubTab} className="w-fit" />
+        {actionError && <Alert variant="danger">{actionError}</Alert>}
         <CategoryOwner
           categoryForm={categoryForm}
           setCategoryForm={setCategoryForm}
@@ -562,12 +569,13 @@ export default function MenuCatalog({
   // ── Products tab (Figma layout) ───────────────────────────────────────────
   return (
     <div className="flex flex-col gap-4 h-full min-h-0">
+      {actionError && <Alert variant="danger">{actionError}</Alert>}
       {/* Tab pills + Search bar + Add button */}
-      <div className="flex items-center gap-3 shrink-0">
+      <div className="flex flex-wrap items-center gap-3 shrink-0">
         <TabPills tabs={TABS} activeId={subTab} onChange={setSubTab} className="w-fit" />
 
         {/* Search */}
-        <div className="flex-1 relative">
+        <div className="min-w-[220px] flex-1 relative max-[640px]:order-3 max-[640px]:basis-full">
           <Icon name="search" className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9ca3af]" strokeWidth={2} />
           <input
             type="text" placeholder="Search products..."
@@ -612,11 +620,11 @@ export default function MenuCatalog({
             </div>
 
             {/* Filters */}
-            <div className="flex items-center gap-2">
+            <div className="grid w-full grid-cols-3 gap-2 max-[640px]:grid-cols-1">
               <select
                 value={categoryFilter}
                 onChange={e => setCategoryFilter(e.target.value)}
-                className="border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 bg-white h-8 px-2 cursor-pointer focus:border-[#003ec7] outline-none"
+                className="h-9 min-w-0 w-full cursor-pointer rounded-lg border border-gray-200 bg-white px-2 text-xs font-semibold text-gray-700 outline-none focus:border-[#003ec7]"
               >
                 <option value="">All Categories</option>
                 {categories.map(c => (
@@ -627,7 +635,7 @@ export default function MenuCatalog({
               <select
                 value={stallFilter}
                 onChange={e => setStallFilter(e.target.value)}
-                className="border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 bg-white h-8 px-2 cursor-pointer focus:border-[#003ec7] outline-none"
+                className="h-9 min-w-0 w-full cursor-pointer rounded-lg border border-gray-200 bg-white px-2 text-xs font-semibold text-gray-700 outline-none focus:border-[#003ec7]"
               >
                 <option value="">All Stalls</option>
                 {stalls.map(s => (
@@ -638,7 +646,7 @@ export default function MenuCatalog({
               <select
                 value={statusFilter}
                 onChange={e => setStatusFilter(e.target.value)}
-                className="border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 bg-white h-8 px-2 cursor-pointer focus:border-[#003ec7] outline-none"
+                className="h-9 min-w-0 w-full cursor-pointer rounded-lg border border-gray-200 bg-white px-2 text-xs font-semibold text-gray-700 outline-none focus:border-[#003ec7]"
               >
                 <option value="">All Statuses</option>
                 <option value="available">In Stock</option>
@@ -648,7 +656,7 @@ export default function MenuCatalog({
           </div>
 
           {/* Column headers */}
-          <div className="hidden md:flex items-center gap-4 px-5 py-2 border-b border-[#f3f4f6] bg-[#fafafa]">
+          <div className="hidden min-[1200px]:flex items-center gap-4 px-5 py-2 border-b border-[#f3f4f6] bg-[#fafafa]">
             <span className="w-[40px] shrink-0 text-[11px] font-bold text-gray-400 uppercase tracking-wider font-sans">Photo</span>
             <span className="flex-1 min-w-[200px] text-[11px] font-bold text-gray-400 uppercase tracking-wider font-sans">Name</span>
             <span className="w-[90px] shrink-0 text-[11px] font-bold text-gray-400 uppercase tracking-wider font-sans">Category</span>
@@ -658,7 +666,7 @@ export default function MenuCatalog({
           </div>
 
           {/* Rows */}
-          <div className="flex-1 overflow-y-auto p-4 md:p-0">
+          <div className="flex-1 overflow-y-auto p-4 min-[1200px]:p-0">
             {loading ? (
               <div className="flex flex-col items-center justify-center h-40 gap-2 text-[#9ca3af]">
                 <span style={{ fontSize: 13, fontFamily: 'Inter, sans-serif' }} className="animate-pulse">Loading products...</span>
@@ -669,7 +677,7 @@ export default function MenuCatalog({
                 <span style={{ fontSize: 13, fontFamily: 'Inter, sans-serif' }}>No products found</span>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:flex md:flex-col gap-4 md:gap-0">
+              <div className="grid grid-cols-2 sm:grid-cols-3 min-[1200px]:flex min-[1200px]:flex-col gap-4 min-[1200px]:gap-0">
                 {filtered.map(product => (
                   <ProductRow
                     key={product.id}
@@ -690,8 +698,8 @@ export default function MenuCatalog({
         {/* Right — editor panel (shown when editing) */}
         {editingProduct !== null && (
           <>
-            <div className="md:hidden fixed inset-0 z-40 bg-gray-900/40 backdrop-blur-sm" onClick={handleCancel} />
-            <div className="fixed md:static inset-x-4 top-16 bottom-4 md:inset-auto z-50 md:z-auto">
+            <div className="min-[1200px]:hidden fixed inset-0 z-40 bg-gray-900/40 backdrop-blur-sm" onClick={handleCancel} />
+            <div className="fixed min-[1200px]:static inset-x-4 top-16 bottom-4 min-[1200px]:inset-auto z-50 min-[1200px]:z-auto">
               <EditorPanel
                 form={editingProduct}
                 setForm={setEditing}
@@ -702,6 +710,7 @@ export default function MenuCatalog({
                 onSave={handleSave}
                 onCancel={handleCancel}
                 isNew={!editingProduct.id}
+                actionError={actionError}
               />
             </div>
           </>

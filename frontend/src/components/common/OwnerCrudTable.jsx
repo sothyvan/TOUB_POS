@@ -43,8 +43,8 @@ export default function OwnerCrudTable({
 
   return (
     <div className="w-full">
-      <div className="border border-brand-border rounded-3xl bg-brand-card shadow-[0_12px_36px_rgba(52,45,35,0.04)] p-6 grid gap-2">
-        <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-2">
+      <div className="border border-brand-border rounded-2xl bg-brand-card shadow-[0_12px_36px_rgba(52,45,35,0.04)] p-6 max-[640px]:p-4 grid gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-3 mb-2">
           <div className="flex items-center gap-3">
             <h3 className="m-0 text-brand-dark text-lg font-black tracking-tight">{title}</h3>
             {loading && <LoadingState label="Loading..." size="sm" className="text-xs" />}
@@ -67,9 +67,9 @@ export default function OwnerCrudTable({
         )}
 
         {items.map((item) => (
-          <div key={item.id} className="py-4.5 px-0 border-t border-gray-100 grid grid-cols-[minmax(0,1fr)_auto] gap-4 items-center first-of-type:border-t-0">
+          <div key={item.id} className="py-4.5 px-0 border-t border-gray-100 grid grid-cols-[minmax(0,1fr)_auto] gap-4 items-center first-of-type:border-t-0 max-[640px]:grid-cols-1">
             {renderItem(item)}
-            <div className="flex items-center gap-2 max-[768px]:justify-start">
+            <div className="flex items-center gap-2 max-[640px]:justify-end">
               <button
                 type="button"
                 onClick={() => onEdit(item)}

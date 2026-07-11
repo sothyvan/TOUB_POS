@@ -33,3 +33,7 @@ Thumbs.db
 
 # ── Misc ──────────────────────────────────────────────────
 *.local
+
+# Local browser verification artifacts
+.playwright-cli/
+output/playwright/

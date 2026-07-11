@@ -2,7 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '../services/api';
 import { useAutoRefresh } from './useAutoRefresh';
 
-export function useSalesReport({ range = 'today', stallId = '', cashierId = '' } = {}) {
+export function useSalesReport({
+  range = 'today',
+  startDate = '',
+  endDate = '',
+  stallId = '',
+  cashierId = '',
+} = {}) {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -12,6 +18,8 @@ export function useSalesReport({ range = 'today', stallId = '', cashierId = '' }
       if (showSpinner) setLoading(true);
       const data = await api.reports.getSales({
         range,
+        start_date: range === 'custom' ? startDate : '',
+        end_date: range === 'custom' ? endDate : '',
         stall_id: stallId,
         cashier_id: cashierId,
       });
@@ -24,7 +32,7 @@ export function useSalesReport({ range = 'today', stallId = '', cashierId = '' }
     } finally {
       if (showSpinner) setLoading(false);
     }
-  }, [range, stallId, cashierId]);
+  }, [range, startDate, endDate, stallId, cashierId]);
 
   useEffect(() => {
     const timerId = window.setTimeout(() => {

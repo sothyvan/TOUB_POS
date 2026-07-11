@@ -14,6 +14,7 @@ export default function OwnerFormModal({
   return (
     <ModalShell
       isOpen={isOpen}
+      onClose={onClose}
       onBackdropClick={onClose}
       labelledBy={titleId}
       overlayClassName="bg-brand-dark/40"

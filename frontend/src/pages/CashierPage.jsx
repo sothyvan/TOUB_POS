@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { getPermissions } from '../utils/permissions';
+import { getPermissions, roleToApiRole } from '../utils/permissions';
 import { api } from '../services/api';
 import { connectCashierSocket, disconnectCashierSocket } from '../services/socketClient';
 import { useAuth } from '../auth/useAuth';
@@ -310,7 +310,7 @@ export default function CashierPage() {
   }, [pendingPaymentMethod, pendingKhqrOrder?.id, fetchOrders, scheduleOrderSnapshotRefresh]);
 
   useEffect(() => {
-    if (!currentUser || currentUser.role !== 'cashier') {
+    if (!currentUser || roleToApiRole(currentUser.role) !== 'cashier') {
       return undefined;
     }
 

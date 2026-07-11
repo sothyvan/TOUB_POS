@@ -68,7 +68,8 @@
 
 - Owner/Manager sales reports use `GET /api/reports/sales` instead of frontend-only calculations.
 - The backend applies same-business owner scope, date range filters, optional stall/cashier filters, and returns summary totals, payment mix, stall/cashier breakdowns, hourly revenue, and ledger rows.
-- The frontend report UI may still use loaded order details for receipt viewing, but report totals/export rows should come from the backend report response whenever it is available.
+- Preset and custom calendar ranges use the same backend report contract; custom ranges send validated `start_date` and `end_date` values.
+- Dashboard hourly revenue and exported PDF totals/rows come from the backend report response. The frontend may still use loaded order details for receipt viewing or as a temporary display fallback while the report request loads.
 
 ## Current Payment Flow (Phase 4)
 

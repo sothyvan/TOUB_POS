@@ -38,6 +38,7 @@ export default function CashConfirmationModal({
   return (
     <ModalShell
       isOpen={isOpen}
+      onClose={onCancel}
       labelledBy="cash-confirmation-title"
       panelClassName="w-full max-w-115 rounded-3xl bg-white shadow-[0_24px_64px_rgba(0,0,0,0.24)] p-6"
     >

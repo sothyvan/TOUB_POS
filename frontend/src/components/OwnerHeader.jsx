@@ -2,11 +2,11 @@ import Icon from './ui/Icon';
 
 // Tab → breadcrumb label map
 const PAGE_TITLES = {
-  dashboard:  { crumb: 'Dashboard',      title: 'Operations Command Center' },
+  dashboard:  { crumb: 'Dashboard',      title: 'Business Overview'          },
   products:   { crumb: 'Menu & Catalog', title: 'Menu & Catalog'            },
   stalls:     { crumb: 'Stall Mgmt',     title: 'Stall Management'          },
   users:      { crumb: 'Staff Mgmt',   title: 'Staff Management'              },
-  orders:     { crumb: 'Sales Reports',  title: 'Revenue & Speed Analytics Ledger' },
+  orders:     { crumb: 'Sales Reports',  title: 'Sales Reports'              },
   settings:   { crumb: 'Settings',       title: 'Settings'                  },
 };
 
@@ -14,7 +14,7 @@ const PAGE_TITLES = {
  * OwnerHeader — pixel-spec from Figma "Owner Dashboard - Computer" > Header [1274x64]
  *
  * Left:  breadcrumb (ToubPOS › [Page Name]) + page title h1
- * Right: notification bell (with red dot) + date label
+ * Right: current date label
  */
 export default function OwnerHeader({ activeTab }) {
   const { crumb, title } = PAGE_TITLES[activeTab] ?? { crumb: activeTab, title: activeTab };
@@ -51,31 +51,11 @@ export default function OwnerHeader({ activeTab }) {
         </h1>
       </div>
 
-      {/* Right — notification bell + date picker */}
+      {/* Right — current date */}
       <div className="flex items-center gap-2.5">
-        {/* Notification bell */}
-        <button
-          type="button"
-          className="relative w-[38px] h-[38px] rounded-[10px] flex items-center justify-center cursor-pointer transition-all duration-150 hover:bg-gray-100 active:scale-95"
-          style={{ background: '#f8fafc', border: 'none' }}
-          aria-label="Notifications"
-        >
-          <Icon name="clock" className="w-4 h-4 text-[#374151]" strokeWidth={2} />
-          {/* Red dot badge */}
-          <span
-            className="absolute"
-            style={{
-              top: 7, right: 7,
-              width: 7, height: 7,
-              borderRadius: '50%',
-              background: '#ef4444',
-            }}
-          />
-        </button>
-
         {/* Date label */}
         <div
-          className="flex items-center gap-2 rounded-[10px] bg-white border border-[#e5e7eb]"
+          className="flex items-center gap-2 rounded-[10px] bg-[#f8fafc] border border-[#e5e7eb]"
           style={{ height: 38, paddingLeft: 14, paddingRight: 14 }}
         >
           <Icon name="clock" className="w-3.5 h-3.5 text-[#6b7280]" strokeWidth={2} />

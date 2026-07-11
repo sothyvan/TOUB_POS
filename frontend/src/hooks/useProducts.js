@@ -35,6 +35,7 @@ export function useProducts(canManageMenu) {
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [actionError, setActionError] = useState(null);
 
   const loadData = useCallback(async (showSpinner = false) => {
     try {
@@ -95,10 +96,11 @@ export function useProducts(canManageMenu) {
 
   // ── Category handlers ───────────────────────────────────────────────────
   const saveCategory = async () => {
+    setActionError(null);
     const name = categoryForm.name.trim();
     if (!canManageMenu || !name) return;
     if (categories.some((c) => c.id !== categoryForm.id && c.name.toLowerCase() === name.toLowerCase())) {
-      alert('That category already exists.');
+      setActionError('That category already exists.');
       return;
     }
     try {
@@ -112,7 +114,7 @@ export function useProducts(canManageMenu) {
       await loadData(false);
       setCategoryForm(blankCategoryForm());
     } catch(err) {
-      alert(err.message || 'Failed to save category.');
+      setActionError(err.message || 'Failed to save category.');
     }
   };
 
@@ -123,9 +125,10 @@ export function useProducts(canManageMenu) {
   };
 
   const deleteCategory = async (categoryId) => {
+    setActionError(null);
     if (!canManageMenu) return;
     if (products.some((p) => p.categoryId === categoryId)) {
-      alert('Move or delete products in this category first.');
+      setActionError('Move or delete products in this category first.');
       return;
     }
     try {
@@ -142,16 +145,17 @@ export function useProducts(canManageMenu) {
       }
       if (selectedCategory === categoryId) setSelectedCategory('All');
     } catch(err) {
-      alert(err.message || 'Failed to delete category.');
+      setActionError(err.message || 'Failed to delete category.');
     }
   };
 
   // ── Product handlers ────────────────────────────────────────────────────
   const saveProduct = async (form = productForm) => {
+    setActionError(null);
     const name = form.name.trim();
     const price = Number(form.price);
     if (!canManageMenu || !name || !form.categoryId || isNaN(price) || price <= 0) {
-      alert('Add a name, category, and valid price.');
+      setActionError('Add a name, category, and valid price.');
       return null;
     }
     const product = {
@@ -172,7 +176,7 @@ export function useProducts(canManageMenu) {
       setProductForm(blankProductForm(form.categoryId));
       return form.id ? saved.id : 'new'; 
     } catch(err) {
-      alert(err.message || 'Failed to save product.');
+      setActionError(err.message || 'Failed to save product.');
       return null;
     }
   };
@@ -185,6 +189,7 @@ export function useProducts(canManageMenu) {
   };
 
   const toggleProductAvailability = async (productId) => {
+    setActionError(null);
     if (!canManageMenu) return;
     const target = products.find((p) => p.id === productId);
     if (target) {
@@ -192,20 +197,21 @@ export function useProducts(canManageMenu) {
         await api.products.save({ ...target, available: !target.available });
         await loadData(false);
       } catch(err) {
-        alert(err.message || 'Failed to toggle availability.');
+        setActionError(err.message || 'Failed to toggle availability.');
       }
     }
     return productId; // signal: remove from cart
   };
 
   const deleteProduct = async (productId) => {
+    setActionError(null);
     if (!canManageMenu) return;
     try {
       await api.products.delete(productId);
       await loadData(false);
       return productId; // signal: remove from cart
     } catch(err) {
-      alert(err.message || 'Failed to delete product.');
+      setActionError(err.message || 'Failed to delete product.');
     }
   };
 
@@ -217,7 +223,8 @@ export function useProducts(canManageMenu) {
     searchQuery, setSearchQuery,
     saveCategory, editCategory, deleteCategory, cancelCategoryEdit,
     saveProduct, editProduct, toggleProductAvailability, deleteProduct, cancelProductEdit,
-    loading, error
+    loading, error, actionError,
+    clearActionError: () => setActionError(null),
   };
 }
 

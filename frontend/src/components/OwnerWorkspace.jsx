@@ -15,6 +15,15 @@ const ownerTabIcons = {
   categories: 'category',
   orders: 'orders',
   users: 'users',
+  stalls: 'location',
+};
+
+const ownerTabLabels = {
+  dashboard: 'Dashboard',
+  products: 'Menu & Catalog',
+  stalls: 'Stall Management',
+  orders: 'Sales Reports',
+  users: 'Staff Management',
 };
 
 const navButtonClass = (isActive) =>
@@ -62,6 +71,10 @@ export default function OwnerWorkspace({
   productsError,
   usersLoading,
   usersError,
+  productsActionError,
+  clearProductsActionError,
+  usersActionError,
+  clearUsersActionError,
 }) {
   const [pendingDelete, setPendingDelete] = useState(null);
   const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
@@ -106,7 +119,7 @@ export default function OwnerWorkspace({
         <div className="flex items-center justify-between p-4">
           <span className="text-sm font-bold text-brand-dark flex items-center gap-2">
             <Icon name={ownerTabIcons[visibleOwnerTab]} className="w-5 h-5 text-brand-action" />
-            <span className="capitalize">{visibleOwnerTab} Management</span>
+            <span>{ownerTabLabels[visibleOwnerTab] ?? visibleOwnerTab}</span>
           </span>
 
           <button
@@ -139,10 +152,20 @@ export default function OwnerWorkspace({
                   className={navButtonClass(isActive)}
                 >
                   <Icon name={ownerTabIcons[tab]} className="w-5 h-5 shrink-0" />
-                  <span>{tab}</span>
+                  <span>{ownerTabLabels[tab] ?? tab}</span>
                 </button>
               );
             })}
+            <div className="mt-2 border-t border-brand-border pt-3">
+              <button
+                type="button"
+                onClick={onLogout}
+                className="flex min-h-11 w-full items-center gap-3 rounded-xl px-4 text-sm font-bold text-state-danger transition-colors hover:bg-red-50"
+              >
+                <Icon name="logout" className="h-5 w-5" />
+                Log out
+              </button>
+            </div>
           </nav>
         )}
       </div>
@@ -179,6 +202,8 @@ export default function OwnerWorkspace({
               categoryById={categoryById}
               loading={productsLoading}
               error={productsError}
+              actionError={productsActionError}
+              clearActionError={clearProductsActionError}
             />
           )}
 
@@ -208,6 +233,8 @@ export default function OwnerWorkspace({
               currentUser={currentUser}
               loading={usersLoading}
               error={usersError}
+              actionError={usersActionError}
+              clearActionError={clearUsersActionError}
             />
           )}
         </div>
