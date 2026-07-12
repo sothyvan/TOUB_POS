@@ -641,6 +641,25 @@ Update this file after every meaningful implementation change.
   - Added client-side pagination to `OwnerCrudTable.jsx` (20 per page), `StaffList.jsx` (15 per page), and `CashierScreen.jsx` My Orders tab (10 per page).
   - Added `loading="lazy"` to product images in `ProductCard.jsx`, `ProductOwner.jsx`, and `MenuCatalog.jsx`.
   - Frontend lint and production build pass cleanly. Backend lint has only pre-existing `no-console` warnings.
+- **Removed confirmed unused legacy files and mock data**:
+  - Removed obsolete frontend localStorage stall helpers, the unused ID utility, and the unconsumed generic pagination hook.
+  - Removed the placeholder order repository and disconnected legacy payment service from the backend.
+  - Removed unused frontend mock categories, products, users, and rate constants while retaining active role/tone constants.
+  - Removed the tracked Vite error log and added `*.err` to the root ignore rules.
+- **Restored a clean lint baseline before folder migration**:
+  - Reworked catalog pagination resets to happen in filter event handlers and safely clamp the active page when results shrink.
+  - Added required braces to backend report/pagination conditionals and removed unused Sequelize report imports.
+- **Started the frontend feature-folder migration**:
+  - Moved cashier selling components into `features/cashier/components`.
+  - Moved cash, KHQR, and receipt modals into `features/payments/components`.
+  - Updated all affected imports without changing routes, state, payment behavior, or UI flow.
+  - Moved the Owner/Manager workspace, sidebar, header, dashboard, metric cards, and revenue chart into `features/management/components`.
+  - Moved menu, product, category, and owner CRUD-table components into `features/catalog/components` and normalized the CRUD-table import casing.
+  - Moved stall management into `features/stalls/components` and staff list/allocation management into `features/staff/components`.
+  - Moved sales report history/analytics and its date-range dialog into `features/reports/components`.
+  - Moved login UI/page, auth context, auth hook, and auth storage into `features/auth` while preserving route and session contracts.
+  - Moved app routing/protection into `app`, shared page/topbar layout into `shared/layout`, and theme state/toggle into `shared/theme`.
+  - Updated `context/architecture.md` with the new frontend boundaries and dependency-direction rules.
 
 ## Next Up
 

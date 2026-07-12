@@ -1,5 +1,5 @@
 import { io } from 'socket.io-client';
-import { AUTH_STORAGE_KEYS } from '../auth/authStorage';
+import { AUTH_STORAGE_KEYS } from '../features/auth/authStorage';
 import { API_BASE_URL } from './apiClient';
 
 let cashierSocket = null;

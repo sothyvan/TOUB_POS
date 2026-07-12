@@ -16,14 +16,26 @@
 
 ## System Boundaries
 
-- `frontend/src/components/` — Reusable UI elements.
-- `frontend/src/pages/` — Route-level page components (`/`, `/owner-portal`).
-- `backend/routes/` — API route definitions and endpoint mapping.
-- `backend/controllers/` — Request handling and response formatting.
-- `backend/services/` — Core business logic, WebSocket session management, Telegram bot logic.
-- `backend/repositories/` — Database queries and data access logic.
-- `backend/services/telegram.service.js` — Telegram Bot API integration (order relay, cook callback).
-- `backend/services/websocket.service.js` — WebSocket server; maps `cashier_id → socket` for isolated push.
+- `frontend/src/app/` — Application routing and route-protection composition.
+- `frontend/src/features/` — Feature-owned UI grouped by business capability: authentication, cashier sales, catalog, management shell, payments, reports, staff, and stalls.
+- `frontend/src/shared/layout/` — Cross-feature page shells and top-level layout components.
+- `frontend/src/shared/theme/` — Persistent light/dark theme state and the shared theme toggle.
+- `frontend/src/components/ui/` — Reusable, domain-neutral UI primitives such as buttons, forms, dialogs, badges, pagination, and loading states.
+- `frontend/src/pages/` — Remaining route-level Cashier and Owner/Manager orchestration pages. The login route is owned by `features/auth/pages/`.
+- `frontend/src/hooks/`, `services/`, and `utils/` — Shared state/data hooks, Axios/Socket.IO clients, and domain-neutral helpers used across features.
+- `backend/src/routes/` — API route definitions and endpoint mapping.
+- `backend/src/controllers/` — Request handling and response formatting.
+- `backend/src/services/` — Core business logic, WebSocket session management, Telegram bot logic, and external provider coordination.
+- `backend/src/repositories/` — Database queries and data access logic.
+- `backend/src/services/telegram.service.js` — Telegram Bot API integration (order relay, cook callback).
+- `backend/src/services/websocket.service.js` — WebSocket server; maps `cashier_id → socket` for isolated push.
+
+### Frontend Dependency Direction
+
+- Route entry points in `app/` compose pages and providers; they do not contain business logic.
+- Feature components may import shared UI, hooks, services, utilities, and components from another feature only when the workflow genuinely crosses feature boundaries, such as reports opening the shared payment receipt.
+- Shared layout and theme modules must remain domain-neutral and must not import cashier, catalog, staff, stall, or report business components.
+- Feature files should not be moved back into the flat `components/` directory. New feature-specific UI belongs under the corresponding `features/<feature>/components/` folder.
 
 ## Storage Model
 
@@ -63,6 +75,8 @@
 - **UI State**: Handled locally within components using `useState` and `useEffect` (e.g., active modals, UI toggles).
 - **Global/Server State**: Abstracted into custom hooks (e.g., `useProducts`, `useOrders`) which interface with the central Axios-backed API service.
 - **Cart Management**: Cart state is managed globally or passed down from a parent POS container to ensure synchronization between the product grid and the order panel.
+- **Authentication State**: Owned by `features/auth/`, including context, storage keys, login UI, and the login route page.
+- **Theme State**: Owned by `shared/theme/`; the selected light/dark mode is persisted in browser storage and consumed through `useTheme`.
 
 ## Reporting Flow
 

@@ -12,9 +12,15 @@ export function parsePagination(query = {}) {
   let page = parseInt(query.page, 10);
   let limit = parseInt(query.limit, 10);
 
-  if (!Number.isFinite(page) || page < 1) page = DEFAULT_PAGE;
-  if (!Number.isFinite(limit) || limit < 1) limit = DEFAULT_LIMIT;
-  if (limit > MAX_LIMIT) limit = MAX_LIMIT;
+  if (!Number.isFinite(page) || page < 1) {
+    page = DEFAULT_PAGE;
+  }
+  if (!Number.isFinite(limit) || limit < 1) {
+    limit = DEFAULT_LIMIT;
+  }
+  if (limit > MAX_LIMIT) {
+    limit = MAX_LIMIT;
+  }
 
   const offset = (page - 1) * limit;
   const sort = typeof query.sort === 'string' ? query.sort : 'created_at';

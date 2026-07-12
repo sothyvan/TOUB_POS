@@ -1,4 +1,4 @@
-import { Op, fn, col, literal } from 'sequelize';
+import { Op } from 'sequelize';
 import { sequelize, Order, Stall, TelegramTicket, User } from '../models/index.js';
 import { parsePagination, buildOrderClause, buildPaginationMeta } from '../utils/pagination.js';
 
@@ -107,9 +107,15 @@ function formatDate(date) {
 }
 
 function formatHour(hour) {
-  if (hour === 0) return '12AM';
-  if (hour === 12) return '12PM';
-  if (hour > 12) return `${hour - 12}PM`;
+  if (hour === 0) {
+    return '12AM';
+  }
+  if (hour === 12) {
+    return '12PM';
+  }
+  if (hour > 12) {
+    return `${hour - 12}PM`;
+  }
   return `${hour}AM`;
 }
 

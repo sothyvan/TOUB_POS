@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { getPermissions } from '../utils/permissions';
-import { useAuth } from '../auth/useAuth';
+import { useAuth } from '../features/auth/useAuth';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useProducts } from '../hooks/useProducts';
 import { useUsers } from '../hooks/useUsers';
 import { useOrders } from '../hooks/useOrders';
 import { api } from '../services/api';
 import { connectManagementSocket, disconnectManagementSocket } from '../services/socketClient';
-import PageShell from '../components/PageShell';
-import OwnerWorkspace from '../components/OwnerWorkspace';
+import PageShell from '../shared/layout/PageShell';
+import OwnerWorkspace from '../features/management/components/OwnerWorkspace';
 
 export default function OwnerPortalPage() {
   const { user: currentUser, logout } = useAuth();
