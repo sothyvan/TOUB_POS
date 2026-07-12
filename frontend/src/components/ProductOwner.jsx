@@ -36,6 +36,7 @@ export default function ProductOwner({
             src={product.image}
             alt={product.name}
             className="w-11 h-11 rounded-xl object-cover shrink-0 border border-brand-border shadow-sm bg-white"
+            loading="lazy"
           />
         ) : (
           <div className="w-11 h-11 rounded-xl bg-[#eee7db] shrink-0 flex items-center justify-center text-[10px] text-gray-500 font-bold border border-brand-border">

@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import {
   sequelize,
   AuditLog,
@@ -20,6 +21,11 @@ import {
   emitManagementOrderUpdated,
   emitPaymentConfirmed,
 } from './websocket.service.js';
+import {
+  parsePagination,
+  buildOrderClause,
+  paginatedResponse,
+} from '../utils/pagination.js';
 
 const ALLOWED_PAYMENT_METHODS = new Set(['cash', 'khqr']);
 const MANAGEMENT_ORDER_ROLES = new Set(['owner', 'manager']);
@@ -828,10 +834,30 @@ export function checkKhqrPaymentStatusAsSystem(orderId) {
 
 /**
  * Fetch all orders, optionally filtered by owner.
+ * Supports pagination, search, and optional date/status filters via query options.
  */
-export function getAllOrders(ownerId) {
+export async function getAllOrders(ownerId, queryOptions = {}) {
+  const pagination = parsePagination(queryOptions);
+  const { search, startDate, endDate, status } = queryOptions;
+
+  const orderClause = buildOrderClause(pagination, ['created_at', 'id', 'status', 'total_usd'], [['created_at', 'DESC']]);
+
+  const where = {};
+  if (startDate && endDate) {
+    where.created_at = { [Op.between]: [startDate, endDate] };
+  }
+  if (status) {
+    where.status = status;
+  }
+  if (search) {
+    where[Op.or] = [
+      { id: { [Op.eq]: search.replace('#', '') } },
+    ];
+  }
+
   if (ownerId) {
-    return Order.findAll({
+    const { rows, count } = await Order.findAndCountAll({
+      where,
       include: [
         {
           model: OrderItem,
@@ -852,23 +878,40 @@ export function getAllOrders(ownerId) {
           attributes: ['id', 'username', 'role'],
         },
       ],
-      order: [['created_at', 'DESC']],
+      order: orderClause,
+      limit: pagination.limit,
+      offset: pagination.offset,
+      distinct: true,
     });
+    return paginatedResponse({ rows, count }, pagination);
   }
 
-  return Order.findAll({
+  const { rows, count } = await Order.findAndCountAll({
+    where,
     include: buildOrderInclude(),
-    order: [['created_at', 'DESC']],
+    order: orderClause,
+    limit: pagination.limit,
+    offset: pagination.offset,
+    distinct: true,
   });
+  return paginatedResponse({ rows, count }, pagination);
 }
 
 /**
- * Fetch all orders created by a specific cashier, including items.
+ * Fetch orders created by a specific cashier, including items.
+ * Supports pagination.
  */
-export function getOrdersByUser(cashierId) {
-  return Order.findAll({
+export async function getOrdersByUser(cashierId, queryOptions = {}) {
+  const pagination = parsePagination(queryOptions);
+  const orderClause = buildOrderClause(pagination, ['created_at', 'id', 'status', 'total_usd'], [['created_at', 'DESC']]);
+
+  const { rows, count } = await Order.findAndCountAll({
     where: { cashier_id: cashierId },
     include: buildOrderInclude(),
-    order: [['created_at', 'DESC']],
+    order: orderClause,
+    limit: pagination.limit,
+    offset: pagination.offset,
+    distinct: true,
   });
+  return paginatedResponse({ rows, count }, pagination);
 }

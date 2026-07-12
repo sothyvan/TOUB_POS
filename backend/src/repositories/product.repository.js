@@ -1,4 +1,5 @@
 import { sequelize, Product, ProductStall, Category, Stall } from '../models/index.js';
+import { parsePagination, buildOrderClause, paginatedResponse } from '../utils/pagination.js';
 
 function buildProductIncludes(stallProductWhere) {
   const productStallInclude = {
@@ -19,14 +20,6 @@ function buildProductIncludes(stallProductWhere) {
       attributes: ['id', 'name', 'tone'],
     },
     productStallInclude,
-    {
-      model: Stall,
-      as: 'Stalls',
-      attributes: ['id', 'name', 'location'],
-      through: {
-        attributes: ['id', 'price_usd', 'price_khr', 'is_visible'],
-      },
-    },
   ];
 }
 
@@ -43,19 +36,30 @@ function buildAssignments(productId, stallIds, assignmentData) {
 /**
  * Fetch all products, including category and stall-specific price/visibility assignments.
  */
-export function findAllProducts(whereClause = {}) {
-  return Product.findAll({
+export async function findAllProducts(whereClause = {}, queryOptions = {}) {
+  const pagination = parsePagination(queryOptions);
+  const orderClause = buildOrderClause(pagination, ['created_at', 'id', 'name'], [['created_at', 'DESC']]);
+
+  const { rows, count } = await Product.findAndCountAll({
     where: { ...whereClause, is_deleted: false },
     include: buildProductIncludes(),
-    order: [['created_at', 'DESC']],
+    order: orderClause,
+    limit: pagination.limit,
+    offset: pagination.offset,
+    distinct: true,
+    subQuery: false,
   });
+  return paginatedResponse({ rows, count }, pagination);
 }
 
 /**
  * Fetch all products assigned to a specific owner's stalls.
  */
-export function findAllProductsByOwnerId(ownerId) {
-  return Product.findAll({
+export async function findAllProductsByOwnerId(ownerId, queryOptions = {}) {
+  const pagination = parsePagination(queryOptions);
+  const orderClause = buildOrderClause(pagination, ['created_at', 'id', 'name'], [['created_at', 'DESC']]);
+
+  const { rows, count } = await Product.findAndCountAll({
     where: { is_deleted: false },
     include: [
       {
@@ -73,19 +77,14 @@ export function findAllProductsByOwnerId(ownerId) {
           },
         ],
       },
-      {
-        model: Stall,
-        as: 'Stalls',
-        required: true,
-        where: { owner_id: ownerId },
-        attributes: ['id', 'name', 'location'],
-        through: {
-          attributes: ['id', 'price_usd', 'price_khr', 'is_visible'],
-        },
-      },
     ],
-    order: [['created_at', 'DESC']],
+    order: orderClause,
+    limit: pagination.limit,
+    offset: pagination.offset,
+    distinct: true,
+    subQuery: false,
   });
+  return paginatedResponse({ rows, count }, pagination);
 }
 
 /**
@@ -106,14 +105,18 @@ export async function checkProductOwnership(productId, ownerId) {
 }
 
 /**
- * Fetch products associated with a specific stall.
+ * Fetch ALL products for a specific stall — no pagination.
+ * Cashiers need the full menu visible at once; the stall-scoped
+ * dataset is small enough that loading everything is the right call.
  */
-export function findAllProductsForStall(stallId, assignmentWhereClause = {}) {
-  return Product.findAll({
+export async function findAllProductsForStall(stallId, assignmentWhereClause = {}) {
+  const rows = await Product.findAll({
     where: { is_deleted: false, is_active: true },
     include: buildProductIncludes({ stall_id: stallId, ...assignmentWhereClause }),
-    order: [['created_at', 'DESC']],
+    order: [['name', 'ASC']],
+    subQuery: false,
   });
+  return rows;
 }
 
 /**

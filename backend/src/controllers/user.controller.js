@@ -126,16 +126,16 @@ async function applyUpdateCredentialRules(updateData, existingRole, targetRole, 
 export async function getUsers(req, res, next) {
   try {
     if (normalizeRole(req.user?.role) === 'platform_admin') {
-      const owners = await userRepository.findOwnerUsers();
-      return res.json({ success: true, data: owners });
+      const result = await userRepository.findOwnerUsers(req.query);
+      return res.json({ success: true, ...result });
     }
 
     const ownerId = ownerScopeForActor(req.user);
-    const users = await userRepository.findAllUsersByOwnerId(ownerId);
-    const visibleUsers = normalizeRole(req.user?.role) === 'manager'
-      ? users.filter((user) => normalizeRole(user.role) === 'cashier')
-      : users;
-    return res.json({ success: true, data: visibleUsers });
+    const result = await userRepository.findAllUsersByOwnerId(ownerId, req.query);
+    const visibleData = normalizeRole(req.user?.role) === 'manager'
+      ? result.data.filter((user) => normalizeRole(user.role) === 'cashier')
+      : result.data;
+    return res.json({ success: true, data: visibleData, pagination: result.pagination });
   } catch (err) {
     next(err);
   }

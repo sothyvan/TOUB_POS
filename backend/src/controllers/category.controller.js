@@ -7,8 +7,8 @@ function resolveOwnerId(req) {
 export async function getCategories(req, res, next) {
   try {
     const ownerId = resolveOwnerId(req);
-    const categories = await categoryRepository.findAllCategories({ owner_id: ownerId });
-    res.json({ success: true, data: categories });
+    const result = await categoryRepository.findAllCategories({ owner_id: ownerId }, req.query);
+    res.json({ success: true, ...result });
   } catch (err) {
     next(err);
   }
