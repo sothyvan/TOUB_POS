@@ -224,7 +224,7 @@ export default function StaffList({
              </div>
           ) : filtered.map((user,idx)=>{
             return (
-              <div key={user.id} className="grid grid-cols-[200px_100px_minmax(160px,1fr)_80px_190px] items-center gap-4 border-b border-[#f9fafb] hover:bg-[#fafafa] transition-colors max-[1200px]:grid-cols-[minmax(0,1fr)_auto] max-[1200px]:gap-3 max-[640px]:px-4"
+              <div key={user.id} className="grid grid-cols-[200px_100px_minmax(160px,1fr)_80px_190px] items-center gap-4 border-b border-ui-border hover:bg-ui-muted transition-colors max-[1200px]:grid-cols-[minmax(0,1fr)_auto] max-[1200px]:gap-3 max-[640px]:px-4"
                 style={{padding:'12px 24px',minHeight:69}}>
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-[38px] h-[38px] rounded-full flex items-center justify-center text-xs font-black shrink-0" style={avatarStyle(idx)}>

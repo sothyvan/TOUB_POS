@@ -13,10 +13,10 @@ export default function Switch({
       aria-checked={checked}
       disabled={disabled}
       onClick={() => onChange?.(!checked)}
-      className={`relative h-6 w-11 shrink-0 rounded-full border-0 p-0 transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-action/20 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${checked ? 'bg-state-success' : 'bg-gray-300'} ${className}`}
+      className={`relative h-6 w-11 shrink-0 rounded-full border border-ui-border p-0 transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-action/20 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${checked ? 'bg-state-success' : 'bg-ui-muted'} ${className}`}
     >
       <span
-        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all duration-200 ${checked ? 'left-5' : 'left-0.5'}`}
+        className={`absolute top-0.5 h-4.5 w-4.5 rounded-full bg-[#f1efea] transition-all duration-200 ${checked ? 'left-5' : 'left-0.5'}`}
         aria-hidden="true"
       />
     </button>

@@ -17,13 +17,13 @@ export default function OwnerFormModal({
       onClose={onClose}
       onBackdropClick={onClose}
       labelledBy={titleId}
-      overlayClassName="bg-brand-dark/40"
-      panelClassName={`w-full ${maxWidth} border border-brand-border rounded-3xl bg-brand-card shadow-[0_20px_50px_rgba(52,45,35,0.15)] p-6 z-10 ${scroll ? 'max-h-[90svh] overflow-y-auto' : ''}`}
+      overlayClassName="bg-black/75"
+      panelClassName={`w-full ${maxWidth} border border-brand-border rounded-lg bg-ui-elevated shadow-[0_24px_70px_rgba(0,0,0,0.45)] p-6 z-10 ${scroll ? 'max-h-[90svh] overflow-y-auto' : ''}`}
     >
       <button
         type="button"
         onClick={onClose}
-        className="absolute top-5 right-5 w-8.5 h-8.5 rounded-full border border-brand-border bg-white text-[#4f483f] grid place-items-center hover:bg-gray-150 cursor-pointer transition-all active:scale-90"
+        className="absolute top-5 right-5 w-8.5 h-8.5 rounded-md border border-brand-border bg-ui-surface text-text-soft grid place-items-center hover:border-brand-action/50 hover:text-brand-action cursor-pointer transition-all active:scale-90"
         aria-label="Close form"
       >
         <Icon name="close" className="w-4 h-4" />

@@ -1,29 +1,31 @@
+@import "@fontsource-variable/geist";
 @import "tailwindcss";
 
 @theme {
-  --color-brand-primary: #2d665d;
-  --color-brand-hover: #224d46;
-  --color-brand-bg: #f6f4ef;
-  --color-brand-text: #221f1f;
-  --color-brand-border: #ded8ca;
-  --color-brand-subtext: #756c61;
-  --color-brand-dark: #191715;
-  --color-brand-card: #fffdfa;
-  --color-brand-yellow: #ebc02b;
-  --color-brand-blue: #0047cc;
-  --color-brand-action: #003ec7;
-  --color-brand-action-hover: #0034a6;
-  --color-state-danger: #c70000;
-  --color-state-success: #157811;
-  --color-state-warning: #d97706;
+  --color-brand-primary: #e76f2e;
+  --color-brand-hover: #f17d3f;
+  --color-brand-bg: #080807;
+  --color-brand-text: #f1efea;
+  --color-brand-border: #302e2b;
+  --color-brand-subtext: #a29d96;
+  --color-brand-dark: #f6f3ed;
+  --color-brand-card: #111110;
+  --color-brand-yellow: #d89a43;
+  --color-brand-blue: #e76f2e;
+  --color-brand-action: #e76f2e;
+  --color-brand-action-hover: #f17d3f;
+  --color-state-danger: #e35d5d;
+  --color-state-success: #55a982;
+  --color-state-warning: #d89a43;
 
-  --color-ui-bg: #f8fafc;
-  --color-ui-surface: #ffffff;
-  --color-ui-muted: #f3f4f6;
-  --color-ui-border: #e5e7eb;
-  --color-text-strong: #111827;
-  --color-text-soft: #6b7280;
-  --color-text-muted: #9ca3af;
+  --color-ui-bg: #080807;
+  --color-ui-surface: #111110;
+  --color-ui-elevated: #171715;
+  --color-ui-muted: #1c1b19;
+  --color-ui-border: #302e2b;
+  --color-text-strong: #f1efea;
+  --color-text-soft: #a29d96;
+  --color-text-muted: #706c67;
 
   --color-tone-gold-bg: #fcf6e5;
   --color-tone-gold-border: #e6c382;
@@ -47,10 +49,15 @@
 }
 
 :root {
+  --grid-line: rgb(255 255 255 / 0.018);
+  --grid-line-strong: rgb(255 255 255 / 0.024);
+  --scrollbar-thumb: #46423e;
+  --scrollbar-track: #111110;
   font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    "Geist Variable", Geist, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--color-brand-text);
   background: var(--color-brand-bg);
+  color-scheme: dark;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -68,6 +75,57 @@ body,
   margin: 0;
 }
 
+:root[data-theme="light"] {
+  --color-brand-primary: #c9571d;
+  --color-brand-hover: #ad4614;
+  --color-brand-bg: #f3f2ee;
+  --color-brand-text: #1b1917;
+  --color-brand-border: #d7d3cc;
+  --color-brand-subtext: #625e58;
+  --color-brand-dark: #171513;
+  --color-brand-card: #fbfaf7;
+  --color-brand-blue: #c9571d;
+  --color-brand-action: #c9571d;
+  --color-brand-action-hover: #ad4614;
+  --color-state-danger: #b53f3f;
+  --color-state-success: #267452;
+  --color-state-warning: #93601d;
+  --color-ui-bg: #f3f2ee;
+  --color-ui-surface: #fbfaf7;
+  --color-ui-elevated: #ffffff;
+  --color-ui-muted: #eae7e1;
+  --color-ui-border: #d7d3cc;
+  --color-text-strong: #1b1917;
+  --color-text-soft: #625e58;
+  --color-text-muted: #827c74;
+  --grid-line: rgb(27 25 23 / 0.035);
+  --grid-line-strong: rgb(27 25 23 / 0.05);
+  --scrollbar-thumb: #aaa49b;
+  --scrollbar-track: #e8e5df;
+  color-scheme: light;
+}
+
+body {
+  background-color: var(--color-ui-bg);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.tech-grid {
+  background-color: var(--color-ui-bg);
+  background-image:
+    linear-gradient(var(--grid-line-strong) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line-strong) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-brand-action) 45%, transparent);
+  color: var(--color-text-strong);
+}
+
 button,
 input,
 select,
@@ -76,6 +134,223 @@ textarea {
 }
 
 :where(button, a, input, select, textarea, [role="button"], [tabindex]):focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--color-brand-action) 35%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--color-brand-action) 70%, transparent);
   outline-offset: 2px;
+}
+
+* {
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/* Compatibility layer for existing presentation classes during the dark-theme migration. */
+.bg-white,
+.bg-white\/50,
+.bg-white\/60,
+.bg-white\/80 {
+  background-color: var(--color-ui-surface);
+}
+
+.bg-gray-50,
+.bg-slate-50,
+[class~="bg-[#f8fafc]"],
+[class~="bg-[#f9fafb]"],
+[class~="bg-[#fafafa]"],
+[class~="bg-[#fafbff]"] {
+  background-color: var(--color-ui-bg);
+}
+
+.bg-gray-100,
+.bg-gray-150,
+.bg-gray-200,
+[class~="bg-[#f3f4f6]"],
+[class~="bg-[#eef2ff]"] {
+  background-color: var(--color-ui-muted);
+}
+
+.text-gray-950,
+.text-gray-900,
+.text-gray-800,
+.text-gray-700,
+[class~="text-[#111827]"],
+[class~="text-[#191b23]"],
+[class~="text-[#374151]"],
+[class~="text-[#4f483f]"] {
+  color: var(--color-text-strong);
+}
+
+.text-gray-600,
+.text-gray-500,
+[class~="text-[#6b7280]"],
+[class~="text-[#776f63]"] {
+  color: var(--color-text-soft);
+}
+
+.text-gray-400,
+.text-gray-300,
+[class~="text-[#9ca3af]"],
+[class~="text-[#c4c9d4]"] {
+  color: var(--color-text-muted);
+}
+
+.border-gray-100,
+.border-gray-150,
+.border-gray-200,
+.border-slate-200,
+.outline-gray-200,
+[class~="border-[#f3f4f6]"],
+[class~="border-[#e5e7eb]"] {
+  border-color: var(--color-ui-border);
+  outline-color: var(--color-ui-border);
+}
+
+.text-blue-600,
+.text-blue-700,
+[class~="text-[#003ec7]"] {
+  color: var(--color-brand-action);
+}
+
+.bg-blue-50,
+.bg-blue-100,
+[class~="bg-[#eff6ff]"] {
+  background-color: color-mix(in srgb, var(--color-brand-action) 12%, var(--color-ui-surface));
+}
+
+[class~="bg-[#003ec7]"] {
+  background-color: var(--color-brand-action);
+}
+
+[class~="hover:bg-[#fafafa]"]:hover,
+[class~="hover:bg-[#fafbff]"]:hover,
+[class~="hover:bg-gray-50"]:hover,
+[class~="hover:bg-gray-100"]:hover {
+  background-color: var(--color-ui-muted);
+}
+
+.border-blue-100,
+.border-blue-200 {
+  border-color: color-mix(in srgb, var(--color-brand-action) 35%, var(--color-ui-border));
+}
+
+[style*="font-family: Inter"] {
+  font-family: "Geist Variable", Geist, ui-sans-serif, system-ui, sans-serif !important;
+}
+
+[style*="color: rgb(17, 24, 39)"],
+[style*="color: rgb(25, 27, 35)"],
+[style*="color: rgb(55, 65, 81)"],
+[style*="color: rgb(79, 72, 63)"] {
+  color: var(--color-text-strong) !important;
+}
+
+[style*="color: rgb(107, 114, 128)"],
+[style*="color: rgb(119, 111, 99)"] {
+  color: var(--color-text-soft) !important;
+}
+
+[style*="color: rgb(156, 163, 175)"],
+[style*="color: rgb(196, 201, 212)"],
+[style*="color: rgb(209, 213, 219)"] {
+  color: var(--color-text-muted) !important;
+}
+
+[style*="color: rgb(0, 62, 199)"],
+[style*="color: rgb(29, 78, 216)"],
+[style*="color: rgb(37, 99, 235)"],
+[style*="color: rgb(59, 130, 246)"],
+[style*="color: rgb(79, 70, 229)"] {
+  color: var(--color-brand-action) !important;
+}
+
+[style*="background: white"],
+[style*="background: rgb(255, 255, 255)"],
+[style*="background-color: rgb(255, 255, 255)"],
+[style*="background: rgb(249, 250, 251)"],
+[style*="background: rgb(250, 250, 250)"],
+[style*="background: rgb(248, 250, 252)"] {
+  background: var(--color-ui-surface) !important;
+}
+
+[style*="background: rgb(238, 242, 255)"],
+[style*="background: rgb(240, 247, 255)"],
+[style*="background: rgb(243, 244, 246)"],
+[style*="background: rgb(238, 238, 240)"],
+[style*="background: rgb(239, 246, 255)"],
+[style*="background: rgb(219, 234, 254)"],
+[style*="background-color: rgb(239, 246, 255)"] {
+  background-color: color-mix(in srgb, var(--color-brand-action) 10%, var(--color-ui-surface)) !important;
+}
+
+[style*="background: rgb(224, 242, 254)"],
+[style*="background: rgb(219, 234, 254)"] {
+  background: color-mix(in srgb, var(--color-brand-action) 10%, var(--color-ui-surface)) !important;
+}
+
+[style*="background: rgb(220, 252, 231)"] {
+  background: color-mix(in srgb, var(--color-state-success) 12%, var(--color-ui-surface)) !important;
+}
+
+[style*="background: rgb(254, 243, 199)"] {
+  background: color-mix(in srgb, var(--color-state-warning) 12%, var(--color-ui-surface)) !important;
+}
+
+[style*="background: rgb(243, 232, 255)"],
+[style*="background: rgb(255, 241, 242)"] {
+  background: color-mix(in srgb, var(--color-state-danger) 9%, var(--color-ui-surface)) !important;
+}
+
+[style*="background: rgb(0, 62, 199)"],
+[style*="background-color: rgb(0, 62, 199)"] {
+  background: var(--color-brand-action) !important;
+  background-color: var(--color-brand-action) !important;
+}
+
+.rounded-xl,
+.rounded-2xl,
+.rounded-3xl,
+.rounded-4xl,
+[class*="rounded-["] {
+  border-radius: 8px;
+}
+
+.shadow-sm,
+.shadow-md,
+.shadow-lg,
+.shadow-xl {
+  box-shadow: none;
+}
+
+.bg-green-50,
+.bg-green-100 {
+  background-color: color-mix(in srgb, var(--color-state-success) 12%, var(--color-ui-surface));
+}
+
+.bg-amber-50,
+.bg-amber-100 {
+  background-color: color-mix(in srgb, var(--color-state-warning) 12%, var(--color-ui-surface));
+}
+
+.bg-red-50,
+.bg-red-100,
+[class~="bg-[#fff1f2]"] {
+  background-color: color-mix(in srgb, var(--color-state-danger) 12%, var(--color-ui-surface));
+}
+
+.khqr-payment-surface,
+.khqr-payment-surface .bg-white {
+  background: #ffffff !important;
+}
+
+.khqr-payment-surface .text-brand-dark,
+.khqr-payment-surface .text-brand-text {
+  color: #171717 !important;
+}
+
+.khqr-payment-surface .khqr-amount {
+  color: #003ec7 !important;
+}
+
+.font-mono,
+code,
+kbd {
+  font-family: "Geist Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }

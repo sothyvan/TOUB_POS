@@ -2,13 +2,13 @@ import Icon from './Icon';
 
 const variantClasses = {
   primary:
-    'border-transparent bg-brand-action text-white shadow-sm hover:bg-brand-action-hover focus-visible:ring-brand-action/30',
+    'border-brand-action bg-brand-action text-[#090807] hover:bg-brand-action-hover focus-visible:ring-brand-action/30',
   secondary:
-    'border-brand-border bg-white text-brand-text hover:bg-gray-50 focus-visible:ring-brand-action/20',
+    'border-brand-border bg-ui-surface text-brand-text hover:bg-ui-muted focus-visible:ring-brand-action/20',
   outline:
-    'border-brand-action/25 bg-white text-brand-action hover:bg-brand-action/5 focus-visible:ring-brand-action/20',
+    'border-brand-action/40 bg-transparent text-brand-action hover:bg-brand-action/10 focus-visible:ring-brand-action/20',
   ghost:
-    'border-transparent bg-transparent text-brand-text hover:bg-gray-100 focus-visible:ring-brand-action/20',
+    'border-transparent bg-transparent text-brand-text hover:bg-ui-muted focus-visible:ring-brand-action/20',
   danger:
     'border-transparent bg-state-danger text-white shadow-sm hover:bg-state-danger/90 focus-visible:ring-state-danger/25',
   success:
@@ -18,9 +18,9 @@ const variantClasses = {
 };
 
 const sizeClasses = {
-  sm: 'min-h-9 px-3 text-xs rounded-lg',
-  md: 'min-h-11 px-4 text-sm rounded-xl',
-  lg: 'min-h-12 px-5 text-[15px] rounded-xl',
+  sm: 'min-h-9 px-3 text-xs rounded-md',
+  md: 'min-h-11 px-4 text-sm rounded-lg',
+  lg: 'min-h-12 px-5 text-[15px] rounded-lg',
   icon: 'h-10 w-10 px-0 rounded-full justify-center',
 };
 

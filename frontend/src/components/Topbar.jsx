@@ -3,13 +3,14 @@ import { initials } from '../utils/format';
 import ConfirmDialog from './ui/ConfirmDialog';
 import Icon from './ui/Icon';
 import Logo from './ui/Logo';
+import ThemeToggle from './ui/ThemeToggle';
 
 export default function Topbar({ currentUser, isCashier, itemCount, onCartOpen, onLogout, assignedStall }) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   return (
-    <header className="min-h-19 py-3.5 px-[clamp(18px,3vw,34px)] bg-[#fff] border-b border-brand-border flex items-center justify-between gap-4.5 max-sm:flex-col max-sm:items-start">
+    <header className="min-h-19 py-3.5 px-[clamp(18px,3vw,34px)] bg-ui-surface border-b border-brand-border flex items-center justify-between gap-4.5 max-sm:flex-col max-sm:items-start">
       <div className="flex items-center gap-3.5">
         <Logo />
         <div>
@@ -24,15 +25,17 @@ export default function Topbar({ currentUser, isCashier, itemCount, onCartOpen, 
 
       <div className="flex items-center gap-3 max-sm:w-full max-sm:justify-between max-sm:flex-wrap" aria-label="Session status">
 
+        <ThemeToggle />
+
         {isCashier ? (
           <button
-            className="hidden max-[1100px]:inline-flex relative min-w-11.5 h-10.5 px-2.5 border border-brand-border rounded-full bg-brand-card text-brand-text items-center justify-center gap-1.5 cursor-pointer shadow-[0_10px_24px_rgba(52,45,35,0.08)]"
+            className="hidden max-[1100px]:inline-flex relative min-w-11.5 h-10.5 px-2.5 border border-brand-border rounded-lg bg-ui-surface text-brand-text items-center justify-center gap-1.5 cursor-pointer"
             type="button"
             aria-label={`Open cart with ${itemCount} items`}
             onClick={onCartOpen}
           >
             <Icon name="cart" className="w-4.5 h-4.5" />
-            <strong className="min-w-4.5 h-4.5 rounded-full bg-[#8f3c28] text-[#fffdf8] grid place-items-center text-[11px] leading-none font-black">
+            <strong className="min-w-4.5 h-4.5 rounded-sm bg-brand-action text-[#090807] grid place-items-center text-[11px] leading-none font-black">
               {itemCount}
             </strong>
           </button>
@@ -41,12 +44,12 @@ export default function Topbar({ currentUser, isCashier, itemCount, onCartOpen, 
         <div className="relative">
           <button
             type="button"
-            className="min-h-11 py-1 pr-3.5 pl-1 border border-brand-border rounded-full bg-brand-card flex items-center gap-2 cursor-pointer hover:bg-gray-50 active:scale-[0.98] transition-all"
+            className="min-h-11 py-1 pr-3.5 pl-1 border border-brand-border rounded-lg bg-ui-surface flex items-center gap-2 cursor-pointer hover:border-brand-action/45 hover:bg-ui-muted active:scale-[0.98] transition-all"
             onClick={() => setIsProfileOpen(!isProfileOpen)}
             aria-expanded={isProfileOpen}
             aria-label="Profile actions"
           >
-            <span className="w-8.5 h-8.5 rounded-full bg-[#f8d36b] text-brand-text grid place-items-center text-xs font-black">
+            <span className="w-8.5 h-8.5 rounded-md bg-brand-action/15 text-brand-action grid place-items-center text-xs font-mono font-bold">
               {initials(currentUser.name)}
             </span>
             <div className="text-left">
@@ -72,7 +75,7 @@ export default function Topbar({ currentUser, isCashier, itemCount, onCartOpen, 
                 onClick={() => setIsProfileOpen(false)}
               />
               {/* Dropdown Popover */}
-              <div className="absolute right-0 top-[calc(100%+8px)] z-50 min-w-40 bg-white border border-brand-border rounded-2xl shadow-[0_12px_36px_rgba(25,23,21,0.14)] py-1.5 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="absolute right-0 top-[calc(100%+8px)] z-50 min-w-40 bg-ui-elevated border border-brand-border rounded-lg shadow-[0_18px_48px_rgba(0,0,0,0.4)] py-1.5 animate-in fade-in slide-in-from-top-2 duration-150">
                 <button
                   type="button"
                   onClick={() => {

@@ -157,7 +157,7 @@ export default function CashierScreen({
           </div>
 
           {activeTab === 'sale' ? (
-            <label className="flex min-h-11 w-[min(100%,320px)] items-center gap-2.5 rounded-2xl border border-ui-border bg-white px-3.5 text-xs font-extrabold uppercase text-text-soft shadow-sm focus-within:border-brand-action focus-within:ring-4 focus-within:ring-brand-action/10">
+            <label className="flex min-h-11 w-[min(100%,320px)] items-center gap-2.5 rounded-lg border border-ui-border bg-ui-surface px-3.5 font-mono text-xs font-bold uppercase tracking-[0.08em] text-text-soft focus-within:border-brand-action focus-within:ring-4 focus-within:ring-brand-action/10">
               <Icon name="search" className="h-4 w-4 text-text-muted" />
               <input
                 type="search"
@@ -211,10 +211,10 @@ export default function CashierScreen({
                 style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
               >
                 <button
-                  className={`min-h-11 px-5 rounded-full text-[13px] font-extrabold cursor-pointer transition-all duration-150 active:scale-95 shrink-0 border ${
+                className={`min-h-11 px-5 rounded-md font-mono text-[12px] font-bold uppercase tracking-[0.06em] cursor-pointer transition-all duration-150 active:scale-95 shrink-0 border ${
                     selectedCategory === 'All'
-                      ? 'text-white bg-brand-action border-brand-action shadow-sm'
-                      : 'bg-white text-text-soft border-ui-border hover:border-brand-action/30 hover:text-brand-action'
+                      ? 'text-[#090807] bg-brand-action border-brand-action'
+                      : 'bg-ui-surface text-text-soft border-ui-border hover:border-brand-action/40 hover:text-brand-action'
                   }`}
                   onClick={() => setSelectedCategory('All')}
                   type="button"
@@ -224,10 +224,10 @@ export default function CashierScreen({
                 {categories.map((category) => (
                   <button
                     key={category.id}
-                    className={`min-h-11 px-5 rounded-full text-[13px] font-extrabold cursor-pointer transition-all duration-150 active:scale-95 shrink-0 border ${
+                    className={`min-h-11 px-5 rounded-md font-mono text-[12px] font-bold uppercase tracking-[0.06em] cursor-pointer transition-all duration-150 active:scale-95 shrink-0 border ${
                       selectedCategory === category.id
-                        ? 'text-white bg-brand-action border-brand-action shadow-sm'
-                        : 'bg-white text-text-soft border-ui-border hover:border-brand-action/30 hover:text-brand-action'
+                        ? 'text-[#090807] bg-brand-action border-brand-action'
+                        : 'bg-ui-surface text-text-soft border-ui-border hover:border-brand-action/40 hover:text-brand-action'
                     }`}
                     onClick={() => setSelectedCategory(category.id)}
                     type="button"
@@ -248,7 +248,7 @@ export default function CashierScreen({
             ) : null}
 
             {productsLoading && filteredProducts.length === 0 ? (
-              <LoadingState label="Loading stall menu..." className="min-h-[280px] rounded-2xl border border-ui-border bg-white" />
+              <LoadingState label="Loading stall menu..." className="min-h-[280px] rounded-lg border border-ui-border bg-ui-surface" />
             ) : filteredProducts.length === 0 ? (
               <EmptyState
                 iconName="product"
@@ -259,7 +259,7 @@ export default function CashierScreen({
                 className="min-h-[280px]"
               />
             ) : (
-              <div className="grid grid-cols-1 gap-3 min-[461px]:grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(190px,1fr))] sm:gap-4">
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-[repeat(auto-fill,minmax(190px,1fr))] sm:gap-4">
                 {filteredProducts.map((product) => {
                   const cartItem = cartById.get(product.id);
                   const category = categoryById.get(product.categoryId);
@@ -280,7 +280,7 @@ export default function CashierScreen({
             )}
           </>
         ) : (
-          <div className="flex flex-col gap-4 flex-1 min-h-0 rounded-2xl border border-ui-border bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-4 flex-1 min-h-0 rounded-lg border border-ui-border bg-ui-surface p-5">
             <div className="flex flex-wrap items-start justify-between gap-4 border-b border-gray-100 pb-4">
               <div>
                 <h3 className="m-0 text-lg font-extrabold text-text-strong">My Shift Orders</h3>
@@ -290,11 +290,11 @@ export default function CashierScreen({
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-right max-sm:w-full">
-                <div className="rounded-2xl border border-ui-border bg-ui-bg px-4 py-3">
+                <div className="rounded-md border border-ui-border bg-ui-bg px-4 py-3">
                   <span className="block text-[11px] font-black uppercase tracking-wide text-text-muted">Today</span>
                   <strong className="text-lg font-black text-brand-action">{myShiftStats.count}</strong>
                 </div>
-                <div className="rounded-2xl border border-ui-border bg-ui-bg px-4 py-3">
+                <div className="rounded-md border border-ui-border bg-ui-bg px-4 py-3">
                   <span className="block text-[11px] font-black uppercase tracking-wide text-text-muted">Sales</span>
                   <strong className="text-lg font-black text-brand-action">{money(myShiftStats.revenue)}</strong>
                 </div>
@@ -313,7 +313,7 @@ export default function CashierScreen({
               </Alert>
             ) : null}
 
-            <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="flex-1 min-h-0 overflow-x-hidden overflow-y-auto">
               {ordersLoading && myOrders.length === 0 ? (
                 <LoadingState label="Loading your orders..." className="min-h-[260px]" />
               ) : myOrders.length === 0 ? (
@@ -324,11 +324,11 @@ export default function CashierScreen({
                   className="min-h-[260px]"
                 />
               ) : (
-                <div className="grid gap-3">
+                <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
                   {myOrders.map((order) => (
                     <article
                       key={order.id}
-                      className="rounded-2xl border border-ui-border bg-white p-4 shadow-sm transition-colors hover:border-brand-action/20 hover:bg-blue-50/20"
+                      className="min-w-0 overflow-hidden rounded-lg border border-ui-border bg-ui-surface p-3.5 transition-colors hover:border-brand-action/35 hover:bg-brand-action/5"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -338,7 +338,7 @@ export default function CashierScreen({
                               {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
-                          <p className="m-0 mt-1 max-w-xl truncate text-sm font-semibold text-text-soft">
+                          <p className="m-0 mt-1 max-w-full truncate text-sm font-semibold text-text-soft">
                             {order.items.map(i => `${i.quantity}x ${i.name}`).join(', ') || 'No item details'}
                           </p>
                         </div>
@@ -438,12 +438,12 @@ export default function CashierScreen({
         <div className="hidden max-[1180px]:block fixed bottom-4 left-4 right-4 z-40">
           <Button
             onClick={() => setIsCartOpen(true)}
-            className="h-15 rounded-2xl justify-between px-5 shadow-lg"
+            className="h-15 rounded-lg justify-between px-5 shadow-[0_18px_44px_rgba(0,0,0,0.38)]"
             fullWidth
             type="button"
           >
             <span className="flex items-center gap-3">
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-white/20 text-white">
+              <span className="grid h-8 w-8 place-items-center rounded-md bg-black/15 text-[#090807]">
                 <Icon name="cart" />
               </span>
               <span className="text-[13px] font-extrabold uppercase tracking-wider">

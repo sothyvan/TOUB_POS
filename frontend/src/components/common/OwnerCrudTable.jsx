@@ -43,7 +43,7 @@ export default function OwnerCrudTable({
 
   return (
     <div className="w-full">
-      <div className="border border-brand-border rounded-2xl bg-brand-card shadow-[0_12px_36px_rgba(52,45,35,0.04)] p-6 max-[640px]:p-4 grid gap-2">
+      <div className="border border-brand-border rounded-lg bg-ui-surface p-6 max-[640px]:p-4 grid gap-2">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-3 mb-2">
           <div className="flex items-center gap-3">
             <h3 className="m-0 text-brand-dark text-lg font-black tracking-tight">{title}</h3>
@@ -54,7 +54,7 @@ export default function OwnerCrudTable({
             iconName="plusCompact"
             iconClassName="w-4.5 h-4.5"
             size="sm"
-            className="rounded-full"
+            className="rounded-md"
           >
             {label}
           </Button>
@@ -73,7 +73,7 @@ export default function OwnerCrudTable({
               <button
                 type="button"
                 onClick={() => onEdit(item)}
-                className="w-9 h-9 border border-brand-border rounded-full bg-white text-[#4f483f] flex items-center justify-center transition-all cursor-pointer active:scale-95 hover:bg-brand-action hover:text-white hover:border-brand-action"
+                className="w-9 h-9 border border-brand-border rounded-md bg-ui-surface text-text-soft flex items-center justify-center transition-all cursor-pointer active:scale-95 hover:bg-brand-action hover:text-[#090807] hover:border-brand-action"
                 title={editLabel(item)}
                 aria-label={editLabel(item)}
               >
@@ -84,7 +84,7 @@ export default function OwnerCrudTable({
                 <button
                   type="button"
                   onClick={() => onToggle(item.id)}
-                  className="w-9 h-9 border border-brand-border rounded-full bg-white text-[#4f483f] flex items-center justify-center transition-all cursor-pointer active:scale-95 hover:bg-gray-150 hover:text-brand-dark"
+                  className="w-9 h-9 border border-brand-border rounded-md bg-ui-surface text-text-soft flex items-center justify-center transition-all cursor-pointer active:scale-95 hover:bg-ui-muted hover:text-brand-dark"
                   title={getResolvedToggleLabel(item)}
                   aria-label={getResolvedToggleLabel(item)}
                 >
@@ -109,7 +109,7 @@ export default function OwnerCrudTable({
               <button
                 type="button"
                 onClick={() => onDelete(item.id)}
-                className="w-9 h-9 border border-brand-border rounded-full bg-white text-[#4f483f] flex items-center justify-center transition-all cursor-pointer active:scale-95 hover:bg-state-danger hover:text-white hover:border-state-danger"
+                className="w-9 h-9 border border-brand-border rounded-md bg-ui-surface text-text-soft flex items-center justify-center transition-all cursor-pointer active:scale-95 hover:bg-state-danger hover:text-white hover:border-state-danger"
                 title={deleteLabel(item)}
                 aria-label={deleteLabel(item)}
               >

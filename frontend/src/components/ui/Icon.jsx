@@ -33,7 +33,9 @@ import {
   ArrowRight,
   ShoppingCart,
   MoreHorizontal,
-  MoreVertical
+  MoreVertical,
+  Sun,
+  Moon
 } from 'lucide-react';
 
 const iconMap = {
@@ -73,7 +75,9 @@ const iconMap = {
   arrowRight: ArrowRight,
   shoppingCart: ShoppingCart,
   moreHorizontal: MoreHorizontal,
-  moreVertical: MoreVertical
+  moreVertical: MoreVertical,
+  sun: Sun,
+  moon: Moon
 };
 
 export default function Icon({

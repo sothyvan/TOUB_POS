@@ -53,7 +53,7 @@ export default function KhqrPaymentModal({ isOpen, total, order, qrPayload, poll
       isOpen={isOpen}
       onClose={onCancel}
       labelledBy="khqr-payment-title"
-      panelClassName="w-[min(92vw,430px)] max-h-[94svh] overflow-y-auto rounded-2xl bg-white p-4 shadow-[0_24px_64px_rgba(0,0,0,0.24)] border border-ui-border max-[420px]:p-3"
+      panelClassName="khqr-payment-surface w-[min(92vw,430px)] max-h-[94svh] overflow-y-auto rounded-lg bg-white p-4 shadow-[0_24px_64px_rgba(0,0,0,0.4)] border border-[#d8d8d8] max-[420px]:p-3"
     >
         <div className="flex flex-col items-center text-center">
           <img
@@ -65,7 +65,7 @@ export default function KhqrPaymentModal({ isOpen, total, order, qrPayload, poll
           <h3 id="khqr-payment-title" className="m-0 mt-3 text-xl font-black uppercase tracking-tight text-brand-dark">
             TOUB POS MERCHANT
           </h3>
-          <p className="m-0 mt-1 text-2xl font-black text-brand-action">
+          <p className="khqr-amount m-0 mt-1 text-2xl font-black">
             ${Number(order?.total ?? total ?? 0).toFixed(2)}
           </p>
           <div className="mt-2 flex items-center gap-2">

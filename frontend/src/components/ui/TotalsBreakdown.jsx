@@ -57,7 +57,7 @@ export default function TotalsBreakdown({
         </div>
       ) : null}
       <div className="flex justify-between items-baseline pt-4 border-t border-gray-100 mt-2">
-        <span className="text-[#1a1c1e] text-base font-bold">Total Amount</span>
+        <span className="text-brand-text text-base font-bold">Total Amount</span>
         <strong className="text-4xl text-brand-action font-black leading-none tracking-tight">
           {money(total)}
         </strong>

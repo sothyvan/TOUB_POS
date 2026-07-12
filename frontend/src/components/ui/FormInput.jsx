@@ -34,7 +34,7 @@ export default function FormInput({
         {...rest}
         aria-describedby={describedBy}
         aria-invalid={error ? 'true' : undefined}
-        className={`w-full min-h-11.5 px-3.5 border rounded-xl bg-white text-brand-text text-[14px] font-semibold outline-none transition-all placeholder:text-gray-300 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 ${error ? 'border-state-danger focus:border-state-danger focus:ring-1 focus:ring-state-danger' : 'border-brand-border focus:border-brand-action focus:ring-1 focus:ring-brand-action'} ${className}`}
+        className={`w-full min-h-11.5 px-3.5 border rounded-lg bg-ui-surface text-brand-text text-[14px] font-medium outline-none transition-all placeholder:text-text-muted disabled:cursor-not-allowed disabled:bg-ui-muted disabled:text-text-muted ${error ? 'border-state-danger focus:border-state-danger focus:ring-1 focus:ring-state-danger' : 'border-brand-border focus:border-brand-action focus:ring-1 focus:ring-brand-action'} ${className}`}
       />
       {error || helperText ? (
         <span

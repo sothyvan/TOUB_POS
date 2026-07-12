@@ -2,11 +2,11 @@ import { useEffect, useRef } from 'react';
 import Icon from './Icon';
 
 const sizeClasses = {
-  sm: 'w-full max-w-sm rounded-2xl bg-white shadow-2xl',
-  md: 'w-full max-w-md rounded-2xl bg-white shadow-2xl',
-  lg: 'w-full max-w-2xl rounded-2xl bg-white shadow-2xl',
-  xl: 'w-full max-w-4xl rounded-2xl bg-white shadow-2xl',
-  full: 'w-[min(100%,72rem)] max-h-[92svh] rounded-3xl bg-white shadow-2xl',
+  sm: 'w-full max-w-sm rounded-lg border border-ui-border bg-ui-elevated shadow-[0_24px_70px_rgba(0,0,0,0.45)]',
+  md: 'w-full max-w-md rounded-lg border border-ui-border bg-ui-elevated shadow-[0_24px_70px_rgba(0,0,0,0.45)]',
+  lg: 'w-full max-w-2xl rounded-lg border border-ui-border bg-ui-elevated shadow-[0_24px_70px_rgba(0,0,0,0.45)]',
+  xl: 'w-full max-w-4xl rounded-lg border border-ui-border bg-ui-elevated shadow-[0_24px_70px_rgba(0,0,0,0.45)]',
+  full: 'w-[min(100%,72rem)] max-h-[92svh] rounded-lg border border-ui-border bg-ui-elevated shadow-[0_24px_70px_rgba(0,0,0,0.45)]',
 };
 
 export default function ModalShell({
@@ -15,7 +15,7 @@ export default function ModalShell({
   isOpen,
   onClose,
   onBackdropClick,
-  overlayClassName = 'bg-black/60',
+  overlayClassName = 'bg-black/75',
   panelClassName = '',
   labelledBy,
   showCloseButton = false,
@@ -104,7 +104,7 @@ export default function ModalShell({
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-4 top-4 z-10 grid h-9 w-9 place-items-center rounded-full border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 hover:text-brand-text active:scale-95"
+            className="absolute right-4 top-4 z-10 grid h-9 w-9 place-items-center rounded-md border border-ui-border bg-ui-surface text-text-soft transition-all hover:border-brand-action/50 hover:text-brand-text active:scale-95"
             aria-label={closeLabel}
           >
             <Icon name="close" className="h-4 w-4" />

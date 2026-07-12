@@ -32,15 +32,14 @@ export default function OwnerSidebar({
   const visibleMain = MAIN_MENU.filter((item) => allowedTabs.includes(item.id));
 
   return (
-    <aside className="flex h-full w-64 min-w-64 shrink-0 select-none flex-col border-r border-brand-border bg-white">
+    <aside className="flex h-full w-64 min-w-64 shrink-0 select-none flex-col border-r border-brand-border bg-ui-surface">
       {/* ── Logo / Brand ── */}
       <div className="px-5 pt-5 pb-4">
         <div className="flex items-center gap-3 px-2">
           {/* Logo box — dark blue square with "r" icon feel */}
           <Logo />
           <span
-            className="text-[#191b23] font-bold leading-none"
-            style={{ fontSize: 18, fontFamily: 'Inter, sans-serif', fontWeight: 700 }}
+            className="font-mono text-[16px] font-bold leading-none tracking-[0.08em] text-brand-text"
           >
             TOUB POS
           </span>
@@ -53,10 +52,7 @@ export default function OwnerSidebar({
         {/* MAIN MENU section */}
         {visibleMain.length > 0 && (
           <>
-            <p
-              className="px-2.5 pt-2 pb-1"
-              style={{ fontSize: 10, fontWeight: 700, color: '#c4c9d4', fontFamily: 'Inter, sans-serif', letterSpacing: '0.08em', textTransform: 'uppercase' }}
-            >
+            <p className="px-2.5 pt-2 pb-1 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-text-muted">
               Main Menu
             </p>
             {visibleMain.map((item) => (
@@ -74,26 +70,20 @@ export default function OwnerSidebar({
 
       {/* ── User Footer ── */}
       <div
-        className="flex items-center gap-2.5 border-t border-[#f3f4f6] px-4"
+        className="flex items-center gap-2.5 border-t border-brand-border px-4"
         style={{ paddingTop: 14, paddingBottom: 14 }}
       >
         {/* Avatar */}
-        <div className="w-9 h-9 rounded-full bg-[#f3f4f6] flex items-center justify-center shrink-0">
-          <Icon name="users" className="w-5 h-5 text-[#9ca3af]" strokeWidth={1.8} />
+        <div className="w-9 h-9 rounded-md border border-brand-border bg-ui-muted flex items-center justify-center shrink-0">
+          <Icon name="users" className="w-5 h-5 text-text-muted" strokeWidth={1.8} />
         </div>
 
         {/* Name + Role */}
         <div className="flex-1 min-w-0">
-          <p
-            className="truncate leading-tight"
-            style={{ fontSize: 13, fontWeight: 600, color: '#111827', fontFamily: 'Inter, sans-serif' }}
-          >
+          <p className="truncate text-[13px] font-semibold leading-tight text-brand-text">
             {userName}
           </p>
-          <p
-            className="truncate leading-tight"
-            style={{ fontSize: 11, fontWeight: 400, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}
-          >
+          <p className="truncate font-mono text-[11px] font-normal leading-tight text-text-muted">
             {userRole}
           </p>
         </div>
@@ -102,11 +92,10 @@ export default function OwnerSidebar({
         <button
           type="button"
           onClick={onLogout}
-          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-150 cursor-pointer hover:opacity-80 active:scale-95 shrink-0"
-          style={{ background: '#fff1f2' }}
+          className="w-8 h-8 rounded-md border border-state-danger/25 bg-state-danger/8 text-state-danger flex items-center justify-center transition-all duration-150 cursor-pointer hover:bg-state-danger/15 active:scale-95 shrink-0"
           aria-label="Logout"
         >
-          <Icon name="logout" className="w-3.5 h-3.5" style={{ color: '#f43f5e' }} strokeWidth={2} />
+          <Icon name="logout" className="w-3.5 h-3.5" strokeWidth={2} />
         </button>
       </div>
     </aside>
@@ -119,43 +108,25 @@ function NavItem({ item, isActive, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className="relative flex items-center gap-2.5 w-full transition-all duration-150 cursor-pointer active:scale-[0.98]"
-      style={{
-        padding: '10px 12px',
-        borderRadius: 10,
-        background: isActive ? '#eef2ff' : 'transparent',
-        border: 'none',
-        outline: 'none',
-        marginBottom: 2,
-      }}
+      className={`relative mb-0.5 flex w-full cursor-pointer items-center gap-2.5 rounded-md border px-3 py-2.5 transition-all duration-150 active:scale-[0.98] ${isActive ? 'border-brand-action/35 bg-brand-action/10' : 'border-transparent bg-transparent hover:border-brand-border hover:bg-ui-muted'}`}
     >
       {/* Icon */}
       <Icon
         name={item.icon}
-        className="w-[17px] h-[17px] shrink-0"
         strokeWidth={isActive ? 2.5 : 2}
-        style={{ color: isActive ? '#003ec7' : '#6b7280' }}
+        className={`w-[17px] h-[17px] shrink-0 ${isActive ? 'text-brand-action' : 'text-text-soft'}`}
       />
 
       {/* Label */}
       <span
-        className="flex-1 text-left leading-none"
-        style={{
-          fontSize: 14,
-          fontWeight: isActive ? 600 : 500,
-          color: isActive ? '#003ec7' : '#6b7280',
-          fontFamily: 'Inter, sans-serif',
-        }}
+        className={`flex-1 text-left text-[14px] leading-none ${isActive ? 'font-semibold text-brand-action' : 'font-medium text-text-soft'}`}
       >
         {item.label}
       </span>
 
       {/* Active blue dot indicator */}
       {isActive && (
-        <span
-          className="shrink-0"
-          style={{ width: 6, height: 6, borderRadius: 3, background: '#003ec7', display: 'inline-block' }}
-        />
+        <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-sm bg-brand-action" />
       )}
     </button>
   );

@@ -7,14 +7,14 @@ export default function MetricCard({
   subtitleColor = 'text-gray-500'
 }) {
   return (
-    <div className="flex-1 px-5 py-4 bg-white rounded-2xl shadow-[0px_1px_3px_0px_rgba(0,0,0,0.05)] border-l-[0.80px] border-r-[0.80px] border-t-[2.40px] border-b-[0.80px] border-gray-200 flex flex-col justify-start items-start gap-3">
+    <div className="flex-1 px-5 py-4 bg-ui-surface rounded-lg border border-ui-border border-t-brand-action/70 flex flex-col justify-start items-start gap-3">
       <div className="self-stretch flex justify-between items-start">
         <div className="w-auto relative">
           <div className="text-gray-500 text-xs font-bold font-sans uppercase leading-4 tracking-wide">
             {title}
           </div>
         </div>
-        <div className={`w-8 h-8 ${iconBgColor} rounded-lg flex justify-center items-center`}>
+        <div className={`w-8 h-8 ${iconBgColor} rounded-md border border-ui-border flex justify-center items-center`}>
           {icon}
         </div>
       </div>

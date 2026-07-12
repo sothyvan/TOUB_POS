@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Icon from './ui/Icon';
 import FormInput from './ui/FormInput';
 import Logo from './ui/Logo';
+import ThemeToggle from './ui/ThemeToggle';
 import { initials } from '../utils/format';
 
 export default function LoginScreen({
@@ -56,7 +57,7 @@ export default function LoginScreen({
   };
 
   const renderRegister = () => (
-    <section className="w-[min(380px,calc(100%-1.5rem))] p-8 rounded-3xl bg-white shadow-[0_24px_64px_-16px_rgba(0,0,0,0.12)] flex flex-col gap-6 animate-in fade-in duration-200">
+    <section className="w-[min(380px,calc(100%-1.5rem))] p-8 rounded-lg border border-brand-border bg-ui-elevated shadow-[0_24px_70px_rgba(0,0,0,0.4)] flex flex-col gap-6 animate-in fade-in duration-200">
       <div className="flex items-center gap-4">
         <Logo variant="login" />
         <div>
@@ -114,7 +115,7 @@ export default function LoginScreen({
   );
 
   const renderSelectProfile = () => (
-    <section className="w-[min(480px,calc(100%-1.5rem))] p-8 rounded-3xl bg-white shadow-[0_24px_64px_-16px_rgba(0,0,0,0.12)] flex flex-col gap-6 animate-in fade-in duration-200">
+    <section className="w-[min(480px,calc(100%-1.5rem))] p-8 rounded-lg border border-brand-border bg-ui-elevated shadow-[0_24px_70px_rgba(0,0,0,0.4)] flex flex-col gap-6 animate-in fade-in duration-200">
       <div className="flex items-center gap-4">
         <Logo variant="login" />
         <div>
@@ -149,7 +150,7 @@ export default function LoginScreen({
                 key={user.id}
                 type="button"
                 onClick={() => onSelectProfile(user)}
-                className="w-28 p-3.5 border border-brand-border/60 hover:border-brand-action rounded-2xl bg-brand-card hover:bg-white flex flex-col items-center shadow-sm hover:shadow active:scale-95 hover:translate-y-0.5 transition-all duration-200 cursor-pointer"
+                className="w-28 p-3.5 border border-brand-border hover:border-brand-action/60 rounded-lg bg-ui-surface hover:bg-ui-muted flex flex-col items-center active:scale-95 transition-all duration-200 cursor-pointer"
               >
                 <div className={`w-15 h-15 rounded-full border-3 ${borderRing} flex items-center justify-center text-lg font-black shadow-inner`}>
                   {initials(user.name)}
@@ -193,7 +194,7 @@ export default function LoginScreen({
     const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'erase'];
 
     return (
-      <section className="w-full max-w-105 min-h-[580px] rounded-4xl bg-white shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-brand-border/20">
+      <section className="w-full max-w-105 min-h-[580px] rounded-lg bg-ui-elevated shadow-[0_24px_70px_rgba(0,0,0,0.45)] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-brand-border">
         {/* Top 35% solid royal blue container */}
         <div className="h-48 bg-brand-action flex flex-col items-center justify-center relative select-none shadow-md shrink-0">
           <button
@@ -244,7 +245,7 @@ export default function LoginScreen({
                     key={idx}
                     type="button"
                     onClick={onErase}
-                    className="h-14 rounded-2xl border border-brand-border/40 bg-white hover:bg-gray-50 active:scale-95 transition-all text-[#776f63] grid place-items-center shadow-sm cursor-pointer"
+                    className="h-14 rounded-md border border-brand-border bg-ui-surface hover:border-brand-action/45 hover:bg-ui-muted active:scale-95 transition-all text-text-soft grid place-items-center cursor-pointer"
                     aria-label="Backspace"
                   >
                     <Icon name="backspace" className="w-5.5 h-5.5" strokeWidth={2} />
@@ -256,7 +257,7 @@ export default function LoginScreen({
                   key={idx}
                   type="button"
                   onClick={() => onKeyPress(key)}
-                  className="h-14 rounded-2xl border border-brand-border/40 bg-white hover:bg-gray-50 active:scale-95 transition-all text-brand-dark text-xl font-bold shadow-sm cursor-pointer"
+                  className="h-14 rounded-md border border-brand-border bg-ui-surface hover:border-brand-action/45 hover:bg-ui-muted active:scale-95 transition-all text-brand-dark text-xl font-bold cursor-pointer"
                 >
                   {key}
                 </button>
@@ -269,7 +270,7 @@ export default function LoginScreen({
   };
 
   const renderManagementLogin = () => (
-    <section className="w-[min(380px,calc(100%-1.5rem))] p-8 rounded-3xl bg-white shadow-[0_24px_64px_-16px_rgba(0,0,0,0.12)] flex flex-col gap-6 animate-in fade-in duration-200">
+    <section className="w-[min(380px,calc(100%-1.5rem))] p-8 rounded-lg border border-brand-border bg-ui-elevated shadow-[0_24px_70px_rgba(0,0,0,0.4)] flex flex-col gap-6 animate-in fade-in duration-200">
       <div className="flex items-center gap-4">
         <Logo variant="login" />
         <div>
@@ -336,7 +337,7 @@ export default function LoginScreen({
   };
 
   const renderSelectStall = () => (
-    <section className="w-[min(380px,calc(100%-1.5rem))] p-8 rounded-3xl bg-white shadow-[0_24px_64px_-16px_rgba(0,0,0,0.12)] flex flex-col gap-6 animate-in fade-in duration-200">
+    <section className="w-[min(380px,calc(100%-1.5rem))] p-8 rounded-lg border border-brand-border bg-ui-elevated shadow-[0_24px_70px_rgba(0,0,0,0.4)] flex flex-col gap-6 animate-in fade-in duration-200">
       <div className="flex items-center gap-4">
         <Logo variant="login" />
         <div>
@@ -392,18 +393,19 @@ export default function LoginScreen({
   );
 
   return (
-    <main className="relative min-h-svh p-6 grid place-items-center bg-brand-yellow text-gray-800 selection:bg-brand-blue/20 max-[640px]:flex max-[640px]:flex-col max-[640px]:items-center max-[640px]:justify-center max-[640px]:gap-4">
+    <main className="tech-grid relative min-h-svh p-6 grid place-items-center bg-ui-bg text-brand-text selection:bg-brand-action/30 max-[640px]:flex max-[640px]:flex-col max-[640px]:items-center max-[640px]:justify-center max-[640px]:gap-4">
+      <ThemeToggle className="absolute right-5 top-5 z-10 bg-ui-elevated" />
       {loginMode === 'management' && renderManagementLogin()}
       {loginMode === 'cashier' && flowStep === 'register' && (ownerToken ? renderSelectStall() : renderRegister())}
       {loginMode === 'cashier' && flowStep === 'select-profile' && renderSelectProfile()}
       {loginMode === 'cashier' && flowStep === 'pin-pad' && renderPinPad()}
 
       {showDemoCredentials && (
-        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex flex-wrap justify-center gap-3 bg-white/20 backdrop-blur-md px-4 py-2.5 rounded-full border border-white/25 text-[11px] font-semibold text-brand-blue shadow-sm max-[640px]:static max-[640px]:w-[min(100%,380px)] max-[640px]:translate-x-0 max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2 max-[640px]:rounded-2xl">
+        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex flex-wrap justify-center gap-3 bg-ui-surface/85 backdrop-blur-md px-4 py-2.5 rounded-lg border border-brand-border font-mono text-[10px] font-medium text-text-soft max-[640px]:static max-[640px]:w-[min(100%,380px)] max-[640px]:translate-x-0 max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2">
           <span className="opacity-80">Development Credentials:</span>
-          <span className="bg-white/35 px-2 py-0.5 rounded-full">Bootstrap API: platform_admin / platform123</span>
-          <span className="bg-white/35 px-2 py-0.5 rounded-full">Demo seed owner: owner / owner123</span>
-          <span className="bg-white/35 px-2 py-0.5 rounded-full">Cashier: profile + PIN</span>
+          <span className="bg-ui-muted px-2 py-0.5 rounded-sm">Bootstrap API: platform_admin / platform123</span>
+          <span className="bg-ui-muted px-2 py-0.5 rounded-sm">Demo seed owner: owner / owner123</span>
+          <span className="bg-ui-muted px-2 py-0.5 rounded-sm">Cashier: profile + PIN</span>
         </div>
       )}
     </main>

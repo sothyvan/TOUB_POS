@@ -696,7 +696,29 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
             ))}
           </select>
 
-          <div className="flex items-center gap-1 bg-[#f3f4f6] p-1 rounded-xl max-[900px]:col-span-2 max-[900px]:grid max-[900px]:grid-cols-4 max-[520px]:grid-cols-2">
+          <label className="hidden max-[900px]:col-span-2 max-[900px]:flex max-[900px]:items-center max-[900px]:gap-3 max-[900px]:rounded-lg max-[900px]:border max-[900px]:border-ui-border max-[900px]:bg-ui-surface max-[900px]:px-3">
+            <span className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-wider text-text-muted">Period</span>
+            <select
+              value={dateFilter}
+              onChange={(event) => {
+                const nextFilter = event.target.value;
+                if (nextFilter === 'custom') {
+                  setIsDateRangeOpen(true);
+                  return;
+                }
+                setDateFilter(nextFilter);
+              }}
+              className="h-10 min-w-0 flex-1 border-0 bg-transparent text-right text-[12px] font-extrabold uppercase text-brand-action outline-none"
+              aria-label="Report date period"
+            >
+              <option value="today">Today</option>
+              <option value="week">This week</option>
+              <option value="month">This month</option>
+              <option value="custom">Custom dates</option>
+            </select>
+          </label>
+
+          <div className="flex items-center gap-1 bg-[#f3f4f6] p-1 rounded-xl max-[900px]:hidden">
             {['today', 'week', 'month'].map((t) => (
               <button
                 key={t}
@@ -771,7 +793,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
           </span>
         </div>
 
-        <div className="grid grid-cols-5 gap-3 max-[1280px]:grid-cols-3 max-[900px]:grid-cols-1">
+        <div className="grid grid-cols-5 gap-3 max-[1280px]:grid-cols-3 max-[900px]:flex max-[900px]:snap-x max-[900px]:snap-mandatory max-[900px]:overflow-x-auto max-[900px]:pb-2">
           {operationalAlerts.map((alert) => {
             const tone = alertToneConfig[alert.count > 0 ? alert.tone : 'success'];
             return (
@@ -779,7 +801,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
                 key={alert.id}
                 type="button"
                 onClick={() => handleOperationalAlertClick(alert)}
-                className={`text-left rounded-xl border p-3 cursor-pointer transition-all active:scale-[0.99] ${tone.panelClassName}`}
+                className={`text-left rounded-xl border p-3 cursor-pointer transition-all active:scale-[0.99] max-[900px]:w-[min(76vw,250px)] max-[900px]:min-w-[min(76vw,250px)] max-[900px]:snap-start ${tone.panelClassName}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -847,7 +869,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
             </div>
 
             {/* CardStalls */}
-            <div className="bg-white p-5 rounded-2xl border border-[#f3f4f6] flex flex-col justify-between h-[180px] shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
+            <div className="bg-white p-5 rounded-2xl border border-[#f3f4f6] flex min-h-[180px] flex-col justify-between shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
               <div className="flex justify-between items-start">
                 <div>
                   <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#6b7280', fontFamily: 'Inter, sans-serif' }}>Selling Stalls</h4>
@@ -860,14 +882,14 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2.5 my-2">
-                {activeStallNames.length > 0 ? activeStallNames.slice(0, 4).map((stallName) => (
+              <div className="my-3 flex min-w-0 flex-wrap gap-2">
+                {activeStallNames.length > 0 ? activeStallNames.map((stallName) => (
                   <div 
                     key={stallName}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-blue-100 bg-blue-50 text-[11px] font-bold text-blue-700"
+                    className="flex min-w-0 max-w-full items-center gap-1.5 rounded-md border border-blue-100 bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-700"
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                    {stallName}
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />
+                    <span className="min-w-0 break-words">{stallName}</span>
                   </div>
                 )) : (
                   <span className="text-[12px] font-semibold text-[#9ca3af]">No paid stall activity in this range.</span>

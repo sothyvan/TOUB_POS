@@ -612,6 +612,20 @@ Update this file after every meaningful implementation change.
   - Updated `docs/database/queries.sql` with exact raw SQL query conversions for orders, webhooks, row-locks, and report calculations.
   - Tested and verified order creation, listing, webhook completion, and report metrics using curl scripts.
 - Verified client compilation builds successfully.
+- **Added persistent light and dark presentation themes**:
+  - Added a shared theme context and accessible theme toggle on login, cashier, and owner/manager shells.
+  - Kept the approved dark-tech theme as the default and added a warm, high-contrast light palette using the same semantic tokens.
+  - Persisted the user's choice in browser storage and preserved the white KHQR scan surface in both themes.
+  - Fixed Staff Management row hover styling so row text remains readable in dark and light mode.
+- **Refined responsive cashier selling views**:
+  - Added compact product thumbnails and image fallbacks to current-order cart rows.
+  - Kept the Quick Sale catalog at two columns on phone widths with compact card typography and controls.
+  - Converted My Orders to a bounded responsive card grid so order details fit without horizontal scrolling on mobile or oversized rows on desktop.
+- **Improved mobile management navigation and report filtering**:
+  - Matched the mobile owner/manager menu order to the desktop sidebar order.
+  - Replaced stacked mobile report-period buttons with a compact dropdown while preserving the custom date dialog.
+  - Changed Operations Watch into a horizontally scrollable snap row on mobile so key report data appears sooner.
+  - Made the Selling Stalls KPI expand to fit every active stall and wrap long stall names safely on mobile.
 
 ## Next Up
 

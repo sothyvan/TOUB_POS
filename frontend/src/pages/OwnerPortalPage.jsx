@@ -79,8 +79,8 @@ export default function OwnerPortalPage() {
     'dashboard',
     canManageMenu  ? 'products' : null,  // includes Categories sub-tab
     canManageMenu  ? 'stalls'   : null,
-    canViewOrders  ? 'orders'   : null,
     canManageUsers ? 'users'    : null,
+    canViewOrders  ? 'orders'   : null,
   ].filter(Boolean);
 
   const visibleOwnerTab = allowedOwnerTabs.includes(ownerTab) ? ownerTab : allowedOwnerTabs[0];

@@ -35,7 +35,7 @@ export default function OrderPanel({
 
   return (
     <aside
-      className={`min-h-0 bg-white text-[#1a1c1e] flex flex-col border-l border-ui-border shadow-sm max-[1180px]:fixed max-[1180px]:top-0 max-[1180px]:right-0 max-[1180px]:bottom-0 max-[1180px]:z-30 max-[1180px]:w-[min(430px,92vw)] max-[1180px]:border-l-0 max-[1180px]:shadow-[-24px_0_52px_rgba(25,23,21,0.34)] max-[1180px]:transition-transform max-[1180px]:duration-200 max-[1180px]:ease-in-out max-sm:top-auto max-sm:w-full max-sm:max-h-[88svh] max-sm:rounded-t-2xl max-sm:shadow-[0_-24px_52px_rgba(25,23,21,0.34)] ${
+      className={`min-h-0 bg-ui-elevated text-brand-text flex flex-col border-l border-ui-border max-[1180px]:fixed max-[1180px]:top-0 max-[1180px]:right-0 max-[1180px]:bottom-0 max-[1180px]:z-30 max-[1180px]:w-[min(430px,92vw)] max-[1180px]:border-l-0 max-[1180px]:shadow-[-24px_0_52px_rgba(0,0,0,0.45)] max-[1180px]:transition-transform max-[1180px]:duration-200 max-[1180px]:ease-in-out max-sm:top-auto max-sm:w-full max-sm:max-h-[88svh] max-sm:rounded-t-lg max-sm:shadow-[0_-24px_52px_rgba(0,0,0,0.45)] ${
         isCartOpen
           ? 'max-[1180px]:translate-x-0 max-sm:translate-y-0'
           : 'max-[1180px]:translate-x-[110%] max-sm:translate-y-[110%]'
@@ -62,7 +62,7 @@ export default function OrderPanel({
             </button>
           )}
           <button
-            className="hidden max-[1180px]:grid max-[1180px]:place-items-center w-8 h-8 border border-gray-200 rounded-full bg-gray-50 text-gray-500 text-sm font-bold cursor-pointer hover:bg-gray-100 transition-colors"
+            className="hidden max-[1180px]:grid max-[1180px]:place-items-center w-8 h-8 border border-ui-border rounded-md bg-ui-surface text-text-soft text-sm font-bold cursor-pointer hover:border-brand-action/45 hover:bg-ui-muted transition-colors"
             type="button"
             aria-label="Close cart"
             onClick={() => setIsCartOpen(false)}
@@ -94,7 +94,7 @@ export default function OrderPanel({
       </div>
 
       {/* Footer Section */}
-      <div className="p-6 border-t border-gray-100 bg-white shrink-0">
+      <div className="p-6 border-t border-ui-border bg-ui-elevated shrink-0">
         <TotalsBreakdown
           subtotal={subtotal}
           serviceFee={serviceFee}
@@ -110,11 +110,11 @@ export default function OrderPanel({
         ) : null}
 
         {!hasItems ? (
-          <p className="m-0 mb-4 rounded-xl bg-ui-muted px-3 py-2 text-xs font-bold text-text-muted">
+          <p className="m-0 mb-4 rounded-md border border-ui-border bg-ui-muted px-3 py-2 text-xs font-bold text-text-muted">
             Add at least one item to enable payment.
           </p>
         ) : !isOnline ? (
-          <p className="m-0 mb-4 rounded-xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700">
+          <p className="m-0 mb-4 rounded-md border border-state-warning/30 bg-state-warning/10 px-3 py-2 text-xs font-bold text-state-warning">
             Offline mode: cash is available, KHQR is disabled.
           </p>
         ) : null}

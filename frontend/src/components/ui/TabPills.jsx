@@ -9,16 +9,16 @@
  */
 export default function TabPills({ tabs, activeId, onChange, className = '' }) {
   return (
-    <div className={`flex items-center gap-1 rounded-xl bg-ui-muted p-1 shrink-0 ${className}`}>
+    <div className={`flex items-center gap-1 rounded-lg border border-ui-border bg-ui-bg p-1 shrink-0 ${className}`}>
       {tabs.map((tab) => (
         <button
           key={tab.id}
           type="button"
           onClick={() => onChange(tab.id)}
-          className={`cursor-pointer rounded-lg border-0 px-4.5 py-1.5 text-[13px] transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-action/20 ${
+          className={`cursor-pointer rounded-md border px-4.5 py-1.5 text-[13px] transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-action/20 ${
             activeId === tab.id
-              ? 'bg-white text-brand-action shadow-sm font-semibold'
-              : 'bg-transparent text-text-soft hover:text-brand-text font-medium'
+              ? 'border-brand-action/50 bg-brand-action/10 text-brand-action font-semibold'
+              : 'border-transparent bg-transparent text-text-soft hover:bg-ui-muted hover:text-brand-text font-medium'
           }`}
         >
           {tab.label}

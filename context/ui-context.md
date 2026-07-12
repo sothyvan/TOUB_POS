@@ -14,28 +14,34 @@
 
 ## Colors
 
+TouB POS supports dark and light presentation themes. Dark mode remains the default, and the user's choice is stored in the browser for future visits.
+
 | Role            | Value / Tailwind Class |
 | --------------- | ---------------------- |
-| Page background | `bg-gray-50`           |
-| Surface         | `bg-white`             |
-| Primary text    | `text-gray-900`        |
-| Muted text      | `text-gray-500`        |
-| Primary accent  | `#003EC7`              |
-| Error/Alert     | `#C70000`              |
-| Success         | `#157811`              |
+| Page background | `#080807`              |
+| Surface         | `#111110`              |
+| Elevated surface| `#171715`              |
+| Primary text    | `#F1EFEA`              |
+| Muted text      | `#A29D96`              |
+| Primary accent  | `#E76F2E`              |
+| Error/Alert     | `#E35D5D`              |
+| Success         | `#55A982`              |
 
-## Color System Rules (Single-Blue Architecture)
+The light theme uses warm off-white surfaces (`#F3F2EE`, `#FBFAF7`), near-black text (`#1B1917`), warm-gray borders (`#D7D3CC`), and a darker orange action color (`#C9571D`) for accessible contrast.
 
-- The application relies on a single signature blue token: `COLOR_BRAND_BLUE` = `#003EC7`.
-- **Primary Surfaces (Headers, Direct Action Buttons):** Must use `COLOR_BRAND_BLUE` at solid 100% opacity.
-- **Floating Containers (Cart Drawer):** Must use clean white backgrounds (`bg-white`) layered with an explicit elevated elevation shadow to denote physical depth, reserving blue for key text or action buttons.
-- **Overlay States (Modals):** Background tinting should use a dark transparent backdrop or `COLOR_BRAND_BLUE` scaled down to 15% opacity matched with a hardware-accelerated backdrop blur filter.
+## Color System Rules (Dual-Theme Dark-Tech Architecture)
+
+- TouB POS uses layered near-black surfaces, warm-gray borders, off-white text, and one restrained orange action accent.
+- **Primary Surfaces:** Page, sidebar, header, card, table, and modal surfaces use `ui-bg`, `ui-surface`, and `ui-elevated` tokens rather than isolated hardcoded colors.
+- **Direct Actions:** Orange is reserved for the active navigation state, primary submit actions, and important totals. Destructive, success, and payment colors keep their semantic meanings.
+- **Elevation:** Prefer thin borders and small tonal shifts over large shadows. Overlays use a dark transparent backdrop with restrained blur.
+- **Theme behavior:** Components consume semantic theme tokens rather than fixed foreground/background pairs. The root `data-theme` attribute switches palettes, and scan-critical KHQR content stays white in both themes.
 
 ## Frontend Theme Tokens
 
 The Tailwind v4 theme in `frontend/src/index.css` defines app-specific tokens for the current visual system:
 
-- `brand-action` — primary action blue for checkout, admin tabs, submit buttons, and important totals.
+- `brand-action` — restrained orange for checkout, active tabs, submit buttons, and important totals.
 - `state-danger` — destructive/cancel red for KHQR, delete, logout, and clear actions.
 - `state-success` — confirmation green for cash and successful payment actions.
 
@@ -48,7 +54,7 @@ The Tailwind v4 theme in `frontend/src/index.css` defines app-specific tokens fo
 
 - **Base Grid:** Strict 8px spatial grid system (`8px`, `16px`, `24px`, `32px`, `48px`). All margins, paddings, and structural spacing values must align to this increments.
 - **Corner Radii (Rounding):**
-  - Interactive UI controls (Buttons, Text Inputs, Selector Pills): `8px` rounded borders.
-  - Contextual Sheet Elements & Layout Cards: `12px` rounded borders.
-  - Overlay Modals (Success panels, QR code blocks): `16px` rounded borders.
+  - Interactive UI controls (Buttons, Text Inputs, Selector Pills): `6px` to `8px` rounded borders.
+  - Contextual Sheet Elements & Layout Cards: `8px` rounded borders.
+  - Overlay Modals (Success panels, QR code blocks): `8px` rounded borders, except the scan-critical white KHQR card.
   - User Profiles (Avatar containers): `50%` circular bounding boxes.

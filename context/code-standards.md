@@ -16,7 +16,7 @@
 - Ensure all cashier-facing interfaces are fully responsive for mobile, tablet and also work fine on big computer screens.
 - **Layout Sizing:** Use relative units (`%`, `vw`, `vh`, `fr` in grid, `flex`) for major structural containers and widths to ensure fluid responsiveness.
 - **Spacing Grid:** Use strict `8px`-based increments (`8px`, `16px`, `24px`, etc., or Tailwind equivalents like `p-2`, `m-4`) for padding, margins, gaps, and border radii. Fixed pixel sizes (or their `rem` equivalents) are correct for spacing, but not for structural layout widths.
-- Font Inter must be used throughout the app for all text.
+- Geist Variable must be used for interface text. Use a system monospace stack only for compact technical labels, IDs, and report metadata.
 
 ## API Routes (Express.js)  
 

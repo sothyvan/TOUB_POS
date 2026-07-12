@@ -1,9 +1,9 @@
 const variantClasses = {
-  neutral: 'border-gray-200 bg-gray-100 text-gray-600',
-  info: 'border-blue-100 bg-blue-50 text-blue-700',
-  success: 'border-green-100 bg-green-50 text-green-700',
-  warning: 'border-amber-100 bg-amber-50 text-amber-700',
-  danger: 'border-red-100 bg-red-50 text-red-700',
+  neutral: 'border-ui-border bg-ui-muted text-text-soft',
+  info: 'border-brand-action/35 bg-brand-action/10 text-brand-action',
+  success: 'border-state-success/35 bg-state-success/10 text-state-success',
+  warning: 'border-state-warning/35 bg-state-warning/10 text-state-warning',
+  danger: 'border-state-danger/35 bg-state-danger/10 text-state-danger',
   brand: 'border-brand-action/15 bg-brand-action/10 text-brand-action',
 };
 
@@ -33,7 +33,7 @@ export default function Badge({
   const resolvedSize = sizeClasses[size] || sizeClasses.sm;
 
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border font-extrabold uppercase tracking-wide ${resolvedSize} ${resolvedVariant} ${className}`}>
+    <span className={`inline-flex items-center gap-1 rounded-md border font-mono font-bold uppercase tracking-[0.08em] ${resolvedSize} ${resolvedVariant} ${className}`}>
       {dot ? <span className={`h-1.5 w-1.5 rounded-full ${resolvedDot}`} aria-hidden="true" /> : null}
       {children}
     </span>

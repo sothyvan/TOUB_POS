@@ -8,6 +8,7 @@ import ConfirmDialog from './ui/ConfirmDialog';
 import Icon from './ui/Icon';
 import OwnerSidebar from './OwnerSidebar';
 import OwnerHeader from './OwnerHeader';
+import ThemeToggle from './ui/ThemeToggle';
 
 const ownerTabIcons = {
   dashboard: 'dashboard',
@@ -26,11 +27,13 @@ const ownerTabLabels = {
   users: 'Staff Management',
 };
 
+const ownerTabOrder = ['dashboard', 'products', 'stalls', 'users', 'orders'];
+
 const navButtonClass = (isActive) =>
-  `flex items-center gap-3 w-full min-h-11.5 px-4 rounded-xl text-[14px] font-bold capitalize transition-all duration-200 cursor-pointer active:scale-[0.98] ${
+  `flex items-center gap-3 w-full min-h-11.5 px-4 rounded-md border text-[14px] font-semibold capitalize transition-all duration-200 cursor-pointer active:scale-[0.98] ${
     isActive
-      ? 'bg-brand-action text-white shadow-sm'
-      : 'text-[#776f63] hover:bg-gray-50 hover:text-brand-dark'
+      ? 'border-brand-action/40 bg-brand-action/10 text-brand-action'
+      : 'border-transparent text-text-soft hover:border-brand-border hover:bg-ui-muted hover:text-brand-dark'
   }`;
 
 export default function OwnerWorkspace({
@@ -79,6 +82,7 @@ export default function OwnerWorkspace({
   const [pendingDelete, setPendingDelete] = useState(null);
   const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mobileOwnerTabs = ownerTabOrder.filter((tab) => allowedOwnerTabs.includes(tab));
 
   const handlePromptDelete = (type, id) => {
     const name = 
@@ -115,31 +119,34 @@ export default function OwnerWorkspace({
       </div>
 
       {/* Mobile Hamburger Header Bar (Phone) */}
-      <div className="hidden max-[768px]:flex flex-col bg-brand-card border-b border-brand-border z-30 shrink-0">
+      <div className="hidden max-[768px]:flex flex-col bg-ui-surface border-b border-brand-border z-30 shrink-0">
         <div className="flex items-center justify-between p-4">
           <span className="text-sm font-bold text-brand-dark flex items-center gap-2">
             <Icon name={ownerTabIcons[visibleOwnerTab]} className="w-5 h-5 text-brand-action" />
             <span>{ownerTabLabels[visibleOwnerTab] ?? visibleOwnerTab}</span>
           </span>
 
-          <button
-            type="button"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="w-10 h-10 rounded-xl border border-brand-border bg-brand-card grid place-items-center text-brand-text hover:bg-gray-50 active:scale-95 transition-all cursor-pointer"
-            aria-label="Toggle menu"
-          >
-            {isMobileMenuOpen ? (
-              <Icon name="close" />
-            ) : (
-              <Icon name="menu" />
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="w-10 h-10 rounded-md border border-brand-border bg-ui-surface grid place-items-center text-brand-text hover:border-brand-action/45 hover:bg-ui-muted active:scale-95 transition-all cursor-pointer"
+              aria-label="Toggle menu"
+            >
+              {isMobileMenuOpen ? (
+                <Icon name="close" />
+              ) : (
+                <Icon name="menu" />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Collapsible Mobile Sidebar (Dropdown menu) */}
         {isMobileMenuOpen && (
-          <nav className="flex flex-col p-4 pt-0 gap-1 border-t border-brand-border/60 bg-brand-card animate-in slide-in-from-top duration-150">
-            {allowedOwnerTabs.map((tab) => {
+          <nav className="flex flex-col p-4 pt-0 gap-1 border-t border-brand-border/60 bg-ui-surface animate-in slide-in-from-top duration-150">
+            {mobileOwnerTabs.map((tab) => {
               const isActive = visibleOwnerTab === tab;
               return (
                 <button
@@ -171,7 +178,7 @@ export default function OwnerWorkspace({
       </div>
 
       {/* Right Main Content area */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-[#f8fafc]">
+      <div className="flex-1 flex flex-col overflow-hidden bg-ui-bg">
         {/* Figma-spec owner topbar (desktop only) */}
         <div className="max-[768px]:hidden">
           <OwnerHeader activeTab={visibleOwnerTab} />
@@ -255,7 +262,7 @@ export default function OwnerWorkspace({
             <label className="text-left text-xs font-bold text-brand-subtext">
               Type DELETE to confirm
               <input
-                className="mt-2 w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-sm font-bold text-brand-dark outline-none focus:border-brand-action"
+                className="mt-2 w-full rounded-lg border border-brand-border bg-ui-surface px-3 py-2 text-sm font-bold text-brand-dark outline-none focus:border-brand-action"
                 value={deleteConfirmationText}
                 onChange={(event) => setDeleteConfirmationText(event.target.value)}
                 autoComplete="off"
@@ -264,15 +271,15 @@ export default function OwnerWorkspace({
           </div>
         ) : null}
         icon={(
-          <div className="w-16 h-16 rounded-full bg-[#fdf5d6] flex items-center justify-center text-brand-yellow mb-4">
+          <div className="w-16 h-16 rounded-lg border border-state-warning/30 bg-state-warning/10 flex items-center justify-center text-state-warning mb-4">
             <Icon name="warning" className="w-8 h-8" />
           </div>
         )}
         cancelTone="secondary"
         confirmTone="danger"
         confirmLabel="Delete"
-        overlayClassName="bg-brand-dark/40"
-        panelClassName="border-brand-yellow bg-[#fffcf0]"
+        overlayClassName="bg-black/75"
+        panelClassName="border-state-warning/35 bg-ui-elevated"
         isConfirmDisabled={deleteConfirmationText.trim() !== 'DELETE'}
         onCancel={() => {
           setPendingDelete(null);

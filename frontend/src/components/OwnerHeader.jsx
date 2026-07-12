@@ -1,4 +1,5 @@
 import Icon from './ui/Icon';
+import ThemeToggle from './ui/ThemeToggle';
 
 // Tab → breadcrumb label map
 const PAGE_TITLES = {
@@ -25,27 +26,26 @@ export default function OwnerHeader({ activeTab }) {
 
   return (
     <header
-      className="flex items-center justify-between gap-4 bg-white border-b border-[#f3f4f6] shrink-0"
+      className="flex items-center justify-between gap-4 bg-ui-surface border-b border-brand-border shrink-0"
       style={{ height: 64, paddingLeft: 28, paddingRight: 28 }}
     >
       {/* Left — breadcrumb + page title */}
       <div className="flex flex-col justify-center gap-0.5">
         {/* Breadcrumb */}
         <div className="flex items-center gap-1.5">
-          <span style={{ fontSize: 12, fontWeight: 500, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}>
+          <span className="font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-text-muted">
             ToubPOS
           </span>
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M4.5 3l3 3-3 3" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M4.5 3l3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          <span style={{ fontSize: 12, fontWeight: 600, color: '#003ec7', fontFamily: 'Inter, sans-serif' }}>
+          <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-brand-action">
             {crumb}
           </span>
         </div>
         {/* Page title */}
         <h1
-          className="m-0 leading-tight"
-          style={{ fontSize: 16, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}
+          className="m-0 text-[16px] font-semibold leading-tight text-brand-text"
         >
           {title}
         </h1>
@@ -53,13 +53,14 @@ export default function OwnerHeader({ activeTab }) {
 
       {/* Right — current date */}
       <div className="flex items-center gap-2.5">
+        <ThemeToggle />
         {/* Date label */}
         <div
-          className="flex items-center gap-2 rounded-[10px] bg-[#f8fafc] border border-[#e5e7eb]"
+          className="flex items-center gap-2 rounded-md bg-ui-bg border border-brand-border"
           style={{ height: 38, paddingLeft: 14, paddingRight: 14 }}
         >
-          <Icon name="clock" className="w-3.5 h-3.5 text-[#6b7280]" strokeWidth={2} />
-          <span style={{ fontSize: 13, fontWeight: 500, color: '#374151', fontFamily: 'Inter, sans-serif', whiteSpace: 'nowrap' }}>
+          <Icon name="clock" className="w-3.5 h-3.5 text-text-muted" strokeWidth={2} />
+          <span className="whitespace-nowrap font-mono text-[12px] font-medium text-text-soft">
             {today}
           </span>
         </div>
