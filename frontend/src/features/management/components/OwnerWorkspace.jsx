@@ -82,6 +82,7 @@ export default function OwnerWorkspace({
   const [pendingDelete, setPendingDelete] = useState(null);
   const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showMobileLogoutConfirm, setShowMobileLogoutConfirm] = useState(false);
   const mobileOwnerTabs = ownerTabOrder.filter((tab) => allowedOwnerTabs.includes(tab));
 
   const handlePromptDelete = (type, id) => {
@@ -166,7 +167,7 @@ export default function OwnerWorkspace({
             <div className="mt-2 border-t border-brand-border pt-3">
               <button
                 type="button"
-                onClick={onLogout}
+                onClick={() => setShowMobileLogoutConfirm(true)}
                 className="flex min-h-11 w-full items-center gap-3 rounded-xl px-4 text-sm font-bold text-state-danger transition-colors hover:bg-red-50"
               >
                 <Icon name="logout" className="h-5 w-5" />
@@ -286,6 +287,22 @@ export default function OwnerWorkspace({
           setDeleteConfirmationText('');
         }}
         onConfirm={handleConfirmDelete}
+      />
+
+      <ConfirmDialog
+        isOpen={showMobileLogoutConfirm}
+        size="compact"
+        title="Log out?"
+        message="You will be returned to the welcome screen and need to sign in again."
+        cancelTone="secondary"
+        confirmTone="danger"
+        confirmLabel="Log out"
+        onCancel={() => setShowMobileLogoutConfirm(false)}
+        onConfirm={() => {
+          setShowMobileLogoutConfirm(false);
+          setIsMobileMenuOpen(false);
+          onLogout();
+        }}
       />
     </div>
   );

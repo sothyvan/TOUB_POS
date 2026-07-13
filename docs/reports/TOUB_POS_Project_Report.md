@@ -131,7 +131,7 @@ Four UML diagrams were produced:
 - **Use Case Diagram** — Identifies the four actors (Cashier, Owner/Manager, Kitchen Staff, Payment Gateway) and 13 use cases, including their Include, Extend, and Generalization relationships.
 - **Activity Diagram** — Maps the end-to-end cashier checkout and kitchen fulfilment workflow with swimlanes separating cashier terminal, backend system, and Telegram kitchen display responsibilities.
 - **Sequence Diagram** — Details object-level interactions during the KHQR polling payment flow and the cash confirmation flow, showing API calls, database writes, and external integrations in chronological order.
-- **Class Diagram** — Defines the 10 domain classes, their attributes, methods, and all relationship types (Association, Composition, Many-to-Many via junction tables), mapped 1:1 to the physical database schema.
+- **Class Diagram** — Defines the 14 domain classes, their attributes, methods, and all relationship types (Inheritance/Generalization, Association, Composition), mapped 1:1 to the physical database schema. The `User` entity is specialized into four `<<role>>` subclasses (`PlatformAdmin`, `Owner`, `Manager`, `Cashier`).
 
 All diagrams are documented in `context/software-engineering.md` and embedded in this report's Chapter 4.
 
@@ -614,167 +614,221 @@ classDiagram
   direction TB
 
   class User {
-    +int id
-    +string username
-    +string password_hash
-    +string pin_hash
-    +enum role
-    +int owner_id
-    +bool is_active
-    +dateTime created_at
-    +login(credentials) JWT
-    +changePin(newPin) void
+    -id : int [PK]
+    -owner_id : int [FK, nullable]
+    -username : varchar
+    -password : varchar [nullable]
+    -pin : varchar [nullable]
+    -role : enum
+    -is_active : boolean
+    -created_at : datetime
+    -updated_at : datetime
+    +authenticate(credential : string) User
+    +updateAccount(data : object) User
+  }
+
+  class PlatformAdmin {
+    <<role>>
+    +createOwner(data : object) Owner
+  }
+
+  class Owner {
+    <<role>>
+    +createManager(data : object) Manager
+    +createCashier(data : object) Cashier
+    +viewSalesReport(filters : object) object
+  }
+
+  class Manager {
+    <<role>>
+    +createCashier(data : object) Cashier
+    +manageCatalog() void
+    +viewSalesReport(filters : object) object
+  }
+
+  class Cashier {
+    <<role>>
+    +createOrder(items : object[], paymentMethod : string) Order
+    +confirmCashPayment(orderId : int, cashReceived : decimal) Order
+    +checkKhqrPaymentStatus(orderId : int) Order
   }
 
   class Stall {
-    +int id
-    +int owner_id
-    +string name
-    +string device_token
-    +bigint telegram_chat_id
-    +dateTime created_at
-    +registerDevice() string
-    +revokeDevice() void
+    -id : int [PK]
+    -owner_id : int [FK, nullable]
+    -name : varchar
+    -location : varchar [nullable]
+    -device_token : varchar [UK, nullable]
+    -telegram_chat_id : bigint [nullable]
+    -created_at : datetime
+    -updated_at : datetime
+    +assignStaff(userId : int) void
+    +unassignStaff(userId : int) void
+    +registerDevice(deviceToken : string) void
   }
 
   class StallStaff {
-    +int stall_id
-    +int user_id
+    -id : int [PK]
+    -stall_id : int [FK]
+    -user_id : int [FK]
+    +createAssignment(stallId : int, userId : int) StallStaff
+    +removeAssignment() void
   }
 
   class Category {
-    +int id
-    +int owner_id
-    +string name
-    +string tone
-    +dateTime created_at
+    -id : int [PK]
+    -owner_id : int [FK]
+    -name : varchar
+    -tone : enum
+    -created_at : datetime
+    -updated_at : datetime
+    +create(data : object) Category
+    +update(data : object) Category
+    +remove() void
   }
 
   class Product {
-    +int id
-    +int category_id
-    +int owner_id
-    +string name
-    +string image_url
-    +dateTime created_at
+    -id : int [PK]
+    -category_id : int [FK]
+    -name : varchar
+    -image_url : varchar
+    -created_at : datetime
+    +create(data : object) Product
+    +update(data : object) Product
+    +assignToStalls(stallIds : int[]) void
+    +remove() void
   }
 
   class StallProduct {
-    +int id
-    +int stall_id
-    +int product_id
-    +decimal price_usd
-    +int price_khr
-    +bool is_visible
+    -id : int [PK]
+    -stall_id : int [FK]
+    -product_id : int [FK]
+    -price_usd : decimal
+    -price_khr : int
+    -is_visible : boolean
+    +updatePrice(priceUsd : decimal, priceKhr : int) void
+    +setVisibility(isVisible : boolean) void
   }
 
   class Order {
-    +int id
-    +int stall_id
-    +int cashier_id
-    +enum payment_method
-    +enum status
-    +decimal subtotal_usd
-    +decimal service_fee_usd
-    +decimal tax_usd
-    +decimal total_usd
-    +decimal cash_received_usd
-    +decimal change_due_usd
-    +string qr_payload
-    +string qr_md5
-    +string payment_reference
-    +dateTime payment_expires_at
-    +dateTime created_at
-    +dateTime completed_at
-    +confirmCash(cashReceived) void
-    +checkKhqrStatus() bool
-    +markPaid() void
+    -id : int [PK]
+    -stall_id : int [FK]
+    -cashier_id : int [FK]
+    -payment_method : enum
+    -status : enum
+    -subtotal_usd : decimal
+    -total_usd : decimal
+    -cash_received_usd : decimal [nullable]
+    -change_due_usd : decimal [nullable]
+    -qr_payload : text [nullable]
+    -qr_md5 : varchar [nullable]
+    -payment_reference : varchar [UK, nullable]
+    -payment_expires_at : datetime [nullable]
+    -created_at : datetime
+    -updated_at : datetime
+    -completed_at : datetime [nullable]
+    +create(items : object[], paymentMethod : string) Order
+    +confirmCash(cashReceived : decimal) Order
+    +checkKhqrStatus() Order
+    +retryTelegramDispatch() TelegramTicket
   }
 
   class OrderItem {
-    +int id
-    +int order_id
-    +int product_id
-    +string name_snapshot
-    +decimal price_usd_snapshot
-    +int price_khr_snapshot
-    +int quantity
-    +decimal subtotal_usd
-    +string notes
+    -id : int [PK]
+    -order_id : int [FK]
+    -product_id : int [FK, nullable]
+    -name : varchar
+    -price_usd : decimal
+    -price_khr : int
+    -line_total_usd : decimal
+    -line_total_khr : int
+    -quantity : int
+    -notes : varchar [nullable]
+    +calculateLineTotal() decimal
   }
 
   class AuditLog {
-    +int id
-    +int actor_id
-    +int order_id
-    +string action
-    +json details
-    +dateTime created_at
+    -id : int [PK]
+    -actor_user_id : int [FK, nullable]
+    -action : enum
+    -order_id : int [FK, nullable]
+    -details : json [nullable]
+    -created_at : datetime
+    +record(action : string, actorId : int, orderId : int) AuditLog
   }
 
   class TelegramTicket {
-    +int id
-    +int order_id
-    +bigint chat_id
-    +bigint message_id
-    +enum status
-    +dateTime sent_at
-    +dateTime done_at
-    +dispatch(orderPayload) void
+    -id : int [PK]
+    -order_id : int [FK]
+    -telegram_msg_id : bigint
+    -telegram_chat_id : bigint
+    -status : enum
+    -sent_at : datetime
+    -completed_at : datetime
+    +dispatch(orderId : int) TelegramTicket
     +markDone() void
+    +retry() TelegramTicket
   }
 
-  %% Relationships
-  User "1" --> "many" User : owner manages
-  User "many" -- "many" Stall : StallStaff junction
-  User "1" --> "many" Order : acts_as_cashier
-  User "1" --> "many" Category : owns
-  User "1" --> "many" Product : owns
-
-  Stall "1" --> "many" StallProduct : sells
-  Stall "1" --> "many" Order : hosts
-  Stall "1" --> "many" TelegramTicket : kitchen_channel
-
-  Category "1" --> "many" Product : groups
-
-  Product "1" --> "many" StallProduct : priced_per_stall
-  Product "1" --> "many" OrderItem : referenced_by
-
-  Order "1" *-- "many" OrderItem : contains
-  Order "1" --> "1" TelegramTicket : dispatches
-  Order "1" --> "many" AuditLog : recorded_in
-
-  StallStaff ..> User
-  StallStaff ..> Stall
+  User <|-- PlatformAdmin
+  User <|-- Owner
+  User <|-- Manager
+  User <|-- Cashier
+  Owner "1" -- "*" Stall : owns
+  Owner "1" -- "*" Category : manages
+  Owner "1" -- "*" User : supervises
+  User "1" -- "*" StallStaff : assigned to
+  Stall "1" -- "*" StallStaff : has staff
+  Category "1" -- "*" Product : groups
+  Stall "1" -- "*" StallProduct : sells
+  Product "1" -- "*" StallProduct : available in
+  Stall "1" -- "*" Order : processes
+  Cashier "1" -- "*" Order : places
+  Order "1" *-- "*" OrderItem : contains
+  Product "1" -- "*" OrderItem : referenced by
+  Order "1" *-- "*" TelegramTicket : dispatches
+  User "1" -- "*" AuditLog : performs
+  Order "1" -- "*" AuditLog : records
 ```
 
 ### Class Descriptions
 
 | Class | Description | Key Attributes | Key Methods |
 |-------|-------------|----------------|-------------|
-| **User** | Represents all system users — admins, owners, managers, and cashiers. Role determines permissions and credential type. | `role`, `owner_id`, `password_hash`/`pin_hash` | `login()`, `changePin()` |
-| **Stall** | A physical booth location with its own device token, telegram kitchen channel, and owner. | `device_token`, `telegram_chat_id`, `owner_id` | `registerDevice()`, `revokeDevice()` |
-| **StallStaff** | Junction table linking Users (cashiers/managers) to their assigned Stalls. | `stall_id`, `user_id` | — |
-| **Category** | An owner-scoped menu grouping (e.g., "Beverages", "Main Dishes"). | `owner_id`, `name`, `tone` | — |
-| **Product** | Shared catalog item with name and image. Pricing is not stored here — it is per-stall. | `category_id`, `owner_id`, `image_url` | — |
-| **StallProduct** | Junction that maps a Product to a Stall and stores the stall-specific USD/KHR price and visibility. | `price_usd`, `price_khr`, `is_visible` | — |
-| **Order** | The core transaction record. Stores payment method, status, all trusted total calculations, KHQR metadata, and cash fields. | `status`, `total_usd`, `qr_md5`, `cash_received_usd`, `change_due_usd` | `confirmCash()`, `checkKhqrStatus()`, `markPaid()` |
-| **OrderItem** | An immutable snapshot of a product at time of order. Stores the product name and price as it was — not a live reference. | `name_snapshot`, `price_usd_snapshot`, `quantity`, `notes` | — |
-| **AuditLog** | Immutable record of sensitive actions for accountability and debugging. | `actor_id`, `action`, `details` | — |
-| **TelegramTicket** | Tracks the lifecycle of a kitchen order ticket sent to Telegram: `pending` → `sent` → `done`. | `message_id`, `chat_id`, `status`, `done_at` | `dispatch()`, `markDone()` |
+| **User** | Base class for all accounts — admins, owners, managers, and cashiers. Stores credentials, role, ownership linkage, and lifecycle timestamps. | `role`, `owner_id`, `password`/`pin`, `is_active` | `authenticate()`, `updateAccount()` |
+| **PlatformAdmin** | Top-level `<<role>>` subclass that bootstraps new business owners. Inherits `User`. | — (inherits User) | `createOwner()` |
+| **Owner** | Business owner `<<role>>` subclass. Manages stalls, categories, staff, and views reports. Inherits `User`. | — (inherits User) | `createManager()`, `createCashier()`, `viewSalesReport()` |
+| **Manager** | Operational `<<role>>` subclass. Can create cashiers, manage the catalog, and view reports. Inherits `User`. | — (inherits User) | `createCashier()`, `manageCatalog()`, `viewSalesReport()` |
+| **Cashier** | Front-line `<<role>>` subclass that builds and confirms orders. Inherits `User`. | — (inherits User) | `createOrder()`, `confirmCashPayment()`, `checkKhqrPaymentStatus()` |
+| **Stall** | A physical booth location with its own device token, location, and Telegram kitchen channel. | `device_token`, `location`, `telegram_chat_id`, `owner_id` | `assignStaff()`, `unassignStaff()`, `registerDevice()` |
+| **StallStaff** | Assignment record linking a `User` to a `Stall`. Promoted to a first-class entity with its own surrogate key. | `stall_id`, `user_id`, `id` [PK] | `createAssignment()`, `removeAssignment()` |
+| **Category** | An owner-scoped menu grouping (e.g., "Beverages", "Main Dishes"). | `owner_id`, `name`, `tone` | `create()`, `update()`, `remove()` |
+| **Product** | Shared catalog item with name and image. No longer owner-scoped; pricing is fully per-stall. | `category_id`, `name`, `image_url` | `create()`, `update()`, `assignToStalls()`, `remove()` |
+| **StallProduct** | Junction that maps a `Product` to a `Stall` and stores the stall-specific USD/KHR price and visibility. | `price_usd`, `price_khr`, `is_visible` | `updatePrice()`, `setVisibility()` |
+| **Order** | The core transaction record. Stores payment method, status, trusted totals (subtotal/total), KHQR metadata, and cash fields. | `status`, `total_usd`, `qr_md5`, `cash_received_usd`, `change_due_usd` | `create()`, `confirmCash()`, `checkKhqrStatus()`, `retryTelegramDispatch()` |
+| **OrderItem** | An immutable snapshot of a product at time of order, with per-line USD/KHR totals. Stores the product name and price as they were — not a live reference. | `name`, `price_usd`, `price_khr`, `line_total_usd`, `line_total_khr`, `quantity`, `notes` | `calculateLineTotal()` |
+| **AuditLog** | Immutable record of sensitive actions for accountability and debugging. | `actor_user_id`, `action`, `details` | `record()` |
+| **TelegramTicket** | Tracks the lifecycle of a kitchen order ticket sent to Telegram: `pending` → `sent` → `done`, with retry support. | `telegram_msg_id`, `telegram_chat_id`, `status`, `completed_at` | `dispatch()`, `markDone()`, `retry()` |
 
 ### Relationship Explanations
 
 | Relationship | Type | Description |
 |-------------|------|-------------|
-| User → User (self-referential) | Association | An `owner` User manages `manager` and `cashier` Users via `owner_id` FK. |
-| User ↔ Stall | Many-to-Many (via StallStaff) | A cashier can be assigned to one stall; a stall can have many cashiers. |
-| User → Order | Association (1-to-Many) | A cashier creates many orders over their shifts. |
-| Stall → Order | Association (1-to-Many) | A stall processes many orders over time. |
+| User → PlatformAdmin / Owner / Manager / Cashier | Inheritance (Generalization) | `User` is the base entity; the four roles specialize it via a `<<role>>` stereotype, inheriting credentials and lifecycle fields while adding role-specific behavior. |
+| Owner → Stall | Association (1-to-Many) | An owner owns many stalls. |
+| Owner → Category | Association (1-to-Many) | An owner manages many categories. |
+| Owner → User | Association (1-to-Many) | An owner supervises `manager` and `cashier` users (self-referential via `owner_id`). |
+| User → StallStaff | Association (1-to-Many) | A user is assigned to many stall-staff assignments. |
+| Stall → StallStaff | Association (1-to-Many) | A stall has many staff assignments. |
 | Category → Product | Association (1-to-Many) | A category groups many products. |
-| Product → StallProduct | Association (1-to-Many) | A product can be assigned (with different pricing) to multiple stalls. |
+| Stall → StallProduct | Association (1-to-Many) | A stall sells many stall-products. |
+| Product → StallProduct | Association (1-to-Many) | A product is available in many stalls (with different pricing). |
+| Stall → Order | Association (1-to-Many) | A stall processes many orders over time. |
+| Cashier → Order | Association (1-to-Many) | A cashier places many orders over their shifts. |
 | Order → OrderItem | **Composition** (1-to-Many) | OrderItems cannot exist without their parent Order. Deleting the Order deletes all its items. |
-| Order → TelegramTicket | Association (1-to-1) | Each paid order has one kitchen ticket. |
+| Product → OrderItem | Association (1-to-Many) | OrderItems reference a product snapshot at order time. |
+| Order → TelegramTicket | **Composition** (1-to-Many) | An order can dispatch one or more kitchen tickets (including retries) that are bound to the order's lifecycle. |
+| User → AuditLog | Association (1-to-Many) | A user performs many audited actions. |
 | Order → AuditLog | Association (1-to-Many) | Multiple audit events can be recorded for a single order (creation, confirmation). |
 
 ---
