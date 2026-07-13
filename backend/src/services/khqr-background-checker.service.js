@@ -37,6 +37,13 @@ function isConfiguredValue(value) {
 }
 
 function hasBakongStatusConfig() {
+  console.log('DEBUG: Bakong config check:');
+  console.log('  BAKONG_ACCOUNT_ID configured?', isConfiguredValue(process.env.BAKONG_ACCOUNT_ID));
+  console.log('  BAKONG_ACCOUNT_ID value:', process.env.BAKONG_ACCOUNT_ID);
+  console.log('  BAKONG_OPEN_API_BASE_URL configured?', isConfiguredValue(process.env.BAKONG_OPEN_API_BASE_URL));
+  console.log('  BAKONG_OPEN_API_BASE_URL value:', process.env.BAKONG_OPEN_API_BASE_URL);
+  console.log('  BAKONG_OPEN_API_TOKEN configured?', isConfiguredValue(process.env.BAKONG_OPEN_API_TOKEN));
+  console.log('  BAKONG_OPEN_API_TOKEN value:', process.env.BAKONG_OPEN_API_TOKEN ? 'DEFINED' : 'UNDEFINED');
   return isConfiguredValue(process.env.BAKONG_ACCOUNT_ID)
     && isConfiguredValue(process.env.BAKONG_OPEN_API_BASE_URL)
     && isConfiguredValue(process.env.BAKONG_OPEN_API_TOKEN);

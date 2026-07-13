@@ -49,8 +49,8 @@
 }
 
 :root {
-  --grid-line: rgb(255 255 255 / 0.018);
-  --grid-line-strong: rgb(255 255 255 / 0.024);
+  --grid-line: rgb(255 255 255 / 0.05);
+  --grid-line-strong: rgb(255 255 255 / 0.095);
   --scrollbar-thumb: #46423e;
   --scrollbar-track: #111110;
   font-family:
@@ -73,6 +73,11 @@ body,
 #root {
   min-height: 100%;
   margin: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
 }
 
 :root[data-theme="light"] {
@@ -99,7 +104,7 @@ body,
   --color-text-soft: #625e58;
   --color-text-muted: #827c74;
   --grid-line: rgb(27 25 23 / 0.035);
-  --grid-line-strong: rgb(27 25 23 / 0.05);
+  --grid-line-strong: rgb(27 25 23 / 0.095);
   --scrollbar-thumb: #aaa49b;
   --scrollbar-track: #e8e5df;
   color-scheme: light;

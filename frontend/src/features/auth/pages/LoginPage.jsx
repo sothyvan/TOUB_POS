@@ -14,8 +14,10 @@ export default function LoginPage() {
 
   const [deviceToken, setDeviceToken] = useSavedState('toub-device-token', null);
   const [deviceRegistered, setDeviceRegistered] = useSavedState('toub-device-registered', false);
-  const [loginMode, setLoginMode] = useState(deviceRegistered && deviceToken ? 'cashier' : 'management');
-  const [flowStep, setFlowStep] = useState(deviceRegistered && deviceToken ? 'select-profile' : 'register');
+  const initialMode = new URLSearchParams(window.location.search).get('mode');
+  const startInCashier = initialMode === 'cashier' || (deviceRegistered && deviceToken);
+  const [loginMode, setLoginMode] = useState(startInCashier ? 'cashier' : 'management');
+  const [flowStep, setFlowStep] = useState(startInCashier ? 'select-profile' : 'register');
   const [selectedUser, setSelectedUser] = useState(null);
   const [typedPin, setTypedPin] = useState('');
   const [loginError, setLoginError] = useState('');
