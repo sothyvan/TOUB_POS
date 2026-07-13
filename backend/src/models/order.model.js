@@ -80,6 +80,21 @@ const Order = sequelize.define('Order', {
       unique: true,
       fields: ['payment_reference'],
     },
+    // Composite index: Owner/Manager lists always filter by stall_id + sort by created_at
+    {
+      name: 'idx_orders_stall_created',
+      fields: ['stall_id', 'created_at'],
+    },
+    // Composite index: Cashier My Orders always filters by cashier_id + sorts by created_at
+    {
+      name: 'idx_orders_cashier_created',
+      fields: ['cashier_id', 'created_at'],
+    },
+    // Status filter hit by operations watch, background KHQR checker, and report queries
+    {
+      name: 'idx_orders_status',
+      fields: ['status'],
+    },
   ],
 });
 

@@ -383,25 +383,36 @@ export async function createOrder(cashierId, items, paymentMethod) {
     let totalKhr = 0;
     const orderItemsToCreate = [];
 
+    // --- Validate item shapes and collect product IDs before hitting the DB ---
+    // We do this pass first so we reject obviously malformed requests immediately.
     for (const item of items) {
       validateItemShape(item);
+    }
 
+    const requestedProductIds = items.map(getProductIdFromItem);
+
+    // Single batch query instead of one findOne() per item (eliminates N+1).
+    // The composite index on (stall_id, product_id) in stall_products makes this fast.
+    const stallProducts = await ProductStall.findAll({
+      where: {
+        product_id: { [Op.in]: requestedProductIds },
+        stall_id: stallId,
+      },
+      include: [{ model: Product }],
+      transaction,
+    });
+
+    // Build a Map keyed by product_id for O(1) lookup inside the loop.
+    const stallProductMap = new Map(
+      stallProducts.map((sp) => [Number(sp.product_id), sp])
+    );
+
+    for (const item of items) {
       const productId = getProductIdFromItem(item);
       const quantity = parsePositiveInteger(item.quantity, 'quantity');
       const notes = normalizeNotes(item.notes);
 
-      const stallProduct = await ProductStall.findOne({
-        where: {
-          product_id: productId,
-          stall_id: stallId,
-        },
-        include: [
-          {
-            model: Product,
-          },
-        ],
-        transaction,
-      });
+      const stallProduct = stallProductMap.get(productId);
 
       if (!stallProduct?.Product) {
         throw httpError(`Product with ID ${productId} not found.`, 404);
