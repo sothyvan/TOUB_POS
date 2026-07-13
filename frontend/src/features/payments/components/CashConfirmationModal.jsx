@@ -51,7 +51,7 @@ export default function CashConfirmationModal({
           <div className="flex items-center justify-between text-sm font-bold text-gray-500 mb-2">
             <span>Order total</span>
             <div className="text-right">
-              <span className="text-xl text-gray-900">{money(totalAmount)}</span>
+              <span className="text-xl text-state-success">{money(totalAmount)}</span>
               <span className="block text-xs text-gray-400">{Math.round(totalAmount * 4000).toLocaleString()} ៛</span>
             </div>
           </div>

@@ -305,7 +305,7 @@ export default function CashierScreen({
                 </div>
                 <div className="rounded-md border border-ui-border bg-ui-bg px-4 py-3">
                   <span className="block text-[11px] font-black uppercase tracking-wide text-text-muted">Sales</span>
-                  <strong className="text-lg font-black text-brand-action">{money(myShiftStats.revenue)}</strong>
+                  <strong className="text-lg font-black text-state-success">{money(myShiftStats.revenue)}</strong>
                 </div>
               </div>
             </div>
@@ -353,7 +353,7 @@ export default function CashierScreen({
                           </p>
                         </div>
 
-                        <strong className="text-lg font-black text-text-strong">{money(order.total)}</strong>
+                        <strong className="text-lg font-black text-state-success">{money(order.total)}</strong>
                       </div>
 
                       <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -470,7 +470,9 @@ export default function CashierScreen({
                 Review Order ({itemCount} {itemCount === 1 ? 'item' : 'items'})
               </span>
             </span>
-            <span className="text-[17px] font-bold">{money(total)}</span>
+            <span className="rounded-md bg-ui-surface px-2.5 py-2 text-[17px] font-black text-state-success">
+              {money(total)}
+            </span>
           </Button>
         </div>
       )}

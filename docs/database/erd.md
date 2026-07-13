@@ -48,6 +48,8 @@ erDiagram
         int category_id FK
         varchar name
         varchar image_url
+        decimal default_price_usd "nullable catalog fallback"
+        int default_price_khr "nullable catalog fallback"
         datetime created_at
     }
 
@@ -147,6 +149,6 @@ erDiagram
 - `stalls.location` stores the physical location of the stall (e.g. AEON Mall, Night Market, University).
 - `stalls.device_token` is the permanent terminal registration key stored in browser `localStorage`.
 - `categories.owner_id` links each category to the business owner who manages it. Category names are unique per owner.
-- `products` stores shared catalog metadata and its global category.
+- `products` stores shared catalog metadata, its owner-scoped category, and default USD/KHR prices so unassigned products retain their last configured price.
 - Per-stall price and visibility live in `stall_products`.
 - A product is visible to a stall only when a matching `stall_products` row exists with `is_visible = TRUE`.

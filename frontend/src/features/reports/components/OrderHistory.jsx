@@ -811,7 +811,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
               <div className="flex justify-between items-start">
                 <div>
                   <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#6b7280', fontFamily: 'Inter, sans-serif' }}>Total Revenue</h4>
-                  <span className="block mt-1" style={{ fontSize: 28, fontWeight: 800, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
+                  <span className="mt-1 block text-[28px] font-extrabold text-state-success">
                     {money(totalRevenue)}
                   </span>
                 </div>
@@ -819,12 +819,10 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
                   <Icon name="trendUp" className="w-4 h-4" />
                 </div>
               </div>
-              
+
               <div className="flex items-center justify-between mt-auto">
-                <span className="text-[12px] text-[#9ca3af] font-sans">
-                  Backend-owned paid orders in this range
-                </span>
-                
+                <span aria-hidden="true" />
+
                 {/* SVG Sparkline */}
                 <div className="w-[110px] h-[38px]">
                   <svg width="100%" height="100%" viewBox="0 0 110 38">
@@ -867,10 +865,6 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
                 )) : (
                   <span className="text-[12px] font-semibold text-[#9ca3af]">No paid stall activity in this range.</span>
                 )}
-              </div>
-              
-              <div className="text-[12px] text-[#9ca3af] font-sans">
-                Based on paid orders in the selected date range.
               </div>
             </div>
 
@@ -976,7 +970,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
                     {emp.ordersCount} Orders
                   </span>
                   
-                  <span className="flex-1 text-center text-[13px] font-extrabold text-[#111827] max-[900px]:text-left"><span className="hidden text-[10px] uppercase text-[#9ca3af] max-[900px]:block">Sales</span>
+                  <span className="flex-1 text-center text-[13px] font-extrabold text-state-success max-[900px]:text-left"><span className="hidden text-[10px] uppercase text-text-muted max-[900px]:block">Sales</span>
                     {money(emp.salesTotal)}
                   </span>
 
@@ -994,7 +988,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
               </span>
               <div className="flex flex-wrap gap-4 text-[12px] font-bold text-[#374151]">
                 <span>Total Orders: <span className="text-[#003ec7] font-black">{totalCompletedOrders}</span></span>
-                <span>Total Sales: <span className="text-[#003ec7] font-black">{money(totalRevenue)}</span></span>
+                <span>Total Sales: <span className="text-state-success font-black">{money(totalRevenue)}</span></span>
                 <span>Cashiers: <span className="text-[#003ec7] font-black">{employeeEfficiency.length}</span></span>
               </div>
             </div>
@@ -1100,7 +1094,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
                     </span>
                   </div>
 
-                  <span className="flex-1 text-right text-[14px] font-extrabold text-[#111827] max-[900px]:text-left"><span className="hidden text-[10px] uppercase text-[#9ca3af] max-[900px]:block">Total</span>
+                  <span className="flex-1 text-right text-[14px] font-extrabold text-state-success max-[900px]:text-left"><span className="hidden text-[10px] uppercase text-text-muted max-[900px]:block">Total</span>
                     {money(order.total)}
                   </span>
 

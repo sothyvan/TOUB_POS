@@ -48,9 +48,21 @@ function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete,
 
   return (
     <div
-      className={`relative flex ${isGrid ? 'flex-col gap-0 rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm min-[1200px]:w-[270px] min-[1200px]:h-[290px]' : 'flex-row items-center gap-4 rounded-none border-0 border-b border-b-gray-50 bg-transparent'} cursor-pointer transition-all duration-200 ${isSelected ? (isGrid ? 'border-indigo-200 shadow-sm ring-2 ring-indigo-500/20' : 'bg-indigo-50/50 ring-2 ring-indigo-500/20') : (isGrid ? 'hover:shadow-lg hover:-translate-y-0.5' : 'hover:bg-gray-50/60')}`}
-      style={{ background: isSelected ? '#f5f3ff' : undefined }}
+      className={`group relative flex cursor-pointer transition-all duration-200 ${
+        isGrid
+          ? 'h-full min-w-0 flex-col gap-0 overflow-hidden rounded-lg border bg-ui-surface shadow-sm'
+          : 'flex-row items-center gap-4 rounded-none border-0 border-b border-ui-border bg-transparent'
+      } ${
+        isSelected
+          ? isGrid
+            ? 'border-brand-action bg-brand-action/8 ring-2 ring-inset ring-brand-action'
+            : 'bg-brand-action/12 ring-2 ring-inset ring-brand-action'
+          : isGrid
+            ? 'border-ui-border hover:-translate-y-0.5 hover:border-brand-action/70 hover:bg-ui-muted hover:shadow-lg'
+            : 'hover:bg-ui-muted'
+      }`}
       onClick={() => onEdit(product)}
+      aria-current={isSelected ? 'true' : undefined}
     >
       {/* Card-mode overlay badges & menu */}
       {isGrid && (
@@ -62,19 +74,20 @@ function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete,
             <button 
               type="button" 
               onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
-              className="w-8 h-8 rounded-full bg-white/90 backdrop-blur shadow-sm flex items-center justify-center text-gray-700 hover:bg-white active:scale-95 transition-all border border-gray-100 cursor-pointer"
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-ui-border bg-ui-elevated text-text-soft shadow-sm backdrop-blur transition-all hover:border-brand-action/50 hover:bg-ui-muted hover:text-text-strong active:scale-95"
+              aria-label={`Open actions for ${product.name}`}
             >
-              <Icon name="moreVertical" className="w-4 h-4 text-gray-600" />
+              <Icon name="moreVertical" className="w-4 h-4" />
             </button>
             {showMenu && (
-              <div className="absolute top-10 right-0 w-36 bg-white rounded-xl shadow-xl border border-gray-100 p-1 flex flex-col gap-1">
-                <button type="button" onClick={(e) => { e.stopPropagation(); setShowMenu(false); onEdit(product); }} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 text-left border-0 bg-transparent cursor-pointer">
-                  <Icon name="edit" className="w-3.5 h-3.5 text-blue-600" strokeWidth={2} />
-                  <span className="text-sm font-medium text-blue-600">Edit</span>
+              <div className="absolute right-0 top-10 flex w-36 flex-col gap-1 rounded-lg border border-ui-border bg-ui-elevated p-1 shadow-xl">
+                <button type="button" onClick={(e) => { e.stopPropagation(); setShowMenu(false); onEdit(product); }} className="flex cursor-pointer items-center gap-2 rounded-md border-0 bg-transparent px-3 py-2 text-left text-brand-action hover:bg-brand-action/12">
+                  <Icon name="edit" className="w-3.5 h-3.5" strokeWidth={2} />
+                  <span className="text-sm font-semibold">Edit</span>
                 </button>
-                <button type="button" onClick={(e) => { e.stopPropagation(); setShowMenu(false); onDelete(product.id); }} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-50 text-left border-0 bg-transparent cursor-pointer">
-                  <Icon name="delete" className="w-3.5 h-3.5 text-red-600" strokeWidth={2} />
-                  <span className="text-sm font-medium text-red-600">Delete</span>
+                <button type="button" onClick={(e) => { e.stopPropagation(); setShowMenu(false); onDelete(product.id); }} className="flex cursor-pointer items-center gap-2 rounded-md border-0 bg-transparent px-3 py-2 text-left text-state-danger hover:bg-state-danger/12">
+                  <Icon name="delete" className="w-3.5 h-3.5" strokeWidth={2} />
+                  <span className="text-sm font-semibold">Delete</span>
                 </button>
               </div>
             )}
@@ -85,8 +98,8 @@ function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete,
       <div className={`flex ${isGrid ? 'flex-col gap-0 w-full h-full' : 'flex-row items-center gap-3 w-full h-full px-4 pr-5 py-3'}`}>
         {/* Thumbnail */}
         <div className={isGrid
-          ? 'w-full aspect-[4/3] min-[1200px]:aspect-auto min-[1200px]:h-[170px] shrink-0 overflow-hidden border-b border-gray-100 bg-gray-50'
-          : 'w-[40px] h-10 shrink-0 rounded-[9px] overflow-hidden border border-gray-100 bg-gray-50'
+          ? 'aspect-[4/3] w-full shrink-0 overflow-hidden border-b border-ui-border bg-ui-bg'
+          : 'h-10 w-[40px] shrink-0 overflow-hidden rounded-lg border border-ui-border bg-ui-bg'
         }>
           {shouldShowImage
             ? <img src={product.image} alt={product.name} className="w-full h-full object-cover" loading="lazy" onError={() => setFailedImage(product.image)} />
@@ -98,14 +111,18 @@ function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete,
         </div>
 
         {/* Info Area */}
-        <div className={`flex ${isGrid ? 'flex-col p-4 bg-white h-[120px]' : 'flex-row items-center gap-4 p-0'} flex-1 min-w-0`}>
+        <div className={`flex ${
+          isGrid
+            ? `min-h-[120px] flex-col p-4 transition-colors ${isSelected ? 'bg-brand-action/10' : 'bg-ui-surface group-hover:bg-ui-muted'}`
+            : 'flex-row items-center gap-4 p-0'
+        } flex-1 min-w-0`}>
           {/* Name */}
           <div className="flex-1 min-w-0">
-            <p className="truncate" style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
+            <p className="m-0 truncate text-sm font-bold text-text-strong">
               {product.name}
             </p>
             {stalls && stalls.length > 0 && (
-              <p className="truncate" style={{ margin: '4px 0 0', fontSize: 11, color: '#6b7280', fontFamily: 'Inter, sans-serif', lineHeight: 1.2 }}>
+              <p className="m-0 mt-1 truncate text-[11px] leading-tight text-text-soft">
                 {product.stallIds && product.stallIds.length > 0
                   ? stalls.filter(s => product.stallIds.includes(s.id)).map(s => s.name).join(', ')
                   : 'No stalls'}
@@ -116,18 +133,18 @@ function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete,
           {/* Category — list only */}
           {!isGrid && (
             <div className="w-[90px] shrink-0">
-              <span style={{ fontSize: 12, fontWeight: 500, color: '#6b7280', fontFamily: 'Inter, sans-serif' }}>
+              <span className="text-xs font-medium text-text-soft">
                 {category?.name ?? '\u2014'}
               </span>
             </div>
           )}
 
           {/* Price USD + KHR */}
-          <div className={isGrid ? 'w-full flex items-baseline justify-between mt-auto pt-2 border-t border-gray-100/50' : 'w-[110px] shrink-0'}>
-            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
+          <div className={isGrid ? 'mt-auto flex w-full items-baseline justify-between border-t border-ui-border pt-2' : 'w-[110px] shrink-0'}>
+            <p className="m-0 text-sm font-bold text-text-strong">
               {money(product.price)}
             </p>
-            <p style={{ margin: 0, fontSize: 12, fontWeight: 500, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}>
+            <p className="m-0 text-xs font-medium text-text-soft">
               {toKHR(product.price)}៛
             </p>
           </div>
@@ -166,9 +183,20 @@ function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsE
   const [uploadProgress, setUploadProgress] = useState(null);
   const [uploadError, setUploadError] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [priceValidationError, setPriceValidationError] = useState('');
 
   const handleSave = (e) => {
     e.preventDefault();
+    const parsedPrice = Number(form.price);
+    if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+      setPriceValidationError(
+        (form.stallIds || []).length > 0
+          ? 'Enter a valid positive price before assigning this product to a stall.'
+          : 'Enter a valid positive default price for this product.'
+      );
+      return;
+    }
+    setPriceValidationError('');
     onSave(form);
   };
 
@@ -222,6 +250,7 @@ function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsE
       <form onSubmit={handleSave} className="flex-1 overflow-y-auto flex flex-col">
         <div className="flex flex-col gap-4.5 p-5">
           {actionError && <Alert variant="danger">{actionError}</Alert>}
+          {priceValidationError && <Alert variant="warning">{priceValidationError}</Alert>}
 
           {/* Product Photo */}
           <div className="grid gap-1.5">
@@ -385,8 +414,12 @@ function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsE
               label="Price (USD)"
               type="number" min="0" step="0.01"
               value={form.price}
-              onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
+              onChange={e => {
+                setPriceValidationError('');
+                setForm(f => ({ ...f, price: e.target.value }));
+              }}
               placeholder="2.00"
+              error={priceValidationError || undefined}
               required
             />
             <FormInput
@@ -394,6 +427,7 @@ function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsE
               type="number" min="0" step="1"
               value={form.price === '' || isNaN(parseFloat(form.price)) ? '' : Math.round(parseFloat(form.price) * KHR_RATE)}
               onChange={e => {
+                setPriceValidationError('');
                 const val = e.target.value;
                 if (val === '') {
                   setForm(f => ({ ...f, price: '' }));
@@ -403,6 +437,7 @@ function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsE
                 }
               }}
               placeholder="8000"
+              error={priceValidationError || undefined}
               required
             />
           </div>
@@ -750,11 +785,12 @@ export default function MenuCatalog({
               </div>
             ) : (
               <div
-                className={effectiveViewMode === 'grid' ? (isDesktop ? '' : 'grid grid-cols-2 sm:grid-cols-3 gap-4') : 'flex flex-col gap-0'}
+                className={effectiveViewMode === 'grid' ? (isDesktop ? '' : 'grid grid-cols-1 min-[480px]:grid-cols-2 min-[800px]:grid-cols-3 gap-4') : 'flex flex-col gap-0'}
                 style={effectiveViewMode === 'grid' && isDesktop ? {
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, 270px)',
-                  gap: '16px'
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))',
+                  alignItems: 'stretch',
+                  gap: '16px',
                 } : undefined}
               >
                 {paginatedProducts.map(product => (

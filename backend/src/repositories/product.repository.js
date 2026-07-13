@@ -53,7 +53,10 @@ export async function findAllProducts(whereClause = {}, queryOptions = {}) {
 }
 
 /**
- * Fetch all products assigned to a specific owner's stalls.
+ * Fetch all products in a specific owner's catalog.
+ *
+ * Category ownership keeps unassigned products manageable, while the optional
+ * stall include returns only assignments that belong to the same business.
  */
 export async function findAllProductsByOwnerId(ownerId, queryOptions = {}) {
   const pagination = parsePagination(queryOptions);
@@ -64,15 +67,18 @@ export async function findAllProductsByOwnerId(ownerId, queryOptions = {}) {
     include: [
       {
         model: Category,
+        where: { owner_id: ownerId },
+        required: true,
         attributes: ['id', 'name', 'tone'],
       },
       {
         model: ProductStall,
-        required: true,
+        required: false,
         include: [
           {
             model: Stall,
             where: { owner_id: ownerId },
+            required: true,
             attributes: ['id', 'name', 'location'],
           },
         ],
@@ -88,14 +94,17 @@ export async function findAllProductsByOwnerId(ownerId, queryOptions = {}) {
 }
 
 /**
- * Check if a product belongs to any stall owned by the specified owner.
+ * Check if a product belongs to the specified owner's catalog.
+ *
+ * Products may intentionally have no stall assignments, so ownership comes
+ * from their required owner-scoped category rather than the assignment table.
  */
 export async function checkProductOwnership(productId, ownerId) {
-  const count = await ProductStall.count({
-    where: { product_id: productId },
+  const count = await Product.count({
+    where: { id: productId, is_deleted: false },
     include: [
       {
-        model: Stall,
+        model: Category,
         where: { owner_id: ownerId },
         required: true,
       },
@@ -205,8 +214,14 @@ export function updateProductById(id, productData, assignmentData) {
       if (stallIds.length > 0) {
         const assignments = stallIds.map((stallId) => {
           const existing = existingByStall.get(Number(stallId));
-          const priceUsd = assignmentData.price_usd ?? existing?.price_usd ?? defaultAssignment?.price_usd;
-          const priceKhr = assignmentData.price_khr ?? existing?.price_khr ?? defaultAssignment?.price_khr;
+          const priceUsd = assignmentData.price_usd
+            ?? existing?.price_usd
+            ?? defaultAssignment?.price_usd
+            ?? product.default_price_usd;
+          const priceKhr = assignmentData.price_khr
+            ?? existing?.price_khr
+            ?? defaultAssignment?.price_khr
+            ?? product.default_price_khr;
           const isVisible = assignmentData.is_visible ?? existing?.is_visible ?? defaultAssignment?.is_visible ?? true;
           if (!priceUsd || !priceKhr) {
             const error = new Error('price_usd and price_khr are required before assigning a product to stalls.');

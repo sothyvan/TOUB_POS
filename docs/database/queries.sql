@@ -433,6 +433,22 @@ ALTER TABLE orders
 MODIFY status ENUM('pending_payment', 'paid', 'cancelled') NOT NULL DEFAULT 'pending_payment';
 
 -- Development-only product/category ERD migration used before Sequelize sync
+ALTER TABLE products
+  ADD COLUMN default_price_usd DECIMAL(10, 2) NULL AFTER image_url,
+  ADD COLUMN default_price_khr INT NULL AFTER default_price_usd;
+
+UPDATE products p
+SET
+  default_price_usd = (
+    SELECT sp.price_usd FROM stall_products sp
+    WHERE sp.product_id = p.id ORDER BY sp.id LIMIT 1
+  ),
+  default_price_khr = (
+    SELECT sp.price_khr FROM stall_products sp
+    WHERE sp.product_id = p.id ORDER BY sp.id LIMIT 1
+  )
+WHERE p.default_price_usd IS NULL OR p.default_price_khr IS NULL;
+
 INSERT INTO categories (name, tone)
 SELECT 'Uncategorized', 'gold'
 WHERE NOT EXISTS (SELECT 1 FROM categories LIMIT 1);

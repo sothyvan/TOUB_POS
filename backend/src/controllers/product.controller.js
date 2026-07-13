@@ -153,6 +153,8 @@ export async function createProduct(req, res, next) {
       name,
       category_id: parsedCategoryId,
       image_url: normalizedImageUrl.value,
+      default_price_usd: parsedPriceUsd,
+      default_price_khr: parsedPriceKhr,
     }, {
       price_usd: parsedPriceUsd,
       price_khr: parsedPriceKhr,
@@ -187,6 +189,7 @@ export async function updateProduct(req, res, next) {
       if (parsedPriceUsd === null) {
         return res.status(400).json({ success: false, message: 'Price must be a positive number.' });
       }
+      updateData.default_price_usd = parsedPriceUsd;
       assignmentData.price_usd = parsedPriceUsd;
     }
     if (price_khr !== undefined) {
@@ -194,6 +197,7 @@ export async function updateProduct(req, res, next) {
       if (parsedPriceKhr === null) {
         return res.status(400).json({ success: false, message: 'KHR price must be a positive integer.' });
       }
+      updateData.default_price_khr = parsedPriceKhr;
       assignmentData.price_khr = parsedPriceKhr;
     }
     if (image_url !== undefined) {

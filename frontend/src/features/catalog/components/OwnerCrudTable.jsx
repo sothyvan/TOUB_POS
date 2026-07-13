@@ -96,7 +96,7 @@ export default function OwnerCrudTable({
         )}
 
         {displayedItems.map((item) => (
-          <div key={item.id} className="py-4.5 px-0 border-t border-gray-100 grid grid-cols-[minmax(0,1fr)_auto] gap-4 items-center first-of-type:border-t-0 max-[640px]:grid-cols-1">
+          <div key={item.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-t border-ui-border px-2 py-4.5 transition-colors first-of-type:border-t-0 hover:bg-ui-muted max-[640px]:grid-cols-1">
             {renderItem(item)}
             <div className="flex items-center gap-2 max-[640px]:justify-end">
               <button

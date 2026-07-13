@@ -54,6 +54,7 @@ export default function OwnerDashboard({ orders = [] }) {
         <MetricCard
           title="Gross Revenue Today"
           value={money(dashboardStats.revenue)}
+          valueClassName="text-state-success"
           subtitle="Backend-owned paid orders only"
           subtitleColor="text-green-700"
           iconBgColor="bg-green-100"

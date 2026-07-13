@@ -67,7 +67,8 @@ export default function RevenueChart({ hourlyData = [], orders = [], loading = f
             Hourly Revenue Breakdown
           </div>
           <div className="pt-[3px] text-gray-400 text-xs font-normal font-sans leading-4">
-            Today total {money(total)}{peak?.revenue > 0 ? ` · Peak ${peak.label} at ${money(peak.revenue)}` : ''}
+            Today total <span className="font-bold text-state-success">{money(total)}</span>
+            {peak?.revenue > 0 ? ` · Peak ${peak.label} at ${money(peak.revenue)}` : ''}
           </div>
         </div>
         <div className="px-3 py-1.5 bg-ui-bg rounded-md border border-ui-border text-center text-text-soft font-mono text-xs font-semibold leading-5">

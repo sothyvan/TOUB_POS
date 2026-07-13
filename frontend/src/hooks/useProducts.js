@@ -154,8 +154,16 @@ export function useProducts(canManageMenu) {
     setActionError(null);
     const name = form.name.trim();
     const price = Number(form.price);
-    if (!canManageMenu || !name || !form.categoryId || isNaN(price) || price <= 0) {
-      setActionError('Add a name, category, and valid price.');
+    if (!canManageMenu || !name || !form.categoryId) {
+      setActionError('Add a product name and category.');
+      return null;
+    }
+    if (!Number.isFinite(price) || price <= 0) {
+      setActionError(
+        (form.stallIds || []).length > 0
+          ? 'Enter a valid positive price before assigning this product to a stall.'
+          : 'Enter a valid positive default price for this product.'
+      );
       return null;
     }
     const product = {

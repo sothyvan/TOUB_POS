@@ -13,26 +13,26 @@ export default function TotalsBreakdown({
 
   if (isReceipt) {
     return (
-      <div className="border-t border-gray-100 pt-4 mt-4 space-y-2">
-        <div className="flex justify-between text-gray-500 text-sm font-semibold">
+      <div className="mt-4 space-y-2 border-t border-ui-border pt-4">
+        <div className="flex justify-between text-sm font-semibold text-text-soft">
           <span>Subtotal</span>
-          <span className="text-gray-950">{money(subtotal)}</span>
+          <span className="text-text-strong">{money(subtotal)}</span>
         </div>
         {hasServiceFee ? (
-          <div className="flex justify-between text-gray-500 text-sm font-semibold">
+          <div className="flex justify-between text-sm font-semibold text-text-soft">
             <span>Service fee</span>
-            <span className="text-gray-950">{money(serviceFee)}</span>
+            <span className="text-text-strong">{money(serviceFee)}</span>
           </div>
         ) : null}
         {hasEstimatedTax ? (
-          <div className="flex justify-between text-gray-500 text-sm font-semibold">
+          <div className="flex justify-between text-sm font-semibold text-text-soft">
             <span>Estimated tax</span>
-            <span className="text-gray-950">{money(estimatedTax)}</span>
+            <span className="text-text-strong">{money(estimatedTax)}</span>
           </div>
         ) : null}
-        <div className="flex justify-between text-gray-900 text-base font-bold pt-3 mt-1.5 border-t border-gray-100 items-baseline">
+        <div className="mt-1.5 flex items-baseline justify-between border-t border-ui-border pt-3 text-base font-bold text-text-strong">
           <span>Total Amount</span>
-          <span className="text-2xl text-brand-action font-black">{money(total)}</span>
+          <span className="text-2xl text-state-success font-black">{money(total)}</span>
         </div>
       </div>
     );
@@ -58,7 +58,7 @@ export default function TotalsBreakdown({
       ) : null}
       <div className="flex justify-between items-baseline pt-4 border-t border-gray-100 mt-2">
         <span className="text-brand-text text-base font-bold">Total Amount</span>
-        <strong className="text-4xl text-brand-action font-black leading-none tracking-tight">
+        <strong className="text-4xl text-state-success font-black leading-none tracking-tight">
           {money(total)}
         </strong>
       </div>

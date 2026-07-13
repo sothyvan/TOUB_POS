@@ -35,6 +35,27 @@ Update this file after every meaningful implementation change.
 - Phase UI-4: Responsive & Polish — **COMPLETE** ✅
 - Pagination & Performance Optimization — **COMPLETE** ✅
 
+- **Fixed cashier receipt contrast across light and dark themes**:
+  - Replaced legacy receipt color utilities with explicit semantic surface, border, and text tokens.
+  - Strengthened item, totals, cash/change, metadata, and payment-status readability without changing receipt behavior.
+  - Styled final order and aggregate sales totals in the shared success green across cart, cash/KHQR confirmation, receipt, cashier history, dashboard, and management reporting views.
+  - Frontend lint and production build pass.
+
+- **Polished Menu & Catalog product selection and grid layout**:
+  - Replaced hard-coded selected and hover colors with theme-aware surfaces and readable text in light and dark modes.
+  - Added a strong brand outline and background treatment to the product currently open in the editor.
+  - Replaced fixed-width desktop cards with evenly distributed responsive columns to remove unused grid gaps.
+  - Improved grid action-menu contrast and kept mobile cards to practical one-, two-, and three-column breakpoints.
+  - Applied matching theme-aware hover, expanded-category, product-row, and action-control contrast fixes to the Categories tab.
+  - Frontend lint and production build pass.
+
+- **Fixed unassigned products disappearing from Menu & Catalog**:
+  - Changed Owner/Manager product listing and ownership checks to use the product's owner-scoped category instead of requiring a stall assignment.
+  - Products with zero selected stalls now remain manageable in the business catalog and are not soft-deleted.
+  - Added product-level default USD/KHR prices so removing the final stall assignment no longer resets the configured price.
+  - Added inline editor validation when a product is missing a valid positive price, with assignment-specific guidance.
+  - Cashier product loading remains strictly scoped to visible products assigned to the cashier's stall.
+
 - **Implemented Owner/Manager reporting UX upgrade**:
   - Kept Today, Week, and Month report presets and added a responsive custom date-range dialog backed by the existing validated `range=custom` report API.
   - Replaced CSV export with a direct PDF report containing the selected date/filter context, backend summary totals, stall and cashier breakdowns, and transaction ledger rows.

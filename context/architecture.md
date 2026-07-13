@@ -139,7 +139,7 @@
 - **Stall**: A physical booth location. Has a name, assigned menu profile, and registered device token.
 - **StallStaff**: Junction — maps `User` to `Stall` (a cashier can belong to one stall).
 - **Category**: Global menu group shared across stalls.
-- **Product**: Shared catalog item metadata with name, category, and image.
+- **Product**: Shared catalog item metadata with name, owner-scoped category, image, and default USD/KHR prices. A product may remain in the management catalog with zero stall assignments; its default price is retained for later reassignment while it stays unavailable to cashiers.
 - **StallProduct**: Junction that maps a `Product` to a `Stall` and stores that stall's `price_usd`, `price_khr`, and visibility.
 - **Order**: A transaction. Belongs to a `User` (cashier) and a `Stall`. Has payment method, status, totals, KHQR metadata when relevant, and cash received/change fields when cash is confirmed.
 - **OrderItem**: Links `Order` to `Product`. Stores quantity, price snapshot, and **`notes`** (modifiers like "no ice").

@@ -4,7 +4,8 @@ export default function MetricCard({
   value,
   subtitle,
   iconBgColor = 'bg-gray-100',
-  subtitleColor = 'text-gray-500'
+  subtitleColor = 'text-gray-500',
+  valueClassName = 'text-gray-900',
 }) {
   return (
     <div className="flex-1 px-5 py-4 bg-ui-surface rounded-lg border border-ui-border border-t-brand-action/70 flex flex-col justify-start items-start gap-3">
@@ -19,7 +20,7 @@ export default function MetricCard({
         </div>
       </div>
       <div className="self-stretch flex flex-col justify-start items-start">
-        <div className="justify-start text-gray-900 text-2xl font-extrabold font-sans leading-7">
+        <div className={`justify-start text-2xl font-extrabold font-sans leading-7 ${valueClassName}`}>
           {value}
         </div>
       </div>

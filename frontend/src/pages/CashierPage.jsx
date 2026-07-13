@@ -502,7 +502,7 @@ export default function CashierPage() {
               </div>
               <div className="mt-2 flex items-center justify-between text-sm font-bold text-blue-700">
                 <span>Total</span>
-                <span>${Number(total || 0).toFixed(2)}</span>
+                <span className="text-state-success">${Number(total || 0).toFixed(2)}</span>
               </div>
             </div>
           </div>

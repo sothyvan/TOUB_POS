@@ -21,6 +21,16 @@ const Product = sequelize.define('Product', {
     defaultValue: null,
     field: 'image_url',
   },
+  default_price_usd: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+    field: 'default_price_usd',
+  },
+  default_price_khr: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'default_price_khr',
+  },
   is_active: {
     type: DataTypes.BOOLEAN,
     allowNull: false,

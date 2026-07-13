@@ -13,23 +13,25 @@ export default function ReceiptModal({ activeReceipt, onClose }) {
       isOpen={Boolean(activeReceipt)}
       onClose={onClose}
       labelledBy="receipt-modal-title"
-      panelClassName="bg-white rounded-2xl w-full max-w-105 overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+      panelClassName="w-full max-w-105 max-h-[90vh] overflow-hidden rounded-lg border border-ui-border bg-ui-elevated text-text-strong shadow-[0_24px_70px_rgba(0,0,0,0.45)] flex flex-col"
     >
       {activeReceipt ? (
         <>
         {/* Header */}
-        <div className="bg-[#f8f9fa] border-b border-gray-100 p-5 text-center flex flex-col items-center">
+        <div className="border-b border-ui-border bg-ui-muted p-5 text-center flex flex-col items-center">
           <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${
-            isPaid ? 'bg-[#e6f4eb] text-[#126149]' : 'bg-[#fff7ed] text-[#c2410c]'
+            isPaid ? 'bg-state-success/15 text-state-success' : 'bg-state-warning/15 text-state-warning'
           }`}>
             <Icon name={isPaid ? 'check' : 'clock'} className="w-6 h-6" strokeWidth={3} />
           </div>
-          <h3 id="receipt-modal-title" className="m-0 text-xl font-bold text-gray-900 leading-snug">{statusLabel}</h3>
-          <p className="m-0 mt-1 text-gray-500 text-sm font-semibold">
+          <h3 id="receipt-modal-title" className="m-0 text-xl font-bold text-text-strong leading-snug">{statusLabel}</h3>
+          <p className="m-0 mt-1 text-text-soft text-sm font-semibold">
             Receipt: {activeReceipt.orderNo}
           </p>
-          <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-bold text-white ${
-            isPaid ? 'bg-state-success' : 'bg-brand-action'
+          <span className={`inline-block mt-2 rounded-full border px-3 py-1 text-xs font-bold ${
+            isPaid
+              ? 'border-state-success/40 bg-state-success/15 text-state-success'
+              : 'border-state-warning/40 bg-state-warning/15 text-state-warning'
           }`}>
             {badgeText}
           </span>
@@ -37,17 +39,17 @@ export default function ReceiptModal({ activeReceipt, onClose }) {
 
         {/* Receipt Details List */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
-          <div className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-2">Order summary</div>
+          <div className="mb-2 text-xs font-bold uppercase tracking-wider text-text-soft">Order summary</div>
           <div className="space-y-3.5">
             {activeReceipt.items.map((item) => (
               <div key={item.id} className="flex justify-between items-start gap-4">
                 <div className="min-w-0">
-                  <strong className="block text-gray-900 text-sm font-bold truncate">{item.name}</strong>
-                  <span className="block mt-0.5 text-gray-400 text-xs font-semibold">
+                  <strong className="block truncate text-sm font-bold text-text-strong">{item.name}</strong>
+                  <span className="block mt-0.5 text-xs font-semibold text-text-soft">
                     {item.quantity} x {money(item.price)}
                   </span>
                 </div>
-                <strong className="text-gray-900 text-sm font-bold shrink-0">
+                <strong className="shrink-0 text-sm font-bold text-text-strong">
                   {money(item.lineTotal)}
                 </strong>
               </div>
@@ -64,12 +66,12 @@ export default function ReceiptModal({ activeReceipt, onClose }) {
           />
 
           {activeReceipt.paymentMethod === 'CASH' && activeReceipt.cashReceived !== null ? (
-            <div className="border-t border-dashed border-gray-200 pt-4 mt-4 space-y-2 text-sm font-bold">
-              <div className="flex justify-between text-gray-500">
+            <div className="mt-4 space-y-2 border-t border-dashed border-ui-border pt-4 text-sm font-bold">
+              <div className="flex justify-between text-text-soft">
                 <span>Cash received</span>
-                <span className="text-gray-900">{money(activeReceipt.cashReceived)}</span>
+                <span className="text-text-strong">{money(activeReceipt.cashReceived)}</span>
               </div>
-              <div className="flex justify-between text-gray-500">
+              <div className="flex justify-between text-text-soft">
                 <span>Change due</span>
                 <span className="text-state-success">{money(activeReceipt.changeDue || 0)}</span>
               </div>
@@ -77,7 +79,7 @@ export default function ReceiptModal({ activeReceipt, onClose }) {
           ) : null}
 
           {/* Metadata */}
-          <div className="border-t border-dashed border-gray-200 pt-4 mt-4 text-[11px] text-gray-400 font-bold space-y-1">
+          <div className="mt-4 space-y-1 border-t border-dashed border-ui-border pt-4 text-xs font-semibold text-text-soft">
             <div className="flex justify-between">
               <span>Cashier:</span>
               <span>{activeReceipt.cashierName}</span>
@@ -94,7 +96,7 @@ export default function ReceiptModal({ activeReceipt, onClose }) {
         </div>
 
         {/* Actions */}
-        <div className="p-5 border-t border-gray-100 bg-[#f8f9fa] flex gap-3">
+        <div className="flex gap-3 border-t border-ui-border bg-ui-muted p-5">
           <button
             className="flex-1 h-12 bg-brand-action hover:bg-brand-action/90 text-white rounded-xl font-bold transition-all cursor-pointer border-0 shadow-sm"
             type="button"

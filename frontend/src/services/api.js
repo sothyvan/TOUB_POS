@@ -61,7 +61,7 @@ function mapProductToFrontend(p) {
     id: p.id,
     name: p.name,
     code: p.name.substring(0, 3).toUpperCase(),
-    price: primaryAssignment.price_usd ?? p.price_usd ?? 0,
+    price: primaryAssignment.price_usd ?? p.default_price_usd ?? p.price_usd ?? '',
     categoryId: p.category_id,
     stallId: primaryAssignment.stall_id ?? p.stall_id,
     stallIds: assignments.length > 0
