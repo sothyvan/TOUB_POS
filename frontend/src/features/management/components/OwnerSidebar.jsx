@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import Icon from '../../../components/ui/Icon';
 import Logo from '../../../components/ui/Logo';
+import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 
 // Nav items matching Figma: Main Menu section
 const MAIN_MENU = [
@@ -29,6 +31,7 @@ export default function OwnerSidebar({
   userRole = 'Owner',
   onLogout,
 }) {
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const visibleMain = MAIN_MENU.filter((item) => allowedTabs.includes(item.id));
 
   return (
@@ -91,13 +94,29 @@ export default function OwnerSidebar({
         {/* Logout button */}
         <button
           type="button"
-          onClick={onLogout}
+          onClick={() => setShowLogoutConfirm(true)}
           className="w-8 h-8 rounded-md border border-state-danger/25 bg-state-danger/8 text-state-danger flex items-center justify-center transition-all duration-150 cursor-pointer hover:bg-state-danger/15 active:scale-95 shrink-0"
           aria-label="Logout"
         >
           <Icon name="logout" className="w-3.5 h-3.5" strokeWidth={2} />
         </button>
       </div>
+
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        size="compact"
+        title="Log out?"
+        message="You will be returned to the welcome screen and need to sign in again."
+        icon={<Icon name="logout" className="w-8 h-8 text-state-danger" strokeWidth={2} />}
+        cancelTone="secondary"
+        confirmTone="danger"
+        confirmLabel="Log out"
+        onCancel={() => setShowLogoutConfirm(false)}
+        onConfirm={() => {
+          setShowLogoutConfirm(false);
+          onLogout();
+        }}
+      />
     </aside>
   );
 }

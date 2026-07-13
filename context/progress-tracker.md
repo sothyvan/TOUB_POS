@@ -33,7 +33,20 @@ Update this file after every meaningful implementation change.
 - Phase UI-2: Cashier POS Flow Redesign — **COMPLETE** ✅
 - Phase UI-3: Owner/Manager Screens — **COMPLETE** ✅
 - Phase UI-4: Responsive & Polish — **COMPLETE** ✅
-- Pagination & Performance Optimization — **COMPLETE** ✅
+- Pagination & Performance Optimization — **COMPLETE**
+
+- **Implemented public landing page (`/`)**:
+  - Added `frontend/src/pages/LandingPage.jsx` as a marketing/public route at `/` with no sign-up; only two login entry points (Cashier Terminal → `/login?mode=cashier`, Management Portal → `/login?mode=management`).
+  - Built hero, feature grid (KHQR, cashier-only confirmation, Telegram kitchen, multi-stall reports), 3-step "How it works", final CTA band, and footer using existing `Logo`, `Button`, `Icon`, and `ThemeToggle` primitives.
+  - Used semantic theme tokens (8px grid, `bg-ui-bg`/`bg-ui-surface`/`border-brand-border`/`text-brand-action`) so it renders correctly in both dark and light mode via the existing `data-theme` system.
+  - Wired the `/` route in `App.jsx` (lazy-loaded) and updated `LoginPage` to honor a `?mode=` query param for the initial cashier vs. management login mode.
+  - Verified frontend lint and production build; both pass. ✅
+
+- **Fixed login mode URL sync & Cashier/Management separation** (`LoginPage.jsx`):
+  - Made `?mode=` query param the source of truth for `loginMode` via `useSearchParams`, replacing the one-time `window.location.search` read.
+  - Gave explicit `?mode=management` priority over device registration so a registered cashier terminal cannot force cashier mode when management is requested.
+  - `setLoginMode` now writes the URL (`setSearchParams`) so switching modes updates the address bar; memoized with `useCallback` to keep `loadActiveCashiers` deps valid.
+  - Frontend lint passes with no warnings.
 
 - **Fixed cashier receipt contrast across light and dark themes**:
   - Replaced legacy receipt color utilities with explicit semantic surface, border, and text tokens.

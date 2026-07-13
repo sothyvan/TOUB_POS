@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Icon from '../../../components/ui/Icon';
 import FormInput from '../../../components/ui/FormInput';
 import Logo from '../../../components/ui/Logo';
@@ -31,6 +32,7 @@ export default function LoginScreen({
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedStallId, setSelectedStallId] = useState('');
+  const navigate = useNavigate();
 
   const handleSubmitManagement = async (event) => {
     event.preventDefault();
@@ -394,6 +396,15 @@ export default function LoginScreen({
 
   return (
     <main className="tech-grid relative min-h-svh p-6 grid place-items-center bg-ui-bg text-brand-text selection:bg-brand-action/30 max-[640px]:flex max-[640px]:flex-col max-[640px]:items-center max-[640px]:justify-center max-[640px]:gap-4">
+      <button
+        type="button"
+        onClick={() => navigate('/')}
+        className="absolute left-5 top-5 z-10 inline-flex h-10 items-center gap-1.5 rounded-md border border-brand-border bg-ui-elevated px-3 text-xs font-bold text-text-soft transition-colors hover:border-brand-action/50 hover:bg-ui-muted hover:text-brand-action cursor-pointer"
+        aria-label="Back to landing page"
+      >
+        <Icon name="arrowLeft" className="h-4 w-4" strokeWidth={2} />
+        Back
+      </button>
       <ThemeToggle className="absolute right-5 top-5 z-10 bg-ui-elevated" />
       {loginMode === 'management' && renderManagementLogin()}
       {loginMode === 'cashier' && flowStep === 'register' && (ownerToken ? renderSelectStall() : renderRegister())}
