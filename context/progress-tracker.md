@@ -42,6 +42,12 @@ Update this file after every meaningful implementation change.
   - Wired the `/` route in `App.jsx` (lazy-loaded) and updated `LoginPage` to honor a `?mode=` query param for the initial cashier vs. management login mode.
   - Verified frontend lint and production build; both pass. ✅
 
+- **Fixed login mode URL sync & Cashier/Management separation** (`LoginPage.jsx`):
+  - Made `?mode=` query param the source of truth for `loginMode` via `useSearchParams`, replacing the one-time `window.location.search` read.
+  - Gave explicit `?mode=management` priority over device registration so a registered cashier terminal cannot force cashier mode when management is requested.
+  - `setLoginMode` now writes the URL (`setSearchParams`) so switching modes updates the address bar; memoized with `useCallback` to keep `loadActiveCashiers` deps valid.
+  - Frontend lint passes with no warnings.
+
 - **Implemented Owner/Manager reporting UX upgrade**:
   - Kept Today, Week, and Month report presets and added a responsive custom date-range dialog backed by the existing validated `range=custom` report API.
   - Replaced CSV export with a direct PDF report containing the selected date/filter context, backend summary totals, stall and cashier breakdowns, and transaction ledger rows.

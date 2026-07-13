@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSavedState } from '../../../hooks/useSavedState';
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { getPermissions } from '../../../utils/permissions';
@@ -14,10 +14,20 @@ export default function LoginPage() {
 
   const [deviceToken, setDeviceToken] = useSavedState('toub-device-token', null);
   const [deviceRegistered, setDeviceRegistered] = useSavedState('toub-device-registered', false);
-  const initialMode = new URLSearchParams(window.location.search).get('mode');
-  const startInCashier = initialMode === 'cashier' || (deviceRegistered && deviceToken);
-  const [loginMode, setLoginMode] = useState(startInCashier ? 'cashier' : 'management');
-  const [flowStep, setFlowStep] = useState(startInCashier ? 'select-profile' : 'register');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const modeParam = searchParams.get('mode'); // 'cashier' | 'management' | null
+  const loginMode =
+    modeParam === 'management' ? 'management'
+    : modeParam === 'cashier' ? 'cashier'
+    : (deviceRegistered && deviceToken ? 'cashier' : 'management');
+  const [flowStep, setFlowStep] = useState(
+    loginMode === 'cashier' && deviceRegistered && deviceToken ? 'select-profile' : 'register'
+  );
+
+  const setLoginMode = useCallback((mode) => {
+    if (mode === 'management') setSearchParams({ mode: 'management' }, { replace: true });
+    else setSearchParams({ mode: 'cashier' }, { replace: true });
+  }, [setSearchParams]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [typedPin, setTypedPin] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -54,7 +64,7 @@ export default function LoginPage() {
       }
       return [];
     }
-  }, [deviceRegistered, deviceToken, setDeviceRegistered, setDeviceToken]);
+  }, [deviceRegistered, deviceToken, setDeviceRegistered, setDeviceToken, setLoginMode]);
 
   useEffect(() => {
     const timerId = window.setTimeout(() => {
