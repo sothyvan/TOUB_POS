@@ -8,6 +8,7 @@ export function useSalesReport({
   endDate = '',
   stallId = '',
   cashierId = '',
+  includeTrends = false,
   ledgerPage = 1,
   ledgerLimit = 25,
 } = {}) {
@@ -24,6 +25,7 @@ export function useSalesReport({
         end_date: range === 'custom' ? endDate : '',
         stall_id: stallId,
         cashier_id: cashierId,
+        include_trends: includeTrends,
         page: ledgerPage,
         limit: ledgerLimit,
       });
@@ -36,7 +38,7 @@ export function useSalesReport({
     } finally {
       if (showSpinner) setLoading(false);
     }
-  }, [range, startDate, endDate, stallId, cashierId, ledgerPage, ledgerLimit]);
+  }, [range, startDate, endDate, stallId, cashierId, includeTrends, ledgerPage, ledgerLimit]);
 
   useEffect(() => {
     const timerId = window.setTimeout(() => {

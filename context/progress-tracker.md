@@ -78,6 +78,11 @@ Update this file after every meaningful implementation change.
   - Restored CSV export alongside PDF so teams can choose a spreadsheet-ready ledger or a presentation-ready report.
   - Frontend lint, production build, and a jsPDF/AutoTable runtime smoke test pass.
 
+- **Fixed Hourly Revenue Breakdown timezone conversion**:
+  - Kept database order timestamps in UTC and converted hourly SQL buckets to the configured business-local offset.
+  - Made today/week/month/custom report boundaries independent of the API server's operating-system timezone.
+  - Added validated `REPORT_TIMEZONE_OFFSET` configuration with a Cambodia default of `+07:00`.
+
 - **Simplified the cashier KHQR payment modal**:
   - Rebuilt the modal around the provided official KHQR asset with merchant name, amount, payment status/expiry, and QR as the only primary information.
   - Removed duplicated instructions, payment reference, QR fingerprint, poster footer, and long close guidance that crowded narrow screens.
@@ -694,6 +699,32 @@ Update this file after every meaningful implementation change.
   - Moved login UI/page, auth context, auth hook, and auth storage into `features/auth` while preserving route and session contracts.
   - Moved app routing/protection into `app`, shared page/topbar layout into `shared/layout`, and theme state/toggle into `shared/theme`.
   - Updated `context/architecture.md` with the new frontend boundaries and dependency-direction rules.
+- **Improved category product management in the Owner/Manager catalog**:
+  - Added a searchable multi-select workflow for moving existing products into a category.
+  - Added Edit and Move actions to products shown inside expanded category rows.
+  - Reused the existing product editor and a narrow category-only API update so prices, stall assignments, visibility, and images remain unchanged.
+  - Added clear empty, loading, disabled, and server-error states without changing the one-category-per-product data model.
+  - Frontend lint and production build pass.
+- **Expanded the Owner/Manager revenue dashboard**:
+  - Replaced the fixed hourly panel with a reusable Revenue Trends chart supporting Today, This Week, and This Month.
+  - Added backend-owned hourly/daily aggregation, paid-order counts, average order value comparisons, and previous-period revenue comparisons.
+  - Defined business weeks as Monday-based and retained `REPORT_TIMEZONE_OFFSET` conversion for all buckets and date windows.
+  - Kept extra reporting queries opt-in through `include_trends=true` so the Sales Reports ledger does not perform unnecessary dashboard aggregation work.
+  - Updated Swagger, API endpoint documentation, raw SQL examples, and architecture notes.
+  - Padded the weekly trend to a stable Monday-Sunday axis without including future days in totals or comparisons.
+  - Added a Custom calendar range using the existing report dialog, with hourly grouping for one day, daily grouping through 31 days, and seven-day grouping for longer ranges.
+- **Made cashier-to-stall assignment touch-friendly**:
+  - Added a responsive Manage Staff dialog with searchable per-cashier Assign, Move here, and Remove actions.
+  - Reused the existing protected assignment endpoints and transfer confirmation so backend RBAC remains authoritative.
+  - Hid drag-only employee pool and drop-zone affordances below desktop widths while retaining drag-and-drop as an optional desktop shortcut.
+  - Added per-cashier loading, inline errors, empty states, and immediate roster refresh after successful changes.
+  - Frontend lint and production build pass.
+- **Compacted the Cashier Quick Sale menu on mobile**:
+  - Added a compact list view with small product thumbnails, category labels, prices, and touch-friendly add/quantity controls.
+  - Kept an optional two-column grid view and persisted the cashier's preferred mobile layout locally.
+  - Made mobile search and category controls sticky while keeping the existing desktop catalog layout unchanged.
+  - Preserved the Quick Sale scroll position when switching between Quick Sale and My Orders.
+  - Frontend lint, production build, and 390px mobile visual checks pass.
 
 ## Next Up
 

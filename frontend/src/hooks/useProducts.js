@@ -223,6 +223,30 @@ export function useProducts(canManageMenu) {
     }
   };
 
+  const moveProductsToCategory = async (productIds, categoryId) => {
+    setActionError(null);
+    const normalizedIds = [...new Set(productIds.map(Number).filter(Number.isInteger))];
+    const normalizedCategoryId = Number(categoryId);
+
+    if (!canManageMenu || normalizedIds.length === 0) return false;
+    if (!categories.some((category) => Number(category.id) === normalizedCategoryId)) {
+      setActionError('Choose a valid destination category.');
+      return false;
+    }
+
+    try {
+      await Promise.all(
+        normalizedIds.map((productId) => api.products.moveToCategory(productId, normalizedCategoryId))
+      );
+      await loadData(false);
+      return true;
+    } catch (err) {
+      await loadData(false);
+      setActionError(err.message || 'Failed to move products to the selected category.');
+      return false;
+    }
+  };
+
   return {
     categories, products, categoryById, filteredProducts,
     productForm, setProductForm,
@@ -230,7 +254,7 @@ export function useProducts(canManageMenu) {
     selectedCategory, setSelectedCategory,
     searchQuery, setSearchQuery,
     saveCategory, editCategory, deleteCategory, cancelCategoryEdit,
-    saveProduct, editProduct, toggleProductAvailability, deleteProduct, cancelProductEdit,
+    saveProduct, editProduct, toggleProductAvailability, deleteProduct, moveProductsToCategory, cancelProductEdit,
     loading, error, actionError,
     clearActionError: () => setActionError(null),
   };

@@ -3,6 +3,29 @@ import { sequelize, Order, Stall, TelegramTicket, User } from '../models/index.j
 import { parsePagination, buildOrderClause, buildPaginationMeta } from '../utils/pagination.js';
 
 const REPORT_RANGES = new Set(['today', 'week', 'month', 'custom']);
+const REPORT_TIMEZONE_OFFSET = process.env.REPORT_TIMEZONE_OFFSET || '+07:00';
+const DAY_MS = 24 * 60 * 60 * 1000;
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function parseTimezoneOffsetMinutes(value) {
+  const match = String(value).match(/^([+-])(\d{2}):(\d{2})$/);
+  if (!match) {
+    throw new Error('REPORT_TIMEZONE_OFFSET must use +HH:MM or -HH:MM format.');
+  }
+
+  const hours = Number(match[2]);
+  const minutes = Number(match[3]);
+  if (hours > 14 || minutes > 59 || (hours === 14 && minutes !== 0)) {
+    throw new Error('REPORT_TIMEZONE_OFFSET must be between -14:00 and +14:00.');
+  }
+
+  const direction = match[1] === '-' ? -1 : 1;
+  return direction * ((hours * 60) + minutes);
+}
+
+const REPORT_TIMEZONE_OFFSET_MINUTES = parseTimezoneOffsetMinutes(REPORT_TIMEZONE_OFFSET);
+const REPORT_TIMEZONE_OFFSET_MS = REPORT_TIMEZONE_OFFSET_MINUTES * 60 * 1000;
 
 function httpError(message, status = 400) {
   const error = new Error(message);
@@ -25,17 +48,25 @@ function parseDateOnly(value, endOfDay = false) {
   }
 
   const [, year, month, day] = match.map(Number);
-  const date = new Date(year, month - 1, day);
+  const validationDate = new Date(Date.UTC(year, month - 1, day));
   if (
-    date.getFullYear() !== year
-    || date.getMonth() !== month - 1
-    || date.getDate() !== day
+    validationDate.getUTCFullYear() !== year
+    || validationDate.getUTCMonth() !== month - 1
+    || validationDate.getUTCDate() !== day
   ) {
     throw httpError('Invalid report date.');
   }
 
-  date.setHours(endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
-  return date;
+  const utcTimestamp = Date.UTC(
+    year,
+    month - 1,
+    day,
+    endOfDay ? 23 : 0,
+    endOfDay ? 59 : 0,
+    endOfDay ? 59 : 0,
+    endOfDay ? 999 : 0,
+  ) - REPORT_TIMEZONE_OFFSET_MS;
+  return new Date(utcTimestamp);
 }
 
 function resolveDateRange({ range = 'today', start_date, end_date }) {
@@ -56,25 +87,37 @@ function resolveDateRange({ range = 'today', start_date, end_date }) {
     return { range: 'custom', startDate, endDate };
   }
 
-  const now = new Date();
-  const startDate = new Date(now);
-  const endDate = new Date(now);
-
-  if (normalizedRange === 'today') {
-    startDate.setHours(0, 0, 0, 0);
-  }
+  const localNow = new Date(Date.now() + REPORT_TIMEZONE_OFFSET_MS);
+  let startYear = localNow.getUTCFullYear();
+  let startMonth = localNow.getUTCMonth();
+  let startDay = localNow.getUTCDate();
 
   if (normalizedRange === 'week') {
-    startDate.setDate(now.getDate() - now.getDay());
-    startDate.setHours(0, 0, 0, 0);
+    const daysSinceMonday = (localNow.getUTCDay() + 6) % 7;
+    const weekStart = new Date(Date.UTC(startYear, startMonth, startDay - daysSinceMonday));
+    startYear = weekStart.getUTCFullYear();
+    startMonth = weekStart.getUTCMonth();
+    startDay = weekStart.getUTCDate();
   }
 
   if (normalizedRange === 'month') {
-    startDate.setDate(1);
-    startDate.setHours(0, 0, 0, 0);
+    startDay = 1;
   }
 
-  endDate.setHours(23, 59, 59, 999);
+  const startDate = new Date(
+    Date.UTC(startYear, startMonth, startDay, 0, 0, 0, 0) - REPORT_TIMEZONE_OFFSET_MS
+  );
+  const endDate = new Date(
+    Date.UTC(
+      localNow.getUTCFullYear(),
+      localNow.getUTCMonth(),
+      localNow.getUTCDate(),
+      23,
+      59,
+      59,
+      999,
+    ) - REPORT_TIMEZONE_OFFSET_MS
+  );
   return { range: normalizedRange, startDate, endDate };
 }
 
@@ -100,10 +143,88 @@ function getOwnerScope(user) {
 }
 
 function formatDate(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const localDate = new Date(date.getTime() + REPORT_TIMEZONE_OFFSET_MS);
+  const year = localDate.getUTCFullYear();
+  const month = String(localDate.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(localDate.getUTCDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function resolvePreviousDateRange(range, startDate, endDate) {
+  if (range === 'today') {
+    return {
+      startDate: new Date(startDate.getTime() - DAY_MS),
+      endDate: new Date(endDate.getTime() - DAY_MS),
+    };
+  }
+
+  if (range === 'week') {
+    return {
+      startDate: new Date(startDate.getTime() - (7 * DAY_MS)),
+      endDate: new Date(endDate.getTime() - (7 * DAY_MS)),
+    };
+  }
+
+  if (range === 'month') {
+    const localEnd = new Date(endDate.getTime() + REPORT_TIMEZONE_OFFSET_MS);
+    const previousMonthAnchor = new Date(Date.UTC(
+      localEnd.getUTCFullYear(),
+      localEnd.getUTCMonth() - 1,
+      1,
+    ));
+    const previousYear = previousMonthAnchor.getUTCFullYear();
+    const previousMonth = previousMonthAnchor.getUTCMonth();
+    const previousMonthLastDay = new Date(Date.UTC(previousYear, previousMonth + 1, 0)).getUTCDate();
+    const previousEndDay = Math.min(localEnd.getUTCDate(), previousMonthLastDay);
+    const previousMonthText = String(previousMonth + 1).padStart(2, '0');
+
+    return {
+      startDate: parseDateOnly(`${previousYear}-${previousMonthText}-01`),
+      endDate: parseDateOnly(
+        `${previousYear}-${previousMonthText}-${String(previousEndDay).padStart(2, '0')}`,
+        true,
+      ),
+    };
+  }
+
+  const duration = endDate.getTime() - startDate.getTime() + 1;
+  return {
+    startDate: new Date(startDate.getTime() - duration),
+    endDate: new Date(startDate.getTime() - 1),
+  };
+}
+
+function calculatePercentChange(currentValue, previousValue) {
+  const current = Number(currentValue || 0);
+  const previous = Number(previousValue || 0);
+  if (previous === 0) {
+    return null;
+  }
+  return Number((((current - previous) / previous) * 100).toFixed(1));
+}
+
+function countCalendarDays(startDate, endDate) {
+  const start = new Date(`${formatDate(startDate)}T00:00:00.000Z`);
+  const end = new Date(`${formatDate(endDate)}T00:00:00.000Z`);
+  return Math.floor((end.getTime() - start.getTime()) / DAY_MS) + 1;
+}
+
+function resolveTrendGranularity(range, startDate, endDate) {
+  if (range === 'today') {
+    return 'hour';
+  }
+  if (range !== 'custom') {
+    return 'day';
+  }
+
+  const dayCount = countCalendarDays(startDate, endDate);
+  if (dayCount === 1) {
+    return 'hour';
+  }
+  if (dayCount <= 31) {
+    return 'day';
+  }
+  return 'week';
 }
 
 function formatHour(hour) {
@@ -295,7 +416,7 @@ async function fetchSqlCashierBreakdown(ownerId, orderWhere) {
 async function fetchSqlHourlyRevenue(ownerId, orderWhere) {
   const rows = await sequelize.query(`
     SELECT
-      HOUR(o.created_at) AS hour,
+      HOUR(CONVERT_TZ(o.created_at, '+00:00', :timezoneOffset)) AS hour,
       COUNT(o.id) AS orderCount,
       COALESCE(SUM(o.total_usd), 0) AS revenue
     FROM orders o
@@ -304,11 +425,12 @@ async function fetchSqlHourlyRevenue(ownerId, orderWhere) {
       AND o.status = 'paid'
       ${orderWhere.stall_id ? 'AND o.stall_id = :stallId' : ''}
       ${orderWhere.cashier_id ? 'AND o.cashier_id = :cashierId' : ''}
-    GROUP BY HOUR(o.created_at)
+    GROUP BY HOUR(CONVERT_TZ(o.created_at, '+00:00', :timezoneOffset))
     ORDER BY hour ASC
   `, {
     replacements: {
       ownerId,
+      timezoneOffset: REPORT_TIMEZONE_OFFSET,
       startDate: orderWhere.startDate,
       endDate: orderWhere.endDate,
       ...(orderWhere.stall_id ? { stallId: orderWhere.stall_id } : {}),
@@ -331,6 +453,123 @@ async function fetchSqlHourlyRevenue(ownerId, orderWhere) {
     orderCount: revenueByHour.get(hour)?.orderCount || 0,
     revenue: revenueByHour.get(hour)?.revenue || 0,
   }));
+}
+
+/**
+ * SQL-based daily revenue aggregation for week/month dashboard trends.
+ */
+async function fetchSqlDailyRevenue(ownerId, orderWhere, range, displayEndDate = orderWhere.endDate) {
+  const rows = await sequelize.query(`
+    SELECT
+      DATE_FORMAT(CONVERT_TZ(o.created_at, '+00:00', :timezoneOffset), '%Y-%m-%d') AS bucketDate,
+      COUNT(o.id) AS orderCount,
+      COALESCE(SUM(o.total_usd), 0) AS revenue
+    FROM orders o
+    INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = :ownerId AND s.is_deleted = 0
+    WHERE o.created_at BETWEEN :startDate AND :endDate
+      AND o.status = 'paid'
+      ${orderWhere.stall_id ? 'AND o.stall_id = :stallId' : ''}
+      ${orderWhere.cashier_id ? 'AND o.cashier_id = :cashierId' : ''}
+    GROUP BY DATE_FORMAT(CONVERT_TZ(o.created_at, '+00:00', :timezoneOffset), '%Y-%m-%d')
+    ORDER BY bucketDate ASC
+  `, {
+    replacements: {
+      ownerId,
+      timezoneOffset: REPORT_TIMEZONE_OFFSET,
+      startDate: orderWhere.startDate,
+      endDate: orderWhere.endDate,
+      ...(orderWhere.stall_id ? { stallId: orderWhere.stall_id } : {}),
+      ...(orderWhere.cashier_id ? { cashierId: orderWhere.cashier_id } : {}),
+    },
+    type: sequelize.QueryTypes.SELECT,
+  });
+
+  const revenueByDate = new Map(rows.map((row) => [String(row.bucketDate).slice(0, 10), {
+    orderCount: Number(row.orderCount || 0),
+    revenue: roundUsd(row.revenue),
+  }]));
+  const startKey = formatDate(orderWhere.startDate);
+  const endKey = formatDate(displayEndDate);
+  const start = new Date(`${startKey}T00:00:00.000Z`);
+  const end = new Date(`${endKey}T00:00:00.000Z`);
+  const points = [];
+
+  for (let cursor = start; cursor <= end; cursor = new Date(cursor.getTime() + DAY_MS)) {
+    const date = cursor.toISOString().slice(0, 10);
+    const value = revenueByDate.get(date);
+    points.push({
+      date,
+      label: range === 'week'
+        ? DAY_LABELS[cursor.getUTCDay()]
+        : `${MONTH_LABELS[cursor.getUTCMonth()]} ${cursor.getUTCDate()}`,
+      orderCount: value?.orderCount || 0,
+      revenue: value?.revenue || 0,
+    });
+  }
+
+  return points;
+}
+
+/**
+ * SQL-based seven-day buckets for custom dashboard ranges longer than 31 days.
+ */
+async function fetchSqlWeeklyRevenue(ownerId, orderWhere) {
+  const localStartDate = formatDate(orderWhere.startDate);
+  const rows = await sequelize.query(`
+    SELECT
+      FLOOR(DATEDIFF(
+        DATE(CONVERT_TZ(o.created_at, '+00:00', :timezoneOffset)),
+        :localStartDate
+      ) / 7) AS bucketIndex,
+      COUNT(o.id) AS orderCount,
+      COALESCE(SUM(o.total_usd), 0) AS revenue
+    FROM orders o
+    INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = :ownerId AND s.is_deleted = 0
+    WHERE o.created_at BETWEEN :startDate AND :endDate
+      AND o.status = 'paid'
+      ${orderWhere.stall_id ? 'AND o.stall_id = :stallId' : ''}
+      ${orderWhere.cashier_id ? 'AND o.cashier_id = :cashierId' : ''}
+    GROUP BY bucketIndex
+    ORDER BY bucketIndex ASC
+  `, {
+    replacements: {
+      ownerId,
+      timezoneOffset: REPORT_TIMEZONE_OFFSET,
+      localStartDate,
+      startDate: orderWhere.startDate,
+      endDate: orderWhere.endDate,
+      ...(orderWhere.stall_id ? { stallId: orderWhere.stall_id } : {}),
+      ...(orderWhere.cashier_id ? { cashierId: orderWhere.cashier_id } : {}),
+    },
+    type: sequelize.QueryTypes.SELECT,
+  });
+
+  const revenueByBucket = new Map(rows.map((row) => [Number(row.bucketIndex), {
+    orderCount: Number(row.orderCount || 0),
+    revenue: roundUsd(row.revenue),
+  }]));
+  const dayCount = countCalendarDays(orderWhere.startDate, orderWhere.endDate);
+  const bucketCount = Math.ceil(dayCount / 7);
+  const start = new Date(`${localStartDate}T00:00:00.000Z`);
+
+  return Array.from({ length: bucketCount }, (_, bucketIndex) => {
+    const bucketStart = new Date(start.getTime() + (bucketIndex * 7 * DAY_MS));
+    const bucketEnd = new Date(Math.min(
+      bucketStart.getTime() + (6 * DAY_MS),
+      new Date(`${formatDate(orderWhere.endDate)}T00:00:00.000Z`).getTime(),
+    ));
+    const value = revenueByBucket.get(bucketIndex);
+    const startLabel = `${MONTH_LABELS[bucketStart.getUTCMonth()]} ${bucketStart.getUTCDate()}`;
+    const endLabel = `${MONTH_LABELS[bucketEnd.getUTCMonth()]} ${bucketEnd.getUTCDate()}`;
+
+    return {
+      startDate: bucketStart.toISOString().slice(0, 10),
+      endDate: bucketEnd.toISOString().slice(0, 10),
+      label: `${startLabel}-${endLabel}`,
+      orderCount: value?.orderCount || 0,
+      revenue: value?.revenue || 0,
+    };
+  });
 }
 
 /**
@@ -384,6 +623,7 @@ export async function getSalesReport(user, query = {}) {
   const stallId = parsePositiveId(query.stall_id, 'stall_id');
   const cashierId = parsePositiveId(query.cashier_id, 'cashier_id');
   const pagination = parsePagination(query);
+  const includeTrends = ['1', 'true'].includes(String(query.include_trends || '').toLowerCase());
 
   const orderWhere = {
     startDate,
@@ -400,6 +640,45 @@ export async function getSalesReport(user, query = {}) {
     fetchLedgerOrders(ownerId, orderWhere, pagination),
   ]);
 
+  let trend = null;
+  let comparison = null;
+  if (includeTrends) {
+    const trendGranularity = resolveTrendGranularity(range, startDate, endDate);
+    const weeklyDisplayEnd = range === 'week'
+      ? new Date(startDate.getTime() + (7 * DAY_MS) - 1)
+      : endDate;
+    const previousRange = resolvePreviousDateRange(range, startDate, endDate);
+    const previousWhere = {
+      ...orderWhere,
+      startDate: previousRange.startDate,
+      endDate: previousRange.endDate,
+    };
+    const [trendPoints, previousSummary] = await Promise.all([
+      trendGranularity === 'hour'
+        ? Promise.resolve(byHour)
+        : (trendGranularity === 'week'
+            ? fetchSqlWeeklyRevenue(ownerId, orderWhere)
+            : fetchSqlDailyRevenue(ownerId, orderWhere, range, weeklyDisplayEnd)),
+      fetchSqlSummary(ownerId, previousWhere),
+    ]);
+
+    trend = {
+      granularity: trendGranularity,
+      points: trendPoints,
+    };
+    comparison = {
+      previousStartDate: formatDate(previousRange.startDate),
+      previousEndDate: formatDate(previousRange.endDate),
+      summary: previousSummary,
+      revenueChangePercent: calculatePercentChange(summary.totalRevenue, previousSummary.totalRevenue),
+      paidOrdersChangePercent: calculatePercentChange(summary.paidOrders, previousSummary.paidOrders),
+      averageOrderValueChangePercent: calculatePercentChange(
+        summary.averageOrderValue,
+        previousSummary.averageOrderValue,
+      ),
+    };
+  }
+
   return {
     filters: {
       range,
@@ -407,11 +686,13 @@ export async function getSalesReport(user, query = {}) {
       endDate: formatDate(endDate),
       stallId,
       cashierId,
+      timezoneOffset: REPORT_TIMEZONE_OFFSET,
     },
     summary,
     byStall,
     byCashier,
     byHour,
+    ...(trend ? { trend, comparison } : {}),
     orders: ledgerResult.orders,
     pagination: ledgerResult.pagination,
   };

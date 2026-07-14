@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { money } from '../../../utils/format';
 import ProductCard from './ProductCard';
 import OrderPanel from './OrderPanel';
@@ -10,6 +10,9 @@ import Icon from '../../../components/ui/Icon';
 import LoadingState from '../../../components/ui/LoadingState';
 import Pagination from '../../../components/ui/Pagination';
 import TabPills from '../../../components/ui/TabPills';
+import { getStorageItem, setStorageItem } from '../../../utils/storage';
+
+const CASHIER_MENU_VIEW_KEY = 'toub-cashier-menu-view';
 
 const TABS = [
   { id: 'sale', label: 'Quick Sale' },
@@ -92,12 +95,39 @@ export default function CashierScreen({
 }) {
   const [retryingKitchenOrderId, setRetryingKitchenOrderId] = useState(null);
   const [kitchenRetryError, setKitchenRetryError] = useState('');
+  const [isMobileMenu, setIsMobileMenu] = useState(() => window.matchMedia('(max-width: 639px)').matches);
+  const [mobileMenuView, setMobileMenuView] = useState(() => {
+    const storedView = getStorageItem(CASHIER_MENU_VIEW_KEY, 'list');
+    return storedView === 'grid' ? 'grid' : 'list';
+  });
+  const contentRef = useRef(null);
+  const saleScrollTopRef = useRef(0);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 639px)');
+    const handleChange = (event) => setIsMobileMenu(event.matches);
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
+  const handleMobileMenuViewChange = (nextView) => {
+    setMobileMenuView(nextView);
+    setStorageItem(CASHIER_MENU_VIEW_KEY, nextView);
+  };
 
   const handleTabChange = (tabId) => {
+    if (activeTab === 'sale' && contentRef.current) {
+      saleScrollTopRef.current = contentRef.current.scrollTop;
+    }
     if (tabId !== 'sale') {
       setIsCartOpen(false);
     }
     setActiveTab(tabId);
+    if (tabId === 'sale') {
+      window.requestAnimationFrame(() => {
+        contentRef.current?.scrollTo({ top: saleScrollTopRef.current });
+      });
+    }
   };
 
   const myOrders = useMemo(() => (
@@ -151,6 +181,7 @@ export default function CashierScreen({
         : 'flex flex-col'
     }`}>
       <section
+        ref={contentRef}
         className="min-h-0 overflow-auto p-[clamp(16px,2.2vw,28px)] max-sm:p-4 flex flex-col gap-5"
         aria-label="Main cashier view"
       >
@@ -166,7 +197,7 @@ export default function CashierScreen({
           </div>
 
           {activeTab === 'sale' ? (
-            <label className="flex min-h-11 w-[min(100%,320px)] items-center gap-2.5 rounded-lg border border-ui-border bg-ui-surface px-3.5 font-mono text-xs font-bold uppercase tracking-[0.08em] text-text-soft focus-within:border-brand-action focus-within:ring-4 focus-within:ring-brand-action/10">
+            <label className="flex min-h-11 w-[min(100%,320px)] items-center gap-2.5 rounded-lg border border-ui-border bg-ui-surface px-3.5 font-mono text-xs font-bold uppercase tracking-[0.08em] text-text-soft focus-within:border-brand-action focus-within:ring-4 focus-within:ring-brand-action/10 max-sm:hidden">
               <Icon name="search" className="h-4 w-4 text-text-muted" />
               <input
                 type="search"
@@ -212,15 +243,28 @@ export default function CashierScreen({
 
         {activeTab === 'sale' ? (
           <>
-            <div className="flex flex-wrap items-center justify-between gap-3 shrink-0">
-              <div
-                className="flex gap-2 overflow-x-auto pb-1 scrollbar-none flex-nowrap"
-                role="tablist"
-                aria-label="Product categories"
-                style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
-              >
+            <div className="sticky top-0 z-20 -mx-1 flex shrink-0 flex-col gap-2.5 bg-ui-bg/95 px-1 py-2 backdrop-blur sm:static sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+              <label className="flex min-h-11 w-full items-center gap-2.5 rounded-lg border border-ui-border bg-ui-surface px-3.5 text-text-soft focus-within:border-brand-action focus-within:ring-4 focus-within:ring-brand-action/10 sm:hidden">
+                <Icon name="search" className="h-4 w-4 text-text-muted" />
+                <input
+                  type="search"
+                  placeholder="Search products..."
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  className="w-full border-0 bg-transparent text-sm font-semibold text-brand-text outline-none placeholder:text-text-muted"
+                  aria-label="Search products"
+                />
+              </label>
+
+              <div className="flex items-center justify-between gap-3">
+                <div
+                  className="flex min-w-0 flex-1 flex-nowrap gap-2 overflow-x-auto pb-1 scrollbar-none"
+                  role="tablist"
+                  aria-label="Product categories"
+                  style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
+                >
                 <button
-                className={`min-h-11 px-5 rounded-md font-mono text-[12px] font-bold uppercase tracking-[0.06em] cursor-pointer transition-all duration-150 active:scale-95 shrink-0 border ${
+                  className={`min-h-10 px-3 sm:min-h-11 sm:px-5 rounded-md font-mono text-[11px] sm:text-[12px] font-bold uppercase tracking-[0.06em] cursor-pointer transition-all duration-150 active:scale-95 shrink-0 border ${
                     selectedCategory === 'All'
                       ? 'text-[#090807] bg-brand-action border-brand-action'
                       : 'bg-ui-surface text-text-soft border-ui-border hover:border-brand-action/40 hover:text-brand-action'
@@ -233,7 +277,7 @@ export default function CashierScreen({
                 {categories.map((category) => (
                   <button
                     key={category.id}
-                    className={`min-h-11 px-5 rounded-md font-mono text-[12px] font-bold uppercase tracking-[0.06em] cursor-pointer transition-all duration-150 active:scale-95 shrink-0 border ${
+                    className={`min-h-10 px-3 sm:min-h-11 sm:px-5 rounded-md font-mono text-[11px] sm:text-[12px] font-bold uppercase tracking-[0.06em] cursor-pointer transition-all duration-150 active:scale-95 shrink-0 border ${
                       selectedCategory === category.id
                         ? 'text-[#090807] bg-brand-action border-brand-action'
                         : 'bg-ui-surface text-text-soft border-ui-border hover:border-brand-action/40 hover:text-brand-action'
@@ -244,8 +288,29 @@ export default function CashierScreen({
                     {category.name}
                   </button>
                 ))}
+                </div>
+
+                <div className="flex shrink-0 items-center rounded-lg border border-ui-border bg-ui-surface p-1 sm:hidden" aria-label="Menu view">
+                  {['list', 'grid'].map((view) => (
+                    <button
+                      key={view}
+                      type="button"
+                      onClick={() => handleMobileMenuViewChange(view)}
+                      className={`grid h-9 w-9 cursor-pointer place-items-center rounded-md border transition-colors ${
+                        mobileMenuView === view
+                          ? 'border-brand-action/50 bg-brand-action/12 text-brand-action'
+                          : 'border-transparent text-text-muted hover:bg-ui-muted hover:text-text-strong'
+                      }`}
+                      aria-label={`${view === 'list' ? 'List' : 'Grid'} menu view`}
+                      title={`${view === 'list' ? 'List' : 'Grid'} view`}
+                    >
+                      <Icon name={view} className="h-4 w-4" strokeWidth={2} />
+                    </button>
+                  ))}
+                </div>
               </div>
-              <span className="text-xs font-bold text-text-muted">
+
+              <span className="text-[11px] font-bold text-text-muted sm:self-end sm:text-xs">
                 {filteredProducts.length} product{filteredProducts.length === 1 ? '' : 's'} visible
               </span>
             </div>
@@ -268,7 +333,9 @@ export default function CashierScreen({
                 className="min-h-[280px]"
               />
             ) : (
-              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-[repeat(auto-fill,minmax(190px,1fr))] sm:gap-4">
+              <div className={isMobileMenu && mobileMenuView === 'list'
+                ? 'flex flex-col gap-2'
+                : 'grid grid-cols-2 gap-2.5 sm:grid-cols-[repeat(auto-fill,minmax(190px,1fr))] sm:gap-4'}>
                 {filteredProducts.map((product) => {
                   const cartItem = cartById.get(product.id);
                   const category = categoryById.get(product.categoryId);
@@ -282,6 +349,7 @@ export default function CashierScreen({
                       addToCart={addToCart}
                       updateQuantity={updateQuantity}
                       setCartItemQuantity={setCartItemQuantity}
+                      compact={isMobileMenu && mobileMenuView === 'list'}
                     />
                   );
                 })}

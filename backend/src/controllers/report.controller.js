@@ -5,12 +5,13 @@ import { getSalesReport } from '../services/report.service.js';
  */
 export async function getDailySummary(req, res, next) {
   try {
-    const date = req.query.date || new Date().toISOString().slice(0, 10);
-    const report = await getSalesReport(req.user, {
-      range: 'custom',
-      start_date: date,
-      end_date: date,
-    });
+    const date = req.query.date;
+    const report = await getSalesReport(
+      req.user,
+      date
+        ? { range: 'custom', start_date: date, end_date: date }
+        : { range: 'today' }
+    );
 
     res.json({
       success: true,

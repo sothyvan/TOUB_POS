@@ -23,7 +23,7 @@ export default function OwnerPortalPage() {
     categories, products, categoryById,
     productForm, setProductForm, categoryForm, setCategoryForm,
     saveCategory, editCategory, deleteCategory, cancelCategoryEdit,
-    saveProduct, editProduct, toggleProductAvailability, deleteProduct, cancelProductEdit,
+    saveProduct, editProduct, toggleProductAvailability, deleteProduct, moveProductsToCategory, cancelProductEdit,
     loading: productsLoading, error: productsError,
     actionError: productsActionError, clearActionError: clearProductsActionError,
   } = useProducts(canManageMenu);
@@ -113,6 +113,7 @@ export default function OwnerPortalPage() {
         onEditProduct={editProduct}
         onToggleProductAvailability={toggleProductAvailability}
         onDeleteProduct={deleteProduct}
+        onMoveProducts={moveProductsToCategory}
         onSaveCategory={saveCategory}
         onEditCategory={editCategory}
         onDeleteCategory={deleteCategory}
