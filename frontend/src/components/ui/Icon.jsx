@@ -38,6 +38,8 @@ import {
   MessageCircle,
   MoreHorizontal,
   MoreVertical,
+  List,
+  Grid2X2,
   Sun,
   Moon
 } from 'lucide-react';
@@ -85,6 +87,8 @@ const iconMap = {
   message: MessageCircle,
   moreHorizontal: MoreHorizontal,
   moreVertical: MoreVertical,
+  list: List,
+  grid: Grid2X2,
   sun: Sun,
   moon: Moon
 };

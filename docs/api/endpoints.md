@@ -578,7 +578,7 @@ Requires `owner` or `manager` role.
 }
 ```
 
-### GET `/reports/sales?range=today|week|month|custom&start_date=YYYY-MM-DD&end_date=YYYY-MM-DD&stall_id=1&cashier_id=2`
+### GET `/reports/sales?range=today|week|month|custom&include_trends=true&start_date=YYYY-MM-DD&end_date=YYYY-MM-DD&stall_id=1&cashier_id=2`
 
 Backs the Owner/Manager sales report screen. The backend scopes all results to the authenticated user's customer business.
 
@@ -590,6 +590,9 @@ Backs the Owner/Manager sales report screen. The backend scopes all results to t
 | end_date | string | Only for custom | End date in `YYYY-MM-DD` format. |
 | stall_id | number | No | Filters to one same-business stall. |
 | cashier_id | number | No | Filters to one cashier's orders. |
+| include_trends | boolean | No | Adds dashboard trend points and previous-period comparisons. Defaults to `false`. |
+
+`week` uses Monday as the first day. The trend always returns Monday through Sunday, including zero-value future weekdays, while summary and comparison values remain week-to-date. Trend and comparison calculations use the configured report timezone and include paid orders only.
 
 **Response `200`**
 ```json
@@ -622,6 +625,20 @@ Backs the Owner/Manager sales report screen. The backend scopes all results to t
     "byHour": [
       { "hour": 9, "label": "9AM", "orderCount": 2, "revenue": 14.00 }
     ],
+    "trend": {
+      "granularity": "hour",
+      "points": [
+        { "hour": 9, "label": "9AM", "orderCount": 2, "revenue": 14.00 }
+      ]
+    },
+    "comparison": {
+      "previousStartDate": "2026-07-08",
+      "previousEndDate": "2026-07-08",
+      "summary": { "paidOrders": 8, "totalRevenue": 70.00, "averageOrderValue": 8.75 },
+      "revenueChangePercent": 20.7,
+      "paidOrdersChangePercent": 25.0,
+      "averageOrderValueChangePercent": -3.4
+    },
     "orders": [
       {
         "id": 42,
@@ -636,6 +653,14 @@ Backs the Owner/Manager sales report screen. The backend scopes all results to t
   }
 }
 ```
+
+`trend` and `comparison` are returned only when `include_trends=true`:
+
+- Today and one-day custom ranges use 24 hourly buckets.
+- This Week uses seven Monday-Sunday daily buckets; future days are zero.
+- This Month and custom ranges of 2-31 days use daily buckets.
+- Custom ranges longer than 31 days use consecutive seven-day buckets.
+- Custom comparisons use the immediately preceding range of equal length.
 
 ---
 

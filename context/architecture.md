@@ -84,6 +84,8 @@
 - The backend applies same-business owner scope, date range filters, optional stall/cashier filters, and returns summary totals, payment mix, stall/cashier breakdowns, hourly revenue, and ledger rows.
 - Preset and custom calendar ranges use the same backend report contract; custom ranges send validated `start_date` and `end_date` values.
 - Dashboard hourly revenue and exported PDF totals/rows come from the backend report response. The frontend may still use loaded order details for receipt viewing or as a temporary display fallback while the report request loads.
+- Dashboard requests opt into `include_trends=true`: today and one-day custom ranges return hourly points; the current Monday-based week always returns seven Monday-Sunday points; month and custom ranges through 31 days return daily points; longer custom ranges return seven-day buckets. Future weekdays are display-only zero points, while summaries and previous-week comparisons stay week-to-date. Comparison percentages remain backend-owned.
+- Order timestamps remain stored in UTC. Report date boundaries and hourly buckets use `REPORT_TIMEZONE_OFFSET` (default `+07:00` for Cambodia) so dashboards reflect business-local time independently of the API server timezone.
 
 ## Current Payment Flow (Phase 4)
 

@@ -5,6 +5,10 @@ import { roleToApiRole } from '../../../utils/permissions';
 import { api } from '../../../services/api';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import Alert from '../../../components/ui/Alert';
+import Button from '../../../components/ui/Button';
+import EmptyState from '../../../components/ui/EmptyState';
+import FormInput from '../../../components/ui/FormInput';
+import ModalShell from '../../../components/ui/ModalShell';
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 
 // ── Seed data ─────────────────────────────────────────────────────────────────
@@ -163,7 +167,7 @@ function DropZone({ onDrop, isDragOver, setIsDragOver }) {
       onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setIsDragOver(true); }}
       onDragLeave={() => setIsDragOver(false)}
       onDrop={(e) => { e.preventDefault(); setIsDragOver(false); onDrop(e.dataTransfer.getData('userId')); }}
-      className="flex flex-col items-center justify-center gap-2 rounded-2xl transition-all duration-200"
+      className="hidden xl:flex flex-col items-center justify-center gap-2 rounded-2xl transition-all duration-200"
       style={{
         minHeight: 128,
         border: isDragOver ? '2px solid #003ec7' : '2px dashed #e5e7eb',
@@ -184,6 +188,128 @@ function DropZone({ onDrop, isDragOver, setIsDragOver }) {
   );
 }
 
+function ManageStaffDialog({
+  cashiers,
+  error,
+  isOpen,
+  onAssign,
+  onClose,
+  onRemove,
+  pendingUserId,
+  stall,
+  userStallMap,
+}) {
+  const [search, setSearch] = useState('');
+
+  if (!stall) return null;
+
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredCashiers = cashiers.filter((user) => (
+    !normalizedSearch
+    || user.name.toLowerCase().includes(normalizedSearch)
+    || String(user.username || '').toLowerCase().includes(normalizedSearch)
+  ));
+
+  return (
+    <ModalShell
+      isOpen={isOpen}
+      onClose={pendingUserId ? undefined : onClose}
+      onBackdropClick={pendingUserId ? undefined : onClose}
+      labelledBy="manage-stall-staff-title"
+      showCloseButton={!pendingUserId}
+      size="lg"
+    >
+      <div className="flex max-h-[88svh] flex-col overflow-hidden">
+        <div className="border-b border-ui-border px-5 py-5 pr-16 sm:px-6">
+          <p className="m-0 text-xs font-extrabold uppercase tracking-wider text-brand-action">Stall roster</p>
+          <h2 id="manage-stall-staff-title" className="m-0 mt-1 text-xl font-extrabold text-text-strong">
+            Manage staff for {stall.name}
+          </h2>
+          <p className="m-0 mt-1 text-sm font-medium text-text-muted">
+            Assign available cashiers, move them from another stall, or remove them from this roster.
+          </p>
+        </div>
+
+        <div className="border-b border-ui-border px-5 py-4 sm:px-6">
+          <FormInput
+            id="manage-staff-search"
+            label="Search cashiers"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by name or username"
+          />
+        </div>
+
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 sm:p-6">
+          {error ? <Alert variant="danger">{error}</Alert> : null}
+          {filteredCashiers.length === 0 ? (
+            <EmptyState
+              iconName="users"
+              title={search ? 'No matching cashiers' : 'No cashiers available'}
+              message={search ? 'Try another name or username.' : 'Create a cashier account before assigning staff to this stall.'}
+            />
+          ) : (
+            filteredCashiers.map((user, index) => {
+              const assignedStall = userStallMap[user.id];
+              const isAssignedHere = Number(assignedStall?.id) === Number(stall.id);
+              const isAssignedElsewhere = Boolean(assignedStall) && !isAssignedHere;
+              const isPending = Number(pendingUserId) === Number(user.id);
+
+              return (
+                <div
+                  key={user.id}
+                  className="flex min-w-0 flex-wrap items-center gap-3 rounded-lg border border-ui-border bg-ui-surface px-3 py-3 transition-colors hover:border-brand-action/45 hover:bg-ui-muted"
+                >
+                  <div
+                    className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-xs font-black"
+                    style={avatarStyle(index)}
+                  >
+                    {initials(user.name)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <strong className="block truncate text-sm text-text-strong">{user.name}</strong>
+                    <span className="block truncate text-xs font-semibold text-text-muted">
+                      {isAssignedHere
+                        ? 'Assigned to this stall'
+                        : (isAssignedElsewhere ? `Currently at ${assignedStall.name}` : 'Not assigned to a stall')}
+                    </span>
+                  </div>
+                  {isAssignedHere ? (
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      loading={isPending}
+                      disabled={Boolean(pendingUserId) && !isPending}
+                      onClick={() => onRemove(user.id)}
+                    >
+                      Remove
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant={isAssignedElsewhere ? 'secondary' : 'primary'}
+                      loading={isPending}
+                      disabled={Boolean(pendingUserId) && !isPending}
+                      onClick={() => onAssign(user.id)}
+                    >
+                      {isAssignedElsewhere ? 'Move here' : 'Assign'}
+                    </Button>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <div className="flex items-center justify-between gap-3 border-t border-ui-border px-5 py-4 sm:px-6">
+          <span className="text-xs font-bold text-text-muted">{cashiers.length} cashier{cashiers.length === 1 ? '' : 's'}</span>
+          <Button variant="secondary" onClick={onClose} disabled={Boolean(pendingUserId)}>Done</Button>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
 export default function StallOwner({ users = [] }) {
   const cashierUsers = useMemo(() => {
     return users.filter((user) => roleToApiRole(user.role) === 'cashier');
@@ -196,6 +322,8 @@ export default function StallOwner({ users = [] }) {
   
   const [staffSearch, setStaffSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [isManageStaffOpen, setIsManageStaffOpen] = useState(false);
+  const [pendingUserId, setPendingUserId] = useState(null);
   const [isDropZoneOver, setIsDropZoneOver] = useState(false);
   const [, setIsDraggingFromRoster] = useState(false);
   const [isPoolOver, setIsPoolOver] = useState(false);
@@ -296,7 +424,7 @@ export default function StallOwner({ users = [] }) {
   };
 
   const handleAssign = async (userId) => {
-    if (!selectedStallId || assignedIds.includes(userId)) return;
+    if (!selectedStallId || assignedIds.includes(userId)) return false;
     
     // Check if user is already assigned to another stall
     const oldStall = userStallMap[userId];
@@ -306,10 +434,13 @@ export default function StallOwner({ users = [] }) {
         oldStall,
         newStall: stalls.find(s => s.id === selectedStallId)
       });
-      return;
+      return false;
     }
 
-    await performAssign(userId, selectedStallId);
+    setPendingUserId(userId);
+    const assigned = await performAssign(userId, selectedStallId);
+    setPendingUserId(null);
+    return assigned;
   };
 
   const performAssign = async (userId, toStallId) => {
@@ -329,17 +460,24 @@ export default function StallOwner({ users = [] }) {
     if (!transferConfirm) return;
     const { userId, newStall } = transferConfirm;
     setTransferConfirm(null);
+    setPendingUserId(userId);
     await performAssign(userId, newStall.id);
+    setPendingUserId(null);
   };
 
   const handleUnassign = async (userId) => {
     setActionError('');
+    setPendingUserId(userId);
     try {
       await api.stalls.unassignStaff(selectedStallId, userId);
       updateAssignmentsLocally(selectedStallId, null, userId);
       await loadStalls(false);
+      return true;
     } catch (err) {
       setActionError(err.message || 'Failed to unassign staff.');
+      return false;
+    } finally {
+      setPendingUserId(null);
     }
   };
 
@@ -370,7 +508,7 @@ export default function StallOwner({ users = [] }) {
       className="relative flex flex-col xl:flex-row gap-4 h-full min-h-0 xl:overflow-hidden overflow-y-auto overflow-x-hidden pb-6 xl:pb-0"
       onDragEnd={() => { setIsDraggingFromRoster(false); setIsDropZoneOver(false); setIsPoolOver(false); }}
     >
-      {actionError && !showAddModal && (
+      {actionError && !showAddModal && !isManageStaffOpen && (
         <Alert variant="danger" className="fixed left-1/2 top-20 z-40 w-[min(92vw,520px)] -translate-x-1/2 shadow-lg">
           {actionError}
         </Alert>
@@ -433,20 +571,25 @@ export default function StallOwner({ users = [] }) {
       </div>
 
       <div className="xl:flex-1 bg-white rounded-2xl flex flex-col min-w-0 w-full min-h-[350px] xl:min-h-0 xl:h-auto xl:overflow-hidden">
-        <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-4 border-b border-[#f3f4f6]">
+        <div className="flex flex-wrap items-start justify-between gap-4 px-6 pt-5 pb-4 border-b border-[#f3f4f6]">
           <div className="min-w-0">
             <h2 className="truncate" title={selectedStall ? `Current Roster: ${selectedStall.name}${selectedStall.location ? ` — ${selectedStall.location}` : ''}` : 'Select a Location'} style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
               {selectedStall ? `Current Roster: ${selectedStall.name}${selectedStall.location ? ` — ${selectedStall.location}` : ''}` : 'Select a Location'}
             </h2>
-            <p className="truncate" title={selectedStall ? `${assignedUsers.length} staff currently assigned · click a card to manage` : 'Choose a location from the left'} style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}>
-              {selectedStall ? `${assignedUsers.length} staff currently assigned · click a card to manage` : 'Choose a location from the left'}
+            <p className="truncate" title={selectedStall ? `${assignedUsers.length} staff currently assigned · use Manage Staff to update the roster` : 'Choose a location from the left'} style={{ margin: '2px 0 0', fontSize: 12, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}>
+              {selectedStall ? `${assignedUsers.length} staff currently assigned · use Manage Staff to update the roster` : 'Choose a location from the left'}
             </p>
           </div>
           {selectedStall && (
-            <div className="px-3 py-1 rounded-full shrink-0" style={{ background: '#eff6ff' }}>
-              <span className="text-[13px] font-bold text-[#1d4ed8] font-sans">
-                {assignedUsers.length} / 12
-              </span>
+            <div className="flex shrink-0 items-center gap-2">
+              <div className="px-3 py-1 rounded-full" style={{ background: '#eff6ff' }}>
+                <span className="text-[13px] font-bold text-[#1d4ed8] font-sans">
+                  {assignedUsers.length} / 12
+                </span>
+              </div>
+              <Button size="sm" iconName="users" onClick={() => setIsManageStaffOpen(true)}>
+                Manage Staff
+              </Button>
             </div>
           )}
         </div>
@@ -460,6 +603,20 @@ export default function StallOwner({ users = [] }) {
             </div>
           )}
 
+          {selectedStall && assignedUsers.length === 0 && (
+            <EmptyState
+              className="xl:hidden"
+              iconName="users"
+              title="No cashiers assigned"
+              message="Use Manage Staff to add a cashier to this stall."
+              action={(
+                <Button size="sm" iconName="userPlus" onClick={() => setIsManageStaffOpen(true)}>
+                  Manage Staff
+                </Button>
+              )}
+            />
+          )}
+
           {selectedStall && (
             <DropZone onDrop={(userId) => handleAssign(Number(userId))} isDragOver={isDropZoneOver} setIsDragOver={setIsDropZoneOver} />
           )}
@@ -467,7 +624,7 @@ export default function StallOwner({ users = [] }) {
       </div>
 
       <div
-        className="flex flex-col bg-white rounded-2xl shrink-0 w-full xl:w-[280px] xl:min-w-[240px] h-[450px] xl:h-auto xl:overflow-hidden"
+        className="hidden xl:flex flex-col bg-white rounded-2xl shrink-0 w-full xl:w-[280px] xl:min-w-[240px] h-[450px] xl:h-auto xl:overflow-hidden"
         onDragOver={(e) => { e.preventDefault(); setIsPoolOver(true); }}
         onDragLeave={() => setIsPoolOver(false)}
         onDrop={handlePoolDrop}
@@ -485,7 +642,7 @@ export default function StallOwner({ users = [] }) {
             </div>
           </div>
           <p style={{ margin: 0, fontSize: 12, color: '#9ca3af', fontFamily: 'Inter, sans-serif' }}>
-            {availableCount} available · drag to assign
+            {availableCount} available · drag or click to assign
           </p>
         </div>
 
@@ -564,6 +721,22 @@ export default function StallOwner({ users = [] }) {
       {showAddModal && (
         <AddStallModal onClose={() => { setShowAddModal(false); setActionError(''); }} onAdd={handleAddStall} error={actionError} />
       )}
+
+      <ManageStaffDialog
+        key={`${selectedStallId}-${isManageStaffOpen ? 'open' : 'closed'}`}
+        cashiers={cashierUsers}
+        error={actionError}
+        isOpen={isManageStaffOpen}
+        stall={selectedStall}
+        userStallMap={userStallMap}
+        pendingUserId={pendingUserId}
+        onAssign={handleAssign}
+        onRemove={handleUnassign}
+        onClose={() => {
+          setIsManageStaffOpen(false);
+          setActionError('');
+        }}
+      />
 
       {transferConfirm && (
         <ConfirmDialog

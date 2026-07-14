@@ -54,6 +54,7 @@ export default function OwnerWorkspace({
   onEditProduct,
   onToggleProductAvailability,
   onDeleteProduct,
+  onMoveProducts,
   onSaveCategory,
   onEditCategory,
   onDeleteCategory,
@@ -199,6 +200,7 @@ export default function OwnerWorkspace({
               onEditProduct={onEditProduct}
               onToggleProductAvailability={onToggleProductAvailability}
               onDeleteProduct={(id) => handlePromptDelete('product', id)}
+              onMoveProducts={onMoveProducts}
               onCancelProduct={onCancelProduct}
               categories={categories}
               categoryForm={categoryForm}

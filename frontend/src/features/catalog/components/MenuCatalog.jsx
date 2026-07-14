@@ -488,6 +488,7 @@ export default function MenuCatalog({
   onEditProduct,
   onToggleProductAvailability,
   onDeleteProduct,
+  onMoveProducts,
   onCancelProduct,
   categories,
   categoryForm,
@@ -611,6 +612,11 @@ export default function MenuCatalog({
     if (editingProduct?.id === id) setEditing(null);
   };
 
+  const handleEditProductFromCategory = (product) => {
+    openEditor(product);
+    setSubTab('products');
+  };
+
   // ── Categories sub-tab ────────────────────────────────────────────────────
   if (subTab === 'categories') {
     return (
@@ -627,6 +633,8 @@ export default function MenuCatalog({
           onEdit={onEditCategory}
           onDelete={onDeleteCategory}
           onCancel={onCancelCategory}
+          onEditProduct={handleEditProductFromCategory}
+          onMoveProducts={onMoveProducts}
           loading={loading}
           error={error}
         />

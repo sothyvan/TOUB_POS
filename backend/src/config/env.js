@@ -53,6 +53,20 @@ export function validateEnvironment() {
     errors.push('DB_PORT must be a positive integer.');
   }
 
+  if (!isBlank(process.env.REPORT_TIMEZONE_OFFSET)) {
+    const timezoneMatch = String(process.env.REPORT_TIMEZONE_OFFSET).match(/^([+-])(\d{2}):(\d{2})$/);
+    const timezoneHours = timezoneMatch ? Number(timezoneMatch[2]) : null;
+    const timezoneMinutes = timezoneMatch ? Number(timezoneMatch[3]) : null;
+    if (
+      !timezoneMatch
+      || timezoneHours > 14
+      || timezoneMinutes > 59
+      || (timezoneHours === 14 && timezoneMinutes !== 0)
+    ) {
+      errors.push('REPORT_TIMEZONE_OFFSET must use +HH:MM or -HH:MM and be between -14:00 and +14:00.');
+    }
+  }
+
   if (isProduction) {
     requireEnv('FRONTEND_ORIGIN', errors);
   }

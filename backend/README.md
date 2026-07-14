@@ -61,6 +61,7 @@ Do not run this seeder against production or any live merchant database.
 | `PORT` | API port | `3000` |
 | `NODE_ENV` | Environment mode | `development` |
 | `FRONTEND_ORIGIN` | Allowed frontend origin | `http://localhost:5173` |
+| `REPORT_TIMEZONE_OFFSET` | Business-local offset used by sales report ranges and hourly buckets | `+07:00` |
 | `DB_HOST` | MySQL host | `localhost` |
 | `DB_PORT` | MySQL port | `3306` |
 | `DB_USER` | MySQL user | `root` |

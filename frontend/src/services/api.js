@@ -225,6 +225,12 @@ export const api = {
         return mapProductToFrontend(res.data);
       }
     },
+    async moveToCategory(id, categoryId) {
+      return apiRequest(`/products/${id}`, {
+        method: 'PUT',
+        body: { category_id: categoryId },
+      });
+    },
     async delete(id) {
       return apiRequest(`/products/${id}`, { method: 'DELETE' });
     }

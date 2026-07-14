@@ -437,7 +437,7 @@ export const swaggerDocument = {
         '/api/reports/sales': {
             get: {
                 summary: 'Filtered sales report',
-                description: 'Owner/Manager only. Supports range, custom date window, stall, and cashier filters. Returns backend-scoped summary, stall/cashier/hourly breakdowns, and ledger rows for the sales report UI.',
+                description: 'Owner/Manager only. Supports range, custom date window, stall, and cashier filters. Returns backend-scoped summary, stall/cashier/hourly breakdowns, and ledger rows. Dashboard callers may request period-aware trend and previous-period comparison data.',
                 parameters: [
                     {
                         name: 'range',
@@ -468,6 +468,12 @@ export const swaggerDocument = {
                         in: 'query',
                         schema: { type: 'integer' },
                         description: 'Optional cashier filter.'
+                    },
+                    {
+                        name: 'include_trends',
+                        in: 'query',
+                        schema: { type: 'boolean', default: false },
+                        description: 'When true, includes dashboard trend points and previous-period comparisons. Today and one-day custom ranges are hourly; week/month and custom ranges up to 31 days are daily; longer custom ranges use seven-day buckets.'
                     }
                 ],
                 responses: {

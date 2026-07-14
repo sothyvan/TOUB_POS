@@ -11,9 +11,77 @@ export default function ProductCard({
   addToCart,
   updateQuantity,
   setCartItemQuantity,
+  compact = false,
 }) {
   const [failedImage, setFailedImage] = useState(null);
   const shouldShowImage = Boolean(product.image) && failedImage !== product.image;
+
+  if (compact) {
+    return (
+      <article
+        className={`group relative flex min-h-18 min-w-0 items-center gap-3 overflow-hidden rounded-lg border bg-ui-surface p-2.5 transition-colors hover:border-brand-action/45 ${
+          cartItem ? 'border-state-success ring-2 ring-state-success/12' : 'border-ui-border'
+        }`}
+        aria-label={`${product.name}, ${money(product.price)}`}
+      >
+        <button
+          className="absolute inset-0 z-10 h-full w-full cursor-pointer border-0 bg-transparent"
+          onClick={() => addToCart(product)}
+          type="button"
+          aria-label={`Add ${product.name} to cart`}
+        />
+
+        <div className="h-14 w-14 shrink-0 overflow-hidden rounded-md border border-ui-border bg-ui-muted">
+          {shouldShowImage ? (
+            <img
+              src={product.image}
+              alt={product.name}
+              className="h-full w-full object-cover"
+              loading="lazy"
+              onError={() => setFailedImage(product.image)}
+            />
+          ) : (
+            <span className="grid h-full w-full place-items-center text-text-muted" aria-hidden="true">
+              <Icon name="product" className="h-5 w-5" strokeWidth={1.6} />
+            </span>
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <h3 className="m-0 truncate text-sm font-bold text-text-strong">{product.name}</h3>
+          <p className="m-0 mt-0.5 truncate text-[11px] font-semibold text-text-muted">
+            {category?.name || 'Menu'}
+          </p>
+          <strong className="mt-1 block text-sm font-extrabold text-state-success">
+            {money(product.price)}
+          </strong>
+        </div>
+
+        <div className="relative z-20 shrink-0">
+          {cartItem ? (
+            <QuantityInput
+              value={cartItem.quantity}
+              onDecrease={() => updateQuantity(product.id, -1)}
+              onIncrease={() => updateQuantity(product.id, 1)}
+              onChange={(value) => setCartItemQuantity(product.id, value)}
+              className="font-bold text-text-strong"
+              compact
+            />
+          ) : (
+            <button
+              className="grid h-11 w-11 cursor-pointer place-items-center rounded-md border border-brand-action bg-brand-action text-[#090807] transition-all hover:bg-brand-action-hover active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-action/25"
+              onClick={() => addToCart(product)}
+              type="button"
+              aria-label={`Add ${product.name}`}
+              title={`Add ${product.name}`}
+            >
+              <Icon name="plus" className="h-4 w-4" strokeWidth={3} />
+            </button>
+          )}
+        </div>
+      </article>
+    );
+  }
 
   return (
     <article
