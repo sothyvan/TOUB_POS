@@ -553,3 +553,42 @@ MODIFY action ENUM('order_created', 'cash_payment_confirmed', 'khqr_payment_conf
 ALTER TABLE orders
 ADD COLUMN cash_received_usd DECIMAL(10, 2) DEFAULT NULL AFTER total_usd,
 ADD COLUMN change_due_usd DECIMAL(10, 2) DEFAULT NULL AFTER cash_received_usd;
+
+
+-- products for a specific owner and shows them for each stall under that owner:
+
+SELECT
+    o.id AS owner_id,
+    s.id AS stall_id,
+    s.name AS stall_name,
+    p.id AS product_id,
+    p.name AS product_name,
+    COALESCE(sp.price_usd, p.default_price_usd) AS price_usd,
+    COALESCE(sp.price_khr, p.default_price_khr) AS price_khr,
+    COALESCE(sp.is_visible, TRUE) AS is_visible
+FROM users o
+JOIN stalls s ON s.owner_id = o.id
+LEFT JOIN categories c ON c.owner_id = o.id
+LEFT JOIN products p ON p.category_id = c.id
+LEFT JOIN stall_products sp
+    ON sp.stall_id = s.id
+   AND sp.product_id = p.id
+WHERE o.id = 2          -- change to the owner ID you want
+  AND o.role = 'owner'
+ORDER BY s.id, p.name;
+
+-- lists staff assigned to each stall owned by a specific owner.
+SELECT
+    o.id AS owner_id,
+    s.id AS stall_id,
+    s.name AS stall_name,
+    u.id AS staff_id,
+    u.username AS staff_username,
+    u.role AS staff_role
+FROM users o
+JOIN stalls s ON s.owner_id = o.id
+LEFT JOIN stall_staff ss ON ss.stall_id = s.id
+LEFT JOIN users u ON u.id = ss.user_id
+WHERE o.id = 2
+  AND o.role = 'owner'
+ORDER BY s.id, u.username;
