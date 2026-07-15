@@ -14,7 +14,7 @@ import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 
 // KHR exchange rate (approx)
 const KHR_RATE = 4000;
-const PRODUCT_PAGE_SIZE = 10;
+const PRODUCT_PAGE_SIZE = 12;
 const PRODUCT_IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp';
 
 function toKHR(usd) {

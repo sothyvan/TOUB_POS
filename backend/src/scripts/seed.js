@@ -13,7 +13,8 @@ async function main() {
 
   await ensureDatabaseExists();
   await sequelize.authenticate();
-  await sequelize.sync();
+  const syncOptions = process.env.NODE_ENV === 'development' ? { alter: true } : {};
+  await sequelize.sync(syncOptions);
 
   console.log('[seed] Database connection established.');
 
