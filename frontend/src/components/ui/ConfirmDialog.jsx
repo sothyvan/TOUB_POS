@@ -6,7 +6,7 @@ const sizeClasses = {
     panel:
       'w-full max-w-100 rounded-lg border border-brand-border bg-ui-elevated shadow-[0_24px_70px_rgba(0,0,0,0.45)] p-6 text-center',
     title: 'text-xl font-black tracking-tight mb-2',
-    message: 'text-[14px] leading-relaxed mb-6 font-semibold',
+    message: 'w-full text-[14px] leading-relaxed mb-6 font-semibold',
     actions: 'gap-3',
     button: 'min-h-12 rounded-xl font-bold',
   },

@@ -57,10 +57,10 @@ async function startServer() {
     // Start HTTP + WebSocket server
     const httpServer = createServer(app);
     initializeWebSocketServer(httpServer);
-    // startKhqrBackgroundChecker();
 
     httpServer.listen(PORT, () => {
       console.log(`[server] Toub POS API running on http://localhost:${PORT}`);
+      startKhqrBackgroundChecker();
     });
   } catch (err) {
     console.error('[server] Failed to start server:', err);
