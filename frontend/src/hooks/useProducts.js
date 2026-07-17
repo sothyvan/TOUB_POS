@@ -20,6 +20,17 @@ const hasProductDraft = (form) => Boolean(
   || (form.stallIds || []).length
 );
 
+// api.products.getAll/categories.getAll return { data, pagination } when called
+// with pagination params, or a bare array otherwise. Normalize to an array so the
+// catalog can load (and then paginate) the full list client-side.
+function normalizeList(result) {
+  if (Array.isArray(result)) return result;
+  if (result && Array.isArray(result.data)) return result.data;
+  return [];
+}
+
+const FULL_LIST = { limit: 1000 };
+
 /**
  * Manages products and categories — state, filters, and CRUD using backend APIs.
  *
@@ -41,11 +52,11 @@ export function useProducts(canManageMenu) {
     try {
       if (showSpinner) setLoading(true);
       const [loadedCats, loadedProds] = await Promise.all([
-        api.categories.getAll(),
-        api.products.getAll()
+        api.categories.getAll(FULL_LIST),
+        api.products.getAll(FULL_LIST)
       ]);
-      setCategories(loadedCats);
-      setProducts(loadedProds);
+      setCategories(normalizeList(loadedCats));
+      setProducts(normalizeList(loadedProds));
       setProductForm((current) => (
         hasProductDraft(current)
           ? current
@@ -133,9 +144,9 @@ export function useProducts(canManageMenu) {
     }
     try {
       await api.categories.delete(categoryId);
-      const nextCats = await api.categories.getAll();
-      setCategories(nextCats);
-      setProducts(await api.products.getAll());
+      const nextCats = await api.categories.getAll(FULL_LIST);
+      setCategories(normalizeList(nextCats));
+      setProducts(normalizeList(await api.products.getAll(FULL_LIST)));
       if (productForm.categoryId === categoryId) {
         setProductForm((prev) => ({
           ...prev,

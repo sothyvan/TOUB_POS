@@ -9,6 +9,8 @@
     "tunnel": "node src/utils/start-tunnel.js",
     "start": "node src/server.js",
     "seed": "node src/scripts/seed.js",
+    "seed:bulk": "node src/scripts/seed-bulk-products.js",
+    "seed:audit": "node src/scripts/seed-audit-logs.js",
     "test:credentials": "node --test tests/credential-model.live.test.js",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix"

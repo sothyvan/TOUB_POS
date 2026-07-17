@@ -27,10 +27,7 @@ export async function upsertProduct(seed, categoryId) {
   });
 
   if (!created) {
-    await product.update({
-      category_id: categoryId,
-      image_url: seed.imageUrl,
-    });
+    await product.update({ category_id: categoryId });
   }
 
   return product;

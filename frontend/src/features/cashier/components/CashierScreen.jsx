@@ -134,7 +134,7 @@ export default function CashierScreen({
     [...orders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
   ), [orders]);
 
-  const ORDERS_PAGE_SIZE = 10;
+  const ORDERS_PAGE_SIZE = 12;
   const [ordersPage, setOrdersPage] = useState(1);
   const ordersTotalPages = Math.ceil(myOrders.length / ORDERS_PAGE_SIZE) || 1;
   const paginatedOrders = useMemo(() => {

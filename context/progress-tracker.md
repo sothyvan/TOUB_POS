@@ -35,6 +35,17 @@ Update this file after every meaningful implementation change.
 - Phase UI-4: Responsive & Polish — **COMPLETE** ✅
 - Pagination & Performance Optimization — **COMPLETE**
 
+- **Added standalone bulk demo product seeder (`npm run seed:bulk`)**:
+  - Added `backend/src/scripts/seed-bulk-products.js`, an idempotent script that appends 100 new demo products per owner (`role='owner'`), independent of the deterministic `seed.js` so canonical demo data and order history stay untouched.
+  - Each product is assigned to one of that owner's existing categories (product ownership flows through `Category.owner_id`), linked to every active/non-deleted stall of the owner via `stall_products`, and given a remote faker image URL (`faker.image.urlLoremFlickr`, clamped to the 500-char `image_url` limit).
+  - Seeded faker deterministically per owner (`faker.seed(BULK_SEED_BASE + owner.id)`) and used find-or-create by product `name` and by `(stall_id, product_id)` so re-runs do not create duplicates; wrapped each owner's writes in a transaction.
+  - Added a cross-owner contamination guard that regenerates a product name (owner-slug + counter) when a name clash resolves to another owner's category.
+  - Registered `"seed:bulk": "node src/scripts/seed-bulk-products.js"` in `backend/package.json`.
+
+- **Fixed pre-existing schema drift in seed scripts** (`seed.js` and `seed-bulk-products.js`):
+  - Both scripts called plain `sequelize.sync()`, which never added the `default_price_usd`/`default_price_khr` columns declared on the `Product` model, so any `Product.findOrCreate` failed with `Unknown column 'default_price_usd'`.
+  - Changed the sync call to match `server.js`: `{ alter: true }` in `development`, `{}` otherwise, so the columns are created before seeding. This also fixes the same latent failure in the base `seed.js`.
+
 - **Implemented public landing page (`/`)**:
   - Added `frontend/src/pages/LandingPage.jsx` as a marketing/public route at `/` with no sign-up; only two login entry points (Cashier Terminal → `/login?mode=cashier`, Management Portal → `/login?mode=management`).
   - Built hero, feature grid (KHQR, cashier-only confirmation, Telegram kitchen, multi-stall reports), 3-step "How it works", final CTA band, and footer using existing `Logo`, `Button`, `Icon`, and `ThemeToggle` primitives.
