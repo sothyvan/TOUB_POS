@@ -19,7 +19,7 @@ export default function ProductCard({
   if (compact) {
     return (
       <article
-        className={`group relative flex min-h-18 min-w-0 items-center gap-3 overflow-hidden rounded-lg border bg-ui-surface p-2.5 transition-colors hover:border-brand-action/45 ${
+        className={`group relative isolate flex min-h-18 min-w-0 items-center gap-3 overflow-hidden rounded-lg border bg-ui-surface p-2.5 transition-colors hover:border-brand-action/45 ${
           cartItem ? 'border-state-success ring-2 ring-state-success/12' : 'border-ui-border'
         }`}
         aria-label={`${product.name}, ${money(product.price)}`}
@@ -85,7 +85,7 @@ export default function ProductCard({
 
   return (
     <article
-      className={`group relative bg-ui-surface border rounded-lg overflow-hidden hover:border-brand-action/45 transition-all duration-200 flex flex-col justify-between ${
+      className={`group relative isolate bg-ui-surface border rounded-lg overflow-hidden hover:border-brand-action/45 transition-all duration-200 flex flex-col justify-between ${
         cartItem ? 'border-state-success ring-2 ring-state-success/12' : 'border-ui-border'
       }`}
       aria-label={`${product.name}, ${money(product.price)}`}
