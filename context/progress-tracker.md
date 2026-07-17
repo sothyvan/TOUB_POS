@@ -35,6 +35,15 @@ Update this file after every meaningful implementation change.
 - Phase UI-4: Responsive & Polish — **COMPLETE** ✅
 - Pagination & Performance Optimization — **COMPLETE**
 
+- **Fixed the cashier KHQR confirmation dialog layout**:
+  - Made compact confirmation-dialog message content span the available panel width so summary rows no longer collapse around their text.
+  - Reworked the item/total summary with responsive spacing and semantic theme tokens for clear separation in light and dark modes.
+
+- **Restored automatic KHQR payment reconciliation**:
+  - Started the existing KHQR background checker when the HTTP/WebSocket server begins listening, so pending payments keep checking after the cashier closes the QR modal.
+  - Removed temporary startup diagnostics that printed the configured Bakong account ID while retaining safe missing-configuration checks.
+  - Kept backend verification strict: only a Bakong-confirmed transaction with matching amount, USD currency, and destination account can mark an order paid.
+
 - **Added standalone bulk demo product seeder (`npm run seed:bulk`)**:
   - Added `backend/src/scripts/seed-bulk-products.js`, an idempotent script that appends 100 new demo products per owner (`role='owner'`), independent of the deterministic `seed.js` so canonical demo data and order history stay untouched.
   - Each product is assigned to one of that owner's existing categories (product ownership flows through `Category.owner_id`), linked to every active/non-deleted stall of the owner via `stall_products`, and given a remote faker image URL (`faker.image.urlLoremFlickr`, clamped to the 500-char `image_url` limit).

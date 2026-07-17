@@ -494,16 +494,14 @@ export default function CashierPage() {
         size="compact"
         title="Create KHQR payment?"
         message={(
-          <div className="flex flex-col gap-3 text-left">
-            <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
-              <div className="flex items-center justify-between text-sm font-bold text-blue-700">
-                <span>Items</span>
-                <span>{itemCount}</span>
-              </div>
-              <div className="mt-2 flex items-center justify-between text-sm font-bold text-blue-700">
-                <span>Total</span>
-                <span className="text-state-success">${Number(total || 0).toFixed(2)}</span>
-              </div>
+          <div className="w-full rounded-lg border border-ui-border bg-ui-surface p-4 text-left">
+            <div className="flex items-center justify-between gap-4 border-b border-ui-border pb-3 text-sm">
+              <span className="text-brand-subtext">Items</span>
+              <span className="text-brand-text">{itemCount}</span>
+            </div>
+            <div className="flex items-center justify-between gap-4 pt-3 text-sm">
+              <span className="text-brand-subtext">Total</span>
+              <span className="text-state-success">${Number(total || 0).toFixed(2)}</span>
             </div>
           </div>
         )}
