@@ -725,6 +725,13 @@ Update this file after every meaningful implementation change.
   - Made mobile search and category controls sticky while keeping the existing desktop catalog layout unchanged.
   - Preserved the Quick Sale scroll position when switching between Quick Sale and My Orders.
   - Frontend lint, production build, and 390px mobile visual checks pass.
+- **Fixed mobile Quick Sale sticky-control layering**:
+  - Made the sticky search/category surface opaque and moved mobile top spacing outside the scroll boundary so products are fully hidden while scrolling underneath it.
+  - Isolated product-card stacking contexts so card controls cannot paint above the sticky controls.
+  - Frontend lint, production build, and a scrolled 390px mobile visual check pass.
+- **Prepared the backend final-presentation guide**:
+  - Traced authentication, RBAC, tenant/stall scoping, order transactions, cash/KHQR payments, Socket.IO events, Telegram tickets, and SQL reporting against the executable code.
+  - Added spoken presentation scripts, workflow sequences, examiner Q&A, demo narration, and a one-page cheat sheet in `docs/
 
 ## Next Up
 

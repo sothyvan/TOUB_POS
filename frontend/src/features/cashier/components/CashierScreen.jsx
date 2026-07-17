@@ -182,10 +182,10 @@ export default function CashierScreen({
     }`}>
       <section
         ref={contentRef}
-        className="min-h-0 overflow-auto p-[clamp(16px,2.2vw,28px)] max-sm:p-4 flex flex-col gap-5"
+        className="min-h-0 overflow-auto p-[clamp(16px,2.2vw,28px)] max-sm:px-4 max-sm:pb-4 max-sm:pt-0 flex flex-col gap-5"
         aria-label="Main cashier view"
       >
-        <div className="flex flex-wrap items-center justify-between gap-4 shrink-0">
+        <div className="flex flex-wrap items-center justify-between gap-4 shrink-0 max-sm:pt-4">
           <div className="flex flex-wrap items-center gap-3">
             <TabPills tabs={TABS} activeId={activeTab} onChange={handleTabChange} className="w-fit" />
             {assignedStall ? (
@@ -243,7 +243,7 @@ export default function CashierScreen({
 
         {activeTab === 'sale' ? (
           <>
-            <div className="sticky top-0 z-20 -mx-1 flex shrink-0 flex-col gap-2.5 bg-ui-bg/95 px-1 py-2 backdrop-blur sm:static sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+            <div className="sticky top-0 z-20 isolate -mx-4 flex shrink-0 flex-col gap-2.5 border-b border-ui-border bg-ui-bg px-4 pb-3 pt-0 sm:static sm:mx-0 sm:border-b-0 sm:bg-transparent sm:p-0">
               <label className="flex min-h-11 w-full items-center gap-2.5 rounded-lg border border-ui-border bg-ui-surface px-3.5 text-text-soft focus-within:border-brand-action focus-within:ring-4 focus-within:ring-brand-action/10 sm:hidden">
                 <Icon name="search" className="h-4 w-4 text-text-muted" />
                 <input
