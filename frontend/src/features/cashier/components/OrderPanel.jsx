@@ -37,8 +37,8 @@ export default function OrderPanel({
     <aside
       className={`min-h-0 bg-ui-elevated text-brand-text flex flex-col border-l border-ui-border max-[1180px]:fixed max-[1180px]:top-0 max-[1180px]:right-0 max-[1180px]:bottom-0 max-[1180px]:z-30 max-[1180px]:w-[min(430px,92vw)] max-[1180px]:border-l-0 max-[1180px]:shadow-[-24px_0_52px_rgba(0,0,0,0.45)] max-[1180px]:transition-transform max-[1180px]:duration-200 max-[1180px]:ease-in-out max-sm:top-auto max-sm:w-full max-sm:max-h-[88svh] max-sm:rounded-t-lg max-sm:shadow-[0_-24px_52px_rgba(0,0,0,0.45)] ${
         isCartOpen
-          ? 'max-[1180px]:translate-x-0 max-sm:translate-y-0'
-          : 'max-[1180px]:translate-x-[110%] max-sm:translate-y-[110%]'
+          ? 'max-[1180px]:translate-x-0 max-sm:translate-y-0 max-[1180px]:visible'
+          : 'max-[1180px]:translate-x-[110%] max-sm:translate-y-[110%] max-[1180px]:invisible'
       }`}
       aria-label="Current order"
     >

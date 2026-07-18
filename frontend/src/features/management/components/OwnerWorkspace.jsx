@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import Swal from 'sweetalert2';
+import 'sweetalert2/dist/sweetalert2.min.css';
 import OwnerDashboard from './OwnerDashboard';
 import MenuCatalog from '../../catalog/components/MenuCatalog';
 import StallOwner from '../../stalls/components/StallOwner';
@@ -80,30 +82,74 @@ export default function OwnerWorkspace({
   usersActionError,
   clearUsersActionError,
 }) {
-  const [pendingDelete, setPendingDelete] = useState(null);
-  const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showMobileLogoutConfirm, setShowMobileLogoutConfirm] = useState(false);
   const mobileOwnerTabs = ownerTabOrder.filter((tab) => allowedOwnerTabs.includes(tab));
 
-  const handlePromptDelete = (type, id) => {
+  const handlePromptDelete = async (type, id) => {
     const name = 
       type === 'product' ? products.find((p) => p.id === id)?.name :
       type === 'category' ? categories.find((c) => c.id === id)?.name :
       type === 'user' ? users.find((u) => u.id === id)?.name : '';
-    setPendingDelete({ type, id, name });
-    setDeleteConfirmationText('');
-  };
 
-  const handleConfirmDelete = () => {
-    if (!pendingDelete) return;
-    if (deleteConfirmationText.trim() !== 'DELETE') return;
-    const { type, id } = pendingDelete;
-    if (type === 'product') onDeleteProduct(id);
-    else if (type === 'category') onDeleteCategory(id);
-    else if (type === 'user') onDeleteUser(id);
-    setPendingDelete(null);
-    setDeleteConfirmationText('');
+    const label = type === 'product' ? 'product' : type === 'category' ? 'category' : 'user';
+
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      html: `You are about to delete the ${label} <strong style="color: var(--color-brand-action, #c9571d)">"${name}"</strong>.<br/><br/>This action cannot be undone.`,
+      icon: 'warning',
+      confirmButtonText: 'Delete',
+      showCancelButton: true,
+      reverseButtons: true,
+      confirmButtonColor: '#b53f3f', // matching state-danger
+      cancelButtonColor: '#827c74',  // matching text-muted
+      background: 'var(--color-ui-elevated, #ffffff)',
+      color: 'var(--color-text-strong, #1b1917)',
+      customClass: {
+        popup: 'rounded-lg shadow-[0_18px_48px_rgba(0,0,0,0.4)] border border-brand-border font-sans'
+      }
+    });
+
+    if (result.isConfirmed) {
+      try {
+        // Show loading state
+        Swal.fire({
+          title: 'Deleting...',
+          html: `Please wait while the ${label} is being deleted.`,
+          allowOutsideClick: false,
+          background: 'var(--color-ui-elevated, #ffffff)',
+          color: 'var(--color-text-strong, #1b1917)',
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        // Perform deletion
+        if (type === 'product') await onDeleteProduct(id);
+        else if (type === 'category') await onDeleteCategory(id);
+        else if (type === 'user') await onDeleteUser(id);
+
+        // Success notification
+        await Swal.fire({
+          title: 'Deleted!',
+          text: `The ${label} has been deleted successfully.`,
+          icon: 'success',
+          confirmButtonColor: '#267452', // matching state-success
+          background: 'var(--color-ui-elevated, #ffffff)',
+          color: 'var(--color-text-strong, #1b1917)',
+        });
+      } catch (err) {
+        // Error notification
+        await Swal.fire({
+          title: 'Failed to delete!',
+          text: err.message || `An error occurred while deleting the ${label}.`,
+          icon: 'error',
+          confirmButtonColor: '#b53f3f',
+          background: 'var(--color-ui-elevated, #ffffff)',
+          color: 'var(--color-text-strong, #1b1917)',
+        });
+      }
+    }
   };
 
   return (
@@ -250,46 +296,6 @@ export default function OwnerWorkspace({
         </div>
       </main>
       </div>
-
-      <ConfirmDialog
-        isOpen={Boolean(pendingDelete)}
-        size="compact"
-        title="Are you sure?"
-        message={pendingDelete ? (
-          <div className="flex flex-col gap-3">
-            <span>
-            You are about to delete the {pendingDelete.type}{' '}
-            <strong className="text-brand-dark">"{pendingDelete.name}"</strong>.
-            This action cannot be undone.
-            </span>
-            <label className="text-left text-xs font-bold text-brand-subtext">
-              Type DELETE to confirm
-              <input
-                className="mt-2 w-full rounded-lg border border-brand-border bg-ui-surface px-3 py-2 text-sm font-bold text-brand-dark outline-none focus:border-brand-action"
-                value={deleteConfirmationText}
-                onChange={(event) => setDeleteConfirmationText(event.target.value)}
-                autoComplete="off"
-              />
-            </label>
-          </div>
-        ) : null}
-        icon={(
-          <div className="w-16 h-16 rounded-lg border border-state-warning/30 bg-state-warning/10 flex items-center justify-center text-state-warning mb-4">
-            <Icon name="warning" className="w-8 h-8" />
-          </div>
-        )}
-        cancelTone="secondary"
-        confirmTone="danger"
-        confirmLabel="Delete"
-        overlayClassName="bg-black/75"
-        panelClassName="border-state-warning/35 bg-ui-elevated"
-        isConfirmDisabled={deleteConfirmationText.trim() !== 'DELETE'}
-        onCancel={() => {
-          setPendingDelete(null);
-          setDeleteConfirmationText('');
-        }}
-        onConfirm={handleConfirmDelete}
-      />
 
       <ConfirmDialog
         isOpen={showMobileLogoutConfirm}

@@ -137,10 +137,11 @@ export function useProducts(canManageMenu) {
 
   const deleteCategory = async (categoryId) => {
     setActionError(null);
-    if (!canManageMenu) return;
+    if (!canManageMenu) return false;
     if (products.some((p) => p.categoryId === categoryId)) {
-      setActionError('Move or delete products in this category first.');
-      return;
+      const msg = 'Move or delete products in this category first.';
+      setActionError(msg);
+      throw new Error(msg);
     }
     try {
       await api.categories.delete(categoryId);
@@ -155,8 +156,10 @@ export function useProducts(canManageMenu) {
         }));
       }
       if (selectedCategory === categoryId) setSelectedCategory('All');
+      return true;
     } catch(err) {
       setActionError(err.message || 'Failed to delete category.');
+      throw err;
     }
   };
 
@@ -224,13 +227,14 @@ export function useProducts(canManageMenu) {
 
   const deleteProduct = async (productId) => {
     setActionError(null);
-    if (!canManageMenu) return;
+    if (!canManageMenu) return false;
     try {
       await api.products.delete(productId);
       await loadData(false);
-      return productId; // signal: remove from cart
+      return true;
     } catch(err) {
       setActionError(err.message || 'Failed to delete product.');
+      throw err;
     }
   };
 
