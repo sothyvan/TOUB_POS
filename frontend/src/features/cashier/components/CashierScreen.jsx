@@ -177,7 +177,9 @@ export default function CashierScreen({
   return (
     <main className={`flex-1 min-h-0 relative bg-ui-bg ${
       activeTab === 'sale'
-        ? 'grid grid-cols-[minmax(0,1fr)_400px] max-[1180px]:grid-cols-1 pb-24 md:pb-0'
+        ? `grid grid-cols-[minmax(0,1fr)_400px] max-[1180px]:grid-cols-1 ${
+            itemCount > 0 && !isCartOpen ? 'pb-24' : 'pb-0'
+          } md:pb-0`
         : 'flex flex-col'
     }`}>
       <section

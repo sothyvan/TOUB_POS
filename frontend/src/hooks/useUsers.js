@@ -130,22 +130,26 @@ export function useUsers(canManageUsers, currentUser) {
 
   const deleteUser = async (userId) => {
     setActionError(null);
-    if (!canManageUsers) return;
+    if (!canManageUsers) return false;
     const target = users.find((u) => u.id === userId);
     const activeCount = users.filter((u) => u.active).length;
     if (target && !canManageUserRole(currentUser, target.role)) {
-      setActionError('You do not have permission to manage this role.');
-      return;
+      const msg = 'You do not have permission to manage this role.';
+      setActionError(msg);
+      throw new Error(msg);
     }
     if (userId === currentUserId || (target?.active && activeCount <= 1)) {
-      setActionError('Keep at least one active user, and do not delete the account currently logged in.');
-      return;
+      const msg = 'Keep at least one active user, and do not delete the account currently logged in.';
+      setActionError(msg);
+      throw new Error(msg);
     }
     try {
       await api.users.delete(userId);
       await fetchUsers(false);
+      return true;
     } catch(err) {
       setActionError(err.message || 'Failed to delete user.');
+      throw err;
     }
   };
 

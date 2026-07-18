@@ -10,7 +10,7 @@ export default function Topbar({ currentUser, isCashier, itemCount, onCartOpen, 
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   return (
-    <header className="min-h-19 py-3.5 px-[clamp(18px,3vw,34px)] bg-ui-surface border-b border-brand-border flex items-center justify-between gap-4.5 max-sm:flex-col max-sm:items-start">
+    <header className="min-h-19 py-3.5 px-[clamp(12px,3vw,34px)] bg-ui-surface border-b border-brand-border flex items-center justify-between gap-4">
       <div className="flex items-center gap-3.5">
         <Logo />
         <div>
@@ -23,7 +23,7 @@ export default function Topbar({ currentUser, isCashier, itemCount, onCartOpen, 
         </div>
       </div>
 
-      <div className="flex items-center gap-3 max-sm:w-full max-sm:justify-between max-sm:flex-wrap" aria-label="Session status">
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0" aria-label="Session status">
 
         <ThemeToggle />
 
@@ -44,15 +44,15 @@ export default function Topbar({ currentUser, isCashier, itemCount, onCartOpen, 
         <div className="relative">
           <button
             type="button"
-            className="min-h-11 py-1 pr-3.5 pl-1 border border-brand-border rounded-lg bg-ui-surface flex items-center gap-2 cursor-pointer hover:border-brand-action/45 hover:bg-ui-muted active:scale-[0.98] transition-all"
+            className="min-h-11 py-1 pr-1 pl-1 sm:pr-3.5 border border-brand-border rounded-lg bg-ui-surface flex items-center gap-2 cursor-pointer hover:border-brand-action/45 hover:bg-ui-muted active:scale-[0.98] transition-all"
             onClick={() => setIsProfileOpen(!isProfileOpen)}
             aria-expanded={isProfileOpen}
             aria-label="Profile actions"
           >
-            <span className="w-8.5 h-8.5 rounded-md bg-brand-action/15 text-brand-action grid place-items-center text-xs font-mono font-bold">
+            <span className="w-8.5 h-8.5 rounded-md bg-brand-action/15 text-brand-action grid place-items-center text-xs font-mono font-bold shrink-0">
               {initials(currentUser.name)}
             </span>
-            <div className="text-left">
+            <div className="text-left hidden sm:block">
               <strong className="block whitespace-nowrap text-brand-text text-[13px] font-bold max-[1280px]:max-w-29 max-[1280px]:overflow-hidden max-[1280px]:text-ellipsis">
                 {currentUser.name}
               </strong>
@@ -62,7 +62,7 @@ export default function Topbar({ currentUser, isCashier, itemCount, onCartOpen, 
             </div>
             <Icon
               name="chevronDown"
-              className={`w-3.5 h-3.5 text-[#776f63] transition-transform duration-200 shrink-0 ${isProfileOpen ? 'rotate-180' : ''}`}
+              className={`w-3.5 h-3.5 text-[#776f63] transition-transform duration-200 shrink-0 hidden sm:block ${isProfileOpen ? 'rotate-180' : ''}`}
               strokeWidth={3}
             />
           </button>
