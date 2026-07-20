@@ -11,7 +11,6 @@ export default function LoginScreen({
   setLoginMode,
   flowStep,
   setFlowStep,
-  onDeregister,
   activeCashiers,
   selectedUser,
   setSelectedUser,
@@ -47,10 +46,6 @@ export default function LoginScreen({
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleDeregister = () => {
-    onDeregister();
   };
 
   const handleBackToProfiles = () => {
@@ -179,13 +174,6 @@ export default function LoginScreen({
           className="text-xs font-bold text-brand-action/90 hover:underline cursor-pointer border-0 bg-transparent"
         >
           Management Portal Login
-        </button>
-        <button
-          type="button"
-          onClick={handleDeregister}
-          className="text-[10px] font-extrabold text-red-500/80 hover:text-red-600 uppercase tracking-wider hover:underline cursor-pointer border-0 bg-transparent"
-        >
-          Deregister Device
         </button>
       </div>
     </section>

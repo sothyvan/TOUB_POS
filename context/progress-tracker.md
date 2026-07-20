@@ -35,6 +35,12 @@ Update this file after every meaningful implementation change.
 - Phase UI-4: Responsive & Polish — **COMPLETE** ✅
 - Pagination & Performance Optimization — **COMPLETE**
 
+- **Moved terminal deregistration into Stall Management**:
+  - Added the Owner/Manager-protected `DELETE /api/stalls/:id/device` endpoint, scoped to the authenticated business, to revoke a terminal by clearing its database token.
+  - Stopped exposing device tokens in stall-list responses and added the safe `device_registered` status flag instead.
+  - Added per-stall device status and a typed `DEREGISTER` confirmation flow to the management portal.
+  - Removed the login-screen action that only cleared local browser state without revoking backend access.
+
 - **Fixed the cashier KHQR confirmation dialog layout**:
   - Made compact confirmation-dialog message content span the available panel width so summary rows no longer collapse around their text.
   - Reworked the item/total summary with responsive spacing and semantic theme tokens for clear separation in light and dark modes.

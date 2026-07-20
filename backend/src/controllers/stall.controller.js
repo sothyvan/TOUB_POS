@@ -7,6 +7,16 @@ function parsePositiveInteger(value) {
   return Number.isInteger(number) && number > 0 ? number : null;
 }
 
+function sanitizeStallForManagement(stall) {
+  const plainStall = stall?.toJSON ? stall.toJSON() : stall;
+  const { device_token: deviceToken, ...safeStall } = plainStall;
+
+  return {
+    ...safeStall,
+    device_registered: Boolean(deviceToken),
+  };
+}
+
 /**
  * Get all stalls.
  */
@@ -14,7 +24,11 @@ export async function getStalls(req, res, next) {
   try {
     const ownerId = req.user.role === 'owner' ? req.user.id : req.user.owner_id;
     const result = await stallRepository.findAllStallsByOwnerId(ownerId, req.query);
-    res.json({ success: true, ...result });
+    res.json({
+      success: true,
+      ...result,
+      data: result.data.map(sanitizeStallForManagement),
+    });
   } catch (err) {
     next(err);
   }
@@ -189,6 +203,40 @@ export async function registerDevice(req, res, next) {
         device_token: deviceToken,
         stall: { id: stall.id, name: stall.name, location: stall.location }
       }
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Revoke the registered terminal for a stall.
+ */
+export async function deregisterDevice(req, res, next) {
+  try {
+    const stallId = parsePositiveInteger(req.params.id);
+    if (!stallId) {
+      return res.status(400).json({ success: false, message: 'Valid stall id is required.' });
+    }
+
+    const ownerId = req.user.role === 'owner' ? req.user.id : req.user.owner_id;
+    const stall = await stallRepository.findStallById(stallId);
+    if (!stall) {
+      return res.status(404).json({ success: false, message: 'Stall not found.' });
+    }
+    if (stall.owner_id !== ownerId) {
+      return res.status(403).json({ success: false, message: 'Forbidden: Stall belongs to another owner.' });
+    }
+
+    await stallRepository.updateStallDeviceToken(stallId, null);
+
+    return res.json({
+      success: true,
+      message: 'Terminal deregistered successfully.',
+      data: {
+        stall_id: stallId,
+        device_registered: false,
+      },
     });
   } catch (err) {
     next(err);
