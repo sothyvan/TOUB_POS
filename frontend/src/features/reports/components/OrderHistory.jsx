@@ -123,6 +123,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
   const [isDateRangeOpen, setIsDateRangeOpen] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState('analytics'); // 'analytics' | 'ledger'
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [selectedStallId, setSelectedStallId] = useState('');
   const [selectedCashierId, setSelectedCashierId] = useState('');
   const [exporting, setExporting] = useState(false);
@@ -152,6 +153,14 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
     return () => window.clearInterval(intervalId);
   }, []);
 
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery.trim());
+    }, 300);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchQuery]);
+
   const allOrders = useMemo(() => {
     return rawOrders;
   }, [rawOrders]);
@@ -167,6 +176,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
     endDate: customDateRange.endDate,
     stallId: selectedStallId,
     cashierId: selectedCashierId,
+    search: debouncedSearchQuery,
     ledgerPage,
     ledgerLimit: LEDGER_PAGE_SIZE,
   });
@@ -1019,6 +1029,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
                   onChange={(e) => {
                     setActiveOperationalFilter(null);
                     setSearchQuery(e.target.value);
+                    setLedgerPage(1);
                   }}
                   className="pl-9 pr-4 py-2 border border-[#e5e7eb] rounded-xl text-[13px] outline-none w-[280px] max-[640px]:w-full"
                   onFocus={(e) => e.target.style.borderColor = '#003ec7'}

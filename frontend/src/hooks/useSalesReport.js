@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../services/api';
+import { subscribeToManagementUpdates } from '../services/socketClient';
 import { useAutoRefresh } from './useAutoRefresh';
 
 export function useSalesReport({
@@ -8,6 +9,7 @@ export function useSalesReport({
   endDate = '',
   stallId = '',
   cashierId = '',
+  search = '',
   includeTrends = false,
   ledgerPage = 1,
   ledgerLimit = 25,
@@ -25,6 +27,7 @@ export function useSalesReport({
         end_date: range === 'custom' ? endDate : '',
         stall_id: stallId,
         cashier_id: cashierId,
+        search,
         include_trends: includeTrends,
         page: ledgerPage,
         limit: ledgerLimit,
@@ -38,7 +41,7 @@ export function useSalesReport({
     } finally {
       if (showSpinner) setLoading(false);
     }
-  }, [range, startDate, endDate, stallId, cashierId, includeTrends, ledgerPage, ledgerLimit]);
+  }, [range, startDate, endDate, stallId, cashierId, search, includeTrends, ledgerPage, ledgerLimit]);
 
   useEffect(() => {
     const timerId = window.setTimeout(() => {
@@ -46,6 +49,21 @@ export function useSalesReport({
     }, 0);
 
     return () => window.clearTimeout(timerId);
+  }, [fetchReport]);
+
+  useEffect(() => {
+    let refreshTimerId = null;
+    const unsubscribe = subscribeToManagementUpdates(() => {
+      window.clearTimeout(refreshTimerId);
+      refreshTimerId = window.setTimeout(() => {
+        void fetchReport(false);
+      }, 250);
+    });
+
+    return () => {
+      window.clearTimeout(refreshTimerId);
+      unsubscribe();
+    };
   }, [fetchReport]);
 
   useAutoRefresh(() => fetchReport(false), {

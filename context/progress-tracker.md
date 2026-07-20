@@ -749,6 +749,17 @@ Update this file after every meaningful implementation change.
   - Made the sticky search/category surface opaque and moved mobile top spacing outside the scroll boundary so products are fully hidden while scrolling underneath it.
   - Isolated product-card stacking contexts so card controls cannot paint above the sticky controls.
   - Frontend lint, production build, and a scrolled 390px mobile visual check pass.
+- **Restored Transaction Ledger search after server-side pagination**:
+  - Added backend-scoped ledger search across order ID/reference, cashier, stall, payment method, and status before pagination is calculated.
+  - Debounced the Owner/Manager search input and reset ledger pagination when the query changes.
+  - Updated Swagger and API endpoint documentation for the `search` report parameter.
+- **Fixed Cambodia-local Today report boundaries in raw SQL aggregations**:
+  - Traced an inconsistency where Sequelize ledger queries included current-day orders but raw summary/trend queries shifted UTC boundary `Date` objects forward by seven hours.
+  - Standardized raw report replacements as explicit UTC SQL timestamps while preserving `REPORT_TIMEZONE_OFFSET=+07:00` for local date selection and chart buckets.
+  - Verified Today and the equivalent one-day custom range both return 15 orders, including 14 paid orders and non-zero hourly revenue; the weekly trend still returns seven points.
+- **Made management dashboard and Sales Reports update in real time**:
+  - Reused the existing authenticated management Socket.IO connection instead of opening another socket per report component.
+  - Added debounced report refetches for order and kitchen-ticket events while retaining 30-second polling as a missed-event fallback.
 - **Prepared the backend final-presentation guide**:
   - Traced authentication, RBAC, tenant/stall scoping, order transactions, cash/KHQR payments, Socket.IO events, Telegram tickets, and SQL reporting against the executable code.
   - Added spoken presentation scripts, workflow sequences, examiner Q&A, demo narration, and a one-page cheat sheet in `docs/
