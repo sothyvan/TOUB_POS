@@ -82,6 +82,7 @@
 
 - Owner/Manager sales reports use `GET /api/reports/sales` instead of frontend-only calculations.
 - The backend applies same-business owner scope, date range filters, optional stall/cashier filters, and returns summary totals, payment mix, stall/cashier breakdowns, hourly revenue, and ledger rows.
+- Active Owner/Manager reports refetch their current filters when the authenticated management socket receives an order or kitchen-ticket update; periodic polling remains a fallback for reconnects or missed events.
 - Preset and custom calendar ranges use the same backend report contract; custom ranges send validated `start_date` and `end_date` values.
 - Dashboard hourly revenue and exported PDF totals/rows come from the backend report response. The frontend may still use loaded order details for receipt viewing or as a temporary display fallback while the report request loads.
 - Dashboard requests opt into `include_trends=true`: today and one-day custom ranges return hourly points; the current Monday-based week always returns seven Monday-Sunday points; month and custom ranges through 31 days return daily points; longer custom ranges return seven-day buckets. Future weekdays are display-only zero points, while summaries and previous-week comparisons stay week-to-date. Comparison percentages remain backend-owned.

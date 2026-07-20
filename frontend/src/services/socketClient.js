@@ -4,6 +4,7 @@ import { API_BASE_URL } from './apiClient';
 
 let cashierSocket = null;
 let managementSocket = null;
+const managementUpdateListeners = new Set();
 
 function getSocketBaseUrl() {
   return API_BASE_URL.replace(/\/api\/?$/, '');
@@ -23,6 +24,21 @@ function attachOrderUpdatedListener(socket, onOrderUpdated) {
       onOrderUpdated(payload);
     }
   });
+}
+
+function notifyManagementUpdate(eventName, payload) {
+  for (const listener of managementUpdateListeners) {
+    listener({ eventName, payload });
+  }
+}
+
+export function subscribeToManagementUpdates(listener) {
+  if (typeof listener !== 'function') {
+    return () => {};
+  }
+
+  managementUpdateListeners.add(listener);
+  return () => managementUpdateListeners.delete(listener);
 }
 
 export function connectCashierSocket({
@@ -76,8 +92,14 @@ export function connectManagementSocket({
     reconnection: true,
   });
 
-  attachKitchenTicketListener(managementSocket, onKitchenTicketUpdated);
-  attachOrderUpdatedListener(managementSocket, onOrderUpdated);
+  attachKitchenTicketListener(managementSocket, (payload) => {
+    onKitchenTicketUpdated?.(payload);
+    notifyManagementUpdate('kitchen_ticket_updated', payload);
+  });
+  attachOrderUpdatedListener(managementSocket, (payload) => {
+    onOrderUpdated?.(payload);
+    notifyManagementUpdate('order_updated', payload);
+  });
 
   managementSocket.on('connect_error', (error) => {
     if (onConnectError) {

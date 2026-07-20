@@ -578,7 +578,7 @@ Requires `owner` or `manager` role.
 }
 ```
 
-### GET `/reports/sales?range=today|week|month|custom&include_trends=true&start_date=YYYY-MM-DD&end_date=YYYY-MM-DD&stall_id=1&cashier_id=2`
+### GET `/reports/sales?range=today|week|month|custom&include_trends=true&start_date=YYYY-MM-DD&end_date=YYYY-MM-DD&stall_id=1&cashier_id=2&search=117`
 
 Backs the Owner/Manager sales report screen. The backend scopes all results to the authenticated user's customer business.
 
@@ -590,6 +590,7 @@ Backs the Owner/Manager sales report screen. The backend scopes all results to t
 | end_date | string | Only for custom | End date in `YYYY-MM-DD` format. |
 | stall_id | number | No | Filters to one same-business stall. |
 | cashier_id | number | No | Filters to one cashier's orders. |
+| search | string | No | Searches paginated ledger rows by exact order ID or partial payment reference, cashier username, stall name/location, payment method, or status. Maximum 100 characters. |
 | include_trends | boolean | No | Adds dashboard trend points and previous-period comparisons. Defaults to `false`. |
 
 `week` uses Monday as the first day. The trend always returns Monday through Sunday, including zero-value future weekdays, while summary and comparison values remain week-to-date. Trend and comparison calculations use the configured report timezone and include paid orders only.

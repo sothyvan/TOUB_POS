@@ -134,6 +134,36 @@ function parsePositiveId(value, fieldName) {
   return parsed;
 }
 
+function normalizeLedgerSearch(value) {
+  const search = String(value || '').trim();
+  if (search.length > 100) {
+    throw httpError('Report search must be 100 characters or fewer.');
+  }
+  return search;
+}
+
+function buildLedgerSearchWhere(search) {
+  if (!search) {
+    return {};
+  }
+
+  const like = `%${search}%`;
+  const conditions = [
+    { payment_reference: { [Op.like]: like } },
+    { payment_method: { [Op.like]: like } },
+    { status: { [Op.like]: like } },
+    { '$Stall.name$': { [Op.like]: like } },
+    { '$Stall.location$': { [Op.like]: like } },
+    { '$Cashier.username$': { [Op.like]: like } },
+  ];
+  const orderIdMatch = search.match(/^(?:order\s*)?#?(?:ord[-\s]*)?0*(\d+)$/i);
+  if (orderIdMatch) {
+    conditions.unshift({ id: Number(orderIdMatch[1]) });
+  }
+
+  return { [Op.or]: conditions };
+}
+
 function getOwnerScope(user) {
   const ownerId = user.role === 'owner' ? user.id : user.owner_id;
   if (!ownerId) {
@@ -148,6 +178,21 @@ function formatDate(date) {
   const month = String(localDate.getUTCMonth() + 1).padStart(2, '0');
   const day = String(localDate.getUTCDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function formatUtcSqlDateTime(date) {
+  return date.toISOString().slice(0, 23).replace('T', ' ');
+}
+
+function buildSqlReportReplacements(ownerId, orderWhere, extras = {}) {
+  return {
+    ownerId,
+    startDate: formatUtcSqlDateTime(orderWhere.startDate),
+    endDate: formatUtcSqlDateTime(orderWhere.endDate),
+    ...(orderWhere.stall_id ? { stallId: orderWhere.stall_id } : {}),
+    ...(orderWhere.cashier_id ? { cashierId: orderWhere.cashier_id } : {}),
+    ...extras,
+  };
 }
 
 function resolvePreviousDateRange(range, startDate, endDate) {
@@ -295,13 +340,7 @@ async function fetchSqlSummary(ownerId, orderWhere) {
       ${orderWhere.stall_id ? 'AND o.stall_id = :stallId' : ''}
       ${orderWhere.cashier_id ? 'AND o.cashier_id = :cashierId' : ''}
   `, {
-    replacements: {
-      ownerId,
-      startDate: orderWhere.startDate,
-      endDate: orderWhere.endDate,
-      ...(orderWhere.stall_id ? { stallId: orderWhere.stall_id } : {}),
-      ...(orderWhere.cashier_id ? { cashierId: orderWhere.cashier_id } : {}),
-    },
+    replacements: buildSqlReportReplacements(ownerId, orderWhere),
     type: sequelize.QueryTypes.SELECT,
   });
 
@@ -349,13 +388,7 @@ async function fetchSqlStallBreakdown(ownerId, orderWhere) {
     GROUP BY s.id, s.name, s.location
     ORDER BY revenue DESC
   `, {
-    replacements: {
-      ownerId,
-      startDate: orderWhere.startDate,
-      endDate: orderWhere.endDate,
-      ...(orderWhere.stall_id ? { stallId: orderWhere.stall_id } : {}),
-      ...(orderWhere.cashier_id ? { cashierId: orderWhere.cashier_id } : {}),
-    },
+    replacements: buildSqlReportReplacements(ownerId, orderWhere),
     type: sequelize.QueryTypes.SELECT,
   });
 
@@ -391,13 +424,7 @@ async function fetchSqlCashierBreakdown(ownerId, orderWhere) {
     GROUP BY o.cashier_id, u.username, s.name, s.location
     ORDER BY revenue DESC
   `, {
-    replacements: {
-      ownerId,
-      startDate: orderWhere.startDate,
-      endDate: orderWhere.endDate,
-      ...(orderWhere.stall_id ? { stallId: orderWhere.stall_id } : {}),
-      ...(orderWhere.cashier_id ? { cashierId: orderWhere.cashier_id } : {}),
-    },
+    replacements: buildSqlReportReplacements(ownerId, orderWhere),
     type: sequelize.QueryTypes.SELECT,
   });
 
@@ -428,14 +455,9 @@ async function fetchSqlHourlyRevenue(ownerId, orderWhere) {
     GROUP BY HOUR(CONVERT_TZ(o.created_at, '+00:00', :timezoneOffset))
     ORDER BY hour ASC
   `, {
-    replacements: {
-      ownerId,
+    replacements: buildSqlReportReplacements(ownerId, orderWhere, {
       timezoneOffset: REPORT_TIMEZONE_OFFSET,
-      startDate: orderWhere.startDate,
-      endDate: orderWhere.endDate,
-      ...(orderWhere.stall_id ? { stallId: orderWhere.stall_id } : {}),
-      ...(orderWhere.cashier_id ? { cashierId: orderWhere.cashier_id } : {}),
-    },
+    }),
     type: sequelize.QueryTypes.SELECT,
   });
 
@@ -473,14 +495,9 @@ async function fetchSqlDailyRevenue(ownerId, orderWhere, range, displayEndDate =
     GROUP BY DATE_FORMAT(CONVERT_TZ(o.created_at, '+00:00', :timezoneOffset), '%Y-%m-%d')
     ORDER BY bucketDate ASC
   `, {
-    replacements: {
-      ownerId,
+    replacements: buildSqlReportReplacements(ownerId, orderWhere, {
       timezoneOffset: REPORT_TIMEZONE_OFFSET,
-      startDate: orderWhere.startDate,
-      endDate: orderWhere.endDate,
-      ...(orderWhere.stall_id ? { stallId: orderWhere.stall_id } : {}),
-      ...(orderWhere.cashier_id ? { cashierId: orderWhere.cashier_id } : {}),
-    },
+    }),
     type: sequelize.QueryTypes.SELECT,
   });
 
@@ -532,15 +549,10 @@ async function fetchSqlWeeklyRevenue(ownerId, orderWhere) {
     GROUP BY bucketIndex
     ORDER BY bucketIndex ASC
   `, {
-    replacements: {
-      ownerId,
+    replacements: buildSqlReportReplacements(ownerId, orderWhere, {
       timezoneOffset: REPORT_TIMEZONE_OFFSET,
       localStartDate,
-      startDate: orderWhere.startDate,
-      endDate: orderWhere.endDate,
-      ...(orderWhere.stall_id ? { stallId: orderWhere.stall_id } : {}),
-      ...(orderWhere.cashier_id ? { cashierId: orderWhere.cashier_id } : {}),
-    },
+    }),
     type: sequelize.QueryTypes.SELECT,
   });
 
@@ -575,7 +587,7 @@ async function fetchSqlWeeklyRevenue(ownerId, orderWhere) {
 /**
  * Fetch paginated ledger rows with Sequelize includes.
  */
-async function fetchLedgerOrders(ownerId, orderWhere, pagination) {
+async function fetchLedgerOrders(ownerId, orderWhere, pagination, search) {
   const orderClause = buildOrderClause(
     pagination,
     ['created_at', 'id', 'status', 'total_usd'],
@@ -587,6 +599,7 @@ async function fetchLedgerOrders(ownerId, orderWhere, pagination) {
       created_at: { [Op.between]: [orderWhere.startDate, orderWhere.endDate] },
       ...(orderWhere.stall_id ? { stall_id: orderWhere.stall_id } : {}),
       ...(orderWhere.cashier_id ? { cashier_id: orderWhere.cashier_id } : {}),
+      ...buildLedgerSearchWhere(search),
     },
     include: [
       {
@@ -603,12 +616,15 @@ async function fetchLedgerOrders(ownerId, orderWhere, pagination) {
         model: TelegramTicket,
         as: 'TelegramTickets',
         attributes: ['id', 'status', 'sent_at', 'completed_at'],
+        separate: true,
+        order: [['id', 'DESC']],
       },
     ],
     order: orderClause,
     limit: pagination.limit,
     offset: pagination.offset,
     distinct: true,
+    subQuery: false,
   });
 
   return {
@@ -622,6 +638,7 @@ export async function getSalesReport(user, query = {}) {
   const { range, startDate, endDate } = resolveDateRange(query);
   const stallId = parsePositiveId(query.stall_id, 'stall_id');
   const cashierId = parsePositiveId(query.cashier_id, 'cashier_id');
+  const search = normalizeLedgerSearch(query.search);
   const pagination = parsePagination(query);
   const includeTrends = ['1', 'true'].includes(String(query.include_trends || '').toLowerCase());
 
@@ -637,7 +654,7 @@ export async function getSalesReport(user, query = {}) {
     fetchSqlStallBreakdown(ownerId, orderWhere),
     fetchSqlCashierBreakdown(ownerId, orderWhere),
     fetchSqlHourlyRevenue(ownerId, orderWhere),
-    fetchLedgerOrders(ownerId, orderWhere, pagination),
+    fetchLedgerOrders(ownerId, orderWhere, pagination, search),
   ]);
 
   let trend = null;
@@ -686,6 +703,7 @@ export async function getSalesReport(user, query = {}) {
       endDate: formatDate(endDate),
       stallId,
       cashierId,
+      search,
       timezoneOffset: REPORT_TIMEZONE_OFFSET,
     },
     summary,
