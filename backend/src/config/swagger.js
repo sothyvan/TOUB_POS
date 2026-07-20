@@ -428,6 +428,18 @@ export const swaggerDocument = {
                 description: 'Owner/Manager only.'
             }
         },
+        '/api/stalls/{id}/register-device': {
+            post: {
+                summary: 'Register a cashier terminal to a stall',
+                description: 'Owner/Manager only. Returns a new device token once so the terminal can store it locally.'
+            }
+        },
+        '/api/stalls/{id}/device': {
+            delete: {
+                summary: 'Deregister a cashier terminal',
+                description: 'Owner/Manager only. Clears the stall device token and immediately invalidates the registered terminal.'
+            }
+        },
         '/api/reports/daily': {
             get: {
                 summary: 'Daily report',

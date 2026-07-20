@@ -538,8 +538,12 @@ Requires `owner` or `manager` role.
 | DELETE | `/stalls/:id` | ✅ | Owner / Manager | Delete stall |
 | POST | `/stalls/:id/staff` | ✅ | Owner / Manager | Assign cashier to stall |
 | DELETE | `/stalls/:id/staff/:userId` | ✅ | Owner / Manager | Remove cashier from stall |
+| POST | `/stalls/:id/register-device` | ✅ | Owner / Manager | Generate and register a terminal token for the stall |
+| DELETE | `/stalls/:id/device` | ✅ | Owner / Manager | Revoke the stall's registered terminal |
 
 Stall create/update accepts normal editable fields such as `name` and `location`. The backend does not trust privileged frontend-submitted fields such as `owner_id`, `device_token`, or `telegram_chat_id`.
+
+Stall list responses expose `device_registered` as a boolean for management UI status. They never expose the stored device token. Deregistration clears `stalls.device_token`, so any browser still holding the old token loses cashier-terminal access immediately. Registering a replacement terminal generates a new token.
 
 ---
 

@@ -6,7 +6,6 @@ import { getPermissions } from '../../../utils/permissions';
 import { apiRequest, authApi } from '../../../services/apiClient';
 import { useAuth } from '../useAuth';
 import LoginScreen from '../components/LoginScreen';
-import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -31,7 +30,6 @@ export default function LoginPage() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [typedPin, setTypedPin] = useState('');
   const [loginError, setLoginError] = useState('');
-  const [showDeregisterConfirm, setShowDeregisterConfirm] = useState(false);
   
   const [activeCashiers, setActiveCashiers] = useState([]);
   const [ownerToken, setOwnerToken] = useState(null);
@@ -161,24 +159,6 @@ export default function LoginPage() {
     setLoginError('');
   };
 
-  const handleDeregister = () => {
-    setShowDeregisterConfirm(true);
-  };
-
-  const confirmDeregister = () => {
-    localStorage.removeItem('toub-device-token');
-    localStorage.removeItem('toub-device-stall');
-    localStorage.removeItem('toub-device-registered');
-
-    setDeviceRegistered(false);
-    setDeviceToken(null);
-    setLoginMode('management');
-    setFlowStep('register');
-    setSelectedUser(null);
-    setActiveCashiers([]);
-    setShowDeregisterConfirm(false);
-  };
-
   // Cashier profile tap in Step 2
   const handleSelectProfile = (user) => {
     setSelectedUser(user);
@@ -244,7 +224,6 @@ export default function LoginPage() {
       setLoginMode={setLoginMode}
       flowStep={flowStep}
       setFlowStep={setFlowStep}
-      onDeregister={handleDeregister}
       activeCashiers={activeCashiers}
       selectedUser={selectedUser}
       setSelectedUser={setSelectedUser}
@@ -260,17 +239,6 @@ export default function LoginPage() {
       availableStalls={availableStalls}
       onRegisterDevice={handleRegisterDevice}
       onCancelRegistration={handleCancelRegistration}
-      />
-      <ConfirmDialog
-        isOpen={showDeregisterConfirm}
-        size="compact"
-        title="Deregister this terminal?"
-        message="Owner or manager credentials will be required before cashiers can use this terminal again."
-        cancelTone="secondary"
-        confirmTone="danger"
-        confirmLabel="Deregister"
-        onCancel={() => setShowDeregisterConfirm(false)}
-        onConfirm={confirmDeregister}
       />
     </>
   );

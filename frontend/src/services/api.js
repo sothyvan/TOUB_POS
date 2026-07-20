@@ -88,6 +88,7 @@ function mapStallToFrontend(s) {
     location: s.location,
     status: 'active',
     online: true,
+    deviceRegistered: Boolean(s.device_registered ?? s.deviceRegistered),
     staff: s.Users ? s.Users.map(u => ({ id: u.id, name: u.username, role: u.role })) : []
   };
 }
@@ -322,6 +323,9 @@ export const api = {
     },
     async unassignStaff(stallId, userId) {
       return apiRequest(`/stalls/${stallId}/staff/${userId}`, { method: 'DELETE' });
+    },
+    async deregisterDevice(stallId) {
+      return apiRequest(`/stalls/${stallId}/device`, { method: 'DELETE' });
     }
   },
   auth: {
