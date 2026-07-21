@@ -1,4 +1,5 @@
-import { Stall, User, StallStaff } from '../models/index.js';
+import { Stall, StallDevice, User, StallStaff } from '../models/index.js';
+import { revokeDevicesByStallId } from './stall-device.repository.js';
 import { parsePagination, buildOrderClause, paginatedResponse } from '../utils/pagination.js';
 
 /**
@@ -15,8 +16,20 @@ export async function findAllStalls(queryOptions = {}) {
         model: User,
         attributes: ['id', 'username', 'role'],
         through: { attributes: [] }
+      },
+      {
+        model: StallDevice,
+        as: 'Devices',
+        attributes: ['id', 'name', 'is_active', 'last_cashier_id', 'last_seen_at', 'revoked_at', 'created_at'],
+        include: [{
+          model: User,
+          as: 'LastCashier',
+          attributes: ['id', 'username'],
+          required: false,
+        }],
       }
     ],
+    distinct: true,
     order: orderClause,
     limit: pagination.limit,
     offset: pagination.offset,
@@ -38,8 +51,20 @@ export async function findAllStallsByOwnerId(ownerId, queryOptions = {}) {
         model: User,
         attributes: ['id', 'username', 'role'],
         through: { attributes: [] }
+      },
+      {
+        model: StallDevice,
+        as: 'Devices',
+        attributes: ['id', 'name', 'is_active', 'last_cashier_id', 'last_seen_at', 'revoked_at', 'created_at'],
+        include: [{
+          model: User,
+          as: 'LastCashier',
+          attributes: ['id', 'username'],
+          required: false,
+        }],
       }
     ],
+    distinct: true,
     order: orderClause,
     limit: pagination.limit,
     offset: pagination.offset,
@@ -78,6 +103,7 @@ export async function deleteStallById(id) {
     return false;
   }
 
+  await revokeDevicesByStallId(id);
   const [affectedRows] = await Stall.update(
     { 
       is_deleted: true, 
@@ -106,20 +132,5 @@ export async function assignStaffToStall(stallId, userId) {
 export async function removeStaffFromStall(stallId, userId) {
   const affectedRows = await StallStaff.destroy({ where: { stall_id: stallId, user_id: userId } });
   return affectedRows > 0;
-}
-
-/**
- * Update a stall's device token.
- */
-export async function updateStallDeviceToken(id, deviceToken) {
-  const [affectedRows] = await Stall.update({ device_token: deviceToken }, { where: { id } });
-  return affectedRows > 0;
-}
-
-/**
- * Find a stall by its device token.
- */
-export async function findStallByDeviceToken(deviceToken) {
-  return Stall.findOne({ where: { device_token: deviceToken } });
 }
 

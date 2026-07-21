@@ -1,20 +1,55 @@
 import jwt from 'jsonwebtoken';
+import { findDeviceByToken } from '../repositories/stall-device.repository.js';
+
+function deviceAuthError(res, code, message) {
+  return res.status(401).json({ success: false, code, message });
+}
 
 /**
  * Middleware: verify JWT and attach decoded payload to req.user.
  */
-export function authenticate(req, res, next) {
+export async function authenticate(req, res, next) {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) {
     return res.status(401).json({ success: false, message: 'Missing or invalid token.' });
   }
 
   const token = header.slice(7);
+  let decodedUser;
   try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET);
-    next();
+    decodedUser = jwt.verify(token, process.env.JWT_SECRET);
   } catch {
     return res.status(401).json({ success: false, message: 'Token expired or invalid.' });
+  }
+
+  req.user = decodedUser;
+  if (req.user.role !== 'cashier') {
+    return next();
+  }
+
+  const deviceId = Number(req.user.device_id);
+  const deviceToken = req.headers['x-device-token'];
+  if (!Number.isInteger(deviceId) || deviceId <= 0 || !deviceToken) {
+    return deviceAuthError(res, 'DEVICE_SESSION_INVALID', 'Cashier session is not bound to a registered terminal.');
+  }
+
+  try {
+    const device = await findDeviceByToken(deviceToken);
+    if (
+      !device
+      || !device.Stall
+      || device.Stall.is_deleted
+      || !device.Stall.is_active
+      || Number(device.id) !== deviceId
+      || Number(device.stall_id) !== Number(req.user.stall_id)
+    ) {
+      return deviceAuthError(res, 'DEVICE_REVOKED', 'This terminal has been deregistered.');
+    }
+
+    req.device = device;
+    return next();
+  } catch (error) {
+    return next(error);
   }
 }
 

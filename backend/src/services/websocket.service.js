@@ -1,9 +1,11 @@
 import jwt from 'jsonwebtoken';
 import { Server } from 'socket.io';
+import { findDeviceByToken, markDeviceSeen } from '../repositories/stall-device.repository.js';
 
 let ioServer = null;
 const cashierSockets = new Map();
 const managementSockets = new Map();
+const deviceSockets = new Map();
 
 function isAllowedDevelopmentOrigin(origin) {
   return !origin
@@ -44,6 +46,10 @@ function getSocketToken(socket) {
   return null;
 }
 
+function getSocketDeviceToken(socket) {
+  return socket.handshake.auth?.deviceToken || socket.handshake.headers?.['x-device-token'] || null;
+}
+
 function addSocket(socketMap, key, socketId) {
   const socketIds = socketMap.get(key) || new Set();
   socketIds.add(socketId);
@@ -70,6 +76,14 @@ function removeCashierSocket(cashierId, socketId) {
   removeSocket(cashierSockets, cashierId, socketId);
 }
 
+function addDeviceSocket(deviceId, socketId) {
+  addSocket(deviceSockets, deviceId, socketId);
+}
+
+function removeDeviceSocket(deviceId, socketId) {
+  removeSocket(deviceSockets, deviceId, socketId);
+}
+
 function addManagementSocket(ownerId, socketId) {
   addSocket(managementSockets, ownerId, socketId);
 }
@@ -90,7 +104,7 @@ function resolveManagementOwnerId(user) {
   return null;
 }
 
-function authenticateSocket(socket, next) {
+async function authenticateSocket(socket, next) {
   const token = getSocketToken(socket);
   if (!token) {
     return next(new Error('Missing socket auth token.'));
@@ -112,7 +126,27 @@ function authenticateSocket(socket, next) {
     socket.data.role = role;
 
     if (role === 'cashier') {
+      const deviceId = Number(user.device_id);
+      const deviceToken = getSocketDeviceToken(socket);
+      if (!Number.isInteger(deviceId) || deviceId <= 0 || !deviceToken) {
+        return next(new Error('Cashier socket requires an active registered terminal.'));
+      }
+
+      const device = await findDeviceByToken(deviceToken);
+      if (
+        !device
+        || !device.Stall
+        || device.Stall.is_deleted
+        || !device.Stall.is_active
+        || Number(device.id) !== deviceId
+        || Number(device.stall_id) !== Number(user.stall_id)
+      ) {
+        return next(new Error('This terminal has been deregistered.'));
+      }
+
       socket.data.cashierId = userId;
+      socket.data.deviceId = deviceId;
+      await markDeviceSeen(deviceId, userId);
     } else {
       const ownerId = resolveManagementOwnerId({ ...user, role });
       if (!Number.isInteger(ownerId) || ownerId <= 0) {
@@ -146,10 +180,13 @@ export function initializeWebSocketServer(httpServer) {
 
     if (role === 'cashier') {
       const cashierId = socket.data.cashierId;
+      const deviceId = socket.data.deviceId;
       addCashierSocket(cashierId, socket.id);
+      addDeviceSocket(deviceId, socket.id);
 
       socket.on('disconnect', () => {
         removeCashierSocket(cashierId, socket.id);
+        removeDeviceSocket(deviceId, socket.id);
       });
 
       return;
@@ -261,6 +298,66 @@ export function emitManagementOrderUpdated({ ownerId, orderId, status, paymentMe
   return emittedCount > 0;
 }
 
+export function emitManagementDeviceRegistryUpdated({ ownerId, stallId, deviceId, changeType }) {
+  if (!ioServer) {
+    return false;
+  }
+
+  const normalizedOwnerId = Number(ownerId);
+  const normalizedStallId = Number(stallId);
+  const normalizedDeviceId = Number(deviceId);
+  if (
+    !Number.isInteger(normalizedOwnerId) || normalizedOwnerId <= 0
+    || !Number.isInteger(normalizedStallId) || normalizedStallId <= 0
+    || !Number.isInteger(normalizedDeviceId) || normalizedDeviceId <= 0
+  ) {
+    return false;
+  }
+
+  const emittedCount = emitToSocketSet(
+    managementSockets.get(normalizedOwnerId),
+    'device_registry_updated',
+    {
+      stallId: normalizedStallId,
+      deviceId: normalizedDeviceId,
+      changeType,
+    }
+  );
+
+  return emittedCount > 0;
+}
+
+export function emitDeviceRevoked(deviceId, payload = {}) {
+  if (!ioServer) {
+    return false;
+  }
+
+  const normalizedDeviceId = Number(deviceId);
+  if (!Number.isInteger(normalizedDeviceId) || normalizedDeviceId <= 0) {
+    return false;
+  }
+
+  const socketIds = deviceSockets.get(normalizedDeviceId);
+  if (!socketIds || socketIds.size === 0) {
+    return false;
+  }
+
+  for (const socketId of [...socketIds]) {
+    const socket = ioServer.sockets.sockets.get(socketId);
+    if (!socket) {
+      continue;
+    }
+
+    socket.emit('device:revoked', {
+      deviceId: normalizedDeviceId,
+      message: payload.message || 'This terminal was deregistered by management.',
+    });
+    setTimeout(() => socket.disconnect(true), 100);
+  }
+
+  return true;
+}
+
 export function getWebSocketConnectionStats() {
   let socketCount = 0;
   for (const socketIds of cashierSockets.values()) {
@@ -273,6 +370,7 @@ export function getWebSocketConnectionStats() {
   return {
     cashierCount: cashierSockets.size,
     managementOwnerCount: managementSockets.size,
+    deviceCount: deviceSockets.size,
     socketCount,
   };
 }

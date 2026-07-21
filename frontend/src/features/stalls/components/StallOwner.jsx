@@ -10,6 +10,7 @@ import EmptyState from '../../../components/ui/EmptyState';
 import FormInput from '../../../components/ui/FormInput';
 import ModalShell from '../../../components/ui/ModalShell';
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
+import { subscribeToManagementUpdates } from '../../../services/socketClient';
 
 // ── Seed data ─────────────────────────────────────────────────────────────────
 const AVATAR_COLORS = ['#eef2ff','#dcfce7','#f3e8ff','#fff1f2','#fef3c7','#e0f2fe'];
@@ -311,6 +312,7 @@ function ManageStaffDialog({
 }
 
 function DeregisterDeviceDialog({
+  device,
   error,
   isOpen,
   isSaving,
@@ -320,7 +322,7 @@ function DeregisterDeviceDialog({
 }) {
   const [confirmation, setConfirmation] = useState('');
 
-  if (!stall) return null;
+  if (!stall || !device) return null;
 
   const isConfirmed = confirmation.trim().toUpperCase() === 'DEREGISTER';
 
@@ -343,10 +345,10 @@ function DeregisterDeviceDialog({
         <div className="pr-10">
           <p className="m-0 text-xs font-extrabold uppercase tracking-wider text-state-danger">Terminal security</p>
           <h2 id="deregister-device-title" className="m-0 mt-1 text-xl font-extrabold text-text-strong">
-            Deregister {stall.name}?
+            Deregister {device.name}?
           </h2>
           <p className="m-0 mt-2 text-sm font-medium leading-relaxed text-text-muted">
-            This immediately revokes the current terminal. Cashiers must register the device again before using PIN login.
+            This immediately logs out this terminal and revokes its cashier access to {stall.name}. Other registered devices are not affected.
           </p>
         </div>
 
@@ -393,7 +395,7 @@ export default function StallOwner({ users = [] }) {
   const [isDropZoneOver, setIsDropZoneOver] = useState(false);
   const [, setIsDraggingFromRoster] = useState(false);
   const [isPoolOver, setIsPoolOver] = useState(false);
-  const [isDeregisterDialogOpen, setIsDeregisterDialogOpen] = useState(false);
+  const [deviceToDeregister, setDeviceToDeregister] = useState(null);
   const [isDeregistering, setIsDeregistering] = useState(false);
 
   const loadStalls = useCallback(async (showSpinner = false) => {
@@ -429,6 +431,12 @@ export default function StallOwner({ users = [] }) {
     intervalMs: 30000,
   });
 
+  useEffect(() => subscribeToManagementUpdates(({ eventName }) => {
+    if (eventName === 'device_registry_updated') {
+      void loadStalls(false);
+    }
+  }), [loadStalls]);
+
   const assignments = useMemo(() => {
     const map = {};
     stalls.forEach(s => {
@@ -438,6 +446,7 @@ export default function StallOwner({ users = [] }) {
   }, [stalls]);
 
   const selectedStall  = stalls.find(s => s.id === selectedStallId) ?? null;
+  const activeDevices = (selectedStall?.devices || []).filter((device) => device.active);
   const assignedIds    = assignments[selectedStallId] ?? [];
   const assignedUsers  = cashierUsers.filter(u => assignedIds.includes(u.id));
 
@@ -564,19 +573,28 @@ export default function StallOwner({ users = [] }) {
   };
 
   const handleDeregisterDevice = async () => {
-    if (!selectedStall?.id || isDeregistering) return;
+    if (!selectedStall?.id || !deviceToDeregister?.id || isDeregistering) return;
 
     setActionError('');
     setActionNotice('');
     setIsDeregistering(true);
     try {
-      await api.stalls.deregisterDevice(selectedStall.id);
-      setStalls((current) => current.map((stall) => (
-        stall.id === selectedStall.id ? { ...stall, deviceRegistered: false } : stall
-      )));
+      await api.stalls.deregisterDevice(selectedStall.id, deviceToDeregister.id);
+      setStalls((current) => current.map((stall) => {
+        if (stall.id !== selectedStall.id) return stall;
+
+        const devices = (stall.devices || []).map((device) => (
+          device.id === deviceToDeregister.id ? { ...device, active: false } : device
+        ));
+        return {
+          ...stall,
+          devices,
+          deviceRegistered: devices.some((device) => device.active),
+        };
+      }));
       await loadStalls(false);
-      setIsDeregisterDialogOpen(false);
-      setActionNotice(`${selectedStall.name} terminal was deregistered.`);
+      setDeviceToDeregister(null);
+      setActionNotice(`${deviceToDeregister.name} was deregistered from ${selectedStall.name}.`);
     } catch (err) {
       setActionError(err.message || 'Failed to deregister the terminal.');
     } finally {
@@ -597,7 +615,7 @@ export default function StallOwner({ users = [] }) {
       className="relative flex flex-col xl:flex-row gap-4 h-full min-h-0 xl:overflow-hidden overflow-y-auto overflow-x-hidden pb-6 xl:pb-0"
       onDragEnd={() => { setIsDraggingFromRoster(false); setIsDropZoneOver(false); setIsPoolOver(false); }}
     >
-      {actionError && !showAddModal && !isManageStaffOpen && !isDeregisterDialogOpen && (
+      {actionError && !showAddModal && !isManageStaffOpen && !deviceToDeregister && (
         <Alert variant="danger" className="fixed left-1/2 top-20 z-40 w-[min(92vw,520px)] -translate-x-1/2 shadow-lg">
           {actionError}
         </Alert>
@@ -695,27 +713,13 @@ export default function StallOwner({ users = [] }) {
                   className={`h-2 w-2 rounded-full ${selectedStall.deviceRegistered ? 'bg-state-success' : 'bg-text-muted'}`}
                   aria-hidden="true"
                 />
-                {selectedStall.deviceRegistered ? 'Device registered' : 'No device'}
+                {activeDevices.length} active device{activeDevices.length === 1 ? '' : 's'}
               </div>
               <div className="px-3 py-1 rounded-full" style={{ background: '#eff6ff' }}>
                 <span className="text-[13px] font-bold text-[#1d4ed8] font-sans">
                   {assignedUsers.length} / 12
                 </span>
               </div>
-              {selectedStall.deviceRegistered ? (
-                <Button
-                  size="sm"
-                  variant="danger"
-                  iconName="disable"
-                  onClick={() => {
-                    setActionError('');
-                    setActionNotice('');
-                    setIsDeregisterDialogOpen(true);
-                  }}
-                >
-                  Deregister Device
-                </Button>
-              ) : null}
               <Button size="sm" iconName="users" onClick={() => setIsManageStaffOpen(true)}>
                 Manage Staff
               </Button>
@@ -724,6 +728,60 @@ export default function StallOwner({ users = [] }) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+          <section className="rounded-lg border border-ui-border bg-ui-surface p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 className="m-0 text-sm font-extrabold text-text-strong">Registered Devices</h3>
+                <p className="m-0 mt-1 text-xs font-medium text-text-muted">
+                  Revoke one terminal without interrupting the others at this stall.
+                </p>
+              </div>
+              <span className="rounded-full bg-ui-muted px-3 py-1 text-xs font-bold text-text-soft">
+                {activeDevices.length} active
+              </span>
+            </div>
+
+            {activeDevices.length === 0 ? (
+              <p className="m-0 rounded-md border border-dashed border-ui-border px-4 py-5 text-center text-xs font-semibold text-text-muted">
+                No active cashier devices are registered to this stall.
+              </p>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2">
+                {activeDevices.map((device) => (
+                  <div
+                    key={device.id}
+                    className="flex min-w-0 flex-wrap items-center gap-3 rounded-lg border border-ui-border bg-ui-elevated p-3"
+                  >
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-brand-action/10 text-brand-action">
+                      <Icon name="settings" className="h-4 w-4" strokeWidth={2} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <strong className="block truncate text-sm text-text-strong">{device.name}</strong>
+                      <span className="block truncate text-xs font-semibold text-text-muted">
+                        {device.lastCashier ? `Last used by ${device.lastCashier.name}` : 'No cashier login yet'}
+                      </span>
+                      <span className="block truncate text-[11px] font-medium text-text-muted">
+                        {device.lastSeenAt ? `Seen ${new Date(device.lastSeenAt).toLocaleString()}` : 'Not seen yet'}
+                      </span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      iconName="disable"
+                      onClick={() => {
+                        setActionError('');
+                        setActionNotice('');
+                        setDeviceToDeregister(device);
+                      }}
+                    >
+                      Deregister
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
           {assignedUsers.length > 0 && (
             <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))' }}>
               {assignedUsers.map((user, idx) => (
@@ -852,7 +910,7 @@ export default function StallOwner({ users = [] }) {
       )}
 
       <ManageStaffDialog
-        key={`${selectedStallId}-${isManageStaffOpen ? 'open' : 'closed'}`}
+        key={`staff-${selectedStallId}-${isManageStaffOpen ? 'open' : 'closed'}`}
         cashiers={cashierUsers}
         error={actionError}
         isOpen={isManageStaffOpen}
@@ -868,13 +926,14 @@ export default function StallOwner({ users = [] }) {
       />
 
       <DeregisterDeviceDialog
-        key={`${selectedStallId}-${isDeregisterDialogOpen ? 'open' : 'closed'}`}
+        key={`device-${selectedStallId}-${deviceToDeregister?.id || 'closed'}`}
+        device={deviceToDeregister}
         error={actionError}
-        isOpen={isDeregisterDialogOpen}
+        isOpen={Boolean(deviceToDeregister)}
         isSaving={isDeregistering}
         stall={selectedStall}
         onClose={() => {
-          setIsDeregisterDialogOpen(false);
+          setDeviceToDeregister(null);
           setActionError('');
         }}
         onConfirm={handleDeregisterDevice}

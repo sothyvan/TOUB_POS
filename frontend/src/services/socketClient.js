@@ -1,5 +1,5 @@
 import { io } from 'socket.io-client';
-import { AUTH_STORAGE_KEYS } from '../features/auth/authStorage';
+import { AUTH_STORAGE_KEYS, readStoredDeviceToken } from '../features/auth/authStorage';
 import { API_BASE_URL } from './apiClient';
 
 let cashierSocket = null;
@@ -44,17 +44,19 @@ export function subscribeToManagementUpdates(listener) {
 export function connectCashierSocket({
   onPaymentConfirmed,
   onKitchenTicketUpdated,
+  onDeviceRevoked,
   onConnectError,
 } = {}) {
   const token = localStorage.getItem(AUTH_STORAGE_KEYS.TOKEN);
-  if (!token) {
+  const deviceToken = readStoredDeviceToken();
+  if (!token || !deviceToken) {
     return null;
   }
 
   disconnectCashierSocket();
 
   cashierSocket = io(getSocketBaseUrl(), {
-    auth: { token },
+    auth: { token, deviceToken },
     reconnection: true,
   });
 
@@ -65,6 +67,10 @@ export function connectCashierSocket({
   });
 
   attachKitchenTicketListener(cashierSocket, onKitchenTicketUpdated);
+
+  cashierSocket.on('device:revoked', (payload) => {
+    onDeviceRevoked?.(payload);
+  });
 
   cashierSocket.on('connect_error', (error) => {
     if (onConnectError) {
@@ -99,6 +105,9 @@ export function connectManagementSocket({
   attachOrderUpdatedListener(managementSocket, (payload) => {
     onOrderUpdated?.(payload);
     notifyManagementUpdate('order_updated', payload);
+  });
+  managementSocket.on('device_registry_updated', (payload) => {
+    notifyManagementUpdate('device_registry_updated', payload);
   });
 
   managementSocket.on('connect_error', (error) => {

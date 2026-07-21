@@ -9,6 +9,7 @@ import OrderItem from './order-item.model.js';
 import TelegramTicket from './telegram-ticket.model.js';
 import AuditLog from './audit-log.model.js';
 import ProductStall from './product-stall.model.js';
+import StallDevice from './stall-device.model.js';
 
 // ── User ↔ Stall Ownership ──────────────────────────────────
 Stall.belongsTo(User, { as: 'Owner', foreignKey: 'owner_id', onDelete: 'SET NULL' });
@@ -26,6 +27,13 @@ StallStaff.belongsTo(Stall, { foreignKey: 'stall_id', onDelete: 'CASCADE' });
 StallStaff.belongsTo(User, { foreignKey: 'user_id', onDelete: 'CASCADE' });
 Stall.hasMany(StallStaff, { foreignKey: 'stall_id' });
 User.hasMany(StallStaff, { foreignKey: 'user_id' });
+
+// ── Stall ↔ Registered Devices ─────────────────────────────
+StallDevice.belongsTo(Stall, { as: 'Stall', foreignKey: 'stall_id', onDelete: 'CASCADE' });
+Stall.hasMany(StallDevice, { as: 'Devices', foreignKey: 'stall_id' });
+StallDevice.belongsTo(User, { as: 'RegisteredBy', foreignKey: 'registered_by_user_id', onDelete: 'SET NULL' });
+StallDevice.belongsTo(User, { as: 'LastCashier', foreignKey: 'last_cashier_id', onDelete: 'SET NULL' });
+StallDevice.belongsTo(User, { as: 'RevokedBy', foreignKey: 'revoked_by_user_id', onDelete: 'SET NULL' });
 
 // ── Product Associations ─────────────────────────────────────
 Product.belongsToMany(Stall, { through: ProductStall, foreignKey: 'product_id', otherKey: 'stall_id', onDelete: 'CASCADE' });
@@ -79,4 +87,5 @@ export {
   TelegramTicket,
   AuditLog,
   ProductStall,
+  StallDevice,
 };

@@ -115,8 +115,15 @@ export const swaggerDocument = {
         '/api/auth/pin': {
             post: {
                 summary: 'Cashier PIN login',
-                description: 'Issues a JWT for cashier accounts using a bcrypt-hashed PIN. Platform Admin/Owner/Manager accounts cannot use PIN login.',
+                description: 'Issues an 8-hour device-bound JWT for a cashier assigned to the registered terminal stall. Platform Admin/Owner/Manager accounts cannot use PIN login.',
                 security: [],
+                parameters: [{
+                    name: 'X-Device-Token',
+                    in: 'header',
+                    required: true,
+                    schema: { type: 'string' },
+                    description: 'Raw token stored only by the registered cashier terminal.'
+                }],
                 requestBody: {
                     required: true,
                     content: {
@@ -143,8 +150,14 @@ export const swaggerDocument = {
         '/api/auth/cashiers': {
             get: {
                 summary: 'List cashier profiles for PIN login',
-                description: 'Public endpoint used by the cashier terminal login screen. Sensitive credential fields are never returned.',
-                security: []
+                description: 'Device-authenticated endpoint used by the terminal login screen. Returns only active cashiers assigned to the registered device stall; sensitive credential fields are never returned.',
+                security: [],
+                parameters: [{
+                    name: 'X-Device-Token',
+                    in: 'header',
+                    required: true,
+                    schema: { type: 'string' }
+                }]
             }
         },
         '/api/products': {
@@ -257,6 +270,22 @@ export const swaggerDocument = {
             get: {
                 summary: 'Get one order',
                 description: 'Cashiers can fetch their own orders only. Owner/Manager can fetch orders only within their own business owner scope. Passive order read.'
+            }
+        },
+        '/api/auth/device-status': {
+            get: {
+                summary: 'Validate current cashier terminal session',
+                description: 'Cashier only. Requires matching Bearer JWT and X-Device-Token. Returns 401 with DEVICE_REVOKED when management has revoked the device.',
+                parameters: [{
+                    name: 'X-Device-Token',
+                    in: 'header',
+                    required: true,
+                    schema: { type: 'string' }
+                }],
+                responses: {
+                    200: { description: 'Device is active' },
+                    401: { $ref: '#/components/responses/Unauthorized' }
+                }
             }
         },
         '/api/orders/{id}/check-khqr-status': {
@@ -431,13 +460,27 @@ export const swaggerDocument = {
         '/api/stalls/{id}/register-device': {
             post: {
                 summary: 'Register a cashier terminal to a stall',
-                description: 'Owner/Manager only. Returns a new device token once so the terminal can store it locally.'
+                description: 'Owner/Manager only. Creates an additional named device and returns its raw token once. The database stores only a SHA-256 hash.',
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                required: ['device_name'],
+                                properties: {
+                                    device_name: { type: 'string', minLength: 2, maxLength: 100, example: 'Front Counter Tablet' }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
-        '/api/stalls/{id}/device': {
+        '/api/stalls/{id}/devices/{deviceId}': {
             delete: {
-                summary: 'Deregister a cashier terminal',
-                description: 'Owner/Manager only. Clears the stall device token and immediately invalidates the registered terminal.'
+                summary: 'Deregister one cashier terminal',
+                description: 'Owner/Manager only. Revokes only the selected device, invalidates its device-bound cashier JWT access, and emits a targeted device:revoked event. Other stall devices remain active.'
             }
         },
         '/api/reports/daily': {

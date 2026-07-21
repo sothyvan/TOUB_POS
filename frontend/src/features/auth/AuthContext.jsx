@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { authApi, setUnauthorizedHandler } from '../../services/apiClient';
-import { clearStoredSession, readStoredSession, writeStoredSession } from './authStorage';
+import {
+  clearStoredDeviceRegistration,
+  clearStoredSession,
+  readStoredSession,
+  writeStoredSession,
+} from './authStorage';
 import { AuthContext } from './authContext';
 import { toDisplayRole } from '../../utils/permissions';
 
@@ -17,6 +22,7 @@ function normalizeAuthUser(user) {
 }
 
 export function AuthProvider({ children }) {
+  const [authNotice, setAuthNotice] = useState('');
   const [session, setSession] = useState(() => {
     const stored = readStoredSession();
     return {
@@ -30,12 +36,31 @@ export function AuthProvider({ children }) {
     setSession({ token: null, user: null });
   }, []);
 
+  const handleDeviceRevoked = useCallback((message = 'This terminal was deregistered by management.') => {
+    clearStoredDeviceRegistration();
+    clearStoredSession();
+    setSession({ token: null, user: null });
+    setAuthNotice(message);
+  }, []);
+
+  const clearAuthNotice = useCallback(() => {
+    setAuthNotice('');
+  }, []);
+
   useEffect(() => {
-    setUnauthorizedHandler(clearSession);
+    setUnauthorizedHandler(({ payload } = {}) => {
+      const deviceCodes = ['DEVICE_REQUIRED', 'DEVICE_REVOKED', 'DEVICE_SESSION_INVALID'];
+      if (deviceCodes.includes(payload?.code)) {
+        handleDeviceRevoked(payload?.message);
+        return;
+      }
+      clearSession();
+    });
     return () => setUnauthorizedHandler(null);
-  }, [clearSession]);
+  }, [clearSession, handleDeviceRevoked]);
 
   const login = useCallback(async (username, password, options = {}) => {
+    setAuthNotice('');
     const response = await authApi.login(username, password);
     const authData = response?.data || response;
 
@@ -52,6 +77,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const loginPin = useCallback(async (userId, pin, options = {}) => {
+    setAuthNotice('');
     const response = await authApi.loginPin(userId, pin);
     const authData = response?.data || response;
 
@@ -75,7 +101,10 @@ export function AuthProvider({ children }) {
     loginPin,
     logout: clearSession,
     clearSession,
-  }), [session.token, session.user, login, loginPin, clearSession]);
+    authNotice,
+    clearAuthNotice,
+    handleDeviceRevoked,
+  }), [session.token, session.user, login, loginPin, clearSession, authNotice, clearAuthNotice, handleDeviceRevoked]);
 
   return (
     <AuthContext.Provider value={value}>

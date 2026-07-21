@@ -14,7 +14,7 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 
 ## Core User Flow
 
-1. Owner, or an authorized Manager, registers a terminal to a specific **stall** (one-time device provisioning).
+1. Owner, or an authorized Manager, registers one or more named terminals to a specific **stall** (one-time provisioning per device).
 2. Cashier taps their avatar from the stall's staff roster and enters a 4-digit PIN.
 3. Cashier selects items from the stall-scoped menu (other stalls' items are hidden).
 4. Cashier optionally adds **order modifiers** (e.g., "no ice", "extra spicy") per item.
@@ -30,7 +30,7 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 ### Authentication & Device Provisioning
 
 - Sub-path routing: `/owner-portal` (owner/manager portal) vs `/` (cashier terminal)
-- Stall-locked device registration (owner/manager one-time setup)
+- Multi-device, stall-locked terminal registration with individual real-time revocation
 - Avatar-based staff quick-switching per stall roster
 - 4-digit PIN pad for shift unlock
 

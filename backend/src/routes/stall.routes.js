@@ -37,7 +37,7 @@ router.delete('/:id/staff/:userId', unassignStaff);
 // POST   /api/stalls/:id/register-device — Register terminal to a stall
 router.post('/:id/register-device', registerDevice);
 
-// DELETE /api/stalls/:id/device — Revoke the terminal registered to a stall
-router.delete('/:id/device', deregisterDevice);
+// DELETE /api/stalls/:id/devices/:deviceId — Revoke one registered terminal
+router.delete('/:id/devices/:deviceId', deregisterDevice);
 
 export default router;

@@ -1,6 +1,11 @@
 import * as stallRepository from '../repositories/stall.repository.js';
+import * as stallDeviceRepository from '../repositories/stall-device.repository.js';
 import * as userRepository from '../repositories/user.repository.js';
-import crypto from 'crypto';
+import { generateDeviceToken } from '../utils/device-token.util.js';
+import {
+  emitDeviceRevoked,
+  emitManagementDeviceRegistryUpdated,
+} from '../services/websocket.service.js';
 
 function parsePositiveInteger(value) {
   const number = Number(value);
@@ -9,11 +14,26 @@ function parsePositiveInteger(value) {
 
 function sanitizeStallForManagement(stall) {
   const plainStall = stall?.toJSON ? stall.toJSON() : stall;
-  const { device_token: deviceToken, ...safeStall } = plainStall;
+  const Devices = plainStall.Devices || [];
+  const safeStall = { ...plainStall };
+  delete safeStall.device_token;
+  delete safeStall.Devices;
+  const devices = Devices.map((device) => ({
+    id: device.id,
+    name: device.name,
+    is_active: device.is_active,
+    last_seen_at: device.last_seen_at,
+    revoked_at: device.revoked_at,
+    created_at: device.created_at,
+    last_cashier: device.LastCashier
+      ? { id: device.LastCashier.id, username: device.LastCashier.username }
+      : null,
+  }));
 
   return {
     ...safeStall,
-    device_registered: Boolean(deviceToken),
+    device_registered: devices.some((device) => device.is_active),
+    devices,
   };
 }
 
@@ -49,7 +69,7 @@ export async function createStall(req, res, next) {
       name,
       location,
     });
-    res.status(201).json({ success: true, data: stall });
+    res.status(201).json({ success: true, data: sanitizeStallForManagement(stall) });
   } catch (err) {
     next(err);
   }
@@ -181,9 +201,17 @@ export async function unassignStaff(req, res, next) {
  */
 export async function registerDevice(req, res, next) {
   try {
-    const { id } = req.params;
+    const stallId = parsePositiveInteger(req.params.id);
+    const deviceName = String(req.body?.device_name || '').trim();
+    if (!stallId) {
+      return res.status(400).json({ success: false, message: 'Valid stall id is required.' });
+    }
+    if (deviceName.length < 2 || deviceName.length > 100) {
+      return res.status(400).json({ success: false, message: 'Device name must be between 2 and 100 characters.' });
+    }
+
     const ownerId = req.user.role === 'owner' ? req.user.id : req.user.owner_id;
-    const stall = await stallRepository.findStallById(id);
+    const stall = await stallRepository.findStallById(stallId);
     if (!stall) {
       return res.status(404).json({ success: false, message: 'Stall not found.' });
     }
@@ -191,16 +219,26 @@ export async function registerDevice(req, res, next) {
       return res.status(403).json({ success: false, message: 'Forbidden: Stall belongs to another owner.' });
     }
 
-    // Generate secure device token
-    const deviceToken = crypto.randomBytes(32).toString('hex');
+    const deviceToken = generateDeviceToken();
+    const device = await stallDeviceRepository.createStallDevice({
+      stallId,
+      name: deviceName,
+      token: deviceToken,
+      registeredByUserId: req.user.id,
+    });
 
-    // Update the device token in database
-    await stallRepository.updateStallDeviceToken(id, deviceToken);
+    emitManagementDeviceRegistryUpdated({
+      ownerId,
+      stallId,
+      deviceId: device.id,
+      changeType: 'registered',
+    });
 
     res.json({
       success: true,
       data: {
         device_token: deviceToken,
+        device: { id: device.id, name: device.name },
         stall: { id: stall.id, name: stall.name, location: stall.location }
       }
     });
@@ -215,8 +253,9 @@ export async function registerDevice(req, res, next) {
 export async function deregisterDevice(req, res, next) {
   try {
     const stallId = parsePositiveInteger(req.params.id);
-    if (!stallId) {
-      return res.status(400).json({ success: false, message: 'Valid stall id is required.' });
+    const deviceId = parsePositiveInteger(req.params.deviceId);
+    if (!stallId || !deviceId) {
+      return res.status(400).json({ success: false, message: 'Valid stall id and device id are required.' });
     }
 
     const ownerId = req.user.role === 'owner' ? req.user.id : req.user.owner_id;
@@ -228,14 +267,31 @@ export async function deregisterDevice(req, res, next) {
       return res.status(403).json({ success: false, message: 'Forbidden: Stall belongs to another owner.' });
     }
 
-    await stallRepository.updateStallDeviceToken(stallId, null);
+    const device = await stallDeviceRepository.findDeviceById(deviceId);
+    if (!device || Number(device.stall_id) !== stallId) {
+      return res.status(404).json({ success: false, message: 'Device not found for this stall.' });
+    }
+
+    if (device.is_active) {
+      await stallDeviceRepository.revokeDevice(deviceId, req.user.id);
+      emitDeviceRevoked(deviceId, {
+        message: 'This terminal was deregistered by management.',
+      });
+      emitManagementDeviceRegistryUpdated({
+        ownerId,
+        stallId,
+        deviceId,
+        changeType: 'deregistered',
+      });
+    }
 
     return res.json({
       success: true,
       message: 'Terminal deregistered successfully.',
       data: {
         stall_id: stallId,
-        device_registered: false,
+        device_id: deviceId,
+        is_active: false,
       },
     });
   } catch (err) {

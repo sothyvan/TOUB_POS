@@ -41,7 +41,7 @@
 
 - **MySQL Database**: Stores all relational data including Users, Stalls, Staff assignments, Orders, Order Items (with modifiers), and Payment Confirmations.
 - **ImageKit**: Stores product photo binary assets. The backend issues short-lived browser-upload authentication parameters to Owner/Manager users only, while MySQL stores only the delivered asset URL in `products.image_url`.
-- **localStorage (Frontend)**: Device registration token (`toub-device-registered`), auth JWT, active user session. Cleared on logout. This is accepted for the final project; production should move to short-lived access tokens plus HttpOnly refresh-token cookies.
+- **localStorage (Frontend)**: Raw per-device registration token, registration metadata, auth JWT, and active user session. The raw device token is never stored in MySQL; the database stores its SHA-256 hash. Device data is cleared on remote revocation, while normal cashier logout preserves terminal registration. This is accepted for the final project; production should move to short-lived access tokens plus HttpOnly refresh-token cookies.
 
 ## Auth and Access Model
 
@@ -53,6 +53,7 @@
 - Owners have full control over one customer business and may create Manager and Cashier users only.
 - Managers handle day-to-day operations and may create/manage Cashier users only.
 - Cashiers can only view and mutate transactions linked to their active session.
+- Cashier PIN login requires an active registered device for the cashier's assigned stall. Cashier JWTs include `device_id` and `stall_id`, and protected cashier requests verify the matching device token is still active.
 - Owners and Managers have access to the management portal, transactions, reports, and operational tools according to their permission level.
 - Platform Admin, Owner, and Manager accounts store a bcrypt password hash and must have `pin = NULL`.
 - Cashier accounts store a bcrypt PIN hash and must have `password = NULL`.
@@ -66,7 +67,7 @@
 2. Auth must be enforced at every mutation boundary.
 3. A transaction cannot be marked as paid without a valid, verified webhook/listener event — except for cash, which is confirmed by explicit cashier/manager/owner action.
 4. WebSocket payment notifications must only be pushed to the socket registered by the cashier who initiated that specific QR session. No broadcast.
-5. A terminal (device) may only load menu items and staff rosters scoped to its registered stall. Cross-stall data must never be returned.
+5. A terminal may only load menu items and staff rosters scoped to its registered stall. Multiple devices may belong to one stall, and revoking one must not affect another.
 6. Telegram callback authorization needs a replacement cook-identity model before production; current Telegram persistence is limited to order ticket dispatch state.
 7. Order item modifiers/notes must be stored as a snapshot at time of order — not linked to a live config.
 
@@ -118,7 +119,7 @@
 
 - `websocket.service.js` initializes a Socket.IO server on the same HTTP server as Express.
 - Cashier, Owner, and Manager sockets authenticate with the existing JWT. Platform Admin sockets are rejected because the temporary bootstrap role has no live POS UI.
-- The service maintains strict socket maps by `cashier_id` and management `owner_id`. It emits `payment_confirmed` only to the cashier who created the paid order. No payment broadcast.
+- The service maintains strict socket maps by `cashier_id`, device ID, and management `owner_id`. It emits `payment_confirmed` only to the creating cashier, `device:revoked` only to the selected terminal, and `device_registry_updated` only to same-business management sockets so device lists refresh after registration or revocation. No payment or revocation broadcast.
 - Owner/Manager sockets receive `order_updated` for same-business order creation and payment status changes, then refresh order history from the backend.
 - `khqr-background-checker.service.js` periodically checks unexpired pending KHQR orders through Bakong, using system audit metadata instead of pretending a cashier clicked the status-check button.
 - KHQR-paid orders reuse the same `dispatchToTelegram` kitchen ticket flow as confirmed cash orders.
@@ -139,7 +140,8 @@
 ## Core Data Entities
 
 - **User / Staff**: Unique username, role (`platform_admin` / `owner` / `manager` / `cashier`), and exactly one role-appropriate credential: Platform Admin/Owner/Manager use a bcrypt password hash; Cashier uses a bcrypt hash of the 4-digit PIN.
-- **Stall**: A physical booth location. Has a name, assigned menu profile, and registered device token.
+- **Stall**: A physical booth location. Has a name, assigned menu profile, staff roster, and zero or more registered devices.
+- **StallDevice**: A named physical terminal with a hashed token, active/revoked state, last-seen timestamp, and most recent cashier metadata. Cashier JWTs are bound to its ID.
 - **StallStaff**: Junction — maps `User` to `Stall` (a cashier can belong to one stall).
 - **Category**: Global menu group shared across stalls.
 - **Product**: Shared catalog item metadata with name, owner-scoped category, image, and default USD/KHR prices. A product may remain in the management catalog with zero stall assignments; its default price is retained for later reassignment while it stays unavailable to cashiers.
@@ -167,6 +169,6 @@
 | 7 | **Webhook duplicate events** | 🔴 High | Bakong/ABA may retry the same webhook multiple times (network timeouts). Processing it twice marks an order paid twice or creates duplicate records. Mitigation: at the start of the webhook handler, check `if order.status === 'paid' → return 200 immediately` (idempotency guard) before any DB write. |
 | 8 | **QR amount mismatch** | 🔴 High | A webhook may arrive for the wrong amount or wrong merchant. Never auto-confirm just because a payment event arrived. Webhook handler must assert `webhook.amount === order.total_usd` and `webhook.merchant_id === env.MERCHANT_ID` before marking the order paid. Reject mismatches with a `400` and log them. |
 | 9 | **JWT expiry mid-shift** | 🟡 Medium | Cashier's 8h token can expire while they are mid-order. The next API call returns `401`, the cart is lost, and the cashier is confused. Mitigation: frontend must intercept all `401` responses, store the current cart in `sessionStorage`, redirect to PIN re-entry, and restore the cart after re-authentication. |
-| 10 | **Device token lifecycle** | 🟢 Controlled | Owner/Manager users can remotely deregister a terminal from Stall Management. The backend clears `stalls.device_token = NULL`, immediately invalidating the old token; management list responses expose only a registration boolean, not the token. Future production work may add device identity, revocation audit events, and token expiry/rotation. |
+| 10 | **Device token lifecycle** | 🟢 Controlled | `stall_devices` supports multiple named terminals per stall with SHA-256 token hashes. Owner/Manager users can revoke one device; backend middleware rejects its device-bound JWT requests and Socket.IO emits a targeted forced logout. Future production work may add token expiry/rotation and dedicated device audit events. |
 | 11 | **Future platform admin data access** | 🔴 High | The current `platform_admin` role is limited to owner bootstrap only. If TouB POS becomes a multi-customer SaaS product, expand it with tenant isolation, support-session auditing, and least-privilege access before enabling any broader cross-customer administration. |
 

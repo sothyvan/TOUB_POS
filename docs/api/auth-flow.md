@@ -99,7 +99,7 @@ Production upgrade path:
 - HttpOnly refresh token cookie
 - refresh-token rotation
 - CSRF protection strategy
-- server-side session/device revocation
+- refresh-token session revocation and rotation
 
 ---
 
@@ -113,12 +113,15 @@ Production upgrade path:
 
 ## Cashier PIN Flow (Terminal Mode)
 
-Cashier terminals use a secondary PIN-based login on top of device registration:
+Cashier terminals use a secondary PIN-based login on top of individual device registration:
 
-1. Device is registered once by an Owner or Manager (`toub-device-registered = true`)
-2. On terminal wake, cashier selects their profile from the roster
-3. Enters a 4-digit PIN — validated by the backend PIN login endpoint
-4. Session is scoped to that cashier's `user.id` for the duration
+1. Owner or Manager registers a named device to a stall; multiple devices may belong to one stall.
+2. The raw device token is stored in that browser while MySQL stores only its SHA-256 hash.
+3. On terminal wake, the device token loads only the cashier roster assigned to its stall.
+4. Cashier selects their profile and enters a 4-digit PIN.
+5. `POST /api/auth/pin` verifies the device, cashier PIN, and same-stall assignment.
+6. The 8-hour cashier JWT includes `device_id` and `stall_id`, and every protected cashier request must present the matching active device token.
+7. Revoking one device blocks its API/socket access and emits `device:revoked`, causing that browser to clear its session immediately. Other stall devices are unaffected.
 
 PIN security:
 

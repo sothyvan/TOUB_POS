@@ -35,6 +35,14 @@ Update this file after every meaningful implementation change.
 - Phase UI-4: Responsive & Polish — **COMPLETE** ✅
 - Pagination & Performance Optimization — **COMPLETE**
 
+- **Implemented multi-device terminal identity and real-time revocation**:
+  - Added `stall_devices` with hashed tokens, device names, active/revoked state, last-seen time, and most recent cashier metadata.
+  - Added startup migration from the former single `stalls.device_token` registration without invalidating existing registered browsers.
+  - Bound cashier PIN login and 8-hour JWTs to an active `device_id` and `stall_id`; all protected cashier API and Socket.IO connections now verify the matching device token.
+  - Changed Stall Management to list each active device and revoke one by ID, preserving all other devices at the stall.
+  - Added targeted `device:revoked` Socket.IO logout plus API-interceptor and browser-focus validation fallbacks.
+  - Added same-business `device_registry_updated` events so an open Owner/Manager Stall Management screen refreshes immediately after another terminal is registered or deregistered.
+
 - **Moved terminal deregistration into Stall Management**:
   - Added the Owner/Manager-protected `DELETE /api/stalls/:id/device` endpoint, scoped to the authenticated business, to revoke a terminal by clearing its database token.
   - Stopped exposing device tokens in stall-list responses and added the safe `device_registered` status flag instead.

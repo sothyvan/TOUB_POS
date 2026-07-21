@@ -31,6 +31,7 @@ export default function LoginScreen({
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedStallId, setSelectedStallId] = useState('');
+  const [deviceName, setDeviceName] = useState('');
   const navigate = useNavigate();
 
   const handleSubmitManagement = async (event) => {
@@ -319,9 +320,9 @@ export default function LoginScreen({
 
   const handleStallRegisterSubmit = (e) => {
     e.preventDefault();
-    if (!selectedStallId) return;
+    if (!selectedStallId || !deviceName.trim()) return;
     setIsSubmitting(true);
-    onRegisterDevice(selectedStallId).finally(() => {
+    onRegisterDevice(selectedStallId, deviceName.trim()).finally(() => {
       setIsSubmitting(false);
     });
   };
@@ -361,11 +362,22 @@ export default function LoginScreen({
           </select>
         </div>
 
+        <FormInput
+          label="Device Name"
+          value={deviceName}
+          onChange={(event) => setDeviceName(event.target.value)}
+          placeholder="Example: Dara Tablet or Front Counter"
+          minLength={2}
+          maxLength={100}
+          required
+          helperText="Use a name that helps management identify this physical device."
+        />
+
         {loginError && <p className="m-0 text-red-500 text-xs font-semibold">{loginError}</p>}
 
         <button
           type="submit"
-          disabled={isSubmitting || !selectedStallId}
+          disabled={isSubmitting || !selectedStallId || !deviceName.trim()}
           className="w-full h-12 mt-1 bg-brand-blue text-white text-[15px] font-bold rounded-xl hover:bg-brand-blue/95 active:scale-[0.98] transition-all cursor-pointer shadow-[0_2px_4px_rgba(0,71,204,0.1)]"
         >
           {isSubmitting ? 'Registering...' : 'Register Device'}
