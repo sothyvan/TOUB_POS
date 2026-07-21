@@ -41,8 +41,9 @@ Auth/security notes:
 | Method | Path           | Auth | Role | Description       |
 |--------|----------------|------|------|-------------------|
 | POST   | `/auth/login`  | No   | Platform Admin / Owner / Manager | Issue JWT token with username/password |
-| POST   | `/auth/pin`    | No   | Cashier | Issue JWT token with cashier PIN |
-| GET    | `/auth/cashiers` | No | Public | List active cashier profiles for PIN login |
+| POST   | `/auth/pin`    | Device token | Cashier | Issue a device-bound JWT with cashier PIN |
+| GET    | `/auth/cashiers` | Device token | Terminal | List active cashiers assigned to the device stall |
+| GET    | `/auth/device-status` | JWT + device token | Cashier | Validate that the bound terminal remains active |
 
 ### POST `/auth/login`
 
@@ -80,7 +81,7 @@ Platform Admin, Owner, and Manager accounts use this endpoint. Cashier accounts 
 
 ### POST `/auth/pin`
 
-Cashier accounts use this endpoint after selecting a cashier profile in the terminal UI.
+Cashier accounts use this endpoint after selecting a profile in the terminal UI. The request must include the registered terminal's `X-Device-Token` header. The backend verifies that the device is active and that the cashier is assigned to the same stall.
 
 **Request body**
 ```json
@@ -109,8 +110,12 @@ Cashier accounts use this endpoint after selecting a cashier profile in the term
 | Code | Reason |
 |------|--------|
 | 401  | Invalid PIN |
+| 401  | Device missing, invalid, or revoked |
 | 403  | Platform Admin/Owner/Manager account used the wrong login method |
+| 403  | Cashier is not assigned to the device stall |
 | 429  | Too many PIN attempts |
+
+Successful cashier JWTs contain the normal identity claims plus `device_id` and `stall_id`. Every protected cashier request must send both this JWT and the same `X-Device-Token`. A revoked device receives `401` with code `DEVICE_REVOKED`.
 
 ---
 
@@ -538,12 +543,12 @@ Requires `owner` or `manager` role.
 | DELETE | `/stalls/:id` | ✅ | Owner / Manager | Delete stall |
 | POST | `/stalls/:id/staff` | ✅ | Owner / Manager | Assign cashier to stall |
 | DELETE | `/stalls/:id/staff/:userId` | ✅ | Owner / Manager | Remove cashier from stall |
-| POST | `/stalls/:id/register-device` | ✅ | Owner / Manager | Generate and register a terminal token for the stall |
-| DELETE | `/stalls/:id/device` | ✅ | Owner / Manager | Revoke the stall's registered terminal |
+| POST | `/stalls/:id/register-device` | ✅ | Owner / Manager | Register an additional named terminal |
+| DELETE | `/stalls/:id/devices/:deviceId` | ✅ | Owner / Manager | Revoke one terminal without affecting the others |
 
 Stall create/update accepts normal editable fields such as `name` and `location`. The backend does not trust privileged frontend-submitted fields such as `owner_id`, `device_token`, or `telegram_chat_id`.
 
-Stall list responses expose `device_registered` as a boolean for management UI status. They never expose the stored device token. Deregistration clears `stalls.device_token`, so any browser still holding the old token loses cashier-terminal access immediately. Registering a replacement terminal generates a new token.
+Stall list responses expose safe `devices` metadata and the aggregate `device_registered` boolean. They never expose token hashes or raw tokens. Registering requires `{ "device_name": "Front Counter Tablet" }` and returns the raw token once. Deregistration marks only the selected `stall_devices` row inactive, rejects its future cashier requests, and sends a targeted real-time logout event. Other devices at that stall remain active.
 
 ---
 

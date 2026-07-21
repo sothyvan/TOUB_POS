@@ -79,33 +79,50 @@ WHERE id = 2;
 -- ── 2. STALLS CRUD (stall.repository.js) ───────────────────
 
 -- List all stalls
-SELECT id, owner_id, name, location, device_token, telegram_chat_id, created_at, updated_at 
-FROM stalls 
+SELECT id, owner_id, name, location, telegram_chat_id, created_at, updated_at
+FROM stalls
 ORDER BY created_at DESC;
 
 -- List all stalls owned by a specific owner
-SELECT id, owner_id, name, location, device_token, telegram_chat_id, created_at, updated_at 
-FROM stalls 
+SELECT id, owner_id, name, location, telegram_chat_id, created_at, updated_at
+FROM stalls
 WHERE owner_id = 1
 ORDER BY created_at DESC;
 
 -- Find a stall by ID
-SELECT id, owner_id, name, location, device_token, telegram_chat_id, created_at, updated_at 
-FROM stalls 
+SELECT id, owner_id, name, location, telegram_chat_id, created_at, updated_at
+FROM stalls
 WHERE id = 1;
 
 -- Create a new stall
-INSERT INTO stalls (owner_id, name, location, device_token, telegram_chat_id) 
-VALUES (1, 'Stall A - Drinks', 'AEON Mall', 'dev_tok_123', 987654321);
+INSERT INTO stalls (owner_id, name, location, telegram_chat_id)
+VALUES (1, 'Stall A - Drinks', 'AEON Mall', 987654321);
 
 -- Update an existing stall by ID
 UPDATE stalls 
-SET owner_id = 1, name = 'Stall A - Hot Coffee', location = 'Night Market', device_token = 'dev_tok_456', telegram_chat_id = 987654321
+SET name = 'Stall A - Hot Coffee', location = 'Night Market', telegram_chat_id = 987654321
 WHERE id = 1;
 
 -- Delete a stall by ID
 DELETE FROM stalls 
 WHERE id = 1;
+
+-- Register a named device. Application code stores SHA2(raw_token, 256), not the raw token.
+INSERT INTO stall_devices (stall_id, name, token_hash, registered_by_user_id)
+VALUES (1, 'Front Counter Tablet', SHA2('one-time-raw-token', 256), 1);
+
+-- List safe device metadata for management (never select token_hash into API responses).
+SELECT sd.id, sd.stall_id, sd.name, sd.is_active, sd.last_seen_at,
+       sd.revoked_at, sd.created_at, u.username AS last_cashier
+FROM stall_devices sd
+LEFT JOIN users u ON u.id = sd.last_cashier_id
+WHERE sd.stall_id = 1
+ORDER BY sd.is_active DESC, sd.created_at DESC;
+
+-- Revoke exactly one terminal while other stall devices remain active.
+UPDATE stall_devices
+SET is_active = FALSE, revoked_at = CURRENT_TIMESTAMP, revoked_by_user_id = 1
+WHERE id = 7 AND stall_id = 1 AND is_active = TRUE;
 
 
 -- ── 3. CATEGORIES CRUD (category.repository.js) ────────────

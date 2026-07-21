@@ -10,5 +10,9 @@ export function errorHandler(err, _req, res, _next) {
     console.error('[error]', err);
   }
 
-  res.status(status).json({ success: false, message });
+  res.status(status).json({
+    success: false,
+    ...(err.code ? { code: err.code } : {}),
+    message,
+  });
 }

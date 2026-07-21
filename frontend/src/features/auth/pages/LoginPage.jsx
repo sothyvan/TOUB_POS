@@ -6,13 +6,26 @@ import { getPermissions } from '../../../utils/permissions';
 import { apiRequest, authApi } from '../../../services/apiClient';
 import { useAuth } from '../useAuth';
 import LoginScreen from '../components/LoginScreen';
+import {
+  clearStoredDeviceRegistration,
+  DEVICE_STORAGE_KEYS,
+  writeStoredDeviceRegistration,
+} from '../authStorage';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { user: currentUser, login, loginPin, logout, isAuthenticated } = useAuth();
+  const {
+    user: currentUser,
+    login,
+    loginPin,
+    logout,
+    isAuthenticated,
+    authNotice,
+    clearAuthNotice,
+  } = useAuth();
 
-  const [deviceToken, setDeviceToken] = useSavedState('toub-device-token', null);
-  const [deviceRegistered, setDeviceRegistered] = useSavedState('toub-device-registered', false);
+  const [deviceToken, setDeviceToken] = useSavedState(DEVICE_STORAGE_KEYS.TOKEN, null);
+  const [deviceRegistered, setDeviceRegistered] = useSavedState(DEVICE_STORAGE_KEYS.REGISTERED, false);
   const [searchParams, setSearchParams] = useSearchParams();
   const modeParam = searchParams.get('mode'); // 'cashier' | 'management' | null
   const loginMode =
@@ -54,11 +67,12 @@ export default function LoginPage() {
     } catch (err) {
       console.error('Failed to load cashier roster:', err);
       if (resetDeviceOnFailure) {
+        clearStoredDeviceRegistration();
         setDeviceRegistered(false);
         setDeviceToken(null);
-        localStorage.removeItem('toub-device-stall');
         setFlowStep('register');
         setLoginMode('management');
+        setLoginError(err.message || 'This terminal must be registered again.');
       }
       return [];
     }
@@ -89,6 +103,7 @@ export default function LoginPage() {
 
   // Handle standard management login or temporary device registration gate.
   const handleManagementLogin = async (username, password, isRegistering = false) => {
+    clearAuthNotice();
     setLoginError('');
 
     try {
@@ -126,19 +141,17 @@ export default function LoginPage() {
     }
   };
 
-  const handleRegisterDevice = async (stallId) => {
+  const handleRegisterDevice = async (stallId, deviceName) => {
     setLoginError('');
     try {
       const payload = await apiRequest(`/stalls/${stallId}/register-device`, {
         method: 'POST',
         authToken: ownerToken,
+        body: { device_name: deviceName },
       });
-      const { device_token, stall } = payload.data;
+      const { device_token, device, stall } = payload.data;
 
-      // Write synchronously to localStorage before updating state to prevent race conditions
-      localStorage.setItem('toub-device-token', JSON.stringify(device_token));
-      localStorage.setItem('toub-device-stall', JSON.stringify(stall));
-      localStorage.setItem('toub-device-registered', JSON.stringify(true));
+      writeStoredDeviceRegistration(device_token, stall, device);
 
       setDeviceToken(device_token);
       setDeviceRegistered(true);
@@ -161,6 +174,7 @@ export default function LoginPage() {
 
   // Cashier profile tap in Step 2
   const handleSelectProfile = (user) => {
+    clearAuthNotice();
     setSelectedUser(user);
     setTypedPin('');
     setLoginError('');
@@ -230,7 +244,7 @@ export default function LoginPage() {
       typedPin={typedPin}
       onKeyPress={handlePinKeyPress}
       onErase={handlePinErase}
-      loginError={loginError}
+      loginError={loginError || authNotice}
       setLoginError={setLoginError}
       onManagementLogin={handleManagementLogin}
       onSelectProfile={handleSelectProfile}

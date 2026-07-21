@@ -22,10 +22,24 @@ erDiagram
         int owner_id FK "nullable"
         varchar name
         varchar location "nullable"
-        varchar device_token UK "nullable"
+        varchar device_token UK "deprecated migration-only"
         bigint telegram_chat_id "nullable"
         datetime created_at
         datetime updated_at
+    }
+
+    stall_devices {
+        int id PK
+        int stall_id FK
+        varchar name
+        varchar token_hash UK "SHA-256; never returned"
+        boolean is_active
+        int registered_by_user_id FK "nullable"
+        int last_cashier_id FK "nullable"
+        datetime last_seen_at "nullable"
+        datetime revoked_at "nullable"
+        int revoked_by_user_id FK "nullable"
+        datetime created_at
     }
 
     stall_staff {
@@ -117,6 +131,8 @@ erDiagram
     users ||--o{ categories : "manages"
     users ||--o{ stall_staff : "assigned to"
     stalls ||--o{ stall_staff : "has staff"
+    stalls ||--o{ stall_devices : "registers terminals"
+    users ||--o{ stall_devices : "registers/uses/revokes"
     categories ||--o{ products : "groups"
     stalls ||--o{ stall_products : "sells"
     products ||--o{ stall_products : "available in"
@@ -147,7 +163,9 @@ erDiagram
 - `telegram_tickets` enforces a unique `(telegram_chat_id, telegram_msg_id)` pair.
 - `stalls.owner_id` identifies the business owner responsible for each stall.
 - `stalls.location` stores the physical location of the stall (e.g. AEON Mall, Night Market, University).
-- `stalls.device_token` is the permanent terminal registration key stored in browser `localStorage`.
+- `stall_devices` supports multiple independently revocable terminals per stall. The raw token is stored only in the registered browser; MySQL stores `token_hash`.
+- `stall_devices.last_cashier_id` identifies the most recent cashier who successfully unlocked that device. It is display metadata, not ownership of the terminal.
+- `stalls.device_token` remains temporarily nullable only as a startup migration source for terminals registered before the multi-device model. Active authentication does not read it.
 - `categories.owner_id` links each category to the business owner who manages it. Category names are unique per owner.
 - `products` stores shared catalog metadata, its owner-scoped category, and default USD/KHR prices so unassigned products retain their last configured price.
 - Per-stall price and visibility live in `stall_products`.

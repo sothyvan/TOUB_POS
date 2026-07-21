@@ -5,6 +5,7 @@ import { getPlatformAdminSeedConfig, validateEnvironment } from './config/env.js
 import { cleanupDevelopmentDuplicateUniqueIndexes } from './services/development-schema-cleanup.service.js';
 import { startKhqrBackgroundChecker } from './services/khqr-background-checker.service.js';
 import { initializeWebSocketServer } from './services/websocket.service.js';
+import { migrateLegacyStallDeviceTokens } from './services/legacy-device-migration.service.js';
 
 const PORT = process.env.PORT || 3000;
 
@@ -34,6 +35,11 @@ async function startServer() {
     }
     await sequelize.sync(syncOptions);
     console.log('[server] Database models synchronized successfully.');
+
+    const migratedDeviceCount = await migrateLegacyStallDeviceTokens();
+    if (migratedDeviceCount > 0) {
+      console.log(`[server] Migrated ${migratedDeviceCount} legacy terminal registration(s).`);
+    }
 
     // Auto-seed default platform admin user for local development only.
     // Business owner accounts should be created by platform_admin through the user API.

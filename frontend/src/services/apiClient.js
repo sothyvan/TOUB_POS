@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { AUTH_STORAGE_KEYS } from '../features/auth/authStorage';
+import { AUTH_STORAGE_KEYS, readStoredDeviceToken } from '../features/auth/authStorage';
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
@@ -29,18 +29,6 @@ function normalizePath(path) {
   return normalizedPath;
 }
 
-function readDeviceToken() {
-  let deviceToken = localStorage.getItem('toub-device-token');
-  if (!deviceToken) {
-    return null;
-  }
-  try {
-    return JSON.parse(deviceToken);
-  } catch {
-    return deviceToken;
-  }
-}
-
 export async function apiRequest(path, options = {}) {
   const {
     authToken,
@@ -50,7 +38,7 @@ export async function apiRequest(path, options = {}) {
     ...requestOptions
   } = options;
   const token = authToken ?? localStorage.getItem(AUTH_STORAGE_KEYS.TOKEN);
-  const deviceToken = readDeviceToken();
+  const deviceToken = readStoredDeviceToken();
   const headers = {
     ...(body ? { 'Content-Type': 'application/json' } : {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -76,7 +64,7 @@ export async function apiRequest(path, options = {}) {
     const status = error.response?.status || 0;
     const payload = error.response?.data || null;
     if (status === 401 && onUnauthorized) {
-      onUnauthorized();
+      onUnauthorized({ status, payload });
     }
 
     const message = payload?.message || payload?.error || error.message || `Request failed with status ${status}.`;
@@ -99,5 +87,8 @@ export const authApi = {
   },
   getCashiers() {
     return apiRequest('/auth/cashiers');
+  },
+  getDeviceStatus() {
+    return apiRequest('/auth/device-status');
   },
 };

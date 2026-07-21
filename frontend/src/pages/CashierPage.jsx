@@ -19,7 +19,7 @@ import Button from '../components/ui/Button';
 import LoadingState from '../components/ui/LoadingState';
 
 export default function CashierPage() {
-  const { user: currentUser, logout } = useAuth();
+  const { user: currentUser, logout, handleDeviceRevoked } = useAuth();
   const { isCashier } = getPermissions(currentUser);
 
   // ── Stall assignment (cashiers only) ──────────────────────────────────────
@@ -58,6 +58,26 @@ export default function CashierPage() {
     enabled: isCashier,
     intervalMs: 30000,
   });
+
+  useEffect(() => {
+    if (!isCashier) return undefined;
+
+    const validateDevice = () => {
+      void api.auth.getDeviceStatus().catch(() => {
+        // The shared API interceptor handles revoked/invalid device sessions.
+      });
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') validateDevice();
+    };
+
+    window.addEventListener('focus', validateDevice);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('focus', validateDevice);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isCashier]);
 
   // ── Hooks ─────────────────────────────────────────────────────────────────
   const isOnline = useOnlineStatus();
@@ -317,6 +337,11 @@ export default function CashierPage() {
     let mounted = true;
 
     connectCashierSocket({
+      onDeviceRevoked: (payload) => {
+        if (mounted) {
+          handleDeviceRevoked(payload?.message);
+        }
+      },
       onKitchenTicketUpdated: async (payload) => {
         if (mounted) {
           await refreshOrderSnapshot(payload?.orderId);
@@ -367,7 +392,7 @@ export default function CashierPage() {
       mounted = false;
       disconnectCashierSocket();
     };
-  }, [currentUser, fetchOrders, refreshOrderSnapshot, scheduleOrderSnapshotRefresh]);
+  }, [currentUser, fetchOrders, handleDeviceRevoked, refreshOrderSnapshot, scheduleOrderSnapshotRefresh]);
 
   // ── UI state ──────────────────────────────────────────────────────────────
   const [activeCashierTab, setActiveCashierTab] = useState('sale');

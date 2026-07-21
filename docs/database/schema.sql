@@ -30,7 +30,7 @@ CREATE TABLE stalls (
   owner_id        INT DEFAULT NULL,                    -- business owner responsible for the stall
   name            VARCHAR(100) NOT NULL,               -- e.g., "Stall A - Drinks"
   location        VARCHAR(150) DEFAULT NULL,           -- physical location label
-  device_token    VARCHAR(255) DEFAULT NULL,           -- registered terminal token
+  device_token    VARCHAR(255) DEFAULT NULL,           -- deprecated one-time migration source; active tokens live in stall_devices
   telegram_chat_id BIGINT DEFAULT NULL,               -- kitchen Telegram channel ID
   is_active       BOOLEAN NOT NULL DEFAULT TRUE,
   is_deleted      BOOLEAN NOT NULL DEFAULT FALSE,
@@ -38,6 +38,30 @@ CREATE TABLE stalls (
   updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_stalls_device_token (device_token),
   FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- ── Registered Cashier Terminals ────────────────────────
+-- Raw tokens are returned once to the registering browser. Only a deterministic
+-- SHA-256 hash is stored so individual devices can be looked up and revoked.
+CREATE TABLE stall_devices (
+  id                    INT AUTO_INCREMENT PRIMARY KEY,
+  stall_id              INT NOT NULL,
+  name                  VARCHAR(100) NOT NULL,
+  token_hash            VARCHAR(64) NOT NULL,
+  is_active             BOOLEAN NOT NULL DEFAULT TRUE,
+  registered_by_user_id INT DEFAULT NULL,
+  last_cashier_id       INT DEFAULT NULL,
+  last_seen_at          DATETIME DEFAULT NULL,
+  revoked_at            DATETIME DEFAULT NULL,
+  revoked_by_user_id    INT DEFAULT NULL,
+  created_at            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_stall_devices_token_hash (token_hash),
+  KEY idx_stall_devices_stall_active (stall_id, is_active),
+  KEY idx_stall_devices_last_cashier (last_cashier_id),
+  FOREIGN KEY (stall_id) REFERENCES stalls(id) ON DELETE CASCADE,
+  FOREIGN KEY (registered_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (last_cashier_id) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (revoked_by_user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- ── Stall ↔ Staff Assignment ──────────────────────────────

@@ -82,13 +82,26 @@ function mapCategoryToFrontend(c) {
 }
 
 function mapStallToFrontend(s) {
+  const devices = (s.devices || s.Devices || []).map((device) => ({
+    id: device.id,
+    name: device.name,
+    active: device.is_active !== false,
+    lastSeenAt: device.last_seen_at || null,
+    registeredAt: device.created_at || null,
+    revokedAt: device.revoked_at || null,
+    lastCashier: device.last_cashier
+      ? { id: device.last_cashier.id, name: device.last_cashier.username }
+      : null,
+  }));
+
   return {
     id: s.id,
     name: s.name,
     location: s.location,
     status: 'active',
     online: true,
-    deviceRegistered: Boolean(s.device_registered ?? s.deviceRegistered),
+    deviceRegistered: devices.some((device) => device.active),
+    devices,
     staff: s.Users ? s.Users.map(u => ({ id: u.id, name: u.username, role: u.role })) : []
   };
 }
@@ -324,8 +337,8 @@ export const api = {
     async unassignStaff(stallId, userId) {
       return apiRequest(`/stalls/${stallId}/staff/${userId}`, { method: 'DELETE' });
     },
-    async deregisterDevice(stallId) {
-      return apiRequest(`/stalls/${stallId}/device`, { method: 'DELETE' });
+    async deregisterDevice(stallId, deviceId) {
+      return apiRequest(`/stalls/${stallId}/devices/${deviceId}`, { method: 'DELETE' });
     }
   },
   auth: {
@@ -337,6 +350,10 @@ export const api = {
         if (err.status === 404) return null;
         throw err;
       }
+    },
+    async getDeviceStatus() {
+      const res = await apiRequest('/auth/device-status');
+      return res.data;
     }
   },
   orders: {

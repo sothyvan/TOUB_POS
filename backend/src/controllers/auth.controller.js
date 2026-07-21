@@ -1,6 +1,10 @@
 import { loginUser, loginWithPin } from '../services/auth.service.js';
 import { findCashiersByStallId } from '../repositories/user.repository.js';
-import { findStallByDeviceToken } from '../repositories/stall.repository.js';
+import { findDeviceByToken, markDeviceSeen } from '../repositories/stall-device.repository.js';
+
+function getDeviceToken(req) {
+  return req.headers['x-device-token'];
+}
 
 export async function login(req, res, next) {
   try {
@@ -18,10 +22,14 @@ export async function login(req, res, next) {
 export async function loginPin(req, res, next) {
   try {
     const { userId, pin } = req.body;
+    const deviceToken = getDeviceToken(req);
     if (!userId || !pin) {
       return res.status(400).json({ success: false, message: 'userId and pin are required.' });
     }
-    const data = await loginWithPin(userId, pin);
+    if (!deviceToken) {
+      return res.status(401).json({ success: false, code: 'DEVICE_REQUIRED', message: 'A registered terminal is required for PIN login.' });
+    }
+    const data = await loginWithPin(userId, pin, deviceToken);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -30,22 +38,33 @@ export async function loginPin(req, res, next) {
 
 export async function getPublicCashiers(req, res, next) {
   try {
-    const deviceToken = req.headers['x-device-token'] || req.query.deviceToken;
+    const deviceToken = getDeviceToken(req);
 
     if (!deviceToken) {
       return res.status(400).json({ success: false, message: 'Device token is required.' });
     }
 
-    // 1. Find the stall associated with this device token
-    const stall = await findStallByDeviceToken(deviceToken);
-    if (!stall) {
-      return res.status(401).json({ success: false, message: 'Invalid or unregistered device token.' });
+    const device = await findDeviceByToken(deviceToken);
+    if (!device || !device.Stall || device.Stall.is_deleted || !device.Stall.is_active) {
+      return res.status(401).json({ success: false, code: 'DEVICE_REVOKED', message: 'Invalid or unregistered device token.' });
     }
 
-    // 2. Fetch only cashiers assigned to this stall
-    const cashiers = await findCashiersByStallId(stall.id);
+    await markDeviceSeen(device.id);
+    const cashiers = await findCashiersByStallId(device.stall_id);
     res.json({ success: true, data: cashiers });
   } catch (err) {
     next(err);
   }
+}
+
+export function getDeviceStatus(req, res) {
+  res.json({
+    success: true,
+    data: {
+      id: req.device.id,
+      name: req.device.name,
+      stall_id: req.device.stall_id,
+      is_active: true,
+    },
+  });
 }
