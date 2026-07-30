@@ -53,6 +53,12 @@ Update this file after every meaningful implementation change.
   - Stall Management shows the connected group and refreshes through a management Socket.IO event with a three-second polling fallback while setup is pending.
   - Manual `telegram_chat_id` mutation was removed from the normal stall update service.
   - Added Sequelize/raw SQL parity, an idempotent migration, Swagger/API docs, and database-free regression tests.
+- Telegram Identifier Data Minimization — **COMPLETE** ✅
+  - Cook management responses now return masked Telegram user IDs.
+  - Stall responses expose connection status/title and a masked chat ID instead of the complete routing ID.
+  - Order, report, assigned-stall, and Socket.IO responses no longer expose Telegram user, chat, or message IDs.
+  - Full identifiers remain available only to backend authorization/routing logic and MySQL persistence.
+  - Added database-free regression tests for identifier masking and order-response sanitization.
 
 - **Safely suspended KHQR payment processing**:
   - Added explicit opt-in `KHQR_ENABLED` and `VITE_KHQR_ENABLED` feature flags, both defaulting to `false`.

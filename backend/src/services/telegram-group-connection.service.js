@@ -143,7 +143,6 @@ export async function processTelegramGroupConnection(update, dependencyOverrides
     dependencies.emitManagementUpdate({
       ownerId: result.stall.owner_id,
       stallId: result.stall.id,
-      chatId: String(chatId),
       chatTitle,
       changeType: 'connected',
     });

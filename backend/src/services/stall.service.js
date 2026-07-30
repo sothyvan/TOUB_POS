@@ -3,6 +3,7 @@ import * as stallDeviceRepository from '../repositories/stall-device.repository.
 import * as userRepository from '../repositories/user.repository.js';
 import { generateDeviceToken } from '../utils/device-token.util.js';
 import { httpError } from '../utils/http-error.util.js';
+import { maskTelegramChatId } from '../utils/telegram-identifier.util.js';
 import {
   emitDeviceRevoked,
   emitManagementDeviceRegistryUpdated,
@@ -31,11 +32,15 @@ function sanitizeStallForManagement(stall) {
       : null,
   }));
   const safeStall = { ...plainStall };
+  const telegramChatId = safeStall.telegram_chat_id;
   delete safeStall.device_token;
+  delete safeStall.telegram_chat_id;
   delete safeStall.Devices;
 
   return {
     ...safeStall,
+    telegram_connected: Boolean(telegramChatId),
+    telegram_chat_id_masked: maskTelegramChatId(telegramChatId),
     device_registered: devices.some((device) => device.is_active),
     devices,
   };

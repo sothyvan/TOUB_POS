@@ -48,9 +48,6 @@ function mapTickets(tickets = []) {
       status: ticket.status,
       sent_at: ticket.sent_at,
       completed_at: ticket.completed_at,
-      completed_by_telegram_user_id: ticket.completed_by_telegram_user_id
-        ? String(ticket.completed_by_telegram_user_id)
-        : null,
       completed_by_name: ticket.completed_by_name,
     }))
     .sort((a, b) => Number(b.id) - Number(a.id));

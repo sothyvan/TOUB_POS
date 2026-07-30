@@ -330,7 +330,6 @@ export function emitManagementDeviceRegistryUpdated({ ownerId, stallId, deviceId
 export function emitManagementTelegramGroupUpdated({
   ownerId,
   stallId,
-  chatId,
   chatTitle,
   changeType,
 }) {
@@ -352,7 +351,7 @@ export function emitManagementTelegramGroupUpdated({
     'telegram_group_updated',
     {
       stallId: normalizedStallId,
-      chatId: String(chatId),
+      connected: changeType === 'connected',
       chatTitle,
       changeType,
     },

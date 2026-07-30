@@ -13,7 +13,7 @@
     "seed:audit": "node src/scripts/seed-audit-logs.js",
     "migrate:telegram-cooks": "node src/scripts/migrations/add-telegram-cook-authorization.js",
     "migrate:telegram-groups": "node src/scripts/migrations/add-telegram-group-connections.js",
-    "test": "node --test tests/report-range.unit.test.js tests/khqr-suspension.unit.test.js tests/telegram-callback-authorization.unit.test.js tests/telegram-group-connection.unit.test.js",
+    "test": "node --test tests/report-range.unit.test.js tests/khqr-suspension.unit.test.js tests/telegram-callback-authorization.unit.test.js tests/telegram-group-connection.unit.test.js tests/telegram-identifier-safety.unit.test.js",
     "test:credentials": "node --test tests/credential-model.live.test.js",
     "test:orders": "node --test tests/order-flow.live.test.js",
     "test:live": "npm run test:credentials && npm run test:orders",
