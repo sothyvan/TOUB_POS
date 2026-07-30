@@ -24,10 +24,11 @@
 - `frontend/src/pages/` — Remaining route-level Cashier and Owner/Manager orchestration pages. The login route is owned by `features/auth/pages/`.
 - `frontend/src/hooks/`, `services/`, and `utils/` — Shared state/data hooks, Axios/Socket.IO clients, and domain-neutral helpers used across features.
 - `backend/src/routes/` — API route definitions and endpoint mapping.
-- `backend/src/controllers/` — Request handling and response formatting.
-- `backend/src/services/` — Core business logic, WebSocket session management, Telegram bot logic, and external provider coordination.
+- `backend/src/controllers/` — Thin request handling and response formatting. Controllers delegate validation, authorization decisions, and workflow coordination to services.
+- `backend/src/services/` — Core business logic for auth, users, products, categories, stalls/devices, orders, reports, Telegram callbacks, WebSocket sessions, and external providers.
 - `backend/src/repositories/` — Database queries and data access logic.
-- `backend/src/services/telegram.service.js` — Telegram Bot API integration (order relay, cook callback).
+- `backend/src/services/telegram.service.js` — Low-level Telegram Bot API integration and outbound kitchen ticket dispatch.
+- `backend/src/services/telegram-callback.service.js` — Inbound cook callback workflow, ticket state updates, and real-time UI notification.
 - `backend/src/services/websocket.service.js` — WebSocket server; maps `cashier_id → socket` for isolated push.
 
 ### Frontend Dependency Direction
@@ -36,6 +37,14 @@
 - Feature components may import shared UI, hooks, services, utilities, and components from another feature only when the workflow genuinely crosses feature boundaries, such as reports opening the shared payment receipt.
 - Shared layout and theme modules must remain domain-neutral and must not import cashier, catalog, staff, stall, or report business components.
 - Feature files should not be moved back into the flat `components/` directory. New feature-specific UI belongs under the corresponding `features/<feature>/components/` folder.
+
+### Backend Dependency Direction
+
+- Routes compose authentication/authorization middleware and controllers.
+- Controllers translate HTTP input/output only and call services; they do not import Sequelize models or repositories directly.
+- Services own validation, RBAC/owner-scope decisions, external-provider coordination, and multi-step workflows.
+- Repositories own Sequelize queries and persistence details and do not import controllers or services.
+- Models define tables and associations and remain independent of HTTP concerns.
 
 ## Storage Model
 
@@ -132,7 +141,7 @@
 ## Telegram Kitchen Bot Architecture
 
 - **Outbound**: `telegram.service.js` uses the Bot API `sendMessage` with inline keyboard buttons after each confirmed order.
-- **Inbound**: A webhook endpoint (`POST /api/webhook/telegram`) receives callback queries from cook button taps.
+- **Inbound**: `POST /api/telegram/callback` receives callback queries from cook button taps.
 - **Security**: Telegram ticket state is stored in `TelegramTicket`; cook authorization rules still need a replacement model before production.
 - **State update**: Uses `editMessageText` + `editMessageReplyMarkup` to mutate the ticket in-place (no new messages).
 - **Format**: Ticket includes stall label, order ID, item list with modifiers, totals, and timestamp.

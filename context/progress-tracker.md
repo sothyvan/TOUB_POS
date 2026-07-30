@@ -35,6 +35,14 @@ Update this file after every meaningful implementation change.
 - Phase UI-4: Responsive & Polish — **COMPLETE** ✅
 - Pagination & Performance Optimization — **COMPLETE**
 
+- **Completed backend service-layer cleanup (Step 1)**:
+  - Added dedicated product, category, stall/device, user/RBAC, and Telegram callback services.
+  - Reduced active controllers to HTTP input/output handling; controllers no longer import repositories or Sequelize models directly.
+  - Preserved existing routes, status codes, response shapes, ownership checks, role restrictions, credential hashing, terminal revocation, and kitchen callback behavior.
+  - Added a shared status-aware HTTP error helper for service validation failures.
+  - Restored the live credential test deleted during the device migration and updated it for registered-terminal PIN login.
+  - Backend lint passes with no errors; controller/service import and credential-test syntax checks pass.
+
 - **Standardized SweetAlert notifications**:
   - Changed management success/error feedback to bottom-right toast notifications with a 3-second timeout and visible progress bar.
   - Kept destructive confirmations and blocking loading dialogs centered so they cannot disappear before the user responds or the operation finishes.

@@ -1,6 +1,8 @@
-import { loginUser, loginWithPin } from '../services/auth.service.js';
-import { findCashiersByStallId } from '../repositories/user.repository.js';
-import { findDeviceByToken, markDeviceSeen } from '../repositories/stall-device.repository.js';
+import {
+  listCashiersForDevice,
+  loginUser,
+  loginWithPin,
+} from '../services/auth.service.js';
 
 function getDeviceToken(req) {
   return req.headers['x-device-token'];
@@ -44,13 +46,7 @@ export async function getPublicCashiers(req, res, next) {
       return res.status(400).json({ success: false, message: 'Device token is required.' });
     }
 
-    const device = await findDeviceByToken(deviceToken);
-    if (!device || !device.Stall || device.Stall.is_deleted || !device.Stall.is_active) {
-      return res.status(401).json({ success: false, code: 'DEVICE_REVOKED', message: 'Invalid or unregistered device token.' });
-    }
-
-    await markDeviceSeen(device.id);
-    const cashiers = await findCashiersByStallId(device.stall_id);
+    const cashiers = await listCashiersForDevice(deviceToken);
     res.json({ success: true, data: cashiers });
   } catch (err) {
     next(err);

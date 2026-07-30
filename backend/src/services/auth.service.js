@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import {
+  findCashiersByStallId,
   findAssignedStallByUserId,
   findUserByUsername,
   findUserWithPinById,
@@ -113,4 +114,14 @@ export async function loginWithPin(userId, pin, deviceToken) {
     token,
     user: { id: user.id, username: user.username, role: user.role, owner_id: user.owner_id },
   };
+}
+
+export async function listCashiersForDevice(deviceToken) {
+  const device = await findDeviceByToken(deviceToken);
+  if (!device || !device.Stall || device.Stall.is_deleted || !device.Stall.is_active) {
+    throw authError('Invalid or unregistered device token.', 401, 'DEVICE_REVOKED');
+  }
+
+  await markDeviceSeen(device.id);
+  return findCashiersByStallId(device.stall_id);
 }
