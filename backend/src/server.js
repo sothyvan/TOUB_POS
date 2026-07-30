@@ -2,11 +2,13 @@ import 'dotenv/config';
 import { createServer } from 'node:http';
 import bcrypt from 'bcryptjs';
 import { getPlatformAdminSeedConfig, validateEnvironment } from './config/env.js';
-import { cleanupDevelopmentDuplicateUniqueIndexes } from './startup/development-schema-cleanup.js';
+import {
+  assertDatabaseMigrationsCurrent,
+  migrateDatabase,
+} from './database/migrator.js';
 import { startKhqrBackgroundChecker } from './startup/khqr-background-checker.js';
 import { startTelegramDispatchWorker } from './services/telegram-dispatch-worker.service.js';
 import { initializeWebSocketServer } from './services/websocket.service.js';
-import { migrateLegacyStallDeviceTokens } from './startup/legacy-device-migration.js';
 
 const PORT = process.env.PORT || 3000;
 
@@ -14,9 +16,7 @@ async function startServer() {
   try {
     validateEnvironment();
 
-    const { default: app } = await import('./app.js');
     const { default: sequelize, ensureDatabaseExists } = await import('./config/db.js');
-    const { User } = await import('./models/index.js');
 
     console.log('[server] Initializing database...');
     // Ensure database exists (Only locally, cloud providers provision the DB for you)
@@ -29,21 +29,18 @@ async function startServer() {
     await sequelize.authenticate();
     console.log('[server] Database connection established via Sequelize.');
 
-    // Sync schema in development
-    const syncOptions = process.env.NODE_ENV === 'development' ? { alter: true } : {};
-    if (process.env.NODE_ENV === 'development') {
-      await cleanupDevelopmentDuplicateUniqueIndexes(sequelize);
+    if (process.env.NODE_ENV === 'production') {
+      await assertDatabaseMigrationsCurrent();
+      console.log('[server] Database migration status is current.');
+    } else {
+      const appliedMigrations = await migrateDatabase();
+      console.log(`[server] Applied ${appliedMigrations.length} pending database migration(s).`);
     }
-    await sequelize.sync(syncOptions);
-    console.log('[server] Database models synchronized successfully.');
 
+    const { default: app } = await import('./app.js');
+    const { User } = await import('./models/index.js');
     const { deleteExpiredRefreshSessions } = await import('./repositories/refresh-session.repository.js');
     await deleteExpiredRefreshSessions();
-
-    const migratedDeviceCount = await migrateLegacyStallDeviceTokens();
-    if (migratedDeviceCount > 0) {
-      console.log(`[server] Migrated ${migratedDeviceCount} legacy terminal registration(s).`);
-    }
 
     // Auto-seed default platform admin user for local development only.
     // Business owner accounts should be created by platform_admin through the user API.

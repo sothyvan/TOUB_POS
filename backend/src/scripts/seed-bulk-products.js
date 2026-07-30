@@ -13,6 +13,7 @@
 import 'dotenv/config';
 import { faker } from '@faker-js/faker';
 import sequelize, { ensureDatabaseExists } from '../config/db.js';
+import { migrateDatabase } from '../database/migrator.js';
 import { User, Category, Stall, Product, ProductStall } from '../models/index.js';
 import { roundUsd, toKhr } from './seeders/helpers.js';
 
@@ -144,8 +145,7 @@ async function seedOwner(owner) {
 async function main() {
   await ensureDatabaseExists();
   await sequelize.authenticate();
-  const syncOptions = process.env.NODE_ENV === 'development' ? { alter: true } : {};
-  await sequelize.sync(syncOptions);
+  await migrateDatabase();
 
   console.log('[seed:bulk] Database connection established.');
 

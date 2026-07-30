@@ -16,10 +16,15 @@ Node.js + Express REST API for TouB POS. The backend owns authentication, RBAC, 
 ```bash
 cp .env.example .env
 npm install
+npm run db:migrate
 npm run dev
 ```
 
 Server runs at `http://localhost:3000` by default.
+
+Development startup applies pending managed migrations automatically. Production
+startup never changes the schema: deploys must run `npm run db:migrate` first,
+and the API refuses to start while a migration is pending.
 
 When the local development database is empty, startup seeds only the temporary platform bootstrap account:
 
@@ -67,6 +72,7 @@ Do not run this seeder against production or any live merchant database.
 | `DB_USER` | MySQL user | `root` |
 | `DB_PASSWORD` | MySQL password, if required by local DB | `your_password` |
 | `DB_NAME` | MySQL database name | `toub_pos` |
+| `ALLOW_MIGRATION_ROLLBACK` | One-command safety gate for a reviewed migration rollback; leave `false` normally | `false` |
 | `JWT_SECRET` | Secret key for signing JWTs | `a_long_random_string` |
 | `JWT_ACCESS_EXPIRES_IN` | Short-lived access JWT duration | `15m` |
 | `REFRESH_SESSION_EXPIRES_HOURS` | Absolute rotating refresh-session lifetime | `8` |
@@ -161,10 +167,10 @@ Security notes:
 - Login and PIN endpoints are rate-limited.
 - Helmet security headers are enabled.
 
-Apply the refresh-session schema before starting a production deployment:
+Apply all pending schema changes before starting a production deployment:
 
 ```bash
-npm run migrate:refresh-sessions
+npm run db:migrate
 ```
 
 ---
@@ -249,9 +255,7 @@ Paid orders enqueue one `telegram_dispatch_jobs` row in the same database transa
 
 Owner/Manager order history shows Telegram kitchen ticket state (`pending`, `sent`, `failed`, or `done`) and can requeue missing or failed kitchen ticket delivery through `POST /api/orders/:id/retry-telegram`. `pending` means the backend may have contacted Telegram and is not automatically resent after an ambiguous process interruption. Cashiers can also retry their own paid orders. The backend emits `order_updated` when same-business orders are created or paid, and emits `kitchen_ticket_updated` when Telegram dispatch finishes or a cook taps `Mark as Done`, so order-history screens refresh without a full page reload.
 
-For an existing database, run `npm run migrate:telegram-outbox` before deploying this backend version.
-
-Telegram cooks remain Telegram-only identities, not web-app users. The Owner connects a stall's kitchen group from Stall Management using a short-lived Telegram group-selection link. Owner/Manager users may then authorize each cook's numeric Telegram user ID for that stall. The raw setup token is returned only in the link; MySQL stores its SHA-256 hash. Run `npm run migrate:telegram-cooks` and `npm run migrate:telegram-groups` once on an existing database, then re-register the Telegram webhook so Telegram sends the configured secret header.
+Telegram cooks remain Telegram-only identities, not web-app users. The Owner connects a stall's kitchen group from Stall Management using a short-lived Telegram group-selection link. Owner/Manager users may then authorize each cook's numeric Telegram user ID for that stall. The raw setup token is returned only in the link; MySQL stores its SHA-256 hash. Existing databases are validated and enrolled into the managed migration baseline by `npm run db:migrate`.
 
 ### Reports
 
@@ -291,27 +295,44 @@ npm run test:credentials
 npm run test:orders
 npm run test:live
 npm run seed
-npm run migrate:telegram-cooks
-npm run migrate:telegram-groups
-npm run migrate:order-idempotency
-npm run migrate:single-stall-assignment
-npm run migrate:user-session-version
-npm run migrate:refresh-sessions
-npm run migrate:telegram-outbox
+npm run db:migrate
+npm run db:migrate:status
 ```
 
-Run `npm run migrate:order-idempotency` once for an existing database before
-deploying the retry-safe checkout API. New development databases receive the
-same nullable order fields and per-cashier unique index from Sequelize sync.
+### Database Migrations
 
-Run `npm run migrate:single-stall-assignment` once for an existing database.
-It stops with a list of user IDs if duplicate assignments need manual review;
-it never deletes ambiguous assignment data.
+Migration files are ordered under `src/database/migrations/`. Umzug records each
+successful migration in the MySQL `schema_migrations` table.
 
-Run `npm run migrate:user-session-version` once for an existing database before
-deploying session invalidation. Existing JWTs require a one-time re-login after
-deployment. User edits/deletion then increment the version and immediately
-invalidate protected HTTP and Socket.IO sessions.
+- `npm run db:migrate` applies all pending migrations.
+- `npm run db:migrate:status` lists executed and pending migrations.
+- Production startup checks status and stops if any migration is pending.
+- Development startup applies pending migrations automatically.
+- Seed commands apply migrations before inserting development data.
+
+The first migration is the immutable current-schema baseline. It creates a fresh
+database or validates that an existing database already has every baseline table
+and column before recording it. It refuses to silently repair an older or partial
+schema; reconcile that database from a verified backup or reviewed SQL first.
+
+Before a production migration:
+
+1. Export a timestamped MySQL backup and restore it into a disposable database.
+2. Stop application writes or enter a maintenance window.
+3. Run `npm run db:migrate:status`, then `npm run db:migrate`.
+4. Start the API and verify health, login, checkout, and kitchen dispatch.
+
+Rollback is deliberately gated and reverts one migration only:
+
+```bash
+# PowerShell, after a verified backup:
+$env:ALLOW_MIGRATION_ROLLBACK='true'
+npm run db:migrate:down
+```
+
+Prefer restoring the verified backup when a migration has modified business
+data or when application compatibility is uncertain. The baseline migration
+will not drop tables that contain users, stalls, products, or orders.
 
 `npm run test:credentials` expects the local API and a seeded Owner account. It creates temporary Manager, Cashier, Stall, assignment, and registered-device records; verifies device-bound PIN login, credential response safety, deactivation/reactivation, credential/role changes, deletion, and stale-session rejection; then cleans up those records.
 

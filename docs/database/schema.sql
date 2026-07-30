@@ -200,6 +200,9 @@ CREATE TABLE orders (
   completed_at   DATETIME DEFAULT NULL,
   UNIQUE KEY uq_orders_payment_reference (payment_reference),
   UNIQUE KEY uq_orders_cashier_idempotency (cashier_id, idempotency_key),
+  KEY idx_orders_stall_created (stall_id, created_at),
+  KEY idx_orders_cashier_created (cashier_id, created_at),
+  KEY idx_orders_status (status),
   FOREIGN KEY (stall_id)   REFERENCES stalls(id),
   FOREIGN KEY (cashier_id) REFERENCES users(id)
 );

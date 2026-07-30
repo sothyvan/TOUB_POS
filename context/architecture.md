@@ -37,6 +37,7 @@
 - `backend/src/repositories/report.repository.js` — Owner-scoped raw SQL aggregations and paginated Sequelize ledger access.
 - `backend/src/utils/report-range.util.js` — Validated business-local date boundaries, comparison ranges, timezone conversion, and trend granularity.
 - `backend/src/startup/` — Automatic boot-time maintenance and process-local workers started by `server.js`.
+- `backend/src/database/` — Ordered Umzug migrations, the immutable current-schema baseline, and the `schema_migrations` ledger integration.
 - `backend/src/scripts/dev/` — Manually invoked development operations such as the Ngrok/Telegram webhook tunnel.
 - `backend/tests/` — Node test-runner coverage. Unit tests are database-free; `*.live.test.js` suites require the local API/MySQL and own cleanup of temporary records.
 
@@ -59,6 +60,7 @@
 ## Storage Model
 
 - **MySQL Database**: Stores all relational data including Users, Stalls, Staff assignments, Orders, Order Items (with modifiers), and Payment Confirmations.
+- **Schema lifecycle**: Ordered Umzug migrations are the only schema-change path. Production startup is read-only and fails when migrations are pending; deployment runs `npm run db:migrate` before starting the API. Development startup and seed commands apply pending migrations without using `sequelize.sync()`.
 - **Telegram dispatch outbox**: `telegram_dispatch_jobs` stores one durable job per paid Order. The payment transaction and enqueue either commit together or roll back together; a database-locking worker performs the external Telegram call afterward.
 - **ImageKit**: Stores product photo binary assets. The backend issues short-lived browser-upload authentication parameters to Owner/Manager users only, while MySQL stores only the delivered asset URL in `products.image_url`.
 - **Browser auth storage**: Short-lived access JWTs and the public user session

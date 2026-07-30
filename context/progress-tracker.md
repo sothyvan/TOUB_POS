@@ -946,6 +946,21 @@ Update this file after every meaningful implementation change.
   - Added an idempotent migration, Sequelize/raw SQL/ERD parity, environment
     controls, Telegram request timeout, retry-delay unit coverage, and a live
     Order-flow assertion for transactional enqueue.
+- **Closed production audit P1-5 with managed database migrations**:
+  - Added Umzug, ordered ESM migrations, and a MySQL `schema_migrations` ledger.
+  - Added an immutable current-schema baseline that creates clean databases or
+    validates existing current schemas before enrollment, plus a focused Order
+    performance-index migration.
+  - Removed runtime `sequelize.sync()`, startup compatibility mutation, and the
+    old untracked one-off migration commands. Development startup and seed
+    commands apply pending migrations; production startup only verifies status
+    and fails closed until deployment runs `npm run db:migrate`.
+  - Added status and explicitly gated one-step rollback commands, synchronized
+    SQL/index documentation, and documented backup-first deployment recovery.
+  - Verified current-schema enrollment/repeatability, clean-schema migration,
+    blocked-by-default rollback, full empty-schema rollback/forward recovery,
+    and `mysqldump` restore into a second disposable database. All disposable
+    databases and dump files were removed after verification.
 
 ## Next Up
 
@@ -956,8 +971,9 @@ Update this file after every meaningful implementation change.
   - P1-2 active user-session invalidation is implemented and verified.
   - P1-3 rotating HttpOnly refresh-token architecture is implemented and verified.
   - P1-4 durable Telegram kitchen dispatch/outbox behavior is implemented and verified.
-  - Current production recommendation remains No-Go until the remaining P1 security, migration, reliability, dependency, CI, and operational controls are fixed and verified.
-  - Next priority: P1-5 managed production migrations and rollback tracking.
+  - P1-5 managed production migrations, rollback controls, and restore drill are implemented and verified.
+  - Current production recommendation remains No-Go until the remaining P1 security, reliability, dependency, CI, and operational controls are fixed and verified.
+  - Next priority: P1-6 production dependency vulnerability remediation.
   - Follow the audit's phased P0/P1 plan only after team review and approval.
 
 - Post-Phase 6 Operations & Security Hardening.

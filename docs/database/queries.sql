@@ -90,8 +90,8 @@ SET is_deleted = TRUE,
     session_version = session_version + 1
 WHERE id = 2;
 
--- Reference DDL. The executable migration checks whether the column exists first:
--- npm run migrate:user-session-version
+-- Historical reference DDL. Managed migrations now own executable schema changes:
+-- npm run db:migrate
 ALTER TABLE users
 ADD COLUMN session_version INT NOT NULL DEFAULT 1;
 

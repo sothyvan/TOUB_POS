@@ -11,13 +11,9 @@
     "seed": "node src/scripts/seed.js",
     "seed:bulk": "node src/scripts/seed-bulk-products.js",
     "seed:audit": "node src/scripts/seed-audit-logs.js",
-    "migrate:telegram-cooks": "node src/scripts/migrations/add-telegram-cook-authorization.js",
-    "migrate:telegram-groups": "node src/scripts/migrations/add-telegram-group-connections.js",
-    "migrate:order-idempotency": "node src/scripts/migrations/add-order-idempotency.js",
-    "migrate:single-stall-assignment": "node src/scripts/migrations/enforce-single-stall-assignment.js",
-    "migrate:user-session-version": "node src/scripts/migrations/add-user-session-version.js",
-    "migrate:refresh-sessions": "node src/scripts/migrations/add-refresh-sessions.js",
-    "migrate:telegram-outbox": "node src/scripts/migrations/add-telegram-dispatch-outbox.js",
+    "db:migrate": "node src/scripts/database-migrate.js up",
+    "db:migrate:status": "node src/scripts/database-migrate.js status",
+    "db:migrate:down": "node src/scripts/database-migrate.js down",
     "test": "node --test tests/report-range.unit.test.js tests/khqr-suspension.unit.test.js tests/order-idempotency.unit.test.js tests/telegram-callback-authorization.unit.test.js tests/telegram-dispatch-worker.unit.test.js tests/telegram-group-connection.unit.test.js tests/telegram-identifier-safety.unit.test.js",
     "test:credentials": "node --test tests/credential-model.live.test.js",
     "test:auth-refresh": "node --test tests/auth-refresh.live.test.js",
@@ -40,7 +36,8 @@
     "node-fetch": "^3.3.2",
     "sequelize": "^6.37.8",
     "socket.io": "^4.8.3",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "umzug": "^3.8.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

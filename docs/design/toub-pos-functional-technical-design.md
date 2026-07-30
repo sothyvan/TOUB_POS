@@ -802,11 +802,11 @@ There is no separate Business/Tenant table.
 
 - Sequelize models are executable application definitions.
 - `docs/database/schema.sql` is the canonical course SQL artifact.
-- Both must remain synchronized.
-- Development startup may use `sequelize.sync({ alter: true })`.
-- Production startup does not use `alter`.
-- Focused scripts migrate Telegram Cook/group features and legacy device tokens.
-- Formal versioned migrations are recommended before production use.
+- Models, managed migrations, and the canonical SQL artifact must remain synchronized.
+- Ordered migrations live under `backend/src/database/migrations/`.
+- Development startup applies pending migrations.
+- Production startup never mutates schema and refuses to start when migrations are pending.
+- Successful versions are recorded in the MySQL `schema_migrations` ledger.
 
 The later database schema document will define every table, column, type,
 constraint, index, relationship, and retention concern.
@@ -1039,8 +1039,7 @@ active workflow.
 - Socket maps are process-local and do not synchronize across multiple Node
   instances.
 - KHQR background checker is process-local and disabled.
-- Telegram retry is manual.
-- Development `sync({ alter: true })` is not a production migration system.
+- Telegram delivery uses a durable outbox with automatic bounded retries and manual recovery for ambiguous failures.
 - Owner ID acts as tenant key rather than a dedicated Business entity.
 
 ### 15.3 Production Evolution
@@ -1049,7 +1048,7 @@ A scaled deployment would likely add:
 
 - Redis Socket.IO adapter.
 - Background job queue for external delivery and reconciliation.
-- Versioned database migrations.
+- Migration verification in CI against a disposable MySQL database.
 - Dedicated Business/Tenant entity.
 - Central observability and alerting.
 - Structured audit/event retention.
@@ -1081,27 +1080,24 @@ No real values belong in documentation or source control.
 ### 16.3 Startup Sequence
 
 1. Validate environment.
-2. Import app/database/models.
-3. Create local development database if needed.
-4. Authenticate MySQL.
-5. Run development duplicate-index cleanup when applicable.
-6. Synchronize models (`alter` only in development).
-7. Migrate legacy device tokens.
-8. Seed development Platform Admin when absent.
-9. Start shared HTTP and Socket.IO server.
-10. Start KHQR checker only when explicitly enabled.
+2. Import database configuration and create the local development database if needed.
+3. Authenticate MySQL.
+4. In production, assert there are no pending migrations; in development, apply them.
+5. Import the Express app and Sequelize models.
+6. Remove expired refresh sessions.
+7. Seed the development Platform Admin when absent.
+8. Start the shared HTTP and Socket.IO server.
+9. Start the KHQR checker only when explicitly enabled.
+10. Start the Telegram dispatch worker.
 
 ### 16.4 Data Migration
 
-Current migration mechanisms include:
-
-- Startup migration from legacy single Stall device token to `stall_devices`.
-- Idempotent Telegram Cook migration script.
-- Idempotent Telegram group-connection migration script.
-- Canonical schema SQL for clean setup.
-
-Production should replace ad hoc synchronization with ordered, versioned,
-reversible migrations.
+Umzug applies ordered files from `backend/src/database/migrations/` and records
+successful names in `schema_migrations`. The immutable baseline creates a clean
+schema or validates a current existing schema before enrollment. Deployment runs
+`npm run db:migrate` before production startup. A one-step rollback command is
+gated by `ALLOW_MIGRATION_ROLLBACK=true`; verified backup restore remains the
+preferred recovery path for data-changing or uncertain failures.
 
 ## 17. Testing And Verification Design
 
