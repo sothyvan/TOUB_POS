@@ -49,6 +49,7 @@ The Tailwind v4 theme in `frontend/src/index.css` defines app-specific tokens fo
 
 - **Cashier View**: Full-viewport with a large central numeric keypad/item grid, and a prominent right-side order summary and checkout button.
 - **QR Modal**: Large, centered overlay with backdrop blur. Must feature clear visual states (e.g., "Waiting for payment" in yellow, "Payment Received" in green).
+- **Transient Notifications**: SweetAlert success/error notifications appear as bottom-right toasts and close after 3 seconds. Confirmations and blocking progress dialogs remain centered and require explicit completion.
 
 ### Global Layout Grids & Sizing Scale
 

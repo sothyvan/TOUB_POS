@@ -12,6 +12,19 @@ import OwnerSidebar from './OwnerSidebar';
 import OwnerHeader from './OwnerHeader';
 import ThemeToggle from '../../../shared/theme/ThemeToggle';
 
+const notificationToast = Swal.mixin({
+  toast: true,
+  position: 'bottom-end',
+  showConfirmButton: false,
+  timer: 3000,
+  timerProgressBar: true,
+  background: 'var(--color-ui-elevated, #ffffff)',
+  color: 'var(--color-text-strong, #1b1917)',
+  customClass: {
+    popup: 'border border-brand-border font-sans shadow-[0_18px_48px_rgba(0,0,0,0.35)]',
+  },
+});
+
 const ownerTabIcons = {
   dashboard: 'dashboard',
   products: 'product',
@@ -130,23 +143,17 @@ export default function OwnerWorkspace({
         else if (type === 'user') await onDeleteUser(id);
 
         // Success notification
-        await Swal.fire({
+        await notificationToast.fire({
           title: 'Deleted!',
           text: `The ${label} has been deleted successfully.`,
           icon: 'success',
-          confirmButtonColor: '#267452', // matching state-success
-          background: 'var(--color-ui-elevated, #ffffff)',
-          color: 'var(--color-text-strong, #1b1917)',
         });
       } catch (err) {
         // Error notification
-        await Swal.fire({
+        await notificationToast.fire({
           title: 'Failed to delete!',
           text: err.message || `An error occurred while deleting the ${label}.`,
           icon: 'error',
-          confirmButtonColor: '#b53f3f',
-          background: 'var(--color-ui-elevated, #ffffff)',
-          color: 'var(--color-text-strong, #1b1917)',
         });
       }
     }
