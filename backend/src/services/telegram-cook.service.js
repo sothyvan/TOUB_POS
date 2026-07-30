@@ -1,6 +1,7 @@
 import { Stall } from '../models/index.js';
 import * as telegramCookRepository from '../repositories/telegram-cook.repository.js';
 import { httpError } from '../utils/http-error.util.js';
+import { maskTelegramUserId } from '../utils/telegram-identifier.util.js';
 
 function resolveOwnerId(actor) {
   return actor.role === 'owner' ? actor.id : actor.owner_id;
@@ -37,7 +38,7 @@ function mapCook(cook) {
   return {
     id: cook.id,
     stall_id: cook.stall_id,
-    telegram_user_id: String(cook.telegram_user_id),
+    telegram_user_id_masked: maskTelegramUserId(cook.telegram_user_id),
     display_name: cook.display_name,
     is_active: Boolean(cook.is_active),
     created_at: cook.created_at,

@@ -12,14 +12,6 @@ const EMPTY_FORM = {
   telegramUserId: '',
 };
 
-function maskChatId(chatId) {
-  const normalized = String(chatId || '');
-  if (normalized.length <= 6) {
-    return normalized;
-  }
-  return `${normalized.slice(0, 4)}••••${normalized.slice(-4)}`;
-}
-
 export default function TelegramCookManager({ stall, onRefresh, canConnectGroup = false }) {
   const [cooks, setCooks] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -29,7 +21,7 @@ export default function TelegramCookManager({ stall, onRefresh, canConnectGroup 
   const [connectionLink, setConnectionLink] = useState(null);
   const [error, setError] = useState('');
   const [cookToRevoke, setCookToRevoke] = useState(null);
-  const isGroupConnected = Boolean(stall.telegramChatId);
+  const isGroupConnected = stall.telegramConnected;
   const connectionCompleted = Boolean(
     connectionLink
     && stall.telegramConnectedAt
@@ -183,7 +175,7 @@ export default function TelegramCookManager({ stall, onRefresh, canConnectGroup 
             </div>
             <p className="m-0 mt-1 text-xs font-medium text-text-muted">
               {isGroupConnected
-                ? `Chat ${maskChatId(stall.telegramChatId)}${stall.telegramConnectedAt ? ` · Connected ${new Date(stall.telegramConnectedAt).toLocaleString()}` : ''}`
+                ? `Chat ${stall.telegramChatIdMasked}${stall.telegramConnectedAt ? ` · Connected ${new Date(stall.telegramConnectedAt).toLocaleString()}` : ''}`
                 : 'Paid orders cannot reach Telegram until a group is connected.'}
             </p>
           </div>
@@ -299,7 +291,7 @@ export default function TelegramCookManager({ stall, onRefresh, canConnectGroup 
                 <div className="min-w-0 flex-1">
                   <strong className="block truncate text-sm text-text-strong">{cook.display_name}</strong>
                   <span className="block truncate font-mono text-xs text-text-muted">
-                    ID {cook.telegram_user_id}
+                    Telegram ID {cook.telegram_user_id_masked}
                   </span>
                 </div>
                 <Button

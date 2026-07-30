@@ -98,7 +98,8 @@ function mapStallToFrontend(s) {
     id: s.id,
     name: s.name,
     location: s.location,
-    telegramChatId: s.telegram_chat_id || null,
+    telegramConnected: Boolean(s.telegram_connected),
+    telegramChatIdMasked: s.telegram_chat_id_masked || null,
     telegramChatTitle: s.telegram_chat_title || null,
     telegramConnectedAt: s.telegram_connected_at || null,
     status: 'active',
@@ -126,9 +127,6 @@ function mapTelegramTicketsToFrontend(tickets) {
     status: ticket.status,
     sentAt: ticket.sent_at || ticket.sentAt || null,
     completedAt: ticket.completed_at || ticket.completedAt || null,
-    completedByTelegramUserId: ticket.completed_by_telegram_user_id
-      || ticket.completedByTelegramUserId
-      || null,
     completedByName: ticket.completed_by_name || ticket.completedByName || null,
   }));
 }

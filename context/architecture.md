@@ -160,6 +160,7 @@
 - **Inbound**: `POST /api/telegram/callback` receives callback queries from cook button taps.
 - **Group connection**: Owner requests a short-lived `startgroup` link for one same-business stall. Telegram consumes the one-time hashed token inside the selected group, and the backend stores that group's ID/title as the stall's kitchen destination.
 - **Security**: The webhook secret authenticates Telegram as caller. Group setup additionally requires an unexpired one-time token; ticket completion requires an authorized stall cook. Arbitrary frontend payloads and ordinary inbound callbacks cannot rewrite stall chat routing.
+- **Identifier minimization**: Complete Telegram user/chat/message IDs stay in MySQL and backend-only workflows. Management responses expose masked identifiers, while order/report responses expose only the cook display name needed by the UI.
 - **State update**: Uses `editMessageText` + `editMessageReplyMarkup` to mutate the ticket in-place (no new messages).
 - **Format**: Ticket includes stall label, order ID, item list with modifiers, totals, and timestamp.
 

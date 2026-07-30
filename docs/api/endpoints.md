@@ -548,9 +548,11 @@ Stall create/update accepts normal editable fields such as `name` and `location`
 
 Stall list responses expose safe `devices` metadata and the aggregate `device_registered` boolean. They never expose token hashes or raw tokens. Registering requires `{ "device_name": "Front Counter Tablet" }` and returns the raw token once. Deregistration marks only the selected `stall_devices` row inactive, rejects its future cashier requests, and sends a targeted real-time logout event. Other devices at that stall remain active.
 
-Telegram cooks are not web users. Authorizing a cook requires a numeric `telegram_user_id` and `display_name`, stores a stall-scoped allowlist record, and grants only the ability to complete that stall's Telegram kitchen tickets. Revoking one identity does not affect other cooks or cashier accounts.
+Telegram cooks are not web users. Authorizing a cook requires a numeric `telegram_user_id` and `display_name`, stores a stall-scoped allowlist record, and grants only the ability to complete that stall's Telegram kitchen tickets. Cook list/create/revoke responses return `telegram_user_id_masked`, never the complete Telegram identifier. Revoking one identity does not affect other cooks or cashier accounts.
 
 The Owner-only Telegram connection endpoint verifies the configured bot through Telegram, creates a random `startgroup` token with a short expiry, returns the raw token only inside the Telegram link, and stores only its SHA-256 hash. Creating a newer link invalidates the stall's previous unused link. When Telegram starts the bot in the selected group, the backend consumes the token once and stores that group's ID/title on the stall. A group already connected to another active stall is rejected. Managers may manage cook identities but cannot reroute a stall's kitchen destination.
+
+Stall management responses expose `telegram_connected`, `telegram_chat_title`, `telegram_chat_id_masked`, and `telegram_connected_at`; the raw group chat ID remains backend-only. Order and report responses may expose the authorized cook's display name but omit Telegram user IDs, ticket chat IDs, and Telegram message IDs.
 
 `POST /api/telegram/callback` is called by Telegram, not the frontend. It requires the configured `X-Telegram-Bot-Api-Secret-Token`. Group-connection messages require a valid, unexpired one-time token and a group/supergroup chat. Ticket-completion callbacks require an exact order/ticket/chat/message match, a chat matching the order's stall, and an active `telegram_cooks` assignment for `callback_query.from.id`.
 

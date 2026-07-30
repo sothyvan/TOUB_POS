@@ -226,5 +226,10 @@ export async function getAssignedStall(actor) {
   if (!stall) {
     throw httpError('No stall assigned to this user.', 404);
   }
-  return stall;
+  return {
+    id: stall.id,
+    name: stall.name,
+    location: stall.location,
+    is_active: stall.is_active,
+  };
 }
