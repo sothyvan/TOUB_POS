@@ -87,6 +87,13 @@ Do not run this seeder against production or any live merchant database.
 | `TELEGRAM_BOT_TOKEN` | Backend-only Telegram bot token used for kitchen tickets | `replace_with_bot_token` |
 | `TELEGRAM_WEBHOOK_SECRET` | Random secret required whenever the Telegram bot is configured | `replace_with_random_secret` |
 | `TELEGRAM_GROUP_CONNECTION_EXPIRY_MINUTES` | Lifetime of a one-time Owner kitchen-group connection link | `10` |
+| `TELEGRAM_DISPATCH_WORKER_ENABLED` | Run the durable paid-order kitchen delivery worker | `true` |
+| `TELEGRAM_DISPATCH_INTERVAL_MS` | Outbox scan interval in milliseconds | `2000` |
+| `TELEGRAM_DISPATCH_BATCH_SIZE` | Maximum jobs claimed per worker run | `10` |
+| `TELEGRAM_DISPATCH_MAX_ATTEMPTS` | Automatic attempts before terminal failure | `5` |
+| `TELEGRAM_DISPATCH_RETRY_BASE_MS` | Initial retry delay; later attempts use exponential backoff | `5000` |
+| `TELEGRAM_DISPATCH_LOCK_TIMEOUT_MS` | Time before an abandoned processing lock may be recovered | `60000` |
+| `TELEGRAM_API_TIMEOUT_MS` | Timeout for each Telegram Bot API request | `10000` |
 
 ---
 
@@ -238,7 +245,11 @@ KHQR is temporarily disabled by default while TouB POS evaluates an approved mer
 
 The retained integration can only be re-enabled deliberately with matching backend and frontend flags. If re-enabled after provider approval, the existing backend validation still requires amount, currency, and destination-account matches before marking an order paid.
 
-Owner/Manager order history shows Telegram kitchen ticket state (`pending`, `sent`, `failed`, or `done`) and can retry missing or failed kitchen ticket delivery through `POST /api/orders/:id/retry-telegram`. `pending` means the backend is still sending the ticket and is not retryable. Cashiers can also retry their own paid orders from the cashier order history when kitchen dispatch fails. The backend emits `order_updated` when same-business orders are created or paid, and emits `kitchen_ticket_updated` when Telegram dispatch finishes or a cook taps `Mark as Done`, so order-history screens refresh without a full page reload.
+Paid orders enqueue one `telegram_dispatch_jobs` row in the same database transaction as payment confirmation. The background worker claims due jobs with row locks, creates/updates the user-visible `telegram_tickets` record, and retries transient failures with exponential backoff. This allows delivery to resume after a backend restart without rolling back payment.
+
+Owner/Manager order history shows Telegram kitchen ticket state (`pending`, `sent`, `failed`, or `done`) and can requeue missing or failed kitchen ticket delivery through `POST /api/orders/:id/retry-telegram`. `pending` means the backend may have contacted Telegram and is not automatically resent after an ambiguous process interruption. Cashiers can also retry their own paid orders. The backend emits `order_updated` when same-business orders are created or paid, and emits `kitchen_ticket_updated` when Telegram dispatch finishes or a cook taps `Mark as Done`, so order-history screens refresh without a full page reload.
+
+For an existing database, run `npm run migrate:telegram-outbox` before deploying this backend version.
 
 Telegram cooks remain Telegram-only identities, not web-app users. The Owner connects a stall's kitchen group from Stall Management using a short-lived Telegram group-selection link. Owner/Manager users may then authorize each cook's numeric Telegram user ID for that stall. The raw setup token is returned only in the link; MySQL stores its SHA-256 hash. Run `npm run migrate:telegram-cooks` and `npm run migrate:telegram-groups` once on an existing database, then re-register the Telegram webhook so Telegram sends the configured secret header.
 
@@ -286,6 +297,7 @@ npm run migrate:order-idempotency
 npm run migrate:single-stall-assignment
 npm run migrate:user-session-version
 npm run migrate:refresh-sessions
+npm run migrate:telegram-outbox
 ```
 
 Run `npm run migrate:order-idempotency` once for an existing database before

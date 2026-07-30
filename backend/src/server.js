@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { getPlatformAdminSeedConfig, validateEnvironment } from './config/env.js';
 import { cleanupDevelopmentDuplicateUniqueIndexes } from './startup/development-schema-cleanup.js';
 import { startKhqrBackgroundChecker } from './startup/khqr-background-checker.js';
+import { startTelegramDispatchWorker } from './services/telegram-dispatch-worker.service.js';
 import { initializeWebSocketServer } from './services/websocket.service.js';
 import { migrateLegacyStallDeviceTokens } from './startup/legacy-device-migration.js';
 
@@ -70,6 +71,7 @@ async function startServer() {
     httpServer.listen(PORT, () => {
       console.log(`[server] Toub POS API running on http://localhost:${PORT}`);
       startKhqrBackgroundChecker();
+      startTelegramDispatchWorker();
     });
   } catch (err) {
     console.error('[server] Failed to start server:', err);

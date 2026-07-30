@@ -397,6 +397,42 @@ FROM telegram_tickets
 WHERE order_id = 1
 ORDER BY id DESC;
 
+-- Enqueue kitchen delivery inside the same transaction that marks an order paid.
+INSERT INTO telegram_dispatch_jobs (order_id, status, next_attempt_at, created_at, updated_at)
+VALUES (1, 'pending', NOW(), NOW(), NOW())
+ON DUPLICATE KEY UPDATE order_id = VALUES(order_id);
+
+-- A worker claims one due job under a row lock. Application code uses
+-- SKIP LOCKED so concurrent worker processes do not claim the same order.
+SELECT id, order_id, status, attempt_count, next_attempt_at, locked_at
+FROM telegram_dispatch_jobs
+WHERE (
+    status IN ('pending', 'retry') AND next_attempt_at <= NOW()
+  ) OR (
+    status = 'processing' AND locked_at < DATE_SUB(NOW(), INTERVAL 60 SECOND)
+  )
+ORDER BY next_attempt_at ASC, id ASC
+LIMIT 1
+FOR UPDATE SKIP LOCKED;
+
+UPDATE telegram_dispatch_jobs
+SET status = 'processing',
+    attempt_count = attempt_count + 1,
+    last_attempt_at = NOW(),
+    locked_at = NOW(),
+    locked_by = 'worker-instance-id'
+WHERE id = 1;
+
+-- Success finishes the durable job. A transient failure uses status='retry'
+-- with a future next_attempt_at; exhausted/ambiguous sends use status='failed'.
+UPDATE telegram_dispatch_jobs
+SET status = 'sent',
+    locked_at = NULL,
+    locked_by = NULL,
+    last_error = NULL,
+    updated_at = NOW()
+WHERE id = 1;
+
 
 -- ── 6. KHQR PAYMENT CHECKING (order.service.js) ────────────
 

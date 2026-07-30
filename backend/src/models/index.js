@@ -13,6 +13,7 @@ import StallDevice from './stall-device.model.js';
 import TelegramCook from './telegram-cook.model.js';
 import TelegramGroupConnection from './telegram-group-connection.model.js';
 import RefreshSession from './refresh-session.model.js';
+import TelegramDispatchJob from './telegram-dispatch-job.model.js';
 
 // ── User ↔ Stall Ownership ──────────────────────────────────
 Stall.belongsTo(User, { as: 'Owner', foreignKey: 'owner_id', onDelete: 'SET NULL' });
@@ -87,6 +88,10 @@ Product.hasMany(OrderItem, { foreignKey: 'product_id' });
 TelegramTicket.belongsTo(Order, { foreignKey: 'order_id', onDelete: 'CASCADE' });
 Order.hasMany(TelegramTicket, { as: 'TelegramTickets', foreignKey: 'order_id' });
 
+// ── Telegram Dispatch Outbox Associations ───────────────────
+TelegramDispatchJob.belongsTo(Order, { as: 'Order', foreignKey: 'order_id', onDelete: 'CASCADE' });
+Order.hasOne(TelegramDispatchJob, { as: 'TelegramDispatchJob', foreignKey: 'order_id' });
+
 // ── AuditLog Associations ──────────────────────────────────
 AuditLog.belongsTo(User, { as: 'Actor', foreignKey: 'actor_user_id', onDelete: 'SET NULL' });
 User.hasMany(AuditLog, { as: 'AuditLogs', foreignKey: 'actor_user_id' });
@@ -110,4 +115,5 @@ export {
   TelegramCook,
   TelegramGroupConnection,
   RefreshSession,
+  TelegramDispatchJob,
 };

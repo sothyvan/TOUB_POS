@@ -60,7 +60,7 @@ The database has five business domains:
 | Stall operations | Stall, Stall Staff, Stall Device | Physical locations, staff allocation, and terminal control |
 | Catalog | Category, Product, Stall Product | Shared Product definition and per-Stall selling configuration |
 | Sales and audit | Order, Order Item, Audit Log | Trusted transactions, snapshots, payment state, and traceability |
-| Telegram kitchen | Telegram Cook, Group Connection, Ticket | Group routing, Cook authorization, delivery, and completion |
+| Telegram kitchen | Telegram Cook, Group Connection, Dispatch Job, Ticket | Group routing, durable delivery, Cook authorization, and completion |
 
 ### 3.2 Logical Schema
 
@@ -72,6 +72,7 @@ The logical schema uses normalized entities and junction tables:
 - `order_items` intentionally duplicates Product name and price as a transaction
   snapshot.
 - `telegram_tickets` separates kitchen state from Order payment state.
+- `telegram_dispatch_jobs` stores the durable one-per-Order delivery instruction.
 - `audit_logs.details` uses JSON for action-specific evidence that does not need
   a dedicated column for every event type.
 
@@ -118,6 +119,7 @@ erDiagram
     STALLS ||--o{ TELEGRAM_GROUP_CONNECTIONS : "receives setup attempts"
     USERS ||--o{ TELEGRAM_GROUP_CONNECTIONS : "creates"
     ORDERS ||--o{ TELEGRAM_TICKETS : "dispatches"
+    ORDERS ||--o| TELEGRAM_DISPATCH_JOBS : "queues delivery"
 ```
 
 ## 5. Table Inventory
@@ -138,6 +140,7 @@ erDiagram
 | 12 | `telegram_group_connections` | Kitchen | One short-lived setup attempt | `stall_id` |
 | 13 | `telegram_tickets` | Kitchen | One Telegram dispatch state record | `order_id` |
 | 14 | `refresh_sessions` | Identity | One rotating browser login credential | `user_id` and optional `device_id` |
+| 15 | `telegram_dispatch_jobs` | Kitchen | One durable paid-Order delivery job | `order_id` |
 
 ## 6. Identity And Tenancy Tables
 
@@ -475,6 +478,27 @@ Deleting the creating User sets `created_by_user_id` to `NULL`.
 The pair (`telegram_chat_id`, `telegram_msg_id`) is unique. Deleting an Order
 cascades to its tickets.
 
+### 10.4 `telegram_dispatch_jobs`
+
+**Purpose:** Makes paid-Order kitchen delivery durable across backend restarts.
+
+| Column | Type | Null/default | Key | Meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `BIGINT` | Auto increment | PK | Job identifier |
+| `order_id` | `INT` | Required | Unique/FK → `orders.id` | One job per paid Order |
+| `status` | `ENUM` | Required; `pending` | Indexed | `pending`, `processing`, `retry`, `sent`, or `failed` |
+| `attempt_count` | `INT UNSIGNED` | Required; `0` |  | Number of worker claims |
+| `next_attempt_at` | `DATETIME` | Required/current time | Indexed | Earliest retry time |
+| `last_attempt_at` | `DATETIME` | Nullable |  | Most recent claim time |
+| `locked_at` | `DATETIME` | Nullable | Indexed | Worker claim time |
+| `locked_by` | `VARCHAR(64)` | Nullable |  | Worker instance identifier |
+| `last_error` | `VARCHAR(500)` | Nullable |  | Bounded non-secret failure summary |
+| `created_at` | `DATETIME` | Required/current time |  | Enqueue time |
+| `updated_at` | `DATETIME` | Required/current time |  | Last state change |
+
+Deleting an Order cascades to its job. The payment transaction creates the job;
+the worker performs the external Telegram call after commit.
+
 ## 11. Relationship And Delete Matrix
 
 | Parent | Child/relationship | Cardinality | Delete behavior |
@@ -500,6 +524,7 @@ cascades to its tickets.
 | `stalls` | `telegram_group_connections` | One-to-many | Cascade |
 | `users` | `telegram_group_connections` | One-to-many | Set `NULL` |
 | `orders` | `telegram_tickets` | One-to-many | Cascade |
+| `orders` | `telegram_dispatch_jobs` | One-to-zero/one | Cascade |
 
 Operational entities normally use soft deletion, reducing the need to delete
 historical Orders or audit evidence.
@@ -517,6 +542,7 @@ historical Orders or audit evidence.
 - Telegram Cook identity is unique per Stall.
 - Telegram group-connection token hashes are unique.
 - Telegram chat/message ticket pairs are unique.
+- Telegram dispatch Order IDs are unique.
 - Payment references are unique when present.
 - Required foreign keys reject missing related rows.
 - Enumerations restrict role, state, tone, payment method, and audit action.
@@ -535,6 +561,7 @@ historical Orders or audit evidence.
 - Only allowed actors confirm cash or retry Telegram delivery.
 - Only active, visible, non-deleted Products can be sold.
 - Telegram callbacks match exact ticket/chat/message context and an active Cook.
+- Worker claims use row locks; retries stop at the configured attempt limit.
 
 The distinction is important: bypassing service logic could violate an
 application-enforced rule even when foreign keys remain valid.
@@ -561,6 +588,9 @@ application-enforced rule even when foreign keys remain valid.
 | `telegram_group_connections` | (`stall_id`, `expires_at`) | Pending/expired setup lookup |
 | `telegram_tickets` | Order, chat, status | Dispatch and completion lookup |
 | `telegram_tickets` | Unique (`telegram_chat_id`, `telegram_msg_id`) | Exact callback context |
+| `telegram_dispatch_jobs` | Unique `order_id` | One durable delivery instruction per Order |
+| `telegram_dispatch_jobs` | (`status`, `next_attempt_at`) | Due-job worker scan |
+| `telegram_dispatch_jobs` | (`status`, `locked_at`) | Abandoned claim recovery |
 
 The three non-unique Order indexes are declared in the Sequelize model but are
 currently missing from `schema.sql`; see Section 15.
@@ -704,7 +734,7 @@ and service code remains the executable query behavior.
 
 ## 21. Verification Checklist
 
-- [ ] All 13 Sequelize models have a corresponding table.
+- [ ] All 15 Sequelize models have a corresponding table.
 - [ ] Every model field is represented in canonical SQL.
 - [ ] Every SQL column has an intended model mapping or documented exception.
 - [ ] Associations match foreign keys and delete behavior.
@@ -716,6 +746,7 @@ and service code remains the executable query behavior.
 - [ ] Order Item snapshots survive Product edits/deletion.
 - [ ] Cash totals and change are backend-calculated.
 - [ ] Telegram state remains independent from payment state.
+- [ ] Paid Order and Telegram dispatch job commit atomically.
 - [ ] KHQR fields are documented as retained/inactive.
 - [ ] Migration and backup procedures are tested before deployment.
 

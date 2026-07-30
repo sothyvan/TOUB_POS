@@ -126,14 +126,14 @@ These controls should be preserved during remediation.
   refresh attempts, retries failed protected requests once, and keeps Socket.IO
   credentials current.
 
-#### P1-4. Telegram kitchen dispatch is not durable across process failure
+#### P1-4. Telegram kitchen dispatch durability - Resolved
 
 - **Severity:** P1
 - **Category:** Reliability / partial failure
-- **Business impact:** Payment can commit successfully while the process exits before a Telegram ticket row is created. The sale is paid but may never reach the kitchen unless a person notices and retries.
-- **Evidence:** Cash payment commits at `backend/src/services/orders/cash-payment.service.js:81`, then dispatch starts asynchronously at `:95`. `backend/src/services/telegram.service.js:215-247` creates the ticket only inside the later dispatch call and returns early when configuration is missing.
-- **Recommended remediation:** Write a durable outbox/dispatch job in the same database transaction as payment. A worker should claim jobs, retry with backoff, record terminal failures, and use a unique order dispatch key.
-- **Acceptance criteria:** Forced termination after payment commit still leads to dispatch after restart; duplicate workers cannot send duplicate tickets; failed jobs are visible and retryable.
+- **Original impact:** Payment could commit successfully while the process exited before any durable Telegram work existed.
+- **Resolution:** Cash and retained KHQR confirmation now create one unique `telegram_dispatch_jobs` row inside the payment transaction. A background worker claims due jobs with database row locks and `SKIP LOCKED`, retries transient failures with exponential backoff, records bounded terminal errors, and resumes queued work after restart.
+- **Duplicate policy:** Concurrent workers cannot claim the same job. Existing sent/done tickets complete the job idempotently. If the process exits while Telegram's `sendMessage` outcome is unknown, the ticket/job becomes a visible manual-retry case instead of being automatically resent.
+- **Verification:** Unit coverage validates retry backoff; the live Order flow verifies that successful cash confirmation creates the outbox row.
 - **Estimated size:** L
 - **Dependencies:** Migration; background worker; monitoring; Telegram idempotency policy.
 
@@ -500,7 +500,7 @@ The live tests were not run during this audit because they require a running bac
 - [x] Implement current-user/session invalidation.
 - [x] Implement checkout idempotency and pending-payment recovery.
 - [x] Make offline messaging truthful by enforcing online-only checkout.
-- [ ] Make Telegram dispatch durable and observable.
+- [x] Make Telegram dispatch durable and observable.
 - [ ] Add error boundaries and safe production error responses.
 - [ ] Confirm KHQR flags remain disabled in all production environments.
 
@@ -527,7 +527,7 @@ Implement current-user/session invalidation, production token architecture, veri
 
 ### Phase C - Database and Reliability
 
-Adopt migrations, implement Telegram outbox/worker behavior, add readiness/graceful shutdown, improve error handling, and define currency/tax/correction/reconciliation rules.
+Adopt managed migrations, operationalize Telegram outbox monitoring, add readiness/graceful shutdown, improve error handling, and define currency/tax/correction/reconciliation rules.
 
 ### Phase D - Automated Release Confidence
 
@@ -548,7 +548,7 @@ Deploy production observability, encrypted backups, restore drills, runbooks, in
 7. **Completed:** Current-user revocation plus short-lived in-memory access JWTs,
    rotating HttpOnly refresh sessions, CSRF protection, and reuse detection are
    implemented and live/browser-tested.
-8. Make paid-order Telegram dispatch durable with an outbox and retry visibility.
+8. **Completed:** Paid-order Telegram dispatch uses a transactional outbox, locked worker claims, bounded retry, restart recovery, and existing role-scoped manual retry visibility.
 9. Add CI with clean installs, lint, tests, build, audit policy, and disposable MySQL integration tests.
 10. Define and test production operations: verified DB TLS, readiness, graceful shutdown, logging/alerts, encrypted backups, and restore.
 
@@ -582,6 +582,10 @@ Deploy production observability, encrypted backups, restore drills, runbooks, in
 | `backend: npm run test:credentials` after P1-3 remediation | Passed with layered account/IP rate limits and refresh-session revocation |
 | `backend: npm run test:orders` after P1-3 remediation | Passed; checkout, totals, RBAC, and idempotency were unchanged |
 | Browser auth verification after P1-3 remediation | Passed: no JWT/user in localStorage, protected reload restored through refresh cookie, and logout cleared cookies |
+| `backend: npm run migrate:telegram-outbox` | Passed twice; durable outbox migration is repeatable |
+| `backend: npm test` after P1-4 remediation | Passed: 17 tests, including Telegram retry-backoff coverage |
+| `backend: npm run test:orders` after P1-4 remediation | Passed; cash confirmation transactionally creates the Telegram dispatch job |
+| Frontend lint/build after P1-4 remediation | Passed; no frontend behavior changed and the existing 575.79 kB owner-portal chunk warning remains |
 
 The first sandboxed npm audit attempts could not reach the registry. They were repeated with approved network access and produced the vulnerability results above.
 

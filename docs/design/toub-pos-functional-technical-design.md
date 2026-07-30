@@ -478,7 +478,22 @@ Rejected state:
 - Stall has no connected group.
 - Telegram Bot is not configured.
 
-Retry does not change payment status.
+Retry resets or recreates the unique durable dispatch job. The background
+worker, not the HTTP request, performs the Telegram network call. Retry does not
+change payment status.
+
+**Automatic delivery**
+
+1. Payment confirmation and one `telegram_dispatch_jobs` row commit in the same
+   MySQL transaction.
+2. A worker claims a due job using a row lock and `SKIP LOCKED`.
+3. The worker creates or retries the user-visible `telegram_tickets` record.
+4. Temporary failures use exponential backoff up to the configured attempt
+   limit.
+5. Successful delivery marks both the ticket and outbox job sent.
+6. A backend restart resumes pending/retry jobs.
+7. A crash during `sendMessage` is an unknown external result; the worker marks
+   it failed for manual review rather than automatically risking a duplicate.
 
 ### 5.12 BP-10: Dashboard And Reporting
 
@@ -764,7 +779,7 @@ There is no separate Business/Tenant table.
 | Operations | `stalls`, `stall_staff`, `stall_devices` | Locations, Cashier assignment, registered terminals |
 | Catalog | `categories`, `products`, `stall_products` | Shared catalog and per-Stall selling configuration |
 | Sales | `orders`, `order_items`, `audit_logs` | Transaction, immutable item snapshot, sensitive action history |
-| Kitchen | `telegram_tickets`, `telegram_cooks`, `telegram_group_connections` | Dispatch, authorization, and secure group setup |
+| Kitchen | `telegram_dispatch_jobs`, `telegram_tickets`, `telegram_cooks`, `telegram_group_connections` | Durable dispatch, delivery state, authorization, and secure group setup |
 
 ### 10.3 Key Data Rules
 
@@ -781,6 +796,7 @@ There is no separate Business/Tenant table.
 - Payment reference is unique when present.
 - Order Item snapshot survives later Product mutation/deletion.
 - Telegram payment/ticket state is separate from Order payment state.
+- One unique Telegram dispatch job is transactionally created per paid Order.
 
 ### 10.4 Persistence And Schema Change
 

@@ -255,6 +255,26 @@ CREATE TABLE telegram_tickets (
   FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
 
+-- ── Telegram Dispatch Outbox ──────────────────────────────
+-- One durable delivery job is committed with each paid order.
+CREATE TABLE telegram_dispatch_jobs (
+  id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+  order_id        INT NOT NULL,
+  status          ENUM('pending', 'processing', 'retry', 'sent', 'failed') NOT NULL DEFAULT 'pending',
+  attempt_count   INT UNSIGNED NOT NULL DEFAULT 0,
+  next_attempt_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_attempt_at DATETIME DEFAULT NULL,
+  locked_at       DATETIME DEFAULT NULL,
+  locked_by       VARCHAR(64) DEFAULT NULL,
+  last_error      VARCHAR(500) DEFAULT NULL,
+  created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_telegram_dispatch_jobs_order (order_id),
+  KEY idx_telegram_dispatch_jobs_due (status, next_attempt_at),
+  KEY idx_telegram_dispatch_jobs_lock (status, locked_at),
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+);
+
 -- ── Seed: development bootstrap platform admin ────────────
 -- Password: platform123 (replace bcrypt hash before production)
 INSERT INTO users (username, password, pin, role) VALUES

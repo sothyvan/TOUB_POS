@@ -931,6 +931,21 @@ Update this file after every meaningful implementation change.
   - Applied the idempotent refresh-session migration. Backend/frontend lint,
     backend unit tests, the live refresh security test, frontend build, and a
     browser login/reload/logout verification pass.
+- **Closed production audit P1-4 with durable Telegram kitchen dispatch**:
+  - Added `telegram_dispatch_jobs`, one unique durable outbox row per paid
+    Order, with claim state, attempt count, retry schedule, worker lock, and
+    bounded failure detail.
+  - Cash and retained KHQR confirmation now enqueue kitchen delivery inside the
+    same MySQL transaction as the paid state and payment audit log.
+  - Added a background worker that claims due jobs with database row locks and
+    `SKIP LOCKED`, applies exponential retry backoff, recovers queued work after
+    restart, and treats unknown crash-during-send outcomes as manual-review
+    failures instead of risking an automatic duplicate.
+  - Existing Cashier/Owner/Manager retry actions now requeue the outbox job;
+    `telegram_tickets` remains the UI-facing delivery/completion record.
+  - Added an idempotent migration, Sequelize/raw SQL/ERD parity, environment
+    controls, Telegram request timeout, retry-delay unit coverage, and a live
+    Order-flow assertion for transactional enqueue.
 
 ## Next Up
 
@@ -940,13 +955,14 @@ Update this file after every meaningful implementation change.
   - P1-1 online-only checkout behavior is implemented and verified.
   - P1-2 active user-session invalidation is implemented and verified.
   - P1-3 rotating HttpOnly refresh-token architecture is implemented and verified.
+  - P1-4 durable Telegram kitchen dispatch/outbox behavior is implemented and verified.
   - Current production recommendation remains No-Go until the remaining P1 security, migration, reliability, dependency, CI, and operational controls are fixed and verified.
-  - Next priority: P1-4 durable Telegram kitchen dispatch/outbox behavior.
+  - Next priority: P1-5 managed production migrations and rollback tracking.
   - Follow the audit's phased P0/P1 plan only after team review and approval.
 
 - Post-Phase 6 Operations & Security Hardening.
   - Add payment monitoring and operational alerting for failed Bakong or Telegram operations.
-  - Decide whether failed Telegram dispatches need an automatic retry worker or if manual retry is enough for the final demo.
+  - Add operator-facing outbox metrics/alerts beyond the existing ticket status and manual retry UI.
 
 - Phase 7C Demo Stabilization & Polish.
   - Manually test the Owner/Manager report filters against seeded and real orders.
@@ -989,6 +1005,7 @@ Record of key architectural and product decisions made, with rationale.
 | 11 | **KHQR Individual before Merchant KHQR** | Final-project scope does not have official MerchantID and AcquiringBank credentials. Individual KHQR can use owner/stall Bakong account ID and is easier to demo while keeping backend-owned payment status. |
 | 12 | **Suspend KHQR behind explicit feature flags** | The available Bakong Open API polling allowance is not suitable for normal POS polling volume. Cash remains active while the team evaluates an approved merchant provider; KHQR code and historical data are retained to avoid destructive rollback. |
 | 13 | **Rotating HttpOnly refresh sessions** | Production readiness requires durable credentials to be inaccessible to JavaScript. Access JWTs stay in memory, refresh tokens rotate in Secure/HttpOnly cookies, and refresh/logout use CSRF proof. |
+| 14 | **Transactional Telegram dispatch outbox** | Payment and kitchen-delivery intent must commit together. A locked worker can safely resume queued jobs after restart and retry transient failures without coupling Telegram availability to payment success. |
 
 ---
 
