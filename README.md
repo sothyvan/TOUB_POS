@@ -96,7 +96,9 @@ Cash is the currently enabled checkout method. The previous backend-owned KHQR i
 http://localhost:3000/api
 ```
 
-See [`backend/README.md`](./backend/README.md) and [`docs/api/endpoints.md`](./docs/api/endpoints.md) for endpoint documentation.
+See the [`docs/` index](./docs/README.md), [`backend/README.md`](./backend/README.md),
+and [`docs/api/endpoints.md`](./docs/api/endpoints.md) for current project and
+endpoint documentation.
 
 ---
 

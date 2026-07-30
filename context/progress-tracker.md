@@ -59,6 +59,35 @@ Update this file after every meaningful implementation change.
   - Order, report, assigned-stall, and Socket.IO responses no longer expose Telegram user, chat, or message IDs.
   - Full identifiers remain available only to backend authorization/routing logic and MySQL persistence.
   - Added database-free regression tests for identifier masking and order-response sanitization.
+- Documentation Suite Baseline — **COMPLETE** ✅
+  - Added the code-verified current-system fact sheet, now archived at `docs/archive/reference/toub-pos-current-system-fact-sheet.md`, as the source for the PRD, functional/technical design, user flows, UI/UX design brief, and database schema document.
+  - Separated implemented behavior, retained-but-disabled KHQR behavior, and future/open scope.
+  - Recorded active roles, credential rules, route access, device binding, backend-owned cash orders, Telegram kitchen security, reporting, entities, environment requirements, and common stale-document traps.
+- Product Requirements Document — **COMPLETE** ✅
+  - Added `docs/product/toub-pos-prd.md` as an as-built Agile PRD based on the current-system fact sheet.
+  - Added stable requirement IDs across identity, RBAC, devices, catalog, orders, cash, QR, Telegram, reporting, real-time updates, and non-functional requirements.
+  - Documented user stories, permission matrix, success targets, assumptions, dependencies, risks, release boundaries, open product questions, and traceability rules for the remaining documentation suite.
+- Functional And Technical Design Document — **COMPLETE** ✅
+  - Added `docs/design/toub-pos-functional-technical-design.md` using the combined FDD/TDD structure.
+  - Documented organizational responsibilities, cross-functional business processes, frontend/backend architecture, API and data boundaries, security, integrations, reporting, operations, testing, design decisions, limitations, and requirement-to-component traceability.
+  - Added Mermaid diagrams for role hierarchy, authentication, terminal login, backend-owned cash checkout, order state, Telegram authorization, system context, layered backend flow, and trust boundaries.
+- User Flow Diagram Document — **COMPLETE** ✅
+  - Added `docs/design/toub-pos-user-flow-diagrams.md` using a user-goal, entry-point, action, decision, endpoint, and recovery-path structure.
+  - Documented the current Platform Admin bootstrap, management login, terminal registration, Cashier PIN login, staff assignment, catalog, cash checkout, Telegram kitchen, group connection, Cook authorization, reporting, and terminal-revocation journeys.
+  - Added Mermaid diagrams, cross-flow recovery rules, usability friction notes, PRD traceability, and a team user-testing checklist while keeping KHQR clearly suspended.
+- Database Schema Document — **COMPLETE WITH PARITY FOLLOW-UPS** ✅
+  - Added `docs/database/toub-pos-database-schema.md` with conceptual, logical, and physical schema views, a full 13-table data dictionary, ERD, relationship/delete matrix, constraints, indexes, security classification, migration, backup, query, and requirement-traceability guidance.
+  - Distinguished database-enforced constraints from service-enforced business rules, including Owner-based tenancy, role-specific credentials, one-Stall Cashier assignment, trusted prices, and Telegram authorization.
+  - Recorded existing Sequelize/SQL drift for User/Product soft-delete fields, Product activity state, Order indexes, query examples, and development seed hashes as explicit follow-up work; no schema or source changes were made during documentation.
+- UI/UX Design Brief — **COMPLETE** ✅
+  - Added `docs/design/toub-pos-ui-ux-design-brief.md` as the as-built design baseline for the public, authentication, Cashier, payment, management, catalog, Stall, staff, and reporting experiences.
+  - Documented user personas, design goals, brand personality, dual-theme color and typography systems, spacing/radius/elevation rules, responsive behavior, information architecture, shared component standards, page-level requirements, accessibility, terminology, technical constraints, acceptance criteria, and review responsibilities.
+  - Recorded current design debt around compatibility CSS, hardcoded legacy presentation styles, focus visibility, notification centralization, reduced motion, and visual-regression coverage without changing frontend code.
+- Documentation Navigation And Cleanup — **COMPLETE** ✅
+  - Added `docs/README.md` as the short entry point for current product, design, API, database, setup, and project-report documentation.
+  - Moved historical handoffs, superseded plans, past reports, and the documentation source snapshot under `docs/archive/`.
+  - Removed obsolete Admin/Cashier auth handoffs, the old frontend-auth implementation guide, the superseded full-project audit, the duplicate API workflow text diagram, and duplicate historical KHQR flow documents.
+  - Kept current code, API, payment, database, setup, and final-project documentation unchanged except for repaired archive references.
 
 - **Safely suspended KHQR payment processing**:
   - Added explicit opt-in `KHQR_ENABLED` and `VITE_KHQR_ENABLED` feature flags, both defaulting to `false`.
@@ -317,7 +346,7 @@ Update this file after every meaningful implementation change.
   - Added a short paid-order refresh fallback for cash and KHQR flows so quickly completed Telegram dispatches do not leave the cashier UI showing stale `pending` ticket state.
 
 - **Closed Phase 6 handoff and verification**:
-  - Created `docs/codex-handoff-phase-6.md` for teammate review.
+  - Created the Phase 6 teammate handoff, now archived at `docs/archive/handoffs/codex-handoff-phase-6.md`.
   - Verified backend lint, frontend lint, and frontend production build after live payment, Telegram ticket, retry, and UI refresh fixes.
   - Marked Phase 6 complete and moved remaining work into post-Phase 6 monitoring/cook-authorization follow-up.
 
