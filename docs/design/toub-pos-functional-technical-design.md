@@ -602,7 +602,8 @@ authorization.
 
 ### 7.3 State Design
 
-- Auth session and registered-terminal metadata persist in `localStorage`.
+- Access JWT/user state stays in memory and restores through the rotating
+  HttpOnly refresh session. Registered-terminal metadata persists in localStorage.
 - Theme preference persists in `localStorage`.
 - Persisted business data comes from backend APIs, not browser storage.
 - Cart and dialog state are owned by Cashier components/hooks.
@@ -848,12 +849,13 @@ Never return or log:
 Request logging masks nested sensitive keys. Telegram IDs remain complete only
 where required for backend routing/authorization and MySQL persistence.
 
-### 11.5 Browser Token Tradeoff
+### 11.5 Browser Token Architecture
 
-JWT remains in `localStorage` for final-project simplicity. An XSS vulnerability
-could steal it. Mitigations include short session lifetime, avoiding unsafe HTML,
-backend RBAC, and security headers. Production should move to short-lived access
-tokens with rotating HttpOnly refresh cookies and an explicit CSRF strategy.
+Access JWTs remain only in JavaScript memory and expire after about 15 minutes.
+An opaque refresh token rotates after every use inside a Secure, HttpOnly cookie;
+MySQL stores only SHA-256 hashes and token-family lineage. Refresh/logout require
+a readable CSRF cookie copied into `X-CSRF-Token`. The absolute session lifetime
+is eight hours, including Cashier device-bound sessions.
 
 ### 11.6 HTTP And Origin Security
 
@@ -1052,7 +1054,7 @@ A scaled deployment would likely add:
 
 | Area | Variables |
 | --- | --- |
-| Auth | `JWT_EXPIRES_IN` |
+| Auth | `JWT_ACCESS_EXPIRES_IN`, `REFRESH_SESSION_EXPIRES_HOURS`, `AUTH_COOKIE_SAME_SITE` |
 | Reporting | `REPORT_TIMEZONE_OFFSET` |
 | Telegram | Bot token, webhook secret, connection-link expiry |
 | ImageKit | Public key, private key, URL endpoint |
@@ -1149,7 +1151,7 @@ Test evidence should reference PRD IDs. Example:
 | DD-07 | Telegram ticket state separate from payment | Kitchen delivery failure must not invalidate payment |
 | DD-08 | Cook is Telegram-only | Avoids unnecessary web role and kitchen UI scope |
 | DD-09 | Real-time event followed by backend refetch | Backend remains source of truth and missed events are recoverable |
-| DD-10 | JWT in localStorage for final project | Simpler delivery; production risk is documented |
+| DD-10 | In-memory access JWT + rotating HttpOnly refresh token | Limits XSS credential exposure while supporting reload persistence and revocation |
 | DD-11 | KHQR retained but disabled | Preserves history/work while preventing unsupported live payment behavior |
 
 ## 19. Known Limitations And Future Design
@@ -1158,7 +1160,7 @@ Test evidence should reference PRD IDs. Example:
 | --- | --- | --- |
 | Platform | No Platform Admin UI or subscription model | Audited multi-customer platform console |
 | Tenancy | Owner ID is tenant key | Dedicated Business/Tenant entity |
-| Authentication | JWT in localStorage; no refresh token | Short access token + rotating HttpOnly refresh cookie |
+| Authentication | Short access token + rotating HttpOnly refresh cookie | Add multi-session management and administrator-visible revocation history if required |
 | Payments | Cash only; KHQR suspended | Approved merchant QR provider |
 | Orders | No active cancel/refund/return | Controlled state machine with permissions and audit |
 | Reliability | Manual Telegram retry | Queue with bounded retry and dead-letter monitoring |

@@ -221,13 +221,13 @@ change, and timely preparation of the Order entered by the Cashier.
 | IAM-004 | Platform Admin, Owner, and Manager shall store a bcrypt password hash and no PIN. | Must | Implemented |
 | IAM-005 | Cashier shall store a bcrypt PIN hash and no password. | Must | Implemented |
 | IAM-006 | Inactive users shall be rejected during login. | Must | Implemented |
-| IAM-007 | Successful authentication shall create an access token with an eight-hour default lifetime. | Must | Implemented |
+| IAM-007 | Successful authentication shall create a short-lived access JWT and an eight-hour rotating refresh session. | Must | Implemented |
 | IAM-008 | Protected API requests shall require a valid JWT. | Must | Implemented |
 | IAM-009 | Protected Cashier requests shall also require the active token for the terminal bound to the Cashier JWT. | Must | Implemented |
 | IAM-010 | Logout shall clear the active browser authentication session. | Must | Implemented |
 | IAM-011 | Normal API responses shall never expose passwords, PINs, or their hashes. | Must | Implemented |
 | IAM-012 | Login and PIN endpoints shall enforce separate rate limits and return a clear `429` response. | Should | Implemented |
-| IAM-013 | A future production version should use short-lived access tokens and rotating HttpOnly refresh-token cookies. | Could | Future |
+| IAM-013 | Refresh credentials shall use rotating HttpOnly cookies, CSRF protection, hash-only database storage, reuse detection, and revocation. | Must | Implemented |
 
 ### 9.2 Roles And Authorization
 
@@ -461,7 +461,8 @@ the operation inside its authorized scope.
 
 - This is a Year 2 Software Engineering final project with limited time and
   infrastructure.
-- JWT remains in localStorage for project simplicity.
+- Access JWTs remain only in memory; rotating refresh credentials use Secure,
+  HttpOnly cookies with an eight-hour absolute session limit.
 - `platform_admin` has no current frontend console.
 - Owner identity acts as the current customer-business isolation key; there is no
   separate business/tenant table.
@@ -502,7 +503,7 @@ the operation inside its authorized scope.
 
 | ID | Risk | Impact | Current mitigation |
 | --- | --- | --- | --- |
-| RISK-001 | JWT theft through XSS because the token is in localStorage | Attacker may act as the stolen user until expiry | Eight-hour expiry, avoid unsafe HTML, backend RBAC; future HttpOnly refresh architecture |
+| RISK-001 | XSS uses or steals the current in-memory access JWT | Attacker may act as the user until the short JWT expires | 15-minute access JWT, HttpOnly rotating refresh token, backend RBAC, no unsafe HTML |
 | RISK-002 | Cross-business or cross-Stall data leakage | Serious privacy and transaction exposure | Owner-scoped and Stall-scoped backend queries; do not trust client IDs |
 | RISK-003 | Shared Cashier PIN brute force | Unauthorized terminal use | Registered device requirement, bcrypt PIN, stricter PIN rate limit |
 | RISK-004 | Telegram delivery failure | Kitchen misses a paid Order | Separate ticket state, live failure status, scoped manual retry |

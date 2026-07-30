@@ -15,7 +15,7 @@ const errorResponse = {
 };
 
 const jwtResponse = {
-    description: 'JWT login response',
+    description: 'Short-lived access JWT response; also sets rotating refresh and CSRF cookies',
     content: {
         'application/json': {
             schema: {
@@ -26,6 +26,11 @@ const jwtResponse = {
                         type: 'object',
                         properties: {
                             token: { type: 'string', example: '<jwt>' },
+                            csrfToken: {
+                                type: 'string',
+                                example: '<csrf-proof>',
+                                description: 'Non-credential proof copied to X-CSRF-Token for refresh/logout.'
+                            },
                             user: {
                                 type: 'object',
                                 properties: {
@@ -53,7 +58,8 @@ export const swaggerDocument = {
             'RBAC roles: platform_admin, owner, manager, cashier.',
             'Platform Admin is a temporary API/bootstrap role for creating business owners only.',
             'Platform Admin/Owner/Manager use username + password. Cashier uses PIN login.',
-            'Protected routes require Authorization: Bearer <token>.',
+            'Protected routes require a short-lived in-memory Authorization: Bearer <token>.',
+            'Session restoration uses a rotating HttpOnly refresh cookie plus X-CSRF-Token.',
             'Protected requests verify the JWT session_version against the current active user. User changes may return 401 SESSION_INVALIDATED.',
             'Rate-limited auth endpoints may return 429.',
             'Bakong Open API tokens are backend-only; the frontend never calls Bakong directly.'
@@ -61,7 +67,9 @@ export const swaggerDocument = {
     },
     components: {
         securitySchemes: {
-            bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }
+            bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+            refreshCookie: { type: 'apiKey', in: 'cookie', name: 'toub_refresh_token' },
+            csrfHeader: { type: 'apiKey', in: 'header', name: 'X-CSRF-Token' }
         },
         responses: {
             BadRequest: errorResponse,
@@ -88,7 +96,7 @@ export const swaggerDocument = {
         '/api/auth/login': {
             post: {
                 summary: 'Platform Admin/Owner/Manager username-password login',
-                description: 'Issues a JWT for platform_admin, owner, and manager accounts. Cashier accounts must use /api/auth/pin. Platform Admin is API/bootstrap-only and does not access the management portal.',
+                description: 'Issues a short-lived access JWT and rotating HttpOnly refresh session for platform_admin, owner, and manager accounts. Cashier accounts must use /api/auth/pin. Platform Admin is API/bootstrap-only and does not access the management portal.',
                 security: [],
                 requestBody: {
                     required: true,
@@ -116,7 +124,7 @@ export const swaggerDocument = {
         '/api/auth/pin': {
             post: {
                 summary: 'Cashier PIN login',
-                description: 'Issues an 8-hour device-bound JWT for a cashier assigned to the registered terminal stall. Platform Admin/Owner/Manager accounts cannot use PIN login.',
+                description: 'Issues a short-lived device-bound access JWT plus an 8-hour rotating refresh session for a cashier assigned to the registered terminal stall. Platform Admin/Owner/Manager accounts cannot use PIN login.',
                 security: [],
                 parameters: [{
                     name: 'X-Device-Token',
@@ -145,6 +153,52 @@ export const swaggerDocument = {
                     401: { $ref: '#/components/responses/Unauthorized' },
                     403: { $ref: '#/components/responses/Forbidden' },
                     429: { $ref: '#/components/responses/TooManyRequests' }
+                }
+            }
+        },
+        '/api/auth/refresh': {
+            post: {
+                summary: 'Rotate refresh session and issue a new access JWT',
+                description: 'Consumes the current refresh token once, rotates both refresh and CSRF cookies, and returns a new short-lived access token. Cashier refreshes also require the registered X-Device-Token.',
+                security: [{ refreshCookie: [], csrfHeader: [] }],
+                parameters: [
+                    {
+                        name: 'X-CSRF-Token',
+                        in: 'header',
+                        required: true,
+                        schema: { type: 'string' },
+                        description: 'Must equal the readable toub_csrf_token cookie.'
+                    },
+                    {
+                        name: 'X-Device-Token',
+                        in: 'header',
+                        required: false,
+                        schema: { type: 'string' },
+                        description: 'Required when refreshing a cashier session.'
+                    }
+                ],
+                responses: {
+                    200: jwtResponse,
+                    401: { $ref: '#/components/responses/Unauthorized' },
+                    403: { $ref: '#/components/responses/Forbidden' },
+                    429: { $ref: '#/components/responses/TooManyRequests' }
+                }
+            }
+        },
+        '/api/auth/logout': {
+            post: {
+                summary: 'Revoke the current refresh session',
+                description: 'Revokes the presented refresh token and clears the refresh and CSRF cookies.',
+                security: [{ refreshCookie: [], csrfHeader: [] }],
+                parameters: [{
+                    name: 'X-CSRF-Token',
+                    in: 'header',
+                    required: true,
+                    schema: { type: 'string' }
+                }],
+                responses: {
+                    200: { description: 'Refresh session revoked and cookies cleared' },
+                    403: { $ref: '#/components/responses/Forbidden' }
                 }
             }
         },

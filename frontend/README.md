@@ -61,11 +61,16 @@ Frontend route guards improve UX, but backend authorization remains the source o
 
 ## Auth And Session Storage
 
-- The frontend stores the JWT access token and current user in localStorage.
-- `services/api.js` automatically attaches `Authorization: Bearer <token>` when a token exists.
-- Logout clears the token and current user.
-- `401` responses clear the session and redirect the user back to login.
-- HttpOnly refresh tokens are a future production improvement, not part of the current final-project implementation.
+- The frontend keeps the short-lived JWT access token and public user only in memory.
+- A rotating refresh token is stored in a backend-issued HttpOnly cookie.
+- Page reload restores the session through `POST /api/auth/refresh`.
+- `services/apiClient.js` attaches the in-memory access token, shares one refresh
+  across concurrent `401` responses, and retries the original request once.
+- Refresh/logout send the non-credential CSRF proof returned by login/refresh
+  as `X-CSRF-Token`; this proof may be persisted because it cannot authenticate
+  without the HttpOnly refresh cookie.
+- Logout revokes the refresh session and clears browser auth state.
+- Terminal registration remains in localStorage and survives normal cashier logout.
 
 Credential rules:
 

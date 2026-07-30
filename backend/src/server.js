@@ -36,6 +36,9 @@ async function startServer() {
     await sequelize.sync(syncOptions);
     console.log('[server] Database models synchronized successfully.');
 
+    const { deleteExpiredRefreshSessions } = await import('./repositories/refresh-session.repository.js');
+    await deleteExpiredRefreshSessions();
+
     const migratedDeviceCount = await migrateLegacyStallDeviceTokens();
     if (migratedDeviceCount > 0) {
       console.log(`[server] Migrated ${migratedDeviceCount} legacy terminal registration(s).`);

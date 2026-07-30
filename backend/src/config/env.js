@@ -33,6 +33,16 @@ function validateBooleanEnv(name, errors) {
   }
 }
 
+function validatePositiveIntegerEnv(name, errors, { max = Number.MAX_SAFE_INTEGER } = {}) {
+  if (isBlank(process.env[name])) {
+    return;
+  }
+  const value = Number(process.env[name]);
+  if (!Number.isInteger(value) || value <= 0 || value > max) {
+    errors.push(`${name} must be a positive integer no greater than ${max}.`);
+  }
+}
+
 export function isKhqrEnabled() {
   return String(process.env.KHQR_ENABLED || '').trim().toLowerCase() === 'true';
 }
@@ -73,6 +83,17 @@ export function validateEnvironment() {
 
   validateBooleanEnv('KHQR_ENABLED', errors);
   validateBooleanEnv('KHQR_BACKGROUND_CHECK_ENABLED', errors);
+  validatePositiveIntegerEnv('REFRESH_SESSION_EXPIRES_HOURS', errors, { max: 720 });
+
+  if (!isBlank(process.env.AUTH_COOKIE_SAME_SITE)) {
+    const sameSite = String(process.env.AUTH_COOKIE_SAME_SITE).trim().toLowerCase();
+    if (!['strict', 'lax', 'none'].includes(sameSite)) {
+      errors.push('AUTH_COOKIE_SAME_SITE must be strict, lax, or none.');
+    }
+    if (sameSite === 'none' && !isProduction) {
+      errors.push('AUTH_COOKIE_SAME_SITE=none requires production HTTPS.');
+    }
+  }
 
   if (isConfiguredValue(process.env.TELEGRAM_BOT_TOKEN)) {
     requireEnv('TELEGRAM_WEBHOOK_SECRET', errors);

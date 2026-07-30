@@ -56,10 +56,16 @@ cp backend/.env.example backend/.env
 | `DB_USER`        | `root`                 | MySQL user                   |
 | `DB_PASSWORD`    | `yourpassword`         | MySQL password               |
 | `JWT_SECRET`     | `change_me_in_prod`    | JWT signing secret           |
-| `JWT_EXPIRES_IN` | `8h`                   | Token lifetime               |
+| `JWT_ACCESS_EXPIRES_IN` | `15m`          | In-memory access JWT lifetime |
+| `REFRESH_SESSION_EXPIRES_HOURS` | `8`    | Absolute refresh-session lifetime |
+| `AUTH_COOKIE_SAME_SITE` | `lax`           | Development cookie policy |
 | `PLATFORM_ADMIN_USERNAME` | `platform_admin` | Local bootstrap username |
 | `PLATFORM_ADMIN_PASSWORD` | `platform123` | Local bootstrap password |
 | `PLATFORM_ADMIN_ROLE` | `platform_admin` | Local bootstrap role |
+
+Use `http://localhost:5173` with the default `http://localhost:3000/api`
+configuration. Do not mix `localhost` and `127.0.0.1`; browsers treat them as
+different sites and will not send the development `SameSite=Lax` refresh cookie.
 
 ---
 

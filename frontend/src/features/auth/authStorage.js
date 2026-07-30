@@ -1,7 +1,9 @@
-export const AUTH_STORAGE_KEYS = {
+const LEGACY_AUTH_STORAGE_KEYS = {
   TOKEN: 'toub-auth-token',
   USER: 'toub-current-user',
 };
+const LOGOUT_PENDING_KEY = 'toub-auth-logout-pending';
+const CSRF_STORAGE_KEY = 'toub-auth-csrf-token';
 
 export const DEVICE_STORAGE_KEYS = {
   TOKEN: 'toub-device-token',
@@ -10,30 +12,38 @@ export const DEVICE_STORAGE_KEYS = {
   REGISTERED: 'toub-device-registered',
 };
 
-export function readStoredSession() {
-  const token = localStorage.getItem(AUTH_STORAGE_KEYS.TOKEN);
-  const rawUser = localStorage.getItem(AUTH_STORAGE_KEYS.USER);
-
-  if (!token || !rawUser) {
-    return { token: null, user: null };
-  }
-
-  try {
-    return { token, user: JSON.parse(rawUser) };
-  } catch {
-    clearStoredSession();
-    return { token: null, user: null };
+export function clearStoredSession({ preserveCsrf = false } = {}) {
+  localStorage.removeItem(LEGACY_AUTH_STORAGE_KEYS.TOKEN);
+  localStorage.removeItem(LEGACY_AUTH_STORAGE_KEYS.USER);
+  if (!preserveCsrf) {
+    localStorage.removeItem(CSRF_STORAGE_KEY);
   }
 }
 
-export function writeStoredSession(token, user) {
-  localStorage.setItem(AUTH_STORAGE_KEYS.TOKEN, token);
-  localStorage.setItem(AUTH_STORAGE_KEYS.USER, JSON.stringify(user));
+export function readStoredCsrfToken() {
+  return localStorage.getItem(CSRF_STORAGE_KEY);
 }
 
-export function clearStoredSession() {
-  localStorage.removeItem(AUTH_STORAGE_KEYS.TOKEN);
-  localStorage.removeItem(AUTH_STORAGE_KEYS.USER);
+export function writeStoredCsrfToken(token) {
+  if (token) {
+    localStorage.setItem(CSRF_STORAGE_KEY, token);
+  }
+}
+
+export function clearStoredCsrfToken() {
+  localStorage.removeItem(CSRF_STORAGE_KEY);
+}
+
+export function isLogoutPending() {
+  return localStorage.getItem(LOGOUT_PENDING_KEY) === 'true';
+}
+
+export function markLogoutPending() {
+  localStorage.setItem(LOGOUT_PENDING_KEY, 'true');
+}
+
+export function clearLogoutPending() {
+  localStorage.removeItem(LOGOUT_PENDING_KEY);
 }
 
 export function readStoredDeviceToken() {

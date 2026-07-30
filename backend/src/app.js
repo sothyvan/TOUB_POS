@@ -21,6 +21,7 @@ app.use(helmet({
   contentSecurityPolicy: false,
 }));
 app.use(cors({
+  credentials: true,
   origin(origin, callback) {
     const isDev = process.env.NODE_ENV !== 'production';
     const allowedOrigin = process.env.FRONTEND_ORIGIN || (isDev ? 'http://localhost:5173' : null);

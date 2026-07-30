@@ -95,6 +95,31 @@ WHERE id = 2;
 ALTER TABLE users
 ADD COLUMN session_version INT NOT NULL DEFAULT 1;
 
+-- Create a refresh session after successful credential validation.
+-- Application code generates random raw tokens and stores only SHA-256 hashes.
+INSERT INTO refresh_sessions (
+  user_id, device_id, token_hash, csrf_token_hash, family_id,
+  session_version, expires_at
+) VALUES (?, ?, ?, ?, ?, ?, ?);
+
+-- Lock the presented refresh token before one-time rotation.
+SELECT *
+FROM refresh_sessions
+WHERE token_hash = ?
+FOR UPDATE;
+
+-- Consume the old token and link it to its replacement.
+UPDATE refresh_sessions
+SET revoked_at = NOW(),
+    last_used_at = NOW(),
+    replaced_by_token_hash = ?
+WHERE id = ? AND revoked_at IS NULL;
+
+-- Revoke all refresh sessions after a credential, role, or account-state change.
+UPDATE refresh_sessions
+SET revoked_at = NOW()
+WHERE user_id = ? AND revoked_at IS NULL;
+
 
 -- ── 2. STALLS CRUD (stall.repository.js) ───────────────────
 

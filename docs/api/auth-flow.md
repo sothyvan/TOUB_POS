@@ -2,7 +2,10 @@
 
 ## Overview
 
-Toub POS uses **JWT (JSON Web Token)** for stateless authentication and **Role-Based Access Control (RBAC)** to gate endpoints by staff role.
+TouB POS uses short-lived **JWT access tokens**, rotating opaque refresh tokens,
+and **Role-Based Access Control (RBAC)**. Access JWTs stay in browser memory.
+Refresh tokens stay in Secure, HttpOnly cookies and are stored only as SHA-256
+hashes in MySQL.
 
 ---
 
@@ -33,11 +36,12 @@ Client                          Server
   │                               │  2. Lookup user in DB
   │                               │  3. Reject cashier accounts
   │                               │  4. bcrypt.compare(password, hash)
-  │                               │  5. Sign JWT { id, username, role, owner_id, session_version } — 8h expiry
+  │                               │  5. Sign short-lived JWT with identity/session claims
+  │                               │  6. Store hashed 8h refresh session in MySQL
   │◀──────────────────────────────│
-  │  { token, user }              │
+  │  { token, user } + refresh/CSRF cookies
   │                               │
-  │  Store token in localStorage  │
+  │  Keep access JWT in memory    │
 ```
 
 ---
@@ -79,37 +83,44 @@ If `req.user.role` is not allowed, returns:
 
 ---
 
-## Token Storage (Frontend)
+## Token Storage And Rotation
 
-| Key                  | Storage       | Value        |
-|----------------------|---------------|--------------|
-| `toub-auth-token`    | localStorage  | Raw JWT string |
-| `toub-current-user`  | localStorage  | `{ id, username, role, owner_id }` |
-| `toub-device-registered` | localStorage | `true` — terminal auth flag |
+| Item | Storage | JavaScript-readable? |
+| --- | --- | --- |
+| Access JWT | React/module memory | Yes; short-lived and lost on reload |
+| `toub_refresh_token` | Secure HttpOnly cookie | No |
+| `toub_csrf_token` | Secure API cookie | Readable only when frontend/API share a site |
+| CSRF proof | Frontend localStorage | Yes; non-credential value copied to `X-CSRF-Token` |
+| Refresh token hash/session lineage | MySQL `refresh_sessions` | Backend only |
+| Terminal registration token | localStorage | Yes; independently revocable device credential |
 
-TouB POS intentionally keeps the JWT access token in `localStorage` for this final project because the design is simple, already integrated, and easy for the team to explain. The backend remains the source of truth for authorization.
+On page load, the frontend calls `POST /api/auth/refresh`. The browser sends the
+HttpOnly refresh cookie automatically, while Axios copies the non-credential
+CSRF proof returned by the previous login/refresh into `X-CSRF-Token`. A same-site
+CSRF cookie must match that header and its MySQL hash. Persisting only the CSRF
+proof also supports separate frontend/API domains, where frontend JavaScript
+cannot read an API-owned cookie. A successful refresh consumes the old token,
+creates a replacement in the same family, rotates both cookies, and returns a
+new short-lived access JWT and CSRF proof.
 
-Security tradeoff:
+Rotation and reuse handling:
 
-- An XSS bug could steal a token from `localStorage`.
-- The token lifetime is limited to 8 hours to match a cashier shift.
-- Passwords and PINs are hashed, login endpoints are rate-limited, and request logs mask sensitive fields.
-
-Production upgrade path:
-
-- short-lived access token
-- HttpOnly refresh token cookie
-- refresh-token rotation
-- CSRF protection strategy
-- refresh-token session revocation and rotation
+- Raw refresh tokens are never stored in MySQL or returned in JSON.
+- A refresh token can be used once. Reuse revokes its whole token family.
+- User credential/role/status changes revoke all of that user's refresh sessions.
+- Cashier refresh sessions remain bound to the registered device and stall assignment.
+- Logout revokes the current refresh session and clears both cookies.
+- XSS can still use or steal the current in-memory access token, but cannot read
+  the durable HttpOnly credential.
 
 ---
 
-## Token Expiry
+## Session Expiry
 
-- JWT lifetime: **8 hours**
-- On expiry, any authenticated request returns `401`
-- Frontend should catch `401` and redirect to `/login`
+- Access JWT lifetime: **15 minutes** by default.
+- Refresh-session maximum lifetime: **8 hours** by default, matching a cashier shift.
+- The Axios client uses one shared refresh request and retries the original API call once.
+- An invalid, expired, reused, revoked, or CSRF-failed refresh returns the user to login.
 
 ## Immediate Session Invalidation
 
@@ -136,7 +147,9 @@ Cashier terminals use a secondary PIN-based login on top of individual device re
 3. On terminal wake, the device token loads only the cashier roster assigned to its stall.
 4. Cashier selects their profile and enters a 4-digit PIN.
 5. `POST /api/auth/pin` verifies the device, cashier PIN, and same-stall assignment.
-6. The 8-hour cashier JWT includes `device_id` and `stall_id`, and every protected cashier request must present the matching active device token.
+6. The short-lived cashier JWT includes `device_id` and `stall_id`; its rotating
+   refresh session lasts at most eight hours and is bound to the same device.
+   Every protected request and refresh presents the matching active device token.
 7. Revoking one device blocks its API/socket access and emits `device:revoked`, causing that browser to clear its session immediately. Other stall devices are unaffected.
 
 PIN security:
@@ -165,10 +178,13 @@ User-management rules:
 
 ## Security Hardening
 
-- `POST /api/auth/login` is rate-limited.
-- `POST /api/auth/pin` is rate-limited more strictly for 4-digit PIN safety.
+- Login endpoints have a broad per-IP ceiling plus per-IP/account limits, so a
+  shared Stall network cannot let one user consume every account's allowance.
+- `POST /api/auth/pin` keeps the stricter per-Cashier limit required for 4-digit PIN safety.
 - Express uses Helmet security headers. Content Security Policy is disabled for now so local Swagger docs continue to work.
-- CORS is restricted to `FRONTEND_ORIGIN`, with `http://localhost:5173` as the development fallback.
+- CORS is restricted to `FRONTEND_ORIGIN`, permits credentials for auth cookies,
+  and keeps `http://localhost:5173` as the development fallback.
+- Refresh and logout require double-submit CSRF validation.
 - Request logging masks sensitive fields such as password, PIN, token, authorization, and secrets, including nested fields.
 - User edits and deletion invalidate existing JWT and Socket.IO sessions through
   the database-backed session version.

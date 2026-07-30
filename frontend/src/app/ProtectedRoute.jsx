@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../features/auth/useAuth';
 import { roleToApiRole } from '../utils/permissions';
+import LoadingState from '../components/ui/LoadingState';
 
 function homeForRole(role) {
   const normalizedRole = roleToApiRole(role);
@@ -11,7 +12,11 @@ function homeForRole(role) {
 
 export default function ProtectedRoute({ allowedRoles, children }) {
   const location = useLocation();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isRestoring } = useAuth();
+
+  if (isRestoring) {
+    return <LoadingState label="Restoring secure session..." className="min-h-svh bg-brand-bg" />;
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location }} />;

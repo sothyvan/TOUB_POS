@@ -46,6 +46,21 @@ erDiagram
         datetime created_at
     }
 
+    refresh_sessions {
+        bigint id PK
+        int user_id FK
+        int device_id FK "nullable; cashier binding"
+        varchar token_hash UK "SHA-256; raw token only in HttpOnly cookie"
+        varchar csrf_token_hash "SHA-256"
+        varchar family_id
+        int session_version
+        datetime expires_at
+        datetime last_used_at "nullable"
+        datetime revoked_at "nullable"
+        varchar replaced_by_token_hash "nullable"
+        datetime created_at
+    }
+
     stall_staff {
         int id PK
         int stall_id FK
@@ -163,6 +178,8 @@ erDiagram
     users ||--o{ stall_staff : "assigned to"
     stalls ||--o{ stall_staff : "has staff"
     stalls ||--o{ stall_devices : "registers terminals"
+    users ||--o{ refresh_sessions : "authenticates through"
+    stall_devices ||--o{ refresh_sessions : "binds cashier sessions"
     stalls ||--o{ telegram_cooks : "authorizes kitchen identities"
     stalls ||--o{ telegram_group_connections : "receives connection attempts"
     users ||--o{ telegram_group_connections : "creates setup link"
