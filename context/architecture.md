@@ -32,6 +32,9 @@
 - `backend/src/services/websocket.service.js` — WebSocket server; maps `cashier_id → socket` for isolated push.
 - `backend/src/services/order.service.js` — Stable public order-service facade consumed by controllers and background jobs.
 - `backend/src/services/orders/` — Focused order modules for creation, access/querying, cash confirmation, KHQR reconciliation, and Telegram retry/dispatch coordination.
+- `backend/src/services/report.service.js` — Report validation, response mapping, trend composition, and public report orchestration.
+- `backend/src/repositories/report.repository.js` — Owner-scoped raw SQL aggregations and paginated Sequelize ledger access.
+- `backend/src/utils/report-range.util.js` — Validated business-local date boundaries, comparison ranges, timezone conversion, and trend granularity.
 
 ### Frontend Dependency Direction
 
