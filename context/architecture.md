@@ -30,6 +30,8 @@
 - `backend/src/services/telegram.service.js` — Low-level Telegram Bot API integration and outbound kitchen ticket dispatch.
 - `backend/src/services/telegram-callback.service.js` — Inbound cook callback workflow, ticket state updates, and real-time UI notification.
 - `backend/src/services/websocket.service.js` — WebSocket server; maps `cashier_id → socket` for isolated push.
+- `backend/src/services/order.service.js` — Stable public order-service facade consumed by controllers and background jobs.
+- `backend/src/services/orders/` — Focused order modules for creation, access/querying, cash confirmation, KHQR reconciliation, and Telegram retry/dispatch coordination.
 
 ### Frontend Dependency Direction
 
@@ -43,6 +45,7 @@
 - Routes compose authentication/authorization middleware and controllers.
 - Controllers translate HTTP input/output only and call services; they do not import Sequelize models or repositories directly.
 - Services own validation, RBAC/owner-scope decisions, external-provider coordination, and multi-step workflows.
+- Large service domains may expose a stable facade while delegating to focused modules; consumers should import the facade unless they are part of the same domain.
 - Repositories own Sequelize queries and persistence details and do not import controllers or services.
 - Models define tables and associations and remain independent of HTTP concerns.
 

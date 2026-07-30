@@ -43,6 +43,15 @@ Update this file after every meaningful implementation change.
   - Restored the live credential test deleted during the device migration and updated it for registered-terminal PIN login.
   - Backend lint passes with no errors; controller/service import and credential-test syntax checks pass.
 
+- **Split the backend order service by responsibility (Step 2)**:
+  - Replaced the former 928-line order service with a stable facade that preserves every existing public export.
+  - Extracted backend-owned order creation, trusted item/total calculation, KHQR generation, and `order_created` audit logging.
+  - Extracted cash confirmation, change calculation, row locking, payment audit logging, and paid-order kitchen dispatch.
+  - Extracted KHQR provider checking, amount/currency/account validation, idempotent row-locked confirmation, WebSocket notification, and background-checker support.
+  - Extracted owner/cashier access checks, order history queries, and Telegram retry rules into focused modules under `backend/src/services/orders/`.
+  - Preserved all route/controller/background-checker imports through `backend/src/services/order.service.js`.
+  - Backend lint passes with no errors; facade export parity and full Express app imports pass.
+
 - **Standardized SweetAlert notifications**:
   - Changed management success/error feedback to bottom-right toast notifications with a 3-second timeout and visible progress bar.
   - Kept destructive confirmations and blocking loading dialogs centered so they cannot disappear before the user responds or the operation finishes.
