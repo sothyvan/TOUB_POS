@@ -156,6 +156,8 @@ CREATE TABLE orders (
   id             INT AUTO_INCREMENT PRIMARY KEY,
   stall_id       INT NOT NULL,                         -- which stall processed this order
   cashier_id     INT NOT NULL,                         -- which cashier
+  idempotency_key VARCHAR(64) DEFAULT NULL,             -- client checkout key; nullable for historical orders
+  idempotency_fingerprint VARCHAR(64) DEFAULT NULL,     -- SHA-256 of request shape for safe replay
   payment_method ENUM('cash', 'khqr') NOT NULL,
   status         ENUM('pending_payment', 'paid', 'cancelled') NOT NULL DEFAULT 'pending_payment',
   subtotal_usd   DECIMAL(10, 2) NOT NULL DEFAULT 0.00, -- sum of line totals before promos
@@ -170,6 +172,7 @@ CREATE TABLE orders (
   updated_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   completed_at   DATETIME DEFAULT NULL,
   UNIQUE KEY uq_orders_payment_reference (payment_reference),
+  UNIQUE KEY uq_orders_cashier_idempotency (cashier_id, idempotency_key),
   FOREIGN KEY (stall_id)   REFERENCES stalls(id),
   FOREIGN KEY (cashier_id) REFERENCES users(id)
 );

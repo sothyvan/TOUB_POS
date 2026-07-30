@@ -192,7 +192,7 @@ All routes require authentication.
 
 | Method | Path             | Auth | Role    | Description                    |
 |--------|------------------|------|---------|--------------------------------|
-| POST   | `/orders`        | ✅   | Cashier | Create backend-owned pending order |
+| POST   | `/orders`        | ✅   | Cashier | Create or safely replay a backend-owned pending order |
 | GET    | `/orders/:id`    | ✅   | Cashier / Owner / Manager | Fetch one order for status polling |
 | POST   | `/orders/:id/check-khqr-status` | ✅ | Cashier / Owner / Manager | Check KHQR payment status through backend |
 | POST   | `/orders/:id/confirm-cash` | ✅ | Cashier / Owner / Manager | Confirm physical cash received |
@@ -201,6 +201,17 @@ All routes require authentication.
 | GET    | `/orders`        | ✅   | Owner / Manager | Fetch all orders               |
 
 ### POST `/orders`
+
+**Required header**
+```http
+Idempotency-Key: 0d635ea2-8ea1-46a0-a195-a3ef02032594
+```
+
+The frontend generates one key when checkout begins and reuses it only while
+retrying that same cart and payment method. An exact retry returns the original
+order with `200 OK` and `Idempotent-Replayed: true`. The first successful
+creation returns `201 Created`. Reusing a key with different items, quantities,
+notes, or payment method returns `409` with code `IDEMPOTENCY_KEY_REUSED`.
 
 **Request body**
 ```json
@@ -224,6 +235,7 @@ Backend behavior:
 - Rejects hidden products, invalid quantities, and products outside the cashier's assigned stall.
 - Snapshots order item names and prices.
 - Creates orders as `pending_payment`.
+- Stores a per-cashier idempotency key and request fingerprint so a lost response cannot create a second order.
 - For KHQR, generates an Individual KHQR payload from backend-owned order totals.
 - For KHQR, stores `qr_payload`, `qr_md5`, `payment_reference`, and `payment_expires_at`.
 - For KHQR, requires `BAKONG_ACCOUNT_ID`; missing account configuration returns `503`.

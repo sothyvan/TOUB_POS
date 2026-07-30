@@ -413,7 +413,7 @@ export const api = {
         order: res.data?.order ? mapOrderToFrontend(res.data.order) : null,
       };
     },
-    async create(order) {
+    async create(order, idempotencyKey) {
       const payload = {
         paymentMethod: order.paymentMethod,
         items: order.items.map(i => ({
@@ -422,7 +422,11 @@ export const api = {
           ...(i.notes ? { notes: i.notes } : {}),
         })),
       };
-      const res = await apiRequest('/orders', { method: 'POST', body: payload });
+      const res = await apiRequest('/orders', {
+        method: 'POST',
+        body: payload,
+        headers: { 'Idempotency-Key': idempotencyKey },
+      });
       return mapOrderToFrontend(res.data);
     },
     async confirmCash(orderId, cashReceivedUsd) {

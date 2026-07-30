@@ -222,10 +222,24 @@ export const swaggerDocument = {
                 summary: 'Create backend-owned order',
                 description: [
                     'Cashier only.',
+                    'Requires a unique Idempotency-Key header for the checkout attempt.',
+                    'An exact replay returns the existing order with HTTP 200; reusing the key for different request data returns 409.',
                     'Frontend sends product IDs, quantities, optional notes, and payment method only.',
                     'Backend derives cashier/stall, calculates trusted totals, snapshots item names/prices, and starts the order as pending_payment.',
                     'KHQR is disabled by default; khqr requests return 503 KHQR_DISABLED unless KHQR_ENABLED=true.'
                 ].join(' '),
+                parameters: [{
+                    name: 'Idempotency-Key',
+                    in: 'header',
+                    required: true,
+                    schema: {
+                        type: 'string',
+                        minLength: 16,
+                        maxLength: 64,
+                        example: '0d635ea2-8ea1-46a0-a195-a3ef02032594'
+                    },
+                    description: 'Stable client-generated key reused only when retrying the same checkout request.'
+                }],
                 requestBody: {
                     required: true,
                     content: {
@@ -253,10 +267,15 @@ export const swaggerDocument = {
                     }
                 },
                 responses: {
+                    200: { description: 'Existing order returned for an exact idempotent replay' },
                     201: { description: 'Order created as pending_payment' },
                     400: { $ref: '#/components/responses/BadRequest' },
                     401: { $ref: '#/components/responses/Unauthorized' },
                     403: { $ref: '#/components/responses/Forbidden' },
+                    409: {
+                        ...errorResponse,
+                        description: 'Idempotency-Key was already used for different order data'
+                    },
                     503: {
                         ...errorResponse,
                         description: 'KHQR payment method is temporarily disabled'

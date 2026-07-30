@@ -888,8 +888,20 @@ Update this file after every meaningful implementation change.
 - **Prepared the backend final-presentation guide**:
   - Traced authentication, RBAC, tenant/stall scoping, order transactions, cash/KHQR payments, Socket.IO events, Telegram tickets, and SQL reporting against the executable code.
   - Added spoken presentation scripts, workflow sequences, examiner Q&A, demo narration, and a one-page cheat sheet in `docs/
+- **Closed production audit P0-1 with retry-safe checkout idempotency**:
+  - Added a required client-generated `Idempotency-Key` for order creation, stored uniquely per cashier with a SHA-256 request fingerprint.
+  - Exact retries now return the original order; key reuse with changed items, quantities, notes, or payment method returns `409 IDEMPOTENCY_KEY_REUSED`.
+  - Retained the checkout key and created order ID in `sessionStorage` until success so cash confirmation retries resume the same order.
+  - Added an idempotent database migration, synchronized Sequelize/SQL/ERD/API docs, and added unit plus live concurrent-create coverage.
+  - Backend lint passes with existing warnings, 16 backend unit tests pass, the live order-flow test passes, and frontend lint/build pass.
 
 ## Next Up
+
+- Production-readiness remediation:
+  - A comprehensive read-only audit is recorded in `PRODUCTION_READINESS_AUDIT.md`.
+  - P0-1 checkout idempotency is implemented and verified.
+  - Current production recommendation remains No-Go until P0-2 cashier device/assignment stall consistency and the remaining P1 controls are fixed and verified.
+  - Follow the audit's phased P0/P1 plan only after team review and approval.
 
 - Post-Phase 6 Operations & Security Hardening.
   - Add payment monitoring and operational alerting for failed Bakong or Telegram operations.

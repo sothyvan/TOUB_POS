@@ -273,8 +273,13 @@ npm run test:live
 npm run seed
 npm run migrate:telegram-cooks
 npm run migrate:telegram-groups
+npm run migrate:order-idempotency
 ```
+
+Run `npm run migrate:order-idempotency` once for an existing database before
+deploying the retry-safe checkout API. New development databases receive the
+same nullable order fields and per-cashier unique index from Sequelize sync.
 
 `npm run test:credentials` expects the local API and a seeded Owner account. It creates temporary Manager, Cashier, Stall, assignment, and registered-device records, verifies device-bound PIN login and credential response safety, then cleans up those records.
 
-`npm test` runs database-free report range and Telegram callback authorization tests. `npm run test:orders` expects the local API, MySQL, and a seeded Owner account; it creates uniquely named cashier, stall, category, product, device, and order records, verifies trusted totals, stall scoping, cash change, duplicate confirmation, order history, and RBAC, then removes its database records. `npm run test:live` runs both live API suites.
+`npm test` runs database-free report range, order-idempotency, and Telegram callback authorization tests. `npm run test:orders` expects the local API, MySQL, and a seeded Owner account; it creates uniquely named cashier, stall, category, product, device, and order records, verifies trusted totals, concurrent idempotent creation, changed-payload conflicts, stall scoping, cash change, duplicate confirmation, order history, and RBAC, then removes its database records. `npm run test:live` runs both live API suites.
