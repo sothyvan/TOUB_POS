@@ -60,7 +60,7 @@ export function AuthProvider({ children }) {
         handleDeviceRevoked(payload?.message);
         return;
       }
-      if (payload?.code === 'STALL_ASSIGNMENT_CHANGED') {
+      if (['STALL_ASSIGNMENT_CHANGED', 'SESSION_INVALIDATED'].includes(payload?.code)) {
         handleSessionInvalidated(payload?.message);
         return;
       }

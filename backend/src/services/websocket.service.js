@@ -2,8 +2,10 @@ import jwt from 'jsonwebtoken';
 import { Server } from 'socket.io';
 import { findDeviceByToken, markDeviceSeen } from '../repositories/stall-device.repository.js';
 import { findStaffAssignmentByUserId } from '../repositories/stall.repository.js';
+import { resolveActiveTokenSession } from './session.service.js';
 
 let ioServer = null;
+const userSockets = new Map();
 const cashierSockets = new Map();
 const managementSockets = new Map();
 const deviceSockets = new Map();
@@ -112,7 +114,11 @@ async function authenticateSocket(socket, next) {
   }
 
   try {
-    const user = jwt.verify(token, process.env.JWT_SECRET);
+    const decodedUser = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await resolveActiveTokenSession(decodedUser);
+    if (!user) {
+      return next(new Error('Your account or permissions changed. Please sign in again.'));
+    }
     const role = String(user?.role || '').toLowerCase();
     if (!['owner', 'manager', 'cashier'].includes(role)) {
       return next(new Error('This role cannot connect to live POS events.'));
@@ -124,6 +130,7 @@ async function authenticateSocket(socket, next) {
     }
 
     socket.data.user = user;
+    socket.data.userId = userId;
     socket.data.role = role;
 
     if (role === 'cashier') {
@@ -186,7 +193,8 @@ export function initializeWebSocketServer(httpServer) {
   ioServer.use(authenticateSocket);
 
   ioServer.on('connection', (socket) => {
-    const { role } = socket.data;
+    const { role, userId } = socket.data;
+    addSocket(userSockets, userId, socket.id);
 
     if (role === 'cashier') {
       const cashierId = socket.data.cashierId;
@@ -195,6 +203,7 @@ export function initializeWebSocketServer(httpServer) {
       addDeviceSocket(deviceId, socket.id);
 
       socket.on('disconnect', () => {
+        removeSocket(userSockets, userId, socket.id);
         removeCashierSocket(cashierId, socket.id);
         removeDeviceSocket(deviceId, socket.id);
       });
@@ -206,6 +215,7 @@ export function initializeWebSocketServer(httpServer) {
     addManagementSocket(ownerId, socket.id);
 
     socket.on('disconnect', () => {
+      removeSocket(userSockets, userId, socket.id);
       removeManagementSocket(ownerId, socket.id);
     });
   });
@@ -432,6 +442,37 @@ export function emitCashierSessionInvalidated(cashierId, payload = {}) {
   return true;
 }
 
+export function emitUserSessionInvalidated(userId, payload = {}) {
+  if (!ioServer) {
+    return false;
+  }
+
+  const normalizedUserId = Number(userId);
+  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+    return false;
+  }
+
+  const socketIds = userSockets.get(normalizedUserId);
+  if (!socketIds || socketIds.size === 0) {
+    return false;
+  }
+
+  for (const socketId of [...socketIds]) {
+    const socket = ioServer.sockets.sockets.get(socketId);
+    if (!socket) {
+      continue;
+    }
+
+    socket.emit('user:session_invalidated', {
+      userId: normalizedUserId,
+      message: payload.message || 'Your account or permissions changed. Please sign in again.',
+    });
+    setTimeout(() => socket.disconnect(true), 100);
+  }
+
+  return true;
+}
+
 export function getWebSocketConnectionStats() {
   let socketCount = 0;
   for (const socketIds of cashierSockets.values()) {
@@ -443,6 +484,7 @@ export function getWebSocketConnectionStats() {
 
   return {
     cashierCount: cashierSockets.size,
+    authenticatedUserCount: userSockets.size,
     managementOwnerCount: managementSockets.size,
     deviceCount: deviceSockets.size,
     socketCount,

@@ -44,6 +44,15 @@ const User = sequelize.define('User', {
     defaultValue: false,
     field: 'is_deleted',
   },
+  session_version: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 1,
+    field: 'session_version',
+    validate: {
+      min: 1,
+    },
+  },
 }, {
   indexes: [
     {

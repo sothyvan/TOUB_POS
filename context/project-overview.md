@@ -72,6 +72,7 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 
 ### Offline Resilience *(Future)*
 
+- Current checkout is intentionally online-only. If the TouB POS API is unreachable, payment actions are disabled and the cashier is told to keep the cart open until reconnection.
 - Client-side order caching when offline
 - Background sync queue on reconnect
 

@@ -7,9 +7,14 @@
 -- ── 1. USERS / STAFF CRUD (user.repository.js) ──────────────
 
 -- Find platform_admin/owner/manager by username (used for password login authentication)
-SELECT id, username, password AS password_hash, role, owner_id, is_active 
+SELECT id, username, password AS password_hash, role, owner_id, is_active, session_version
 FROM users 
-WHERE username = 'owner';
+WHERE username = 'owner' AND is_deleted = FALSE;
+
+-- Resolve current user session state for protected HTTP and Socket.IO authentication
+SELECT id, username, role, owner_id, is_active, is_deleted, session_version
+FROM users
+WHERE id = 1;
 
 -- Find user by ID (excluding password and PIN)
 SELECT id, owner_id, username, role, is_active, created_at, updated_at
@@ -17,9 +22,9 @@ FROM users
 WHERE id = 1;
 
 -- Find user by ID including PIN hash (PIN login only)
-SELECT id, username, role, pin, owner_id, is_active
+SELECT id, username, role, pin, owner_id, is_active, session_version
 FROM users
-WHERE id = 2;
+WHERE id = 2 AND is_deleted = FALSE;
 
 -- List all users (excluding password and PIN)
 SELECT id, owner_id, username, role, is_active, created_at, updated_at
@@ -60,6 +65,12 @@ UPDATE users
 SET username = 'cashier1_updated', password = NULL, pin = '$2b$10$newhashedpinstring...', role = 'cashier', owner_id = 1, is_active = TRUE
 WHERE id = 2;
 
+-- User-management updates atomically invalidate every previously issued JWT
+UPDATE users
+SET username = 'cashier1_updated',
+    session_version = session_version + 1
+WHERE id = 2;
+
 -- Development-only credential storage migration
 ALTER TABLE users
 MODIFY password VARCHAR(255) DEFAULT NULL;
@@ -72,8 +83,17 @@ ALTER TABLE users
 MODIFY password VARCHAR(255) DEFAULT NULL;
 
 -- Delete user account by ID
-DELETE FROM users 
+UPDATE users
+SET is_deleted = TRUE,
+    is_active = FALSE,
+    username = CONCAT(username, '_deleted_', UNIX_TIMESTAMP()),
+    session_version = session_version + 1
 WHERE id = 2;
+
+-- Reference DDL. The executable migration checks whether the column exists first:
+-- npm run migrate:user-session-version
+ALTER TABLE users
+ADD COLUMN session_version INT NOT NULL DEFAULT 1;
 
 
 -- ── 2. STALLS CRUD (stall.repository.js) ───────────────────

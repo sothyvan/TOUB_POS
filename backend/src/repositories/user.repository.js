@@ -1,4 +1,6 @@
-import { User, Stall } from '../models/index.js';
+import { sequelize, User, Stall } from '../models/index.js';
+
+const PUBLIC_USER_EXCLUDES = ['password', 'pin', 'session_version'];
 import { parsePagination, buildOrderClause, paginatedResponse } from '../utils/pagination.js';
 
 /**
@@ -16,6 +18,7 @@ export async function findUserByUsername(username) {
     role: user.role,
     owner_id: user.owner_id,
     is_active: user.is_active,
+    session_version: user.session_version,
   };
 }
 
@@ -25,7 +28,21 @@ export async function findUserByUsername(username) {
 export async function findUserById(id) {
   return User.findOne({
     where: { id, is_deleted: false },
-    attributes: { exclude: ['password', 'pin'] },
+    attributes: { exclude: PUBLIC_USER_EXCLUDES },
+  });
+}
+
+export function findUserSessionById(id) {
+  return User.findByPk(id, {
+    attributes: [
+      'id',
+      'username',
+      'role',
+      'owner_id',
+      'is_active',
+      'is_deleted',
+      'session_version',
+    ],
   });
 }
 
@@ -35,7 +52,7 @@ export async function findUserById(id) {
 export async function findUserWithPinById(id) {
   return User.findOne({
     where: { id, is_deleted: false },
-    attributes: ['id', 'username', 'role', 'pin', 'owner_id', 'is_active'],
+    attributes: ['id', 'username', 'role', 'pin', 'owner_id', 'is_active', 'session_version'],
   });
 }
 
@@ -62,7 +79,7 @@ export async function findAllUsers(queryOptions = {}) {
 
   const { rows, count } = await User.findAndCountAll({
     where: { is_deleted: false },
-    attributes: { exclude: ['password', 'pin'] },
+    attributes: { exclude: PUBLIC_USER_EXCLUDES },
     order: orderClause,
     limit: pagination.limit,
     offset: pagination.offset,
@@ -79,7 +96,7 @@ export async function findAllUsersByOwnerId(ownerId, queryOptions = {}) {
 
   const { rows, count } = await User.findAndCountAll({
     where: { owner_id: ownerId, is_deleted: false },
-    attributes: { exclude: ['password', 'pin'] },
+    attributes: { exclude: PUBLIC_USER_EXCLUDES },
     order: orderClause,
     limit: pagination.limit,
     offset: pagination.offset,
@@ -96,7 +113,7 @@ export async function findOwnerUsers(queryOptions = {}) {
 
   const { rows, count } = await User.findAndCountAll({
     where: { role: 'owner', is_deleted: false },
-    attributes: { exclude: ['password', 'pin'] },
+    attributes: { exclude: PUBLIC_USER_EXCLUDES },
     order: orderClause,
     limit: pagination.limit,
     offset: pagination.offset,
@@ -107,11 +124,14 @@ export async function findOwnerUsers(queryOptions = {}) {
 /**
  * Update user by ID.
  */
-export async function updateUserById(id, data) {
+export async function updateUserById(id, data, { invalidateSession = false } = {}) {
   const updateData = { ...data };
   if (Object.prototype.hasOwnProperty.call(data, 'password_hash')) {
     updateData.password = data.password_hash;
     delete updateData.password_hash;
+  }
+  if (invalidateSession) {
+    updateData.session_version = sequelize.literal('session_version + 1');
   }
   const [affectedRows] = await User.update(updateData, { where: { id } });
   return affectedRows > 0;
@@ -126,11 +146,14 @@ export async function deleteUserById(id) {
     return false;
   }
 
+  const deletedSuffix = `_deleted_${Date.now()}`;
+  const deletedUsername = `${user.username.slice(0, 50 - deletedSuffix.length)}${deletedSuffix}`;
   const [affectedRows] = await User.update(
     { 
       is_deleted: true, 
       is_active: false,
-      username: `${user.username}_deleted_${Date.now()}`
+      username: deletedUsername,
+      session_version: sequelize.literal('session_version + 1'),
     },
     { where: { id } }
   );

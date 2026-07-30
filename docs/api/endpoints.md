@@ -115,7 +115,12 @@ Cashier accounts use this endpoint after selecting a profile in the terminal UI.
 | 403  | Cashier is not assigned to the device stall |
 | 429  | Too many PIN attempts |
 
-Successful cashier JWTs contain the normal identity claims plus `device_id` and `stall_id`. Every protected cashier request must send both this JWT and the same `X-Device-Token`. A revoked device receives `401` with code `DEVICE_REVOKED`.
+Successful JWTs contain a backend-owned `session_version`. Every protected
+request verifies that version and the current active user role/scope. A changed,
+deactivated, or deleted account receives `401 SESSION_INVALIDATED`. Successful
+cashier JWTs additionally contain `device_id` and `stall_id`; every protected
+cashier request must send both this JWT and the same `X-Device-Token`. A revoked
+device receives `401` with code `DEVICE_REVOKED`.
 
 ---
 
@@ -530,6 +535,12 @@ Cashier accounts require a 4-digit PIN and must not include a password.
 ```
 
 Responses never include password hashes, raw PINs, or PIN hashes.
+
+Updating a user increments their internal session version and immediately
+disconnects that user's active web sockets. Deactivation, credential/role/name
+changes, and deletion therefore invalidate existing JWTs. Reactivation requires
+a fresh login and does not revive an older token. `session_version` is internal
+and is not returned by user-management or login responses.
 
 ### GET `/users/me/stall`
 

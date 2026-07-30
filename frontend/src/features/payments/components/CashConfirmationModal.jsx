@@ -8,6 +8,8 @@ export default function CashConfirmationModal({
   isOpen,
   total = 0,
   isBusy = false,
+  isOnline = true,
+  isCheckingBackend = false,
   error,
   onCancel,
   onConfirm,
@@ -25,7 +27,7 @@ export default function CashConfirmationModal({
   ), [cashReceived, parsedCashReceived]);
   const changeDue = hasValidAmount ? parsedCashReceived - totalAmount : 0;
   const isUnderpaid = hasValidAmount && changeDue < -0.001;
-  const canConfirm = hasValidAmount && !isUnderpaid && !isBusy;
+  const canConfirm = hasValidAmount && !isUnderpaid && !isBusy && isOnline;
 
   function handleConfirm() {
     if (!canConfirm) {
@@ -126,6 +128,14 @@ export default function CashConfirmationModal({
         {error ? (
           <Alert variant="danger" className="mb-4 text-left" title="Payment failed">
             {error}
+          </Alert>
+        ) : null}
+
+        {!isOnline ? (
+          <Alert variant="warning" className="mb-4 text-left" title="Payment unavailable">
+            {isCheckingBackend
+              ? 'Checking the TouB POS server. Payment will be enabled when it responds.'
+              : 'The server is unreachable. Do not accept payment yet; keep this dialog open and retry after reconnection.'}
           </Alert>
         ) : null}
 

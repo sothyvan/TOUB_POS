@@ -47,7 +47,13 @@ export async function loginUser(username, password) {
   }
 
   const token = jwt.sign(
-    { id: user.id, username: user.username, role: user.role, owner_id: user.owner_id },
+    {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      owner_id: user.owner_id,
+      session_version: user.session_version,
+    },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
   );
@@ -103,6 +109,7 @@ export async function loginWithPin(userId, pin, deviceToken) {
       username: user.username,
       role: user.role,
       owner_id: user.owner_id,
+      session_version: user.session_version,
       device_id: device.id,
       stall_id: device.stall_id,
     },

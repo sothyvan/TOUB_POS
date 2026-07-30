@@ -19,6 +19,8 @@ CREATE TABLE users (
   pin        VARCHAR(255) DEFAULT NULL,                -- bcrypt hash for cashier PIN login
   role       ENUM('platform_admin', 'owner', 'manager', 'cashier') NOT NULL DEFAULT 'cashier',
   is_active  BOOLEAN NOT NULL DEFAULT TRUE,
+  is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+  session_version INT NOT NULL DEFAULT 1,                  -- incremented to invalidate existing JWT/socket sessions
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL

@@ -75,6 +75,9 @@ export function connectCashierSocket({
   cashierSocket.on('cashier:session_invalidated', (payload) => {
     onSessionInvalidated?.(payload);
   });
+  cashierSocket.on('user:session_invalidated', (payload) => {
+    onSessionInvalidated?.(payload);
+  });
 
   cashierSocket.on('connect_error', (error) => {
     if (onConnectError) {
@@ -88,6 +91,7 @@ export function connectCashierSocket({
 export function connectManagementSocket({
   onKitchenTicketUpdated,
   onOrderUpdated,
+  onSessionInvalidated,
   onConnectError,
 } = {}) {
   const token = localStorage.getItem(AUTH_STORAGE_KEYS.TOKEN);
@@ -115,6 +119,9 @@ export function connectManagementSocket({
   });
   managementSocket.on('telegram_group_updated', (payload) => {
     notifyManagementUpdate('telegram_group_updated', payload);
+  });
+  managementSocket.on('user:session_invalidated', (payload) => {
+    onSessionInvalidated?.(payload);
   });
 
   managementSocket.on('connect_error', (error) => {

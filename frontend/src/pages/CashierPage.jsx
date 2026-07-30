@@ -4,7 +4,7 @@ import { getPermissions, roleToApiRole } from '../utils/permissions';
 import { api } from '../services/api';
 import { connectCashierSocket, disconnectCashierSocket } from '../services/socketClient';
 import { useAuth } from '../features/auth/useAuth';
-import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import { useBackendAvailability } from '../hooks/useBackendAvailability';
 import { useCart } from '../hooks/useCart';
 import { useProducts } from '../hooks/useProducts';
 import { useOrders } from '../hooks/useOrders';
@@ -86,7 +86,11 @@ export default function CashierPage() {
   }, [isCashier]);
 
   // ── Hooks ─────────────────────────────────────────────────────────────────
-  const isOnline = useOnlineStatus();
+  const {
+    isBackendAvailable: isOnline,
+    isCheckingBackend,
+    markBackendUnavailable,
+  } = useBackendAvailability();
 
   const {
     categories, categoryById, filteredProducts,
@@ -109,7 +113,9 @@ export default function CashierPage() {
     checkoutLoading,
     checkoutError,
   } =
-    useOrders(isOnline, cart, clearCart, currentUser);
+    useOrders(isOnline, cart, clearCart, currentUser, {
+      onConnectionFailure: markBackendUnavailable,
+    });
 
   const [activeReceipt, setActiveReceipt] = useState(null);
   const [cashierNotice, setCashierNotice] = useState(null);
@@ -172,6 +178,14 @@ export default function CashierPage() {
 
   const handleCheckoutWithReceipt = async (method) => {
     setCashierNotice(null);
+    if (!isOnline) {
+      setCashierNotice({
+        variant: 'warning',
+        title: 'Checkout unavailable',
+        message: 'TouB POS cannot reach the server. Keep the cart open and retry when the connection returns.',
+      });
+      return;
+    }
     if (method === 'KHQR') {
       if (!KHQR_ENABLED) {
         setCashierNotice({
@@ -517,6 +531,7 @@ export default function CashierPage() {
         cashierNotice={cashierNotice}
         onDismissCashierNotice={() => setCashierNotice(null)}
         isOnline={isOnline}
+        isCheckingBackend={isCheckingBackend}
         assignedStall={assignedStall}
         onRetryTelegramDispatch={handleRetryTelegramDispatch}
         onResumeKhqrPayment={KHQR_ENABLED ? handleResumeKhqrPayment : undefined}
@@ -533,6 +548,8 @@ export default function CashierPage() {
           isOpen
           total={total}
           isBusy={checkoutLoading}
+          isOnline={isOnline}
+          isCheckingBackend={isCheckingBackend}
           error={checkoutError}
           onCancel={() => {
             if (!checkoutLoading) setPendingPaymentMethod(null);

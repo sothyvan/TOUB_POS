@@ -12,12 +12,14 @@ import { useAutoRefresh } from './useAutoRefresh';
 
 /**
  * Manages order history and checkout logic.
- * @param {boolean}  isOnline
+ * @param {boolean}  isOnline - whether the TouB POS backend is reachable
  * @param {Array}    cart
  * @param {Function} clearCart
  * @param {Object}   currentUser
+ * @param {Object}   options
  */
-export function useOrders(isOnline, cart, clearCart, currentUser) {
+export function useOrders(isOnline, cart, clearCart, currentUser, options = {}) {
+  const { onConnectionFailure } = options;
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -39,12 +41,15 @@ export function useOrders(isOnline, cart, clearCart, currentUser) {
       setOrders(data);
       return data;
     } catch (err) {
+      if (err.status === 0) {
+        onConnectionFailure?.();
+      }
       setError(err.message || 'Failed to load orders.');
       return [];
     } finally {
       if (showSpinner) setLoading(false);
     }
-  }, [currentUser]);
+  }, [currentUser, onConnectionFailure]);
 
   useEffect(() => {
     const timerId = window.setTimeout(() => {
@@ -77,13 +82,15 @@ export function useOrders(isOnline, cart, clearCart, currentUser) {
       setCheckoutError('Add at least one item before checkout.');
       return null;
     }
+    if (!isOnline) {
+      setCheckoutError(
+        'Checkout is unavailable because TouB POS cannot reach the server. Your cart is still here; retry after the connection returns.'
+      );
+      return null;
+    }
     const normalizedMethod = String(method || '').toUpperCase();
     if (normalizedMethod === 'KHQR' && !KHQR_ENABLED) {
       setCheckoutError('KHQR payments are temporarily unavailable. Please use cash.');
-      return null;
-    }
-    if (normalizedMethod === 'KHQR' && !isOnline) {
-      setCheckoutError('KHQR needs an internet connection. Take cash or reconnect the terminal.');
       return null;
     }
 
@@ -140,6 +147,9 @@ export function useOrders(isOnline, cart, clearCart, currentUser) {
       clearCart();
       return finalOrder;
     } catch(err) {
+      if (err.status === 0) {
+        onConnectionFailure?.();
+      }
       const message = err.message || 'Failed to checkout.';
       setCheckoutError(message);
       return null;

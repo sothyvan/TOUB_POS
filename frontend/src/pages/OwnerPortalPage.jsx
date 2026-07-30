@@ -11,7 +11,7 @@ import PageShell from '../shared/layout/PageShell';
 import OwnerWorkspace from '../features/management/components/OwnerWorkspace';
 
 export default function OwnerPortalPage() {
-  const { user: currentUser, logout } = useAuth();
+  const { user: currentUser, logout, handleSessionInvalidated } = useAuth();
 
   // ── Permissions ───────────────────────────────────────────────────────────
   const { canManageMenu, canManageUsers, canViewOrders } = getPermissions(currentUser);
@@ -55,13 +55,14 @@ export default function OwnerPortalPage() {
     connectManagementSocket({
       onKitchenTicketUpdated: refreshOrders,
       onOrderUpdated: refreshOrders,
+      onSessionInvalidated: (payload) => handleSessionInvalidated(payload?.message),
     });
 
     return () => {
       mounted = false;
       disconnectManagementSocket();
     };
-  }, [currentUser, canViewOrders, fetchOrders]);
+  }, [currentUser, canViewOrders, fetchOrders, handleSessionInvalidated]);
 
   // ── Logout ────────────────────────────────────────────────────────────────
   const handleLogout = () => {

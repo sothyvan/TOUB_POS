@@ -54,6 +54,7 @@ export const swaggerDocument = {
             'Platform Admin is a temporary API/bootstrap role for creating business owners only.',
             'Platform Admin/Owner/Manager use username + password. Cashier uses PIN login.',
             'Protected routes require Authorization: Bearer <token>.',
+            'Protected requests verify the JWT session_version against the current active user. User changes may return 401 SESSION_INVALIDATED.',
             'Rate-limited auth endpoints may return 429.',
             'Bakong Open API tokens are backend-only; the frontend never calls Bakong directly.'
         ].join(' ')
@@ -426,7 +427,7 @@ export const swaggerDocument = {
         '/api/users': {
             get: {
                 summary: 'List users',
-                description: 'Platform Admin/Owner/Manager only. Platform Admin sees owner accounts only; Managers see/manage cashier accounts only. Password and PIN hashes are never returned.'
+                description: 'Platform Admin/Owner/Manager only. Platform Admin sees owner accounts only; Managers see/manage cashier accounts only. Password, PIN, and internal session-version fields are never returned.'
             },
             post: {
                 summary: 'Create user',
@@ -442,11 +443,11 @@ export const swaggerDocument = {
         '/api/users/{id}': {
             put: {
                 summary: 'Update user',
-                description: 'Owner/Manager only, with server-side role and credential rules. Platform Admin cannot update users in this temporary bootstrap implementation.'
+                description: 'Owner/Manager only, with server-side role and credential rules. Platform Admin cannot update users in this temporary bootstrap implementation. A successful update increments the target user session version and invalidates existing JWT/socket sessions.'
             },
             delete: {
                 summary: 'Delete user',
-                description: 'Owner/Manager only. Platform Admin cannot delete users in this temporary bootstrap implementation. Frontend destructive actions require typed confirmation.'
+                description: 'Owner/Manager only. Platform Admin cannot delete users in this temporary bootstrap implementation. Frontend destructive actions require typed confirmation. Soft deletion invalidates the target user JWT/socket sessions immediately.'
             }
         },
         '/api/stalls': {

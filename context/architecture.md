@@ -72,10 +72,15 @@
 - Managers handle day-to-day operations and may create/manage Cashier users only.
 - Cashiers can only view and mutate transactions linked to their active session.
 - Cashier PIN login requires an active registered device for the cashier's assigned stall. Cashier JWTs include `device_id` and `stall_id`, and protected cashier requests verify the matching device token is still active.
+- Every JWT also includes `session_version`. Protected HTTP requests and Socket.IO
+  connections load the current user row and require an active, non-deleted user
+  with matching username, role, owner scope, and session version. User edits or
+  deletion increment the version and emit a targeted real-time logout event.
 - Owners and Managers have access to the management portal, transactions, reports, and operational tools according to their permission level.
 - Platform Admin, Owner, and Manager accounts store a bcrypt password hash and must have `pin = NULL`.
 - Cashier accounts store a bcrypt PIN hash and must have `password = NULL`.
 - Password hashes, raw PINs, and PIN hashes are never returned by normal API responses.
+- Internal session versions are never returned by normal user or login responses.
 - Express applies Helmet security headers while keeping local Swagger documentation compatible.
 - Future SaaS/multi-customer versions should expand `platform_admin` into a full audited platform console with tenant isolation, subscription/license management, owner recovery, and support-only access rules.
 
@@ -97,6 +102,7 @@
 - **UI State**: Handled locally within components using `useState` and `useEffect` (e.g., active modals, UI toggles).
 - **Global/Server State**: Abstracted into custom hooks (e.g., `useProducts`, `useOrders`) which interface with the central Axios-backed API service.
 - **Cart Management**: Cart state is managed globally or passed down from a parent POS container to ensure synchronization between the product grid and the order panel.
+- **Backend Availability**: Cashier checkout is online-only. The cashier page probes the public API health endpoint, reacts to browser connectivity events, and disables every payment action while the API is unreachable. The cart remains editable and is not cleared by connection failures.
 - **Authentication State**: Owned by `features/auth/`, including context, storage keys, login UI, and the login route page.
 - **Theme State**: Owned by `shared/theme/`; the selected light/dark mode is persisted in browser storage and consumed through `useTheme`.
 
@@ -115,6 +121,7 @@
 - Cashier checkout calls `POST /api/orders` with product IDs, quantities, optional notes, and payment method only.
 - Each checkout attempt sends a client-generated `Idempotency-Key`. The backend stores the key uniquely per cashier with a SHA-256 request fingerprint, returns the original order for an exact replay, and rejects key reuse with changed order data.
 - The frontend retains the key and created order ID in `sessionStorage` until checkout succeeds. A retry resumes the same pending order and never creates another order merely because a create or confirmation response was lost.
+- Cash and KHQR checkout require a reachable TouB POS backend. The UI checks backend availability every five seconds and on browser reconnect/focus, disables payment controls while unavailable, and never claims cash can complete offline.
 - The backend derives `cashier_id` from the JWT and `stall_id` from the cashier's staff assignment.
 - Authentication verifies the current cashier assignment against both the JWT and registered terminal. Order creation rechecks and locks that same assignment inside its transaction before using the verified stall ID.
 - The backend loads product prices from MySQL, calculates trusted subtotal/total values, snapshots item names/prices, and creates the order as `pending_payment`.

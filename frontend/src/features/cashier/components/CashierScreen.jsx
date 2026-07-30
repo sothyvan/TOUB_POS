@@ -92,6 +92,7 @@ export default function CashierScreen({
   cashierNotice,
   onDismissCashierNotice,
   isOnline,
+  isCheckingBackend,
   assignedStall,
 }) {
   const [retryingKitchenOrderId, setRetryingKitchenOrderId] = useState(null);
@@ -238,9 +239,9 @@ export default function CashierScreen({
           </Alert>
         ) : null}
 
-        {activeTab === 'sale' && !isOnline ? (
-          <Alert variant="warning" title="KHQR unavailable offline">
-            Cash payments can continue. Reconnect before creating KHQR payments.
+        {activeTab === 'sale' && !isOnline && !isCheckingBackend ? (
+          <Alert variant="warning" title="Checkout unavailable">
+            TouB POS cannot reach the server, so no payment can be completed. Your current cart remains available while the terminal reconnects.
           </Alert>
         ) : null}
 
@@ -513,6 +514,7 @@ export default function CashierScreen({
           checkoutLoading={checkoutLoading}
           checkoutError={checkoutError}
           isOnline={isOnline}
+          isCheckingBackend={isCheckingBackend}
           khqrEnabled={khqrEnabled}
         />
       )}

@@ -15,6 +15,7 @@
     "migrate:telegram-groups": "node src/scripts/migrations/add-telegram-group-connections.js",
     "migrate:order-idempotency": "node src/scripts/migrations/add-order-idempotency.js",
     "migrate:single-stall-assignment": "node src/scripts/migrations/enforce-single-stall-assignment.js",
+    "migrate:user-session-version": "node src/scripts/migrations/add-user-session-version.js",
     "test": "node --test tests/report-range.unit.test.js tests/khqr-suspension.unit.test.js tests/order-idempotency.unit.test.js tests/telegram-callback-authorization.unit.test.js tests/telegram-group-connection.unit.test.js tests/telegram-identifier-safety.unit.test.js",
     "test:credentials": "node --test tests/credential-model.live.test.js",
     "test:orders": "node --test tests/order-flow.live.test.js",
