@@ -37,6 +37,7 @@
 - `backend/src/utils/report-range.util.js` — Validated business-local date boundaries, comparison ranges, timezone conversion, and trend granularity.
 - `backend/src/startup/` — Automatic boot-time maintenance and process-local workers started by `server.js`.
 - `backend/src/scripts/dev/` — Manually invoked development operations such as the Ngrok/Telegram webhook tunnel.
+- `backend/tests/` — Node test-runner coverage. Unit tests are database-free; `*.live.test.js` suites require the local API/MySQL and own cleanup of temporary records.
 
 ### Frontend Dependency Direction
 

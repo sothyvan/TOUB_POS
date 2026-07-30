@@ -260,8 +260,13 @@ Common error codes:
 
 ```bash
 npm run lint
+npm test
 npm run test:credentials
+npm run test:orders
+npm run test:live
 npm run seed
 ```
 
 `npm run test:credentials` expects the local API and a seeded Owner account. It creates temporary Manager, Cashier, Stall, assignment, and registered-device records, verifies device-bound PIN login and credential response safety, then cleans up those records.
+
+`npm test` runs database-free report range tests. `npm run test:orders` expects the local API, MySQL, and a seeded Owner account; it creates uniquely named cashier, stall, category, product, device, and order records, verifies trusted totals, stall scoping, cash change, duplicate confirmation, order history, and RBAC, then removes its database records. `npm run test:live` runs both live API suites.

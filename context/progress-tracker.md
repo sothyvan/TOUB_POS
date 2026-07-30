@@ -73,6 +73,13 @@ Update this file after every meaningful implementation change.
   - Kept the real Telegram callback at `POST /api/telegram/callback` unchanged.
   - Updated current project, architecture, and roadmap wording to describe the implemented Bakong MD5 status-check and background-checker flow instead of a Bakong webhook.
 
+- **Added backend stabilization tests (Step 6)**:
+  - Added database-free tests for Cambodia-local report boundaries, invalid dates, custom-range granularity, previous-month comparisons, and percentage changes.
+  - Added an opt-in live order suite covering trusted backend totals, item snapshots, hidden and cross-stall product rejection, invalid quantities, cashier management-route denial, cash underpayment/change, duplicate confirmation, and cashier/owner histories.
+  - The live order suite creates uniquely named test data and deletes its orders, audit logs, items, products, assignments, devices, stalls, category, and cashier in foreign-key-safe order.
+  - Added `npm test`, `npm run test:orders`, and `npm run test:live`; backend lint now includes `tests/`.
+  - Unit tests pass (4/4) and backend/test lint passes with no errors. Live tests remain pending because the local API was not running.
+
 - **Standardized SweetAlert notifications**:
   - Changed management success/error feedback to bottom-right toast notifications with a 3-second timeout and visible progress bar.
   - Kept destructive confirmations and blocking loading dialogs centered so they cannot disappear before the user responds or the operation finishes.
