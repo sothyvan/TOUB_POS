@@ -91,7 +91,10 @@ TouB POS allows one Owner per customer business. Additional supervisors should b
 6. Cash confirmation uses `POST /api/orders/:id/confirm-cash`.
 7. Confirmation changes the order status to `paid` and writes an audit log.
 
-Cash is the currently enabled checkout method. The previous backend-owned KHQR implementation and historical order fields are retained, but new KHQR creation, status polling, and background checks are disabled unless both backend `KHQR_ENABLED=true` and frontend `VITE_KHQR_ENABLED=true` are explicitly configured. The default remains `false` while an approved merchant integration is evaluated.
+Cash is the currently enabled checkout method. Historical KHQR order fields and
+read-only reporting remain, but the vulnerable legacy KHQR SDK has been removed.
+`KHQR_ENABLED` and `VITE_KHQR_ENABLED` must remain `false`; enabling KHQR now
+fails closed until an approved provider adapter is implemented and reviewed.
 
 ---
 

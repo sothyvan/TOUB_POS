@@ -961,6 +961,21 @@ Update this file after every meaningful implementation change.
     blocked-by-default rollback, full empty-schema rollback/forward recovery,
     and `mysqldump` restore into a second disposable database. All disposable
     databases and dump files were removed after verification.
+- **Closed production audit P1-6 dependency remediation with bounded exceptions**:
+  - Removed the suspended `bakong-khqr` package and its obsolete Axios
+    dependency. KHQR generation now fails closed and startup rejects
+    `KHQR_ENABLED=true` until an approved provider adapter is installed.
+  - Patched backend `body-parser` and frontend React Router, PostCSS, and
+    DOMPurify dependency versions without forcing incompatible downgrades.
+  - Backend production audit now has no high/critical findings. Its remaining
+    Sequelize/UUID moderate chain is not reached through the vulnerable UUID
+    v3/v5/v6 buffer API used by the advisory.
+  - Frontend audit still reports the React Router RSC-action advisory, but TouB
+    is a client-only `BrowserRouter` SPA with no RSC/SSR/data-router server
+    action boundary. The owner, evidence, review date, and exit conditions for
+    both exceptions are recorded in `docs/security/dependency-risk-register.md`.
+  - Backend lint passed with zero errors, 19 unit tests passed, and frontend
+    lint/build passed. The existing Owner Portal chunk-size warning remains.
 
 ## Next Up
 
@@ -972,8 +987,9 @@ Update this file after every meaningful implementation change.
   - P1-3 rotating HttpOnly refresh-token architecture is implemented and verified.
   - P1-4 durable Telegram kitchen dispatch/outbox behavior is implemented and verified.
   - P1-5 managed production migrations, rollback controls, and restore drill are implemented and verified.
+  - P1-6 applicable production dependency vulnerabilities are remediated; bounded scanner exceptions are documented and time-limited.
   - Current production recommendation remains No-Go until the remaining P1 security, reliability, dependency, CI, and operational controls are fixed and verified.
-  - Next priority: P1-6 production dependency vulnerability remediation.
+  - Next priority: P1-7 verified database TLS using the provider CA.
   - Follow the audit's phased P0/P1 plan only after team review and approval.
 
 - Post-Phase 6 Operations & Security Hardening.

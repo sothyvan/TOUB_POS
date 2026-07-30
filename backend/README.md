@@ -80,14 +80,14 @@ Do not run this seeder against production or any live merchant database.
 | `PLATFORM_ADMIN_USERNAME` | Development bootstrap platform admin username | `platform_admin` |
 | `PLATFORM_ADMIN_PASSWORD` | Development bootstrap platform admin password | `platform123` |
 | `PLATFORM_ADMIN_ROLE` | Development bootstrap role; must be `platform_admin` | `platform_admin` |
-| `KHQR_ENABLED` | Explicitly enable KHQR creation and Bakong status checking; defaults to disabled | `false` |
-| `BAKONG_ACCOUNT_ID` | Required owner/stall Bakong account for Individual KHQR generation and validation | `owner@bakong` |
-| `KHQR_MERCHANT_NAME` | Name embedded in KHQR payload | `Toub POS` |
-| `KHQR_MERCHANT_CITY` | City embedded in KHQR payload | `PHNOM PENH` |
-| `KHQR_EXPIRATION_MINUTES` | KHQR payment expiration window | `10` |
-| `BAKONG_OPEN_API_BASE_URL` | Bakong Open API base URL | `https://api-bakong.nbc.gov.kh` |
-| `BAKONG_OPEN_API_TOKEN` | Backend-only Bakong Open API token | `replace_with_token` |
-| `KHQR_BACKGROUND_CHECK_ENABLED` | Enable background polling only when `KHQR_ENABLED=true` | `false` |
+| `KHQR_ENABLED` | Must remain `false` until an approved provider adapter is installed | `false` |
+| `BAKONG_ACCOUNT_ID` | Reserved historical/future-provider setting; inactive while KHQR is suspended | `owner@bakong` |
+| `KHQR_MERCHANT_NAME` | Reserved historical/future-provider merchant name | `Toub POS` |
+| `KHQR_MERCHANT_CITY` | Reserved historical/future-provider merchant city | `PHNOM PENH` |
+| `KHQR_EXPIRATION_MINUTES` | Reserved historical/future-provider expiry setting | `10` |
+| `BAKONG_OPEN_API_BASE_URL` | Reserved historical Bakong API setting | `https://api-bakong.nbc.gov.kh` |
+| `BAKONG_OPEN_API_TOKEN` | Reserved backend-only historical setting; never expose it | `replace_with_token` |
+| `KHQR_BACKGROUND_CHECK_ENABLED` | Keep `false` while KHQR is suspended | `false` |
 | `KHQR_BACKGROUND_CHECK_INTERVAL_MS` | Background KHQR check interval in milliseconds | `5000` |
 | `KHQR_BACKGROUND_CHECK_BATCH_SIZE` | Maximum pending KHQR orders checked per run | `10` |
 | `TELEGRAM_BOT_TOKEN` | Backend-only Telegram bot token used for kitchen tickets | `replace_with_bot_token` |
@@ -247,9 +247,12 @@ Order creation accepts only product IDs, quantities, optional notes, and payment
 
 Cash orders start as `pending_payment`. Cash confirmation requires `cash_received_usd`; the backend rejects underpayment, calculates `change_due_usd`, changes the status to `paid`, and writes a `cash_payment_confirmed` audit log.
 
-KHQR is temporarily disabled by default while TouB POS evaluates an approved merchant payment provider. When `KHQR_ENABLED` is not explicitly `true`, KHQR order creation and status checking return `503` with code `KHQR_DISABLED`, and the background checker does not start. Existing KHQR records remain readable in order history and reports.
-
-The retained integration can only be re-enabled deliberately with matching backend and frontend flags. If re-enabled after provider approval, the existing backend validation still requires amount, currency, and destination-account matches before marking an order paid.
+KHQR is suspended while TouB POS evaluates an approved merchant payment
+provider. The vulnerable legacy generation SDK has been removed. Keep
+`KHQR_ENABLED=false`; startup rejects `true`, KHQR order creation/status checks
+return `503`, and the background checker does not start. Existing KHQR records
+remain readable in order history and reports. Re-enabling digital payment now
+requires a new reviewed provider adapter, not only an environment change.
 
 Paid orders enqueue one `telegram_dispatch_jobs` row in the same database transaction as payment confirmation. The background worker claims due jobs with row locks, creates/updates the user-visible `telegram_tickets` record, and retries transient failures with exponential backoff. This allows delivery to resume after a backend restart without rolling back payment.
 

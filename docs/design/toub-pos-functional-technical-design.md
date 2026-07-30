@@ -581,7 +581,7 @@ flowchart LR
 | Real-time | Socket.IO | Scoped operational notifications |
 | Kitchen integration | Telegram Bot API | Kitchen ticket delivery and callbacks |
 | Product media | ImageKit | Product image storage/delivery |
-| QR integration | `bakong-khqr` + Bakong API | Retained but disabled |
+| QR integration | No active provider adapter | Historical fields/status code retained; legacy SDK removed |
 
 ## 7. Frontend Design
 

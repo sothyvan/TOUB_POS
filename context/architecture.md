@@ -157,13 +157,11 @@
 ## KHQR Individual Payment Flow (Suspended)
 
 - KHQR is disabled by default while TouB POS evaluates an approved merchant payment provider.
-- Backend `KHQR_ENABLED` and frontend `VITE_KHQR_ENABLED` both require an explicit `true` before the retained integration is exposed.
+- Backend `KHQR_ENABLED` and frontend `VITE_KHQR_ENABLED` must remain `false`; backend startup rejects an attempted enable.
 - With KHQR disabled, backend order creation and status checks return `503` with code `KHQR_DISABLED`; the background checker does not query MySQL or Bakong.
 - Cash checkout, historical KHQR order reads, reports, receipts, and audit history remain unaffected.
-- The implementation below is retained for a possible approved provider rollout and is not the current cashier payment flow.
-
-- TouB POS uses Generate KHQR (Individual)
-- Backend KHQR generation uses the `bakong-khqr` SDK.
+- The vulnerable legacy `bakong-khqr` SDK and its obsolete Axios dependency have been removed from the runtime.
+- The retained status/history code is not an enable-ready provider integration. A future rollout requires a new approved adapter and security review.
 - Cashier checkout calls `POST /api/orders` with safe item data and `paymentMethod = "khqr"`.
 - The backend calculates trusted totals from MySQL and creates the order as `pending_payment`.
 - The backend stores `qr_payload`, `qr_md5`, `payment_reference`, and `payment_expires_at`.

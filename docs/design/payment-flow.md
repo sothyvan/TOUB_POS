@@ -1,8 +1,13 @@
 # Payment Flow
 
-This document describes the active cash flow and the retained, currently suspended KHQR design.
+This document describes the active cash flow and the historical, currently
+suspended KHQR design.
 
-> **Current availability:** Cash checkout is enabled. KHQR checkout, status polling, and background reconciliation are disabled by default while TouB POS evaluates an approved merchant payment provider. Historical KHQR data remains available for reporting and audit.
+> **Current availability:** Cash checkout is enabled. KHQR checkout, status
+> polling, and background reconciliation are disabled while TouB POS evaluates
+> an approved merchant payment provider. The legacy generation SDK has been
+> removed; environment flags alone cannot re-enable payment. Historical KHQR
+> data remains available for reporting and audit.
 
 ## Current Cash Payment Flow
 
@@ -67,7 +72,10 @@ pending_payment ──▶ paid
 
 ## KHQR Individual Payment Flow
 
-The following design is retained but inactive unless KHQR is deliberately enabled in both backend and frontend configuration. It must not be enabled for a merchant rollout until an approved provider and suitable transaction-checking allowance are confirmed.
+The following diagram records the former integration for historical design
+context only. It is not executable by setting environment flags. A future
+merchant rollout requires an approved provider, a new adapter, suitable
+transaction-checking limits, and a fresh security review.
 
 The backend owns QR generation and payment status. The frontend displays the QR and polls the TouB backend status-check endpoint as a fallback; it never calls Bakong directly and never marks a KHQR order as paid by itself. The backend also runs a background checker for unexpired pending KHQR orders.
 
@@ -76,7 +84,7 @@ sequenceDiagram
     participant C as Cashier Browser
     participant API as Backend API
     participant DB as MySQL
-    participant KHQR as KHQR SDK
+    participant KHQR as Removed Legacy KHQR SDK
     participant B as Bakong Open API
     participant AUD as Audit Logs
     participant WS as Socket.IO

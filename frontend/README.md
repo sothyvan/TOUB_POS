@@ -95,7 +95,10 @@ Credential rules:
 - The cashier enters cash received; the frontend previews change, while the backend verifies the amount, calculates saved change due, changes cash orders to `paid`, and writes audit logs.
 - Order history loads from the backend, so clearing browser localStorage does not erase saved orders.
 
-KHQR checkout is temporarily hidden by default while TouB POS evaluates an approved merchant payment provider. `VITE_KHQR_ENABLED=true` exposes the retained KHQR interface only for an intentionally configured build; the backend must independently have `KHQR_ENABLED=true`. Cash remains the enabled checkout method, and historical KHQR orders remain visible.
+KHQR checkout remains hidden while TouB POS evaluates an approved merchant
+payment provider. Keep `VITE_KHQR_ENABLED=false`; the legacy backend generator
+SDK has been removed and the backend rejects attempts to enable it. Cash remains
+the enabled checkout method, while historical KHQR orders remain visible.
 
 ---
 

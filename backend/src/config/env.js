@@ -83,6 +83,11 @@ export function validateEnvironment() {
 
   validateBooleanEnv('KHQR_ENABLED', errors);
   validateBooleanEnv('KHQR_BACKGROUND_CHECK_ENABLED', errors);
+  if (isKhqrEnabled()) {
+    errors.push(
+      'KHQR_ENABLED must remain false until an approved payment provider adapter is installed.',
+    );
+  }
   validateBooleanEnv('TELEGRAM_DISPATCH_WORKER_ENABLED', errors);
   validatePositiveIntegerEnv('REFRESH_SESSION_EXPIRES_HOURS', errors, { max: 720 });
   validatePositiveIntegerEnv('TELEGRAM_DISPATCH_INTERVAL_MS', errors, { max: 60000 });

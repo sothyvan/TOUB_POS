@@ -43,7 +43,10 @@ The following five measurable objectives guide the development and evaluation of
 Design and implement a web-based POS application that allows cashiers to process customer orders quickly and accurately within a stall-scoped menu environment, addressing the core bottleneck of manual order entry and disconnected payment workflows.
 
 **Objective 2 — Integrate Real-Time KHQR Payment Verification**
-Implement dynamic KHQR code generation using the `bakong-khqr` SDK and a backend webhook/polling listener that automatically detects payment success from the Bakong Open API. The verified payment confirmation must be delivered exclusively to the cashier who initiated that specific QR session — eliminating manual bank app checking.
+The project initially implemented dynamic KHQR generation and Bakong status
+polling as a learning phase. That provider path is now suspended, and the
+vulnerable `bakong-khqr` SDK has been removed while TouB POS evaluates an
+approved merchant payment provider. Cash is the active checkout method.
 
 **Objective 3 — Replace Paper Kitchen Tickets with a Digital Kitchen Display System**
 Implement a Telegram Bot-based Kitchen Display System (KDS) that automatically dispatches a structured digital order ticket to the stall's kitchen channel upon payment confirmation. Kitchen staff can acknowledge completion directly via an inline Telegram button, providing a real-time, paperless order queue.
@@ -151,7 +154,7 @@ Implementation was divided into six backend/frontend sprints:
 | **Sprint 2 (Frontend Auth)** | React login flows for Owner/Manager and Cashier PIN, avatar roster UI, device provisioning UI |
 | **Sprint 3 (Menu & Staff)** | Products, categories, stalls, stall-products with dual pricing, ImageKit photo upload, stall-staff assignment |
 | **Sprint 4 (Orders & Cash)** | Order creation with trusted backend totals, cash confirmation with change calculation, audit logging |
-| **Sprint 5 (KHQR)** | Dynamic KHQR generation via `bakong-khqr` SDK, Bakong Open API polling, multi-owner data isolation, RBAC hierarchy cleanup |
+| **Sprint 5 (KHQR)** | Historical learning implementation of KHQR generation and Bakong polling; later suspended and SDK removed pending an approved provider |
 | **Sprint 6 (KDS & Real-Time)** | Telegram kitchen display system (dispatch + Done callback), ngrok tunnel auto-registration, stall-scoped device registration, WebSocket KHQR live notification *(in progress)* |
 
 The backend strictly follows a **routes → controllers → services → repositories** layered pattern. The frontend uses custom hooks (`useProducts`, `useOrders`) to abstract API calls from UI rendering.
@@ -555,7 +558,7 @@ sequenceDiagram
   Note over C,API: Cashier submits order
   C->>API: POST /api/orders (JWT + X-Device-Token, items + paymentMethod=khqr)
   API->>DB: INSERT Order (status=pending_payment, calculate trusted totals)
-  API->>API: Generate KHQR payload via bakong-khqr SDK
+  API->>API: Former flow generated KHQR payload via legacy SDK
   DB-->>API: orderId, qr_payload, qr_md5
   API-->>C: 201 Created { orderId, qr_payload }
 
@@ -843,7 +846,10 @@ The Toub POS project has successfully demonstrated a complete, production-ready 
 
 - A **full-stack web application** was built with React.js (frontend) and Node.js/Express (backend), connected to a MySQL relational database.
 - A **secure, multi-tenant RBAC system** was implemented with four roles (`platform_admin`, `owner`, `manager`, `cashier`), each strictly scoped to their permitted data and operations.
-- **KHQR dynamic payment generation and verification** was integrated using the `bakong-khqr` SDK and the Bakong Open API, enabling cashiers to confirm payments on-screen without manually checking a bank app.
+- **KHQR dynamic payment generation and verification** was implemented as a
+  learning phase, then suspended. The vulnerable SDK is no longer in the
+  runtime; historical order data remains readable while an approved provider
+  is evaluated.
 - **Cash payment tracking** was implemented with backend-calculated change, preventing frontend tampering of financial figures.
 - **Telegram Kitchen Display System** replaced paper tickets with automated, real-time digital order dispatch and in-place cook acknowledgement.
 - An **analytical dashboard** was delivered, allowing owners and managers to view time-filtered revenue reports and product performance, scoped to their business.
