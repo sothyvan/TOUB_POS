@@ -542,6 +542,7 @@ Requires `owner` or `manager` role.
 | GET | `/stalls/:id/telegram-cooks` | ✅ | Owner / Manager | List Telegram-only kitchen identities |
 | POST | `/stalls/:id/telegram-cooks` | ✅ | Owner / Manager | Authorize or reactivate one Telegram cook |
 | DELETE | `/stalls/:id/telegram-cooks/:cookId` | ✅ | Owner / Manager | Revoke one Telegram cook |
+| POST | `/stalls/:id/telegram-connection` | ✅ | Owner | Generate a short-lived one-time link for selecting this stall's Telegram kitchen group |
 
 Stall create/update accepts normal editable fields such as `name` and `location`. The backend does not trust privileged frontend-submitted fields such as `owner_id`, `device_token`, or `telegram_chat_id`.
 
@@ -549,7 +550,9 @@ Stall list responses expose safe `devices` metadata and the aggregate `device_re
 
 Telegram cooks are not web users. Authorizing a cook requires a numeric `telegram_user_id` and `display_name`, stores a stall-scoped allowlist record, and grants only the ability to complete that stall's Telegram kitchen tickets. Revoking one identity does not affect other cooks or cashier accounts.
 
-`POST /api/telegram/callback` is called by Telegram, not the frontend. It requires the configured `X-Telegram-Bot-Api-Secret-Token`, an exact order/ticket/chat/message match, a chat matching the order's stall, and an active `telegram_cooks` assignment for `callback_query.from.id`. Rejected callbacks never mutate ticket or stall chat data.
+The Owner-only Telegram connection endpoint verifies the configured bot through Telegram, creates a random `startgroup` token with a short expiry, returns the raw token only inside the Telegram link, and stores only its SHA-256 hash. Creating a newer link invalidates the stall's previous unused link. When Telegram starts the bot in the selected group, the backend consumes the token once and stores that group's ID/title on the stall. A group already connected to another active stall is rejected. Managers may manage cook identities but cannot reroute a stall's kitchen destination.
+
+`POST /api/telegram/callback` is called by Telegram, not the frontend. It requires the configured `X-Telegram-Bot-Api-Secret-Token`. Group-connection messages require a valid, unexpired one-time token and a group/supergroup chat. Ticket-completion callbacks require an exact order/ticket/chat/message match, a chat matching the order's stall, and an active `telegram_cooks` assignment for `callback_query.from.id`.
 
 ---
 

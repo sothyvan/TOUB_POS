@@ -11,6 +11,7 @@ import AuditLog from './audit-log.model.js';
 import ProductStall from './product-stall.model.js';
 import StallDevice from './stall-device.model.js';
 import TelegramCook from './telegram-cook.model.js';
+import TelegramGroupConnection from './telegram-group-connection.model.js';
 
 // ── User ↔ Stall Ownership ──────────────────────────────────
 Stall.belongsTo(User, { as: 'Owner', foreignKey: 'owner_id', onDelete: 'SET NULL' });
@@ -39,6 +40,12 @@ StallDevice.belongsTo(User, { as: 'RevokedBy', foreignKey: 'revoked_by_user_id',
 // ── Stall ↔ Telegram Cook Identities ───────────────────────
 TelegramCook.belongsTo(Stall, { as: 'Stall', foreignKey: 'stall_id', onDelete: 'CASCADE' });
 Stall.hasMany(TelegramCook, { as: 'TelegramCooks', foreignKey: 'stall_id' });
+
+// ── Stall ↔ Telegram Group Connection Attempts ────────────
+TelegramGroupConnection.belongsTo(Stall, { as: 'Stall', foreignKey: 'stall_id', onDelete: 'CASCADE' });
+Stall.hasMany(TelegramGroupConnection, { as: 'TelegramGroupConnections', foreignKey: 'stall_id' });
+TelegramGroupConnection.belongsTo(User, { as: 'CreatedBy', foreignKey: 'created_by_user_id', onDelete: 'SET NULL' });
+User.hasMany(TelegramGroupConnection, { as: 'TelegramGroupConnections', foreignKey: 'created_by_user_id' });
 
 // ── Product Associations ─────────────────────────────────────
 Product.belongsToMany(Stall, { through: ProductStall, foreignKey: 'product_id', otherKey: 'stall_id', onDelete: 'CASCADE' });
@@ -94,4 +101,5 @@ export {
   ProductStall,
   StallDevice,
   TelegramCook,
+  TelegramGroupConnection,
 };

@@ -84,6 +84,7 @@ Do not run this seeder against production or any live merchant database.
 | `KHQR_BACKGROUND_CHECK_BATCH_SIZE` | Maximum pending KHQR orders checked per run | `10` |
 | `TELEGRAM_BOT_TOKEN` | Backend-only Telegram bot token used for kitchen tickets | `replace_with_bot_token` |
 | `TELEGRAM_WEBHOOK_SECRET` | Random secret required whenever the Telegram bot is configured | `replace_with_random_secret` |
+| `TELEGRAM_GROUP_CONNECTION_EXPIRY_MINUTES` | Lifetime of a one-time Owner kitchen-group connection link | `10` |
 
 ---
 
@@ -230,7 +231,7 @@ The retained integration can only be re-enabled deliberately with matching backe
 
 Owner/Manager order history shows Telegram kitchen ticket state (`pending`, `sent`, `failed`, or `done`) and can retry missing or failed kitchen ticket delivery through `POST /api/orders/:id/retry-telegram`. `pending` means the backend is still sending the ticket and is not retryable. Cashiers can also retry their own paid orders from the cashier order history when kitchen dispatch fails. The backend emits `order_updated` when same-business orders are created or paid, and emits `kitchen_ticket_updated` when Telegram dispatch finishes or a cook taps `Mark as Done`, so order-history screens refresh without a full page reload.
 
-Telegram cooks remain Telegram-only identities, not web-app users. An Owner or Manager must authorize each cook's numeric Telegram user ID for a specific stall before that cook can complete the stall's ticket. Run `npm run migrate:telegram-cooks` once on an existing database, then re-register the Telegram webhook so Telegram sends the configured secret header.
+Telegram cooks remain Telegram-only identities, not web-app users. The Owner connects a stall's kitchen group from Stall Management using a short-lived Telegram group-selection link. Owner/Manager users may then authorize each cook's numeric Telegram user ID for that stall. The raw setup token is returned only in the link; MySQL stores its SHA-256 hash. Run `npm run migrate:telegram-cooks` and `npm run migrate:telegram-groups` once on an existing database, then re-register the Telegram webhook so Telegram sends the configured secret header.
 
 ### Reports
 
@@ -271,6 +272,7 @@ npm run test:orders
 npm run test:live
 npm run seed
 npm run migrate:telegram-cooks
+npm run migrate:telegram-groups
 ```
 
 `npm run test:credentials` expects the local API and a seeded Owner account. It creates temporary Manager, Cashier, Stall, assignment, and registered-device records, verifies device-bound PIN login and credential response safety, then cleans up those records.

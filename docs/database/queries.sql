@@ -79,28 +79,31 @@ WHERE id = 2;
 -- ── 2. STALLS CRUD (stall.repository.js) ───────────────────
 
 -- List all stalls
-SELECT id, owner_id, name, location, telegram_chat_id, created_at, updated_at
+SELECT id, owner_id, name, location, telegram_chat_id, telegram_chat_title,
+       telegram_connected_at, created_at, updated_at
 FROM stalls
 ORDER BY created_at DESC;
 
 -- List all stalls owned by a specific owner
-SELECT id, owner_id, name, location, telegram_chat_id, created_at, updated_at
+SELECT id, owner_id, name, location, telegram_chat_id, telegram_chat_title,
+       telegram_connected_at, created_at, updated_at
 FROM stalls
 WHERE owner_id = 1
 ORDER BY created_at DESC;
 
 -- Find a stall by ID
-SELECT id, owner_id, name, location, telegram_chat_id, created_at, updated_at
+SELECT id, owner_id, name, location, telegram_chat_id, telegram_chat_title,
+       telegram_connected_at, created_at, updated_at
 FROM stalls
 WHERE id = 1;
 
 -- Create a new stall
-INSERT INTO stalls (owner_id, name, location, telegram_chat_id)
-VALUES (1, 'Stall A - Drinks', 'AEON Mall', 987654321);
+INSERT INTO stalls (owner_id, name, location)
+VALUES (1, 'Stall A - Drinks', 'AEON Mall');
 
 -- Update an existing stall by ID
 UPDATE stalls 
-SET name = 'Stall A - Hot Coffee', location = 'Night Market', telegram_chat_id = 987654321
+SET name = 'Stall A - Hot Coffee', location = 'Night Market'
 WHERE id = 1;
 
 -- Delete a stall by ID
@@ -356,6 +359,32 @@ VALUES (
 );
 
 -- ── 6b. TELEGRAM COOK AUTHORIZATION AND TICKETS ───────────
+
+-- Create a short-lived group connection attempt. Application code stores
+-- SHA2(raw_token, 256); the raw token appears only in the Telegram deep link.
+DELETE FROM telegram_group_connections
+WHERE stall_id = 1 AND consumed_at IS NULL;
+
+INSERT INTO telegram_group_connections
+  (stall_id, created_by_user_id, token_hash, expires_at)
+VALUES
+  (1, 2, SHA2('one-time-startgroup-token', 256), DATE_ADD(NOW(), INTERVAL 10 MINUTE));
+
+-- Consume the token and connect the Telegram group in one backend transaction.
+UPDATE stalls
+SET telegram_chat_id = -1001234567890,
+    telegram_chat_title = 'Stall A Kitchen',
+    telegram_connected_at = NOW()
+WHERE id = 1;
+
+UPDATE telegram_group_connections
+SET consumed_at = NOW(),
+    connected_chat_id = -1001234567890,
+    connected_chat_title = 'Stall A Kitchen',
+    connected_by_telegram_user_id = 123456789
+WHERE token_hash = SHA2('one-time-startgroup-token', 256)
+  AND consumed_at IS NULL
+  AND expires_at > NOW();
 
 -- List Telegram-only cooks authorized for a stall
 SELECT id, stall_id, telegram_user_id, display_name, is_active, created_at, updated_at

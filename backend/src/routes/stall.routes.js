@@ -12,6 +12,7 @@ import {
   getTelegramCooks,
   authorizeTelegramCook,
   revokeTelegramCook,
+  createTelegramGroupConnection,
 } from '../controllers/stall.controller.js';
 
 const router = Router();
@@ -47,5 +48,8 @@ router.delete('/:id/devices/:deviceId', deregisterDevice);
 router.get('/:id/telegram-cooks', getTelegramCooks);
 router.post('/:id/telegram-cooks', authorizeTelegramCook);
 router.delete('/:id/telegram-cooks/:cookId', revokeTelegramCook);
+
+// Short-lived Owner-only link for selecting this stall's Telegram group
+router.post('/:id/telegram-connection', authorize('owner'), createTelegramGroupConnection);
 
 export default router;

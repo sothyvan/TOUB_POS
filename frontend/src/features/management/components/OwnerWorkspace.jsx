@@ -271,7 +271,7 @@ export default function OwnerWorkspace({
           )}
 
           {visibleOwnerTab === 'stalls' && (
-            <StallOwner users={users} />
+            <StallOwner users={users} currentUser={currentUser} />
           )}
 
           {visibleOwnerTab === 'orders' && (

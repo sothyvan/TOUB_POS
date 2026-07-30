@@ -4,6 +4,7 @@ import { emitKitchenTicketUpdated } from './websocket.service.js';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_API_BASE = `https://api.telegram.org/bot${BOT_TOKEN}`;
+let cachedBotIdentity = null;
 
 // ── Telegram API Helpers ──────────────────────────────────
 
@@ -129,6 +130,16 @@ function formatDoneMessage(order, completedByName) {
 }
 
 // ── Telegram API Actions ──────────────────────────────────
+
+export async function getBotIdentity() {
+  if (!BOT_TOKEN) {
+    throw new Error('TELEGRAM_BOT_TOKEN is not configured.');
+  }
+  if (!cachedBotIdentity) {
+    cachedBotIdentity = await callTelegramApi('getMe', {});
+  }
+  return cachedBotIdentity;
+}
 
 /**
  * Sends an order ticket to the kitchen group chat.

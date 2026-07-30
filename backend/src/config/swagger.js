@@ -493,6 +493,17 @@ export const swaggerDocument = {
                 description: 'Owner/Manager only. Deactivates one stall-scoped Telegram identity without affecting other cooks.'
             }
         },
+        '/api/stalls/{id}/telegram-connection': {
+            post: {
+                summary: 'Create a Telegram kitchen-group connection link',
+                description: 'Owner only. Returns a short-lived Telegram startgroup link for the same-business stall. The raw one-time token is returned in the link while only its SHA-256 hash is stored. Telegram consumes the token when the bot is added to a group.',
+                responses: {
+                    201: { description: 'Short-lived Telegram group-selection link created' },
+                    404: { description: 'Stall not found in this business' },
+                    503: { description: 'Telegram bot is not configured or cannot be verified' }
+                }
+            }
+        },
         '/api/stalls/{id}/register-device': {
             post: {
                 summary: 'Register a cashier terminal to a stall',

@@ -12,13 +12,29 @@ const EMPTY_FORM = {
   telegramUserId: '',
 };
 
-export default function TelegramCookManager({ stall }) {
+function maskChatId(chatId) {
+  const normalized = String(chatId || '');
+  if (normalized.length <= 6) {
+    return normalized;
+  }
+  return `${normalized.slice(0, 4)}••••${normalized.slice(-4)}`;
+}
+
+export default function TelegramCookManager({ stall, onRefresh, canConnectGroup = false }) {
   const [cooks, setCooks] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [creatingConnection, setCreatingConnection] = useState(false);
+  const [connectionLink, setConnectionLink] = useState(null);
   const [error, setError] = useState('');
   const [cookToRevoke, setCookToRevoke] = useState(null);
+  const isGroupConnected = Boolean(stall.telegramChatId);
+  const connectionCompleted = Boolean(
+    connectionLink
+    && stall.telegramConnectedAt
+    && String(stall.telegramConnectedAt) !== String(connectionLink.previousConnectedAt || ''),
+  );
 
   const activeCooks = useMemo(
     () => cooks.filter((cook) => cook.is_active),
@@ -58,6 +74,42 @@ export default function TelegramCookManager({ stall }) {
       active = false;
     };
   }, [stall?.id]);
+
+  useEffect(() => {
+    if (!connectionLink || connectionCompleted || typeof onRefresh !== 'function') {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      if (new Date(connectionLink.expiresAt).getTime() <= Date.now()) {
+        window.clearInterval(intervalId);
+        return;
+      }
+      void onRefresh();
+    }, 3000);
+
+    return () => window.clearInterval(intervalId);
+  }, [connectionCompleted, connectionLink, onRefresh]);
+
+  const handleCreateConnection = async () => {
+    if (creatingConnection) {
+      return;
+    }
+
+    setCreatingConnection(true);
+    setError('');
+    try {
+      const connection = await api.stalls.createTelegramGroupConnection(stall.id);
+      setConnectionLink({
+        ...connection,
+        previousConnectedAt: stall.telegramConnectedAt,
+      });
+    } catch (connectionError) {
+      setError(connectionError.message || 'Unable to create the Telegram group connection link.');
+    } finally {
+      setCreatingConnection(false);
+    }
+  };
 
   const handleAuthorize = async (event) => {
     event.preventDefault();
@@ -109,12 +161,88 @@ export default function TelegramCookManager({ stall }) {
       <div className="mb-4">
         <h3 className="m-0 text-sm font-extrabold text-text-strong">Kitchen Telegram Access</h3>
         <p className="m-0 mt-1 text-xs font-medium leading-relaxed text-text-muted">
-          Only authorized Telegram identities can mark this stall&apos;s kitchen tickets done.
-          An unauthorized cook can tap the button once to see their numeric Telegram ID.
+          Connect this stall&apos;s kitchen group, then authorize the cooks who may mark its tickets done.
         </p>
       </div>
 
       {error ? <Alert variant="danger" className="mb-4">{error}</Alert> : null}
+
+      <div className="mb-4 rounded-lg border border-ui-border bg-ui-elevated p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span
+                className={`h-2.5 w-2.5 rounded-full ${isGroupConnected ? 'bg-state-success' : 'bg-text-muted'}`}
+                aria-hidden="true"
+              />
+              <strong className="truncate text-sm text-text-strong">
+                {isGroupConnected
+                  ? (stall.telegramChatTitle || 'Connected Telegram group')
+                  : 'No kitchen group connected'}
+              </strong>
+            </div>
+            <p className="m-0 mt-1 text-xs font-medium text-text-muted">
+              {isGroupConnected
+                ? `Chat ${maskChatId(stall.telegramChatId)}${stall.telegramConnectedAt ? ` · Connected ${new Date(stall.telegramConnectedAt).toLocaleString()}` : ''}`
+                : 'Paid orders cannot reach Telegram until a group is connected.'}
+            </p>
+          </div>
+          {canConnectGroup ? (
+            <Button
+              type="button"
+              size="sm"
+              variant={isGroupConnected ? 'secondary' : 'primary'}
+              iconName="telegram"
+              loading={creatingConnection}
+              onClick={handleCreateConnection}
+            >
+              {isGroupConnected ? 'Replace Group' : 'Connect Group'}
+            </Button>
+          ) : (
+            <span className="rounded-md border border-ui-border px-3 py-2 text-xs font-semibold text-text-muted">
+              Owner setup required
+            </span>
+          )}
+        </div>
+
+        {connectionLink && !connectionCompleted ? (
+          <div className="mt-4 border-t border-ui-border pt-4">
+            <p className="m-0 text-xs font-semibold leading-relaxed text-text-muted">
+              Create the kitchen group in Telegram first. Then open this one-time link,
+              select that group, and add @{connectionLink.botUsername}. The link expires at{' '}
+              {new Date(connectionLink.expiresAt).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}.
+            </p>
+            <Button
+              as="a"
+              className="mt-3"
+              href={connectionLink.connectUrl}
+              target="_blank"
+              rel="noreferrer"
+              iconName="telegram"
+            >
+              Open Telegram
+            </Button>
+          </div>
+        ) : null}
+
+        {connectionCompleted ? (
+          <Alert variant="success" className="mt-4">
+            Telegram confirmed the kitchen group connection.
+          </Alert>
+        ) : null}
+      </div>
+
+      <div className="mb-4">
+        <h4 className="m-0 text-xs font-extrabold uppercase tracking-wider text-text-muted">
+          Authorized cooks
+        </h4>
+        <p className="m-0 mt-1 text-xs font-medium leading-relaxed text-text-muted">
+          An unauthorized cook can tap Mark as Done once to see their numeric Telegram ID.
+        </p>
+      </div>
 
       <form className="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end" onSubmit={handleAuthorize}>
         <FormInput

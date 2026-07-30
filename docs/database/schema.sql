@@ -32,6 +32,8 @@ CREATE TABLE stalls (
   location        VARCHAR(150) DEFAULT NULL,           -- physical location label
   device_token    VARCHAR(255) DEFAULT NULL,           -- deprecated one-time migration source; active tokens live in stall_devices
   telegram_chat_id BIGINT DEFAULT NULL,               -- kitchen Telegram channel ID
+  telegram_chat_title VARCHAR(255) DEFAULT NULL,       -- safe display name received from Telegram
+  telegram_connected_at DATETIME DEFAULT NULL,         -- most recent guided group connection
   is_active       BOOLEAN NOT NULL DEFAULT TRUE,
   is_deleted      BOOLEAN NOT NULL DEFAULT FALSE,
   created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -78,6 +80,26 @@ CREATE TABLE telegram_cooks (
   UNIQUE KEY uq_telegram_cooks_stall_user (stall_id, telegram_user_id),
   KEY idx_telegram_cooks_stall_active (stall_id, is_active),
   FOREIGN KEY (stall_id) REFERENCES stalls(id) ON DELETE CASCADE
+);
+
+-- ── One-Time Telegram Group Connections ──────────────────
+-- Raw startgroup tokens are returned once to management and never stored.
+-- The SHA-256 token hash is consumed when Telegram starts the bot in a group.
+CREATE TABLE telegram_group_connections (
+  id                            INT AUTO_INCREMENT PRIMARY KEY,
+  stall_id                      INT NOT NULL,
+  created_by_user_id            INT DEFAULT NULL,
+  token_hash                    VARCHAR(64) NOT NULL,
+  expires_at                    DATETIME NOT NULL,
+  consumed_at                   DATETIME DEFAULT NULL,
+  connected_chat_id             BIGINT DEFAULT NULL,
+  connected_chat_title          VARCHAR(255) DEFAULT NULL,
+  connected_by_telegram_user_id BIGINT DEFAULT NULL,
+  created_at                    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_telegram_group_connections_token_hash (token_hash),
+  KEY idx_telegram_group_connections_stall_expiry (stall_id, expires_at),
+  FOREIGN KEY (stall_id) REFERENCES stalls(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- ── Stall ↔ Staff Assignment ──────────────────────────────

@@ -327,6 +327,40 @@ export function emitManagementDeviceRegistryUpdated({ ownerId, stallId, deviceId
   return emittedCount > 0;
 }
 
+export function emitManagementTelegramGroupUpdated({
+  ownerId,
+  stallId,
+  chatId,
+  chatTitle,
+  changeType,
+}) {
+  if (!ioServer) {
+    return false;
+  }
+
+  const normalizedOwnerId = Number(ownerId);
+  const normalizedStallId = Number(stallId);
+  if (
+    !Number.isInteger(normalizedOwnerId) || normalizedOwnerId <= 0
+    || !Number.isInteger(normalizedStallId) || normalizedStallId <= 0
+  ) {
+    return false;
+  }
+
+  const emittedCount = emitToSocketSet(
+    managementSockets.get(normalizedOwnerId),
+    'telegram_group_updated',
+    {
+      stallId: normalizedStallId,
+      chatId: String(chatId),
+      chatTitle,
+      changeType,
+    },
+  );
+
+  return emittedCount > 0;
+}
+
 export function emitDeviceRevoked(deviceId, payload = {}) {
   if (!ioServer) {
     return false;

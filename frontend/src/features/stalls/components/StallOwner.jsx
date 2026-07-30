@@ -378,7 +378,7 @@ function DeregisterDeviceDialog({
   );
 }
 
-export default function StallOwner({ users = [] }) {
+export default function StallOwner({ users = [], currentUser }) {
   const cashierUsers = useMemo(() => {
     return users.filter((user) => roleToApiRole(user.role) === 'cashier');
   }, [users]);
@@ -433,7 +433,7 @@ export default function StallOwner({ users = [] }) {
   });
 
   useEffect(() => subscribeToManagementUpdates(({ eventName }) => {
-    if (eventName === 'device_registry_updated') {
+    if (eventName === 'device_registry_updated' || eventName === 'telegram_group_updated') {
       void loadStalls(false);
     }
   }), [loadStalls]);
@@ -784,7 +784,12 @@ export default function StallOwner({ users = [] }) {
           </section>
 
           {selectedStall ? (
-            <TelegramCookManager key={selectedStall.id} stall={selectedStall} />
+            <TelegramCookManager
+              key={selectedStall.id}
+              stall={selectedStall}
+              onRefresh={loadStalls}
+              canConnectGroup={roleToApiRole(currentUser?.role) === 'owner'}
+            />
           ) : null}
 
           {assignedUsers.length > 0 && (

@@ -78,6 +78,13 @@ export function validateEnvironment() {
     requireEnv('TELEGRAM_WEBHOOK_SECRET', errors);
   }
 
+  if (!isBlank(process.env.TELEGRAM_GROUP_CONNECTION_EXPIRY_MINUTES)) {
+    const expiryMinutes = Number(process.env.TELEGRAM_GROUP_CONNECTION_EXPIRY_MINUTES);
+    if (!Number.isInteger(expiryMinutes) || expiryMinutes <= 0 || expiryMinutes > 60) {
+      errors.push('TELEGRAM_GROUP_CONNECTION_EXPIRY_MINUTES must be an integer from 1 to 60.');
+    }
+  }
+
   const dbPort = Number(process.env.DB_PORT);
   if (!isBlank(process.env.DB_PORT) && (!Number.isInteger(dbPort) || dbPort <= 0)) {
     errors.push('DB_PORT must be a positive integer.');
