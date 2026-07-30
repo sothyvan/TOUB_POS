@@ -1,6 +1,6 @@
 import { Op } from 'sequelize';
 import { Order } from '../models/index.js';
-import { checkKhqrPaymentStatusAsSystem } from './order.service.js';
+import { checkKhqrPaymentStatusAsSystem } from '../services/order.service.js';
 
 const DEFAULT_INTERVAL_MS = 5000;
 const DEFAULT_BATCH_SIZE = 10;

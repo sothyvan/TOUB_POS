@@ -60,6 +60,19 @@ Update this file after every meaningful implementation change.
   - Backend lint passes with no errors; report/app imports, public export parity, custom-range formatting, and granularity checks pass.
   - A live MySQL response comparison remains pending because the backend was not running during this refactor.
 
+- **Organized backend startup and development operations (Step 4)**:
+  - Moved duplicate-index cleanup, legacy terminal migration, and the process-local KHQR checker from general services into `backend/src/startup/`.
+  - Moved the Ngrok/Telegram webhook runner from `utils/` into `backend/src/scripts/dev/` and updated `npm run tunnel`.
+  - Updated `server.js` startup imports while preserving schema cleanup, legacy device migration, and KHQR checker execution order.
+  - Corrected the tunnel script's relative `.env` path after relocation.
+  - Updated active architecture and KHQR flow documentation; historical handoff documents remain unchanged.
+
+- **Removed the obsolete payment webhook placeholder (Step 5)**:
+  - Removed the unauthenticated `POST /api/webhook/payment` route, controller, and Express mount; the endpoint previously returned `501` and never processed payments.
+  - Removed the legacy Swagger, backend README, and API endpoint documentation entries.
+  - Kept the real Telegram callback at `POST /api/telegram/callback` unchanged.
+  - Updated current project, architecture, and roadmap wording to describe the implemented Bakong MD5 status-check and background-checker flow instead of a Bakong webhook.
+
 - **Standardized SweetAlert notifications**:
   - Changed management success/error feedback to bottom-right toast notifications with a 3-second timeout and visible progress bar.
   - Kept destructive confirmations and blocking loading dialogs centered so they cannot disappear before the user responds or the operation finishes.
@@ -862,5 +875,5 @@ Intentional shortcuts taken during development that must be resolved before prod
 | 3 | **No input sanitization on order modifiers** | `order_items.notes` | 🟡 Medium — add max-length enforcement and strip dangerous characters before DB write |
 | 4 | **No auth endpoint rate limiting** | `POST /api/auth/login` / `POST /api/auth/pin` | ✅ Resolved — added `express-rate-limit` |
 | 5 | **Seed owner password is a placeholder hash** | `docs/database/schema.sql` | 🔴 High — generate real bcrypt hash and store securely before any live deployment |
-| 6 | **KHQR background checker is process-local** | `khqr-background-checker.service.js` | 🟡 Medium — The checker runs inside the API process. For production or multiple server instances, move this to one scheduled worker/queue to avoid duplicate provider calls. |
+| 6 | **KHQR background checker is process-local** | `startup/khqr-background-checker.js` | 🟡 Medium — The checker runs inside the API process. For production or multiple server instances, move this to one scheduled worker/queue to avoid duplicate provider calls. |
 

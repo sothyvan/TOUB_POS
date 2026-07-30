@@ -7,7 +7,7 @@
 | Frontend     | ReactJS + Vite          | UI rendering and state management                 |
 | API Client   | Axios                   | Centralized HTTP requests, auth/device headers, and error normalization |
 | Charts       | Recharts                | Owner/Manager dashboard and reporting visualizations |
-| Backend      | Node.js + Express.js    | REST API, WebSocket server, webhook handler       |
+| Backend      | Node.js + Express.js    | REST API, WebSocket server, Telegram callback handler |
 | Database     | MySQL                   | Relational data storage                           |
 | Auth         | JWT                     | Secure authentication and session management      |
 | Real-Time    | WebSocket (ws / socket.io) | Cashier-specific payment confirmation push     |
@@ -35,6 +35,8 @@
 - `backend/src/services/report.service.js` — Report validation, response mapping, trend composition, and public report orchestration.
 - `backend/src/repositories/report.repository.js` — Owner-scoped raw SQL aggregations and paginated Sequelize ledger access.
 - `backend/src/utils/report-range.util.js` — Validated business-local date boundaries, comparison ranges, timezone conversion, and trend granularity.
+- `backend/src/startup/` — Automatic boot-time maintenance and process-local workers started by `server.js`.
+- `backend/src/scripts/dev/` — Manually invoked development operations such as the Ngrok/Telegram webhook tunnel.
 
 ### Frontend Dependency Direction
 
@@ -80,7 +82,7 @@
 
 1. Request handlers must only handle HTTP routing; business logic strictly belongs in the services layer.
 2. Auth must be enforced at every mutation boundary.
-3. A transaction cannot be marked as paid without a valid, verified webhook/listener event — except for cash, which is confirmed by explicit cashier/manager/owner action.
+3. A KHQR transaction cannot be marked as paid without a verified Bakong provider result matching the order amount, currency, and destination account; cash requires explicit cashier/manager/owner confirmation.
 4. WebSocket payment notifications must only be pushed to the socket registered by the cashier who initiated that specific QR session. No broadcast.
 5. A terminal may only load menu items and staff rosters scoped to its registered stall. Multiple devices may belong to one stall, and revoking one must not affect another.
 6. Telegram callback authorization needs a replacement cook-identity model before production; current Telegram persistence is limited to order ticket dispatch state.
@@ -136,7 +138,7 @@
 - Cashier, Owner, and Manager sockets authenticate with the existing JWT. Platform Admin sockets are rejected because the temporary bootstrap role has no live POS UI.
 - The service maintains strict socket maps by `cashier_id`, device ID, and management `owner_id`. It emits `payment_confirmed` only to the creating cashier, `device:revoked` only to the selected terminal, and `device_registry_updated` only to same-business management sockets so device lists refresh after registration or revocation. No payment or revocation broadcast.
 - Owner/Manager sockets receive `order_updated` for same-business order creation and payment status changes, then refresh order history from the backend.
-- `khqr-background-checker.service.js` periodically checks unexpired pending KHQR orders through Bakong, using system audit metadata instead of pretending a cashier clicked the status-check button.
+- `startup/khqr-background-checker.js` periodically checks unexpired pending KHQR orders through Bakong, using system audit metadata instead of pretending a cashier clicked the status-check button.
 - KHQR-paid orders reuse the same `dispatchToTelegram` kitchen ticket flow as confirmed cash orders.
 - Owner/Manager order history surfaces `telegram_tickets.status` and can retry missing or failed Telegram dispatches for paid orders in their business. Cashiers can retry only their own paid orders. Pending tickets are treated as in-progress and are not retryable; sent/done tickets are not resent.
 - When Telegram dispatch finishes as `sent` or `failed`, the backend emits `kitchen_ticket_updated` so the UI does not stay stuck on the temporary `pending` state.
@@ -181,8 +183,8 @@
 | 4 | **KHR exchange rate — hardcoded vs. live** | 🟡 Medium | Decision required before building the product form. Recommend: hardcode the rate as a `.env` constant (`KHR_RATE=4100`) for now. Add a note in the admin panel showing the current rate. Live rate API is out of scope. |
 | 5 | **Stall data isolation — cross-stall data leak** | 🔴 High | Every query that returns cashier-facing products, orders, or staff must scope by the authenticated user and their backend stall assignment. Never trust a client-supplied stall ID for cashier access. |
 | 6 | **Legacy localStorage fallback regression** | 🟡 Medium | Products, categories, stalls, users, and orders are now backend-owned. Future UI work must not reintroduce localStorage as the source of truth for persisted POS data; localStorage should remain limited to auth/session/device-style browser state. |
-| 7 | **Webhook duplicate events** | 🔴 High | Bakong/ABA may retry the same webhook multiple times (network timeouts). Processing it twice marks an order paid twice or creates duplicate records. Mitigation: at the start of the webhook handler, check `if order.status === 'paid' → return 200 immediately` (idempotency guard) before any DB write. |
-| 8 | **QR amount mismatch** | 🔴 High | A webhook may arrive for the wrong amount or wrong merchant. Never auto-confirm just because a payment event arrived. Webhook handler must assert `webhook.amount === order.total_usd` and `webhook.merchant_id === env.MERCHANT_ID` before marking the order paid. Reject mismatches with a `400` and log them. |
+| 7 | **Duplicate KHQR status checks** | 🔴 High | Frontend polling and the background checker may verify the same order concurrently. The KHQR confirmation service uses a database row lock, rechecks status inside the transaction, and writes the payment audit log only for the first successful transition. |
+| 8 | **QR amount or destination mismatch** | 🔴 High | A provider result may belong to the wrong amount or account. The backend validates Bakong amount, USD currency, and destination account against trusted order/environment values before marking an order paid. |
 | 9 | **JWT expiry mid-shift** | 🟡 Medium | Cashier's 8h token can expire while they are mid-order. The next API call returns `401`, the cart is lost, and the cashier is confused. Mitigation: frontend must intercept all `401` responses, store the current cart in `sessionStorage`, redirect to PIN re-entry, and restore the cart after re-authentication. |
 | 10 | **Device token lifecycle** | 🟢 Controlled | `stall_devices` supports multiple named terminals per stall with SHA-256 token hashes. Owner/Manager users can revoke one device; backend middleware rejects its device-bound JWT requests and Socket.IO emits a targeted forced logout. Future production work may add token expiry/rotation and dedicated device audit events. |
 | 11 | **Future platform admin data access** | 🔴 High | The current `platform_admin` role is limited to owner bootstrap only. If TouB POS becomes a multi-customer SaaS product, expand it with tenant isolation, support-session auditing, and least-privilege access before enabling any broader cross-customer administration. |

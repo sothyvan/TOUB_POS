@@ -9,8 +9,8 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Explicitly load .env from the backend root directory
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+// Explicitly load .env from the backend root directory.
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 // Force DNS resolution to prefer IPv4
 dns.setDefaultResultOrder('ipv4first');

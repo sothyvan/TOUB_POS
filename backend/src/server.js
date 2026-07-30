@@ -2,10 +2,10 @@ import 'dotenv/config';
 import { createServer } from 'node:http';
 import bcrypt from 'bcryptjs';
 import { getPlatformAdminSeedConfig, validateEnvironment } from './config/env.js';
-import { cleanupDevelopmentDuplicateUniqueIndexes } from './services/development-schema-cleanup.service.js';
-import { startKhqrBackgroundChecker } from './services/khqr-background-checker.service.js';
+import { cleanupDevelopmentDuplicateUniqueIndexes } from './startup/development-schema-cleanup.js';
+import { startKhqrBackgroundChecker } from './startup/khqr-background-checker.js';
 import { initializeWebSocketServer } from './services/websocket.service.js';
-import { migrateLegacyStallDeviceTokens } from './services/legacy-device-migration.service.js';
+import { migrateLegacyStallDeviceTokens } from './startup/legacy-device-migration.js';
 
 const PORT = process.env.PORT || 3000;
 
