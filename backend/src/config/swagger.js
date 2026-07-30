@@ -472,13 +472,13 @@ export const swaggerDocument = {
         '/api/stalls/{id}/staff': {
             post: {
                 summary: 'Assign cashier to stall',
-                description: 'Owner/Manager only. Backend verifies the stall exists, the user exists, and the assigned user is a cashier.'
+                description: 'Owner/Manager only. Backend verifies the stall and cashier, transactionally replaces any previous assignment, and invalidates that cashier\'s active sessions without deregistering their terminals.'
             }
         },
         '/api/stalls/{id}/staff/{userId}': {
             delete: {
                 summary: 'Remove cashier from stall',
-                description: 'Owner/Manager only.'
+                description: 'Owner/Manager only. Removes the assignment and immediately invalidates the cashier\'s active sessions without deregistering the physical terminal.'
             }
         },
         '/api/stalls/{id}/telegram-cooks': {

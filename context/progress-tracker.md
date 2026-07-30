@@ -894,13 +894,20 @@ Update this file after every meaningful implementation change.
   - Retained the checkout key and created order ID in `sessionStorage` until success so cash confirmation retries resume the same order.
   - Added an idempotent database migration, synchronized Sequelize/SQL/ERD/API docs, and added unit plus live concurrent-create coverage.
   - Backend lint passes with existing warnings, 16 backend unit tests pass, the live order-flow test passes, and frontend lint/build pass.
+- **Closed production audit P0-2 with strict cashier stall-session consistency**:
+  - Cashier API requests and Socket.IO connections now require the current `stall_staff` assignment, JWT stall, and active registered-device stall to match.
+  - Product listing and order creation use the stall verified by authentication; stale sessions return `401 STALL_ASSIGNMENT_CHANGED`.
+  - Cashier assignment moves are transactional, each cashier is database-limited to one stall, and reassignment/unassignment disconnects active cashier sessions without deregistering the physical terminal.
+  - The frontend clears the stale cashier session while preserving its device registration so the terminal can be reused after a correct reassignment.
+  - Applied the idempotent one-stall assignment migration. Backend lint has zero errors, 16 unit tests pass, the live order/reassignment test passes, and frontend lint/build pass.
 
 ## Next Up
 
 - Production-readiness remediation:
   - A comprehensive read-only audit is recorded in `PRODUCTION_READINESS_AUDIT.md`.
-  - P0-1 checkout idempotency is implemented and verified.
-  - Current production recommendation remains No-Go until P0-2 cashier device/assignment stall consistency and the remaining P1 controls are fixed and verified.
+  - P0-1 checkout idempotency and P0-2 cashier stall-session consistency are implemented and verified.
+  - Current production recommendation remains No-Go until the remaining P1 security, migration, reliability, dependency, CI, and operational controls are fixed and verified.
+  - Next priority: make the online-only checkout behavior truthful and recoverable when the backend is unavailable.
   - Follow the audit's phased P0/P1 plan only after team review and approval.
 
 - Post-Phase 6 Operations & Security Hardening.

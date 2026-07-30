@@ -81,6 +81,7 @@ export async function createOrder(req, res, next) {
       items,
       paymentMethod,
       idempotencyKey,
+      req.user.stall_id,
     );
     if (result.replayed) {
       res.set('Idempotent-Replayed', 'true');

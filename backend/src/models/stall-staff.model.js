@@ -22,8 +22,13 @@ const StallStaff = sequelize.define('StallStaff', {
   timestamps: false,
   indexes: [
     {
+      name: 'uq_stall_staff_user',
       unique: true,
-      fields: ['stall_id', 'user_id'],
+      fields: ['user_id'],
+    },
+    {
+      name: 'idx_stall_staff_stall_id',
+      fields: ['stall_id'],
     },
   ],
 });

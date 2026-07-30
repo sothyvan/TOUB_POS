@@ -43,6 +43,12 @@ export function AuthProvider({ children }) {
     setAuthNotice(message);
   }, []);
 
+  const handleSessionInvalidated = useCallback((message = 'Your session is no longer valid. Please sign in again.') => {
+    clearStoredSession();
+    setSession({ token: null, user: null });
+    setAuthNotice(message);
+  }, []);
+
   const clearAuthNotice = useCallback(() => {
     setAuthNotice('');
   }, []);
@@ -54,10 +60,14 @@ export function AuthProvider({ children }) {
         handleDeviceRevoked(payload?.message);
         return;
       }
+      if (payload?.code === 'STALL_ASSIGNMENT_CHANGED') {
+        handleSessionInvalidated(payload?.message);
+        return;
+      }
       clearSession();
     });
     return () => setUnauthorizedHandler(null);
-  }, [clearSession, handleDeviceRevoked]);
+  }, [clearSession, handleDeviceRevoked, handleSessionInvalidated]);
 
   const login = useCallback(async (username, password, options = {}) => {
     setAuthNotice('');
@@ -104,7 +114,8 @@ export function AuthProvider({ children }) {
     authNotice,
     clearAuthNotice,
     handleDeviceRevoked,
-  }), [session.token, session.user, login, loginPin, clearSession, authNotice, clearAuthNotice, handleDeviceRevoked]);
+    handleSessionInvalidated,
+  }), [session.token, session.user, login, loginPin, clearSession, authNotice, clearAuthNotice, handleDeviceRevoked, handleSessionInvalidated]);
 
   return (
     <AuthContext.Provider value={value}>

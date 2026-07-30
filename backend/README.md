@@ -274,11 +274,16 @@ npm run seed
 npm run migrate:telegram-cooks
 npm run migrate:telegram-groups
 npm run migrate:order-idempotency
+npm run migrate:single-stall-assignment
 ```
 
 Run `npm run migrate:order-idempotency` once for an existing database before
 deploying the retry-safe checkout API. New development databases receive the
 same nullable order fields and per-cashier unique index from Sequelize sync.
+
+Run `npm run migrate:single-stall-assignment` once for an existing database.
+It stops with a list of user IDs if duplicate assignments need manual review;
+it never deletes ambiguous assignment data.
 
 `npm run test:credentials` expects the local API and a seeded Owner account. It creates temporary Manager, Cashier, Stall, assignment, and registered-device records, verifies device-bound PIN login and credential response safety, then cleans up those records.
 

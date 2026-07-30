@@ -558,6 +558,13 @@ Requires `owner` or `manager` role.
 
 Stall create/update accepts normal editable fields such as `name` and `location`. The backend does not trust privileged frontend-submitted fields such as `owner_id`, `device_token`, or `telegram_chat_id`.
 
+Each cashier can have at most one current stall assignment. Assigning a cashier
+to another stall transactionally replaces the previous assignment. Moving or
+removing an assignment emits `cashier:session_invalidated`, logs out that
+cashier's connected sessions, and preserves the physical terminal registration.
+Future cashier API requests also compare the current assignment with the JWT
+and device stall and return `401 STALL_ASSIGNMENT_CHANGED` on any mismatch.
+
 Stall list responses expose safe `devices` metadata and the aggregate `device_registered` boolean. They never expose token hashes or raw tokens. Registering requires `{ "device_name": "Front Counter Tablet" }` and returns the raw token once. Deregistration marks only the selected `stall_devices` row inactive, rejects its future cashier requests, and sends a targeted real-time logout event. Other devices at that stall remain active.
 
 Telegram cooks are not web users. Authorizing a cook requires a numeric `telegram_user_id` and `display_name`, stores a stall-scoped allowlist record, and grants only the ability to complete that stall's Telegram kitchen tickets. Cook list/create/revoke responses return `telegram_user_id_masked`, never the complete Telegram identifier. Revoking one identity does not affect other cooks or cashier accounts.

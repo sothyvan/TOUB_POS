@@ -105,7 +105,13 @@ async function findIdempotentOrder(cashierId, idempotencyKey, fingerprint) {
   return getOrderById(existing.id);
 }
 
-export async function createOrder(cashierId, items, paymentMethod, rawIdempotencyKey) {
+export async function createOrder(
+  cashierId,
+  items,
+  paymentMethod,
+  rawIdempotencyKey,
+  verifiedStallId,
+) {
   if (!Array.isArray(items) || items.length === 0) {
     throw httpError('Order must contain items.');
   }
@@ -120,6 +126,7 @@ export async function createOrder(cashierId, items, paymentMethod, rawIdempotenc
   }
 
   const parsedCashierId = parsePositiveInteger(cashierId, 'cashier ID');
+  const parsedVerifiedStallId = parsePositiveInteger(verifiedStallId, 'verified stall ID');
   const idempotencyKey = normalizeIdempotencyKey(rawIdempotencyKey);
   for (const item of items) {
     validateItemShape(item);
@@ -144,14 +151,22 @@ export async function createOrder(cashierId, items, paymentMethod, rawIdempotenc
 
   try {
     const stallStaff = await StallStaff.findOne({
-      where: { user_id: parsedCashierId },
+      where: {
+        user_id: parsedCashierId,
+        stall_id: parsedVerifiedStallId,
+      },
       transaction,
+      lock: transaction.LOCK.UPDATE,
     });
     if (!stallStaff) {
-      throw httpError('Cashier is not assigned to any stall.', 403);
+      throw httpError(
+        'Cashier assignment no longer matches this terminal. Please sign in again.',
+        401,
+        'STALL_ASSIGNMENT_CHANGED',
+      );
     }
 
-    const stallId = stallStaff.stall_id;
+    const stallId = parsedVerifiedStallId;
     const stall = await Stall.findByPk(stallId, { transaction });
     if (!stall) {
       throw httpError('Assigned stall was not found.', 404);

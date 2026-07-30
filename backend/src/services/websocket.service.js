@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { Server } from 'socket.io';
 import { findDeviceByToken, markDeviceSeen } from '../repositories/stall-device.repository.js';
+import { findStaffAssignmentByUserId } from '../repositories/stall.repository.js';
 
 let ioServer = null;
 const cashierSockets = new Map();
@@ -142,6 +143,15 @@ async function authenticateSocket(socket, next) {
         || Number(device.stall_id) !== Number(user.stall_id)
       ) {
         return next(new Error('This terminal has been deregistered.'));
+      }
+
+      const assignment = await findStaffAssignmentByUserId(userId);
+      if (
+        !assignment
+        || Number(assignment.stall_id) !== Number(user.stall_id)
+        || Number(assignment.stall_id) !== Number(device.stall_id)
+      ) {
+        return next(new Error('Your stall assignment changed. Sign in again on the correct terminal.'));
       }
 
       socket.data.cashierId = userId;
@@ -384,6 +394,37 @@ export function emitDeviceRevoked(deviceId, payload = {}) {
     socket.emit('device:revoked', {
       deviceId: normalizedDeviceId,
       message: payload.message || 'This terminal was deregistered by management.',
+    });
+    setTimeout(() => socket.disconnect(true), 100);
+  }
+
+  return true;
+}
+
+export function emitCashierSessionInvalidated(cashierId, payload = {}) {
+  if (!ioServer) {
+    return false;
+  }
+
+  const normalizedCashierId = Number(cashierId);
+  if (!Number.isInteger(normalizedCashierId) || normalizedCashierId <= 0) {
+    return false;
+  }
+
+  const socketIds = cashierSockets.get(normalizedCashierId);
+  if (!socketIds || socketIds.size === 0) {
+    return false;
+  }
+
+  for (const socketId of [...socketIds]) {
+    const socket = ioServer.sockets.sockets.get(socketId);
+    if (!socket) {
+      continue;
+    }
+
+    socket.emit('cashier:session_invalidated', {
+      cashierId: normalizedCashierId,
+      message: payload.message || 'Your stall assignment changed. Please sign in again.',
     });
     setTimeout(() => socket.disconnect(true), 100);
   }
