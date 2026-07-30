@@ -1,6 +1,6 @@
 # Toub POS
 
-A lightweight Point-of-Sale system for small merchant teams operating across multiple stalls. TouB POS now uses backend-owned products, staff assignments, orders, cash confirmation, KHQR Individual payment confirmation with backend Bakong status checking, and audit logs, with future phases planned for live WebSocket updates and Telegram kitchen dispatch.
+A lightweight Point-of-Sale system for small merchant teams operating across multiple stalls. TouB POS uses backend-owned products, staff assignments, orders, cash confirmation, audit logs, live updates, and Telegram kitchen dispatch. Automatic KHQR checkout is temporarily disabled while the team evaluates an approved merchant payment provider.
 
 ---
 
@@ -86,7 +86,7 @@ TouB POS allows one Owner per customer business. Additional supervisors should b
 6. Cash confirmation uses `POST /api/orders/:id/confirm-cash`.
 7. Confirmation changes the order status to `paid` and writes an audit log.
 
-KHQR Individual checkout is backend-owned in Phase 5. The frontend displays the backend QR payload and asks the TouB backend to check payment status. The backend checks Bakong Open API by QR md5/hash before marking the order as `paid`. Live WebSocket payment updates and Telegram kitchen dispatch are later phases.
+Cash is the currently enabled checkout method. The previous backend-owned KHQR implementation and historical order fields are retained, but new KHQR creation, status polling, and background checks are disabled unless both backend `KHQR_ENABLED=true` and frontend `VITE_KHQR_ENABLED=true` are explicitly configured. The default remains `false` while an approved merchant integration is evaluated.
 
 ---
 

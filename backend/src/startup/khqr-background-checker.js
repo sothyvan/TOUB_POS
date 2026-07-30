@@ -1,4 +1,5 @@
 import { Op } from 'sequelize';
+import { isKhqrEnabled } from '../config/env.js';
 import { Order } from '../models/index.js';
 import { checkKhqrPaymentStatusAsSystem } from '../services/order.service.js';
 
@@ -59,6 +60,10 @@ function findPendingKhqrOrders() {
 }
 
 export async function runKhqrBackgroundCheckOnce() {
+  if (!isKhqrEnabled()) {
+    return { skipped: true, reason: 'khqr_disabled' };
+  }
+
   if (!isCheckerEnabled()) {
     return { skipped: true, reason: 'disabled' };
   }
@@ -106,6 +111,11 @@ export async function runKhqrBackgroundCheckOnce() {
 
 export function startKhqrBackgroundChecker() {
   if (timerId) {
+    return;
+  }
+
+  if (!isKhqrEnabled()) {
+    console.info('[khqr-background-checker] KHQR is disabled by KHQR_ENABLED.');
     return;
   }
 

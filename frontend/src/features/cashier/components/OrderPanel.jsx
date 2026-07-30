@@ -22,6 +22,7 @@ export default function OrderPanel({
   checkoutLoading,
   checkoutError,
   isOnline,
+  khqrEnabled,
 }) {
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const hasItems = cart.length > 0;
@@ -113,13 +114,13 @@ export default function OrderPanel({
           <p className="m-0 mb-4 rounded-md border border-ui-border bg-ui-muted px-3 py-2 text-xs font-bold text-text-muted">
             Add at least one item to enable payment.
           </p>
-        ) : !isOnline ? (
+        ) : khqrEnabled && !isOnline ? (
           <p className="m-0 mb-4 rounded-md border border-state-warning/30 bg-state-warning/10 px-3 py-2 text-xs font-bold text-state-warning">
             Offline mode: cash is available, KHQR is disabled.
           </p>
         ) : null}
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className={`grid gap-3 ${khqrEnabled ? 'grid-cols-2' : 'grid-cols-1'}`}>
           <Button
             className="h-13 text-base"
             type="button"
@@ -131,17 +132,19 @@ export default function OrderPanel({
           >
             {checkoutLoading ? 'Processing...' : 'Cash'}
           </Button>
-          <Button
-            className="h-13 text-base"
-            type="button"
-            disabled={khqrDisabled}
-            loading={checkoutLoading}
-            variant="danger"
-            iconName={checkoutLoading ? undefined : 'khqr'}
-            onClick={() => handleCheckout('KHQR')}
-          >
-            {checkoutLoading ? 'Processing...' : 'KHQR'}
-          </Button>
+          {khqrEnabled ? (
+            <Button
+              className="h-13 text-base"
+              type="button"
+              disabled={khqrDisabled}
+              loading={checkoutLoading}
+              variant="danger"
+              iconName={checkoutLoading ? undefined : 'khqr'}
+              onClick={() => handleCheckout('KHQR')}
+            >
+              {checkoutLoading ? 'Processing...' : 'KHQR'}
+            </Button>
+          ) : null}
         </div>
       </div>
 

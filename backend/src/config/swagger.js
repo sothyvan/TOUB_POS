@@ -224,7 +224,7 @@ export const swaggerDocument = {
                     'Cashier only.',
                     'Frontend sends product IDs, quantities, optional notes, and payment method only.',
                     'Backend derives cashier/stall, calculates trusted totals, snapshots item names/prices, and starts the order as pending_payment.',
-                    'KHQR orders generate an Individual KHQR payload plus md5, payment reference, and expiry metadata.'
+                    'KHQR is disabled by default; khqr requests return 503 KHQR_DISABLED unless KHQR_ENABLED=true.'
                 ].join(' '),
                 requestBody: {
                     required: true,
@@ -256,7 +256,11 @@ export const swaggerDocument = {
                     201: { description: 'Order created as pending_payment' },
                     400: { $ref: '#/components/responses/BadRequest' },
                     401: { $ref: '#/components/responses/Unauthorized' },
-                    403: { $ref: '#/components/responses/Forbidden' }
+                    403: { $ref: '#/components/responses/Forbidden' },
+                    503: {
+                        ...errorResponse,
+                        description: 'KHQR payment method is temporarily disabled'
+                    }
                 }
             }
         },
@@ -293,6 +297,7 @@ export const swaggerDocument = {
                 summary: 'Check KHQR payment status',
                 description: [
                     'Allowed for the creating cashier, or an owner/manager within the same business owner scope.',
+                    'Returns 503 KHQR_DISABLED while KHQR_ENABLED=false.',
                     'Frontend calls this endpoint while the KHQR modal is open.',
                     'The backend calls Bakong Open API by qr_md5 and validates amount/currency/configured destination account before marking paid.',
                     'The Bakong Open API token is backend-only and is never exposed to the frontend.'
@@ -336,7 +341,7 @@ export const swaggerDocument = {
                     404: { $ref: '#/components/responses/NotFound' },
                     503: {
                         ...errorResponse,
-                        description: 'Bakong status checking or account configuration is misconfigured'
+                        description: 'KHQR is disabled, or Bakong status checking/account configuration is misconfigured'
                     }
                 }
             }

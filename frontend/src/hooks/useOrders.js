@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { KHQR_ENABLED } from '../config/features';
 import { api } from '../services/api';
 import { useAutoRefresh } from './useAutoRefresh';
 
@@ -69,6 +70,10 @@ export function useOrders(isOnline, cart, clearCart, currentUser) {
       return null;
     }
     const normalizedMethod = String(method || '').toUpperCase();
+    if (normalizedMethod === 'KHQR' && !KHQR_ENABLED) {
+      setCheckoutError('KHQR payments are temporarily unavailable. Please use cash.');
+      return null;
+    }
     if (normalizedMethod === 'KHQR' && !isOnline) {
       setCheckoutError('KHQR needs an internet connection. Take cash or reconnect the terminal.');
       return null;

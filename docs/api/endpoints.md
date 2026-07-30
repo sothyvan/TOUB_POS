@@ -214,6 +214,8 @@ All routes require authentication.
 
 The frontend may use `paymentMethod`; the backend accepts it and normalizes it. The frontend must not send trusted fields such as `total`, `subtotal`, `cashier_id`, `stall_id`, item prices, paid flags, or final status.
 
+KHQR is disabled by default. Submitting `payment_method: "khqr"` while `KHQR_ENABLED` is not explicitly `true` returns `503` with code `KHQR_DISABLED`. Cash order creation is unaffected.
+
 Backend behavior:
 
 - Derives cashier ID from the JWT.
@@ -251,7 +253,7 @@ Cashiers can fetch their own orders only. Owner/Manager can fetch orders only wi
 
 Cashiers can check their own KHQR orders only. Owner/Manager can check KHQR orders only within their own business owner scope.
 
-Frontend KHQR polling should call this endpoint, not Bakong directly. The backend also runs a background checker for unexpired pending KHQR orders, so this endpoint is now a fallback and manual recovery path rather than the only payment detector.
+This endpoint is retained for a future approved provider rollout but returns `503` with code `KHQR_DISABLED` while `KHQR_ENABLED=false`. The frontend does not poll it while `VITE_KHQR_ENABLED=false`, and the background checker remains stopped.
 
 Backend behavior:
 
@@ -291,7 +293,7 @@ Backend behavior:
 | 400  | Not a KHQR order, missing md5, amount/currency/destination mismatch |
 | 403  | Actor is not allowed for this order |
 | 404  | Order not found |
-| 503  | Bakong token/base URL/account is misconfigured |
+| 503  | KHQR is disabled, or Bakong token/base URL/account is misconfigured |
 
 ### POST `/orders/:id/confirm-cash`
 

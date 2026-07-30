@@ -72,13 +72,14 @@ Do not run this seeder against production or any live merchant database.
 | `PLATFORM_ADMIN_USERNAME` | Development bootstrap platform admin username | `platform_admin` |
 | `PLATFORM_ADMIN_PASSWORD` | Development bootstrap platform admin password | `platform123` |
 | `PLATFORM_ADMIN_ROLE` | Development bootstrap role; must be `platform_admin` | `platform_admin` |
+| `KHQR_ENABLED` | Explicitly enable KHQR creation and Bakong status checking; defaults to disabled | `false` |
 | `BAKONG_ACCOUNT_ID` | Required owner/stall Bakong account for Individual KHQR generation and validation | `owner@bakong` |
 | `KHQR_MERCHANT_NAME` | Name embedded in KHQR payload | `Toub POS` |
 | `KHQR_MERCHANT_CITY` | City embedded in KHQR payload | `PHNOM PENH` |
 | `KHQR_EXPIRATION_MINUTES` | KHQR payment expiration window | `10` |
 | `BAKONG_OPEN_API_BASE_URL` | Bakong Open API base URL | `https://api-bakong.nbc.gov.kh` |
 | `BAKONG_OPEN_API_TOKEN` | Backend-only Bakong Open API token | `replace_with_token` |
-| `KHQR_BACKGROUND_CHECK_ENABLED` | Enable backend polling for pending KHQR orders | `true` |
+| `KHQR_BACKGROUND_CHECK_ENABLED` | Enable background polling only when `KHQR_ENABLED=true` | `false` |
 | `KHQR_BACKGROUND_CHECK_INTERVAL_MS` | Background KHQR check interval in milliseconds | `5000` |
 | `KHQR_BACKGROUND_CHECK_BATCH_SIZE` | Maximum pending KHQR orders checked per run | `10` |
 
@@ -221,9 +222,9 @@ Order creation accepts only product IDs, quantities, optional notes, and payment
 
 Cash orders start as `pending_payment`. Cash confirmation requires `cash_received_usd`; the backend rejects underpayment, calculates `change_due_usd`, changes the status to `paid`, and writes a `cash_payment_confirmed` audit log.
 
-KHQR orders also start as `pending_payment`. The backend requires `BAKONG_ACCOUNT_ID`, generates Individual KHQR data, stores the QR payload, md5, payment reference, and expiry. The frontend asks the backend to run `POST /api/orders/:id/check-khqr-status`; the backend calls Bakong Open API by md5/hash and marks the order `paid` only after amount/currency/destination-account validation.
+KHQR is temporarily disabled by default while TouB POS evaluates an approved merchant payment provider. When `KHQR_ENABLED` is not explicitly `true`, KHQR order creation and status checking return `503` with code `KHQR_DISABLED`, and the background checker does not start. Existing KHQR records remain readable in order history and reports.
 
-When a KHQR order becomes `paid`, the backend emits a Socket.IO `payment_confirmed` event only to sockets authenticated as the cashier who created that order, then reuses the Telegram kitchen ticket dispatch flow. A background checker also scans unexpired pending KHQR orders, so paid detection no longer depends only on the cashier keeping the QR modal open. The frontend still keeps polling as a fallback while the KHQR modal is open.
+The retained integration can only be re-enabled deliberately with matching backend and frontend flags. If re-enabled after provider approval, the existing backend validation still requires amount, currency, and destination-account matches before marking an order paid.
 
 Owner/Manager order history shows Telegram kitchen ticket state (`pending`, `sent`, `failed`, or `done`) and can retry missing or failed kitchen ticket delivery through `POST /api/orders/:id/retry-telegram`. `pending` means the backend is still sending the ticket and is not retryable. Cashiers can also retry their own paid orders from the cashier order history when kitchen dispatch fails. The backend emits `order_updated` when same-business orders are created or paid, and emits `kitchen_ticket_updated` when Telegram dispatch finishes or a cook taps `Mark as Done`, so order-history screens refresh without a full page reload.
 

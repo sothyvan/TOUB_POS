@@ -1,5 +1,6 @@
 # ToubPOS — Backend Completion Roadmap (Sprint Plan)
 
+> **Payment update:** Completed KHQR milestones below are retained as implementation history. KHQR is currently disabled by default while the team evaluates an approved merchant payment provider; cash remains active.
 
 **Stack confirmed from your code:** Node.js + Express, Sequelize (MySQL), JWT auth, Controller→Service→Repository pattern.
 

@@ -6,8 +6,8 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 
 ## Goals
 
-1. Eliminate manual payment verification bottlenecks for cashiers.
-2. Provide real-time payment confirmation routed exclusively to the cashier who generated that QR session.
+1. Keep cashier checkout totals and payment state backend-owned and auditable.
+2. Support reliable cash checkout while an approved automated QR payment provider is evaluated.
 3. Replace paper kitchen tickets with a real-time Telegram bot kitchen display.
 4. Ensure accurate end-of-day sales reporting scoped per stall for owners.
 5. Support dual-currency pricing (USD / KHR) for menu items.
@@ -18,9 +18,9 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 2. Cashier taps their avatar from the stall's staff roster and enters a 4-digit PIN.
 3. Cashier selects items from the stall-scoped menu (other stalls' items are hidden).
 4. Cashier optionally adds **order modifiers** (e.g., "no ice", "extra spicy") per item.
-5. Cashier selects **Cash** or **KHQR** checkout.
-   - Cash: confirmation dialog → order recorded as paid.
-   - KHQR: dynamic QR generated → backend checks Bakong by QR MD5 → WebSocket pushes confirmation **only to that cashier's screen**.
+5. Cashier selects **Cash** checkout.
+   - Cash: confirmation dialog → backend validates the received amount and records the order as paid.
+   - KHQR: temporarily unavailable while TouB POS evaluates an approved merchant payment provider.
 6. On payment confirmation, the order payload is forwarded to the **Telegram kitchen bot**, which posts a structured order ticket to the stall's kitchen channel.
 7. Cook taps "Done" in Telegram → bot edits the message to mark it complete.
 8. Transaction is recorded to the central database under the stall and cashier.
@@ -39,15 +39,15 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 - Stall-scoped menu (only that stall's items/categories visible)
 - Order modifiers per item (notes: "no ice", "extra spicy", etc.)
 - Floating order summary with quantity adjustments
-- Dual checkout: Cash (green) / KHQR (blue)
+- Cash checkout with received-amount and change calculation
 - Cash confirmation dialog guardrail
 - "Park" transaction for later *(Future)*
 
 ### Payment Integration
 
-- Dynamic KHQR generation (Bakong-compliant)
-- Backend Bakong Open API status checking by QR MD5, with frontend polling and a process-local background checker
-- WebSocket isolated notification routing → specific cashier only
+- Backend-owned cash confirmation and audit logging
+- Retained KHQR provider code and historical order metadata behind disabled-by-default feature flags
+- Future approved merchant QR provider integration without trusting frontend payment status
 
 ### Kitchen Display (Telegram Bot)
 
@@ -92,7 +92,8 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 - Menu management with dual-currency pricing (USD / KHR).
 - Order modifiers/notes per item.
 - Service Fee (3%) and Estimated Tax (8%) calculation.
-- KHQR payment integration through backend-owned Bakong Open API verification.
+- Cash payment confirmation and change calculation.
+- Historical KHQR data remains readable; new KHQR payment processing is temporarily out of active scope.
 - Telegram kitchen display bot.
 
 ### Out of Scope (Current Phase)
@@ -106,7 +107,7 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 
 ## Success Criteria
 
-1. A cashier can process a KHQR payment and receive automated confirmation **on their screen only**, without checking a separate bank app.
+1. A cashier can process a cash payment with backend-validated totals, received amount, and change.
 2. A confirmed order is relayed to the Telegram kitchen channel within 2 seconds of payment.
 3. An owner/manager can view a consolidated financial report filtered by stall, cashier, and time window, according to their assigned permissions.
 4. A device can only access the menu and staff roster of its registered stall.

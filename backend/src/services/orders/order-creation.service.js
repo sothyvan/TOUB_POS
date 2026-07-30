@@ -10,6 +10,7 @@ import {
   StallStaff,
   User,
 } from '../../models/index.js';
+import { isKhqrEnabled } from '../../config/env.js';
 import { httpError } from '../../utils/http-error.util.js';
 import { generateKhqrIndividualPayment } from '../khqr-provider.service.js';
 import { emitManagementOrderUpdated } from '../websocket.service.js';
@@ -89,6 +90,14 @@ export async function createOrder(cashierId, items, paymentMethod) {
   }
 
   const normalizedPaymentMethod = normalizePaymentMethod(paymentMethod);
+  if (normalizedPaymentMethod === 'khqr' && !isKhqrEnabled()) {
+    throw httpError(
+      'KHQR payments are temporarily unavailable. Please use cash.',
+      503,
+      'KHQR_DISABLED',
+    );
+  }
+
   const parsedCashierId = parsePositiveInteger(cashierId, 'cashier ID');
   let createdOrderId;
   let createdOrderOwnerId;

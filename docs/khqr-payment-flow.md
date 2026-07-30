@@ -1,5 +1,7 @@
 # KHQR Payment Flow & Function Mapping Guide
 
+> **Current status:** This guide documents the retained Phase 5 implementation. KHQR creation, polling, and background checking are disabled by default while TouB POS evaluates an approved merchant payment provider. Cash is the active checkout method.
+
 This document explains the complete end-to-end payment flow when a customer scans a generated KHQR code in the TOUB POS system, along with the precise mapping of functions from the React frontend to the Node.js Express backend.
 
 ---
