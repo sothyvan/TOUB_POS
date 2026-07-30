@@ -264,8 +264,33 @@ WHERE sp.product_id = 5
   AND sp.stall_id = 1;
 
 -- Insert a new Order (status defaults to 'pending_payment')
-INSERT INTO orders (stall_id, cashier_id, payment_method, status, subtotal_usd, total_usd)
-VALUES (1, 2, 'cash', 'pending_payment', 15.75, 15.75);
+INSERT INTO orders (
+  stall_id,
+  cashier_id,
+  idempotency_key,
+  idempotency_fingerprint,
+  payment_method,
+  status,
+  subtotal_usd,
+  total_usd
+)
+VALUES (
+  1,
+  2,
+  '0d635ea2-8ea1-46a0-a195-a3ef02032594',
+  SHA2('canonical checkout request', 256),
+  'cash',
+  'pending_payment',
+  15.75,
+  15.75
+);
+
+-- Replay lookup for the same cashier and checkout attempt.
+SELECT id, idempotency_fingerprint
+FROM orders
+WHERE cashier_id = 2
+  AND idempotency_key = '0d635ea2-8ea1-46a0-a195-a3ef02032594'
+LIMIT 1;
 
 -- Insert Order Item details (linked to order)
 INSERT INTO order_items (order_id, product_id, name, price_usd, price_khr, line_total_usd, line_total_khr, quantity, notes)
@@ -613,6 +638,12 @@ DROP INDEX payment_reference_2;
 
 ALTER TABLE orders
 ADD UNIQUE INDEX uq_orders_payment_reference (payment_reference);
+
+-- One-time production migration for retry-safe checkout creation.
+ALTER TABLE orders
+  ADD COLUMN idempotency_key VARCHAR(64) DEFAULT NULL AFTER cashier_id,
+  ADD COLUMN idempotency_fingerprint VARCHAR(64) DEFAULT NULL AFTER idempotency_key,
+  ADD UNIQUE INDEX uq_orders_cashier_idempotency (cashier_id, idempotency_key);
 -- Development-only Phase 5 KHQR metadata migration
 ALTER TABLE orders
 ADD COLUMN qr_md5 VARCHAR(64) DEFAULT NULL AFTER qr_payload,

@@ -1,6 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { KHQR_ENABLED } from '../config/features';
 import { api } from '../services/api';
+import {
+  clearPendingCheckout,
+  createCheckoutSignature,
+  createIdempotencyKey,
+  readPendingCheckout,
+  writePendingCheckout,
+} from '../utils/pendingCheckout';
 import { useAutoRefresh } from './useAutoRefresh';
 
 /**
@@ -16,6 +23,7 @@ export function useOrders(isOnline, cart, clearCart, currentUser) {
   const [error, setError] = useState(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState(null);
+  const pendingCheckoutRef = useRef(null);
 
   const fetchOrders = useCallback(async (showSpinner = true) => {
     if (!currentUser) {
@@ -87,17 +95,48 @@ export function useOrders(isOnline, cart, clearCart, currentUser) {
         ...(notes ? { notes } : {}),
       })),
     };
+    const userId = currentUser?.id;
+    const signature = createCheckoutSignature(orderPayload);
+    let pendingCheckout = pendingCheckoutRef.current || readPendingCheckout(userId);
+    if (
+      !pendingCheckout
+      || pendingCheckout.userId !== userId
+      || pendingCheckout.signature !== signature
+    ) {
+      pendingCheckout = {
+        userId,
+        signature,
+        idempotencyKey: createIdempotencyKey(),
+        orderId: null,
+      };
+    }
+    pendingCheckoutRef.current = pendingCheckout;
+    writePendingCheckout(userId, pendingCheckout);
 
     try {
       setCheckoutLoading(true);
       setCheckoutError(null);
-      const createdOrder = await api.orders.create(orderPayload);
+      const createdOrder = pendingCheckout.orderId
+        ? await api.orders.getById(pendingCheckout.orderId)
+        : await api.orders.create(orderPayload, pendingCheckout.idempotencyKey);
+
+      if (!pendingCheckout.orderId) {
+        pendingCheckout = { ...pendingCheckout, orderId: createdOrder.id };
+        pendingCheckoutRef.current = pendingCheckout;
+        writePendingCheckout(userId, pendingCheckout);
+      }
 
       const finalOrder = normalizedMethod === 'CASH'
-        ? await api.orders.confirmCash(createdOrder.id, options.cashReceivedUsd)
+        ? (
+          createdOrder.status === 'paid'
+            ? createdOrder
+            : await api.orders.confirmCash(createdOrder.id, options.cashReceivedUsd)
+        )
         : createdOrder;
 
       await fetchOrders(false);
+      pendingCheckoutRef.current = null;
+      clearPendingCheckout(userId);
       clearCart();
       return finalOrder;
     } catch(err) {

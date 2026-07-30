@@ -14,6 +14,7 @@ async function apiRequest(path, {
   method = 'GET',
   token,
   deviceToken,
+  idempotencyKey,
   body,
 } = {}) {
   const headers = { Accept: 'application/json' };
@@ -25,6 +26,9 @@ async function apiRequest(path, {
   }
   if (deviceToken) {
     headers['x-device-token'] = deviceToken;
+  }
+  if (idempotencyKey) {
+    headers['Idempotency-Key'] = idempotencyKey;
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -232,10 +236,23 @@ test('live order flow enforces trusted totals, stall scope, cash rules, and RBAC
   });
   expectStatus(trustedTopLevel, 400);
 
+  const missingIdempotencyKey = await apiRequest('/orders', {
+    method: 'POST',
+    token: cashierToken,
+    deviceToken,
+    body: {
+      items: [{ product_id: visibleProductId, quantity: 1 }],
+      paymentMethod: 'cash',
+    },
+  });
+  expectStatus(missingIdempotencyKey, 400);
+  assert.match(missingIdempotencyKey.payload.message, /Idempotency-Key/);
+
   const trustedItemPrice = await apiRequest('/orders', {
     method: 'POST',
     token: cashierToken,
     deviceToken,
+    idempotencyKey: uniqueName('checkout'),
     body: {
       items: [{ product_id: visibleProductId, quantity: 1, price_usd: 0.01 }],
       paymentMethod: 'cash',
@@ -247,6 +264,7 @@ test('live order flow enforces trusted totals, stall scope, cash rules, and RBAC
     method: 'POST',
     token: cashierToken,
     deviceToken,
+    idempotencyKey: uniqueName('checkout'),
     body: {
       items: [{ product_id: visibleProductId, quantity: 0 }],
       paymentMethod: 'cash',
@@ -258,6 +276,7 @@ test('live order flow enforces trusted totals, stall scope, cash rules, and RBAC
     method: 'POST',
     token: cashierToken,
     deviceToken,
+    idempotencyKey: uniqueName('checkout'),
     body: {
       items: [{ product_id: hiddenProductId, quantity: 1 }],
       paymentMethod: 'cash',
@@ -269,6 +288,7 @@ test('live order flow enforces trusted totals, stall scope, cash rules, and RBAC
     method: 'POST',
     token: cashierToken,
     deviceToken,
+    idempotencyKey: uniqueName('checkout'),
     body: {
       items: [{ product_id: otherStallProductId, quantity: 1 }],
       paymentMethod: 'cash',
@@ -276,19 +296,42 @@ test('live order flow enforces trusted totals, stall scope, cash rules, and RBAC
   });
   expectStatus(otherStallProduct, 404);
 
-  const orderCreate = await apiRequest('/orders', {
-    method: 'POST',
-    token: cashierToken,
-    deviceToken,
-    body: {
-      items: [{
-        product_id: visibleProductId,
-        quantity: 2,
-        notes: 'Less sugar',
-      }],
-      paymentMethod: 'cash',
-    },
-  });
+  const checkoutKey = uniqueName('checkout');
+  const orderBody = {
+    items: [{
+      product_id: visibleProductId,
+      quantity: 2,
+      notes: 'Less sugar',
+    }],
+    paymentMethod: 'cash',
+  };
+  const concurrentCreates = await Promise.all([
+    apiRequest('/orders', {
+      method: 'POST',
+      token: cashierToken,
+      deviceToken,
+      idempotencyKey: checkoutKey,
+      body: orderBody,
+    }),
+    apiRequest('/orders', {
+      method: 'POST',
+      token: cashierToken,
+      deviceToken,
+      idempotencyKey: checkoutKey,
+      body: orderBody,
+    }),
+  ]);
+  assert.deepEqual(
+    concurrentCreates.map((result) => result.response.status).sort(),
+    [200, 201],
+    'Concurrent creates should produce one new order and one idempotent replay.',
+  );
+  assert.equal(
+    concurrentCreates[0].payload.data.id,
+    concurrentCreates[1].payload.data.id,
+    'Concurrent creates should return the same order.',
+  );
+  const orderCreate = concurrentCreates.find((result) => result.response.status === 201);
   expectStatus(orderCreate, 201);
   const order = orderCreate.payload.data;
   ids.orderIds.push(order.id);
@@ -300,6 +343,30 @@ test('live order flow enforces trusted totals, stall scope, cash rules, and RBAC
   assert.equal(order.Items[0].name, productDefinitions[0].name);
   assert.equal(Number(order.Items[0].price_usd), 2.75);
   assert.equal(order.Items[0].notes, 'Less sugar');
+
+  const replayedCreate = await apiRequest('/orders', {
+    method: 'POST',
+    token: cashierToken,
+    deviceToken,
+    idempotencyKey: checkoutKey,
+    body: orderBody,
+  });
+  expectStatus(replayedCreate, 200);
+  assert.equal(replayedCreate.response.headers.get('idempotent-replayed'), 'true');
+  assert.equal(replayedCreate.payload.data.id, order.id);
+
+  const conflictingReplay = await apiRequest('/orders', {
+    method: 'POST',
+    token: cashierToken,
+    deviceToken,
+    idempotencyKey: checkoutKey,
+    body: {
+      ...orderBody,
+      items: [{ product_id: visibleProductId, quantity: 3 }],
+    },
+  });
+  expectStatus(conflictingReplay, 409);
+  assert.equal(conflictingReplay.payload.code, 'IDEMPOTENCY_KEY_REUSED');
 
   const underpayment = await apiRequest(`/orders/${order.id}/confirm-cash`, {
     method: 'POST',

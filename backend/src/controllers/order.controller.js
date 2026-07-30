@@ -75,8 +75,19 @@ export async function createOrder(req, res, next) {
       return res.status(400).json({ success: false, message: 'Order must contain items.' });
     }
 
-    const result = await orderService.createOrder(cashierId, items, paymentMethod);
-    res.status(201).json({ success: true, data: sanitizeOrderTelegramMetadata(result) });
+    const idempotencyKey = req.get('Idempotency-Key');
+    const result = await orderService.createOrder(
+      cashierId,
+      items,
+      paymentMethod,
+      idempotencyKey,
+    );
+    if (result.replayed) {
+      res.set('Idempotent-Replayed', 'true');
+    }
+    res
+      .status(result.replayed ? 200 : 201)
+      .json({ success: true, data: sanitizeOrderTelegramMetadata(result.order) });
   } catch (error) {
     next(error);
   }

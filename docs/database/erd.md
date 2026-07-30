@@ -105,6 +105,8 @@ erDiagram
         int id PK
         int stall_id FK
         int cashier_id FK
+        varchar idempotency_key UK "nullable historical orders"
+        varchar idempotency_fingerprint "nullable historical orders"
         enum payment_method "cash, khqr"
         enum status "pending_payment, paid, cancelled"
         decimal subtotal_usd
@@ -179,6 +181,7 @@ erDiagram
 
 - `order_items.name`, `price_usd`, `price_khr`, `line_total_usd`, and `line_total_khr` are snapshots frozen at time of sale. They survive product edits or deletion.
 - `orders.cash_received_usd` and `orders.change_due_usd` are stored for cash orders after backend confirmation. The frontend may preview change, but the backend calculates the saved value.
+- `orders.idempotency_key` is unique per cashier. Exact checkout retries return the original order; reuse with different request data is rejected by comparing `idempotency_fingerprint`.
 - `orders.qr_payload`, `qr_md5`, `payment_reference`, and `payment_expires_at` are populated for KHQR orders and remain `NULL` for cash orders.
 - `orders.payment_reference` is the unique bill number/reference used by the KHQR webhook.
 - `users.username` is required and unique for every role.

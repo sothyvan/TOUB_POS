@@ -1,4 +1,4 @@
-import { Op } from 'sequelize';
+import { Op, UniqueConstraintError } from 'sequelize';
 import {
   sequelize,
   AuditLog,
@@ -18,6 +18,10 @@ import {
   getOrderById,
   parsePositiveInteger,
 } from './order-access.js';
+import {
+  buildOrderFingerprint,
+  normalizeIdempotencyKey,
+} from './order-idempotency.js';
 
 const ALLOWED_PAYMENT_METHODS = new Set(['cash', 'khqr']);
 const FORBIDDEN_ITEM_FIELDS = [
@@ -75,16 +79,33 @@ function validateItemShape(item) {
   }
 }
 
-function getProductIdFromItem(item) {
-  const productId = item.product_id ?? item.productId ?? item.id;
-  return parsePositiveInteger(productId, 'product_id');
-}
-
 function isVisibleStallProduct(stallProduct) {
   return stallProduct.is_visible === true || stallProduct.is_visible === 1;
 }
 
-export async function createOrder(cashierId, items, paymentMethod) {
+async function findIdempotentOrder(cashierId, idempotencyKey, fingerprint) {
+  const existing = await Order.unscoped().findOne({
+    where: {
+      cashier_id: cashierId,
+      idempotency_key: idempotencyKey,
+    },
+    attributes: ['id', 'idempotency_fingerprint'],
+  });
+  if (!existing) {
+    return null;
+  }
+  if (existing.idempotency_fingerprint !== fingerprint) {
+    throw httpError(
+      'This Idempotency-Key was already used for a different order request.',
+      409,
+      'IDEMPOTENCY_KEY_REUSED',
+    );
+  }
+
+  return getOrderById(existing.id);
+}
+
+export async function createOrder(cashierId, items, paymentMethod, rawIdempotencyKey) {
   if (!Array.isArray(items) || items.length === 0) {
     throw httpError('Order must contain items.');
   }
@@ -99,6 +120,24 @@ export async function createOrder(cashierId, items, paymentMethod) {
   }
 
   const parsedCashierId = parsePositiveInteger(cashierId, 'cashier ID');
+  const idempotencyKey = normalizeIdempotencyKey(rawIdempotencyKey);
+  for (const item of items) {
+    validateItemShape(item);
+  }
+  const { fingerprint, normalizedItems } = buildOrderFingerprint(
+    normalizedPaymentMethod,
+    items,
+    normalizeNotes,
+  );
+  const replayedOrder = await findIdempotentOrder(
+    parsedCashierId,
+    idempotencyKey,
+    fingerprint,
+  );
+  if (replayedOrder) {
+    return { order: replayedOrder, replayed: true };
+  }
+
   let createdOrderId;
   let createdOrderOwnerId;
   const transaction = await sequelize.transaction();
@@ -124,10 +163,7 @@ export async function createOrder(cashierId, items, paymentMethod) {
       transaction,
     });
 
-    for (const item of items) {
-      validateItemShape(item);
-    }
-    const requestedProductIds = items.map(getProductIdFromItem);
+    const requestedProductIds = normalizedItems.map((item) => item.product_id);
     const stallProducts = await ProductStall.findAll({
       where: {
         product_id: { [Op.in]: requestedProductIds },
@@ -146,9 +182,9 @@ export async function createOrder(cashierId, items, paymentMethod) {
     let totalUsd = 0;
     let totalKhr = 0;
     const orderItems = [];
-    for (const item of items) {
-      const productId = getProductIdFromItem(item);
-      const quantity = parsePositiveInteger(item.quantity, 'quantity');
+    for (const item of normalizedItems) {
+      const productId = item.product_id;
+      const quantity = item.quantity;
       const stallProduct = stallProductMap.get(productId);
       if (!stallProduct?.Product) {
         throw httpError(`Product with ID ${productId} not found.`, 404);
@@ -172,7 +208,7 @@ export async function createOrder(cashierId, items, paymentMethod) {
         line_total_usd: lineTotalUsd,
         line_total_khr: lineTotalKhr,
         quantity,
-        notes: normalizeNotes(item.notes),
+        notes: item.notes,
       });
     }
     totalUsd = Number(totalUsd.toFixed(2));
@@ -184,6 +220,8 @@ export async function createOrder(cashierId, items, paymentMethod) {
       status: 'pending_payment',
       subtotal_usd: totalUsd,
       total_usd: totalUsd,
+      idempotency_key: idempotencyKey,
+      idempotency_fingerprint: fingerprint,
     }, { transaction });
     createdOrderId = order.id;
 
@@ -225,6 +263,16 @@ export async function createOrder(cashierId, items, paymentMethod) {
     await transaction.commit();
   } catch (error) {
     await transaction.rollback();
+    if (error instanceof UniqueConstraintError) {
+      const concurrentOrder = await findIdempotentOrder(
+        parsedCashierId,
+        idempotencyKey,
+        fingerprint,
+      );
+      if (concurrentOrder) {
+        return { order: concurrentOrder, replayed: true };
+      }
+    }
     throw error;
   }
 
@@ -236,5 +284,5 @@ export async function createOrder(cashierId, items, paymentMethod) {
     paymentMethod: createdOrder.payment_method,
     changeType: 'created',
   });
-  return createdOrder;
+  return { order: createdOrder, replayed: false };
 }

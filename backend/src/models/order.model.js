@@ -73,7 +73,22 @@ const Order = sequelize.define('Order', {
     defaultValue: null,
     field: 'completed_at',
   },
+  idempotency_key: {
+    type: DataTypes.STRING(64),
+    defaultValue: null,
+    field: 'idempotency_key',
+  },
+  idempotency_fingerprint: {
+    type: DataTypes.STRING(64),
+    defaultValue: null,
+    field: 'idempotency_fingerprint',
+  },
 }, {
+  defaultScope: {
+    attributes: {
+      exclude: ['idempotency_key', 'idempotency_fingerprint'],
+    },
+  },
   indexes: [
     {
       name: 'uq_orders_payment_reference',
@@ -94,6 +109,11 @@ const Order = sequelize.define('Order', {
     {
       name: 'idx_orders_status',
       fields: ['status'],
+    },
+    {
+      name: 'uq_orders_cashier_idempotency',
+      unique: true,
+      fields: ['cashier_id', 'idempotency_key'],
     },
   ],
 });

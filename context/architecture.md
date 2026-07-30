@@ -111,6 +111,8 @@
 ## Current Payment Flow (Phase 4)
 
 - Cashier checkout calls `POST /api/orders` with product IDs, quantities, optional notes, and payment method only.
+- Each checkout attempt sends a client-generated `Idempotency-Key`. The backend stores the key uniquely per cashier with a SHA-256 request fingerprint, returns the original order for an exact replay, and rejects key reuse with changed order data.
+- The frontend retains the key and created order ID in `sessionStorage` until checkout succeeds. A retry resumes the same pending order and never creates another order merely because a create or confirmation response was lost.
 - The backend derives `cashier_id` from the JWT and `stall_id` from the cashier's staff assignment.
 - The backend loads product prices from MySQL, calculates trusted subtotal/total values, snapshots item names/prices, and creates the order as `pending_payment`.
 - Cash confirmation uses `POST /api/orders/:id/confirm-cash`.
