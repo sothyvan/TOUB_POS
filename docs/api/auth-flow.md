@@ -33,7 +33,7 @@ Client                          Server
   │                               │  2. Lookup user in DB
   │                               │  3. Reject cashier accounts
   │                               │  4. bcrypt.compare(password, hash)
-  │                               │  5. Sign JWT { id, username, role, owner_id } — 8h expiry
+  │                               │  5. Sign JWT { id, username, role, owner_id, session_version } — 8h expiry
   │◀──────────────────────────────│
   │  { token, user }              │
   │                               │
@@ -52,7 +52,9 @@ Client                          Server
   │ ─────────────────────────────▶│
   │                               │  1. authenticate middleware
   │                               │     → jwt.verify(token, SECRET)
-  │                               │     → attach req.user = { id, role, owner_id }
+  │                               │     → load current user session state
+  │                               │     → require active/not deleted and matching session_version/role/scope
+  │                               │     → attach verified req.user
   │                               │  2. Route handler executes
   │◀──────────────────────────────│
   │  { success: true, data: [...] }│
@@ -109,6 +111,20 @@ Production upgrade path:
 - On expiry, any authenticated request returns `401`
 - Frontend should catch `401` and redirect to `/login`
 
+## Immediate Session Invalidation
+
+- Every JWT contains the user's current `session_version`.
+- Every protected HTTP request and Socket.IO connection compares that claim with
+  the current active, non-deleted user row.
+- Updating a user's username, credential, role, or active state increments the
+  database version. Soft deletion also increments it.
+- A stale token returns `401` with code `SESSION_INVALIDATED`.
+- Connected Cashier and Owner/Manager browsers receive
+  `user:session_invalidated`, clear the JWT session, and return to login.
+- Reactivating a user does not revive tokens issued before deactivation; the
+  user must authenticate again.
+- Tokens issued before the session-version migration require a one-time login.
+
 ---
 
 ## Cashier PIN Flow (Terminal Mode)
@@ -154,3 +170,5 @@ User-management rules:
 - Express uses Helmet security headers. Content Security Policy is disabled for now so local Swagger docs continue to work.
 - CORS is restricted to `FRONTEND_ORIGIN`, with `http://localhost:5173` as the development fallback.
 - Request logging masks sensitive fields such as password, PIN, token, authorization, and secrets, including nested fields.
+- User edits and deletion invalidate existing JWT and Socket.IO sessions through
+  the database-backed session version.

@@ -22,11 +22,12 @@ export default function OrderPanel({
   checkoutLoading,
   checkoutError,
   isOnline,
+  isCheckingBackend,
   khqrEnabled,
 }) {
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const hasItems = cart.length > 0;
-  const paymentDisabled = !hasItems || checkoutLoading;
+  const paymentDisabled = !isOnline || !hasItems || checkoutLoading;
   const khqrDisabled = !isOnline || !hasItems || checkoutLoading;
 
   const handleClearCart = () => {
@@ -114,9 +115,13 @@ export default function OrderPanel({
           <p className="m-0 mb-4 rounded-md border border-ui-border bg-ui-muted px-3 py-2 text-xs font-bold text-text-muted">
             Add at least one item to enable payment.
           </p>
-        ) : khqrEnabled && !isOnline ? (
+        ) : isCheckingBackend ? (
+          <p className="m-0 mb-4 rounded-md border border-ui-border bg-ui-muted px-3 py-2 text-xs font-bold text-text-muted">
+            Checking the TouB POS server before enabling payment.
+          </p>
+        ) : !isOnline ? (
           <p className="m-0 mb-4 rounded-md border border-state-warning/30 bg-state-warning/10 px-3 py-2 text-xs font-bold text-state-warning">
-            Offline mode: cash is available, KHQR is disabled.
+            Checkout is unavailable. Keep this cart open and retry when the server reconnects.
           </p>
         ) : null}
 
@@ -125,6 +130,7 @@ export default function OrderPanel({
             className="h-13 text-base"
             type="button"
             disabled={paymentDisabled}
+            title={!isOnline ? 'Checkout requires a connection to the TouB POS server.' : undefined}
             loading={checkoutLoading}
             variant="success"
             iconName={checkoutLoading ? undefined : 'cash'}
@@ -137,6 +143,7 @@ export default function OrderPanel({
               className="h-13 text-base"
               type="button"
               disabled={khqrDisabled}
+              title={!isOnline ? 'Checkout requires a connection to the TouB POS server.' : undefined}
               loading={checkoutLoading}
               variant="danger"
               iconName={checkoutLoading ? undefined : 'khqr'}

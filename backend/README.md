@@ -275,6 +275,7 @@ npm run migrate:telegram-cooks
 npm run migrate:telegram-groups
 npm run migrate:order-idempotency
 npm run migrate:single-stall-assignment
+npm run migrate:user-session-version
 ```
 
 Run `npm run migrate:order-idempotency` once for an existing database before
@@ -285,6 +286,11 @@ Run `npm run migrate:single-stall-assignment` once for an existing database.
 It stops with a list of user IDs if duplicate assignments need manual review;
 it never deletes ambiguous assignment data.
 
-`npm run test:credentials` expects the local API and a seeded Owner account. It creates temporary Manager, Cashier, Stall, assignment, and registered-device records, verifies device-bound PIN login and credential response safety, then cleans up those records.
+Run `npm run migrate:user-session-version` once for an existing database before
+deploying session invalidation. Existing JWTs require a one-time re-login after
+deployment. User edits/deletion then increment the version and immediately
+invalidate protected HTTP and Socket.IO sessions.
+
+`npm run test:credentials` expects the local API and a seeded Owner account. It creates temporary Manager, Cashier, Stall, assignment, and registered-device records; verifies device-bound PIN login, credential response safety, deactivation/reactivation, credential/role changes, deletion, and stale-session rejection; then cleans up those records.
 
 `npm test` runs database-free report range, order-idempotency, and Telegram callback authorization tests. `npm run test:orders` expects the local API, MySQL, and a seeded Owner account; it creates uniquely named cashier, stall, category, product, device, and order records, verifies trusted totals, concurrent idempotent creation, changed-payload conflicts, stall scoping, cash change, duplicate confirmation, order history, and RBAC, then removes its database records. `npm run test:live` runs both live API suites.

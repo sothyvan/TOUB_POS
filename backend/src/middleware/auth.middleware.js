@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { findDeviceByToken } from '../repositories/stall-device.repository.js';
 import { findStaffAssignmentByUserId } from '../repositories/stall.repository.js';
+import { resolveActiveTokenSession } from '../services/session.service.js';
 
 function deviceAuthError(res, code, message) {
   return res.status(401).json({ success: false, code, message });
@@ -23,7 +24,19 @@ export async function authenticate(req, res, next) {
     return res.status(401).json({ success: false, message: 'Token expired or invalid.' });
   }
 
-  req.user = decodedUser;
+  try {
+    req.user = await resolveActiveTokenSession(decodedUser);
+  } catch (error) {
+    return next(error);
+  }
+  if (!req.user) {
+    return deviceAuthError(
+      res,
+      'SESSION_INVALIDATED',
+      'Your account or permissions changed. Please sign in again.',
+    );
+  }
+
   if (req.user.role !== 'cashier') {
     return next();
   }

@@ -56,8 +56,8 @@ function expectNoCredentialFields(value) {
 
   Object.entries(value).forEach(([key, childValue]) => {
     assert.ok(
-      !['password', 'password_hash', 'pin', 'pin_hash'].includes(key),
-      `Response must not include credential field "${key}"`,
+      !['password', 'password_hash', 'pin', 'pin_hash', 'session_version'].includes(key),
+      `Response must not include credential or internal session field "${key}"`,
     );
     expectNoCredentialFields(childValue);
   });
@@ -188,6 +188,8 @@ test('credential and device-bound PIN rules are enforced through the live API', 
   });
   expectStatus(managerLogin, 200);
   expectNoCredentialFields(managerLogin.payload);
+  const managerToken = managerLogin.payload?.data?.token;
+  assert.ok(managerToken, 'Manager login should return a token.');
 
   const stallCreate = await apiRequest('/stalls', {
     method: 'POST',
@@ -224,6 +226,8 @@ test('credential and device-bound PIN rules are enforced through the live API', 
   });
   expectStatus(cashierPinLogin, 200);
   expectNoCredentialFields(cashierPinLogin.payload);
+  const cashierToken = cashierPinLogin.payload?.data?.token;
+  assert.ok(cashierToken, 'Cashier PIN login should return a token.');
 
   const cashierPasswordLogin = await apiRequest('/auth/login', {
     method: 'POST',
@@ -237,6 +241,139 @@ test('credential and device-bound PIN rules are enforced through the live API', 
     body: { userId: ownerId, pin: '1234' },
   });
   expectStatus(ownerPinLogin, 403);
+
+  const managerOrdersBeforeDeactivation = await apiRequest('/orders', {
+    token: managerToken,
+  });
+  expectStatus(managerOrdersBeforeDeactivation, 200);
+
+  const deactivateManager = await apiRequest(`/users/${managerCreate.payload.data.id}`, {
+    method: 'PUT',
+    token: ownerToken,
+    body: { is_active: false },
+  });
+  expectStatus(deactivateManager, 200);
+
+  const deactivatedManagerRequest = await apiRequest('/orders', {
+    token: managerToken,
+  });
+  expectStatus(deactivatedManagerRequest, 401);
+  assert.equal(deactivatedManagerRequest.payload.code, 'SESSION_INVALIDATED');
+
+  const inactiveManagerLogin = await apiRequest('/auth/login', {
+    method: 'POST',
+    body: { username: managerRenamedUsername, password: managerPassword },
+  });
+  expectStatus(inactiveManagerLogin, 403);
+
+  const reactivateManager = await apiRequest(`/users/${managerCreate.payload.data.id}`, {
+    method: 'PUT',
+    token: ownerToken,
+    body: { is_active: true },
+  });
+  expectStatus(reactivateManager, 200);
+
+  const staleManagerAfterReactivation = await apiRequest('/orders', {
+    token: managerToken,
+  });
+  expectStatus(staleManagerAfterReactivation, 401);
+  assert.equal(staleManagerAfterReactivation.payload.code, 'SESSION_INVALIDATED');
+
+  const reactivatedManagerLogin = await apiRequest('/auth/login', {
+    method: 'POST',
+    body: { username: managerRenamedUsername, password: managerPassword },
+  });
+  expectStatus(reactivatedManagerLogin, 200);
+  const reactivatedManagerToken = reactivatedManagerLogin.payload?.data?.token;
+
+  const newManagerPassword = 'ManagerPass456!';
+  const changeManagerPassword = await apiRequest(`/users/${managerCreate.payload.data.id}`, {
+    method: 'PUT',
+    token: ownerToken,
+    body: { password: newManagerPassword },
+  });
+  expectStatus(changeManagerPassword, 200);
+
+  const staleManagerAfterPasswordChange = await apiRequest('/orders', {
+    token: reactivatedManagerToken,
+  });
+  expectStatus(staleManagerAfterPasswordChange, 401);
+  assert.equal(staleManagerAfterPasswordChange.payload.code, 'SESSION_INVALIDATED');
+
+  const oldManagerPasswordLogin = await apiRequest('/auth/login', {
+    method: 'POST',
+    body: { username: managerRenamedUsername, password: managerPassword },
+  });
+  expectStatus(oldManagerPasswordLogin, 401);
+
+  const changedManagerLogin = await apiRequest('/auth/login', {
+    method: 'POST',
+    body: { username: managerRenamedUsername, password: newManagerPassword },
+  });
+  expectStatus(changedManagerLogin, 200);
+  const changedManagerToken = changedManagerLogin.payload?.data?.token;
+
+  const deactivateCashier = await apiRequest(`/users/${cashierCreate.payload.data.id}`, {
+    method: 'PUT',
+    token: ownerToken,
+    body: { is_active: false },
+  });
+  expectStatus(deactivateCashier, 200);
+
+  const deactivatedCashierRequest = await apiRequest('/products', {
+    token: cashierToken,
+    deviceToken,
+  });
+  expectStatus(deactivatedCashierRequest, 401);
+  assert.equal(deactivatedCashierRequest.payload.code, 'SESSION_INVALIDATED');
+
+  const reactivateCashier = await apiRequest(`/users/${cashierCreate.payload.data.id}`, {
+    method: 'PUT',
+    token: ownerToken,
+    body: { is_active: true },
+  });
+  expectStatus(reactivateCashier, 200);
+
+  const staleCashierAfterReactivation = await apiRequest('/products', {
+    token: cashierToken,
+    deviceToken,
+  });
+  expectStatus(staleCashierAfterReactivation, 401);
+  assert.equal(staleCashierAfterReactivation.payload.code, 'SESSION_INVALIDATED');
+
+  const freshCashierLogin = await apiRequest('/auth/pin', {
+    method: 'POST',
+    deviceToken,
+    body: { userId: cashierCreate.payload.data.id, pin: cashierPin },
+  });
+  expectStatus(freshCashierLogin, 200);
+  const freshCashierToken = freshCashierLogin.payload?.data?.token;
+
+  const changeCashierRole = await apiRequest(`/users/${cashierCreate.payload.data.id}`, {
+    method: 'PUT',
+    token: ownerToken,
+    body: { role: 'manager', password: 'RoleChangePass123!' },
+  });
+  expectStatus(changeCashierRole, 200);
+
+  const staleCashierAfterRoleChange = await apiRequest('/products', {
+    token: freshCashierToken,
+    deviceToken,
+  });
+  expectStatus(staleCashierAfterRoleChange, 401);
+  assert.equal(staleCashierAfterRoleChange.payload.code, 'SESSION_INVALIDATED');
+
+  const deleteManager = await apiRequest(`/users/${managerCreate.payload.data.id}`, {
+    method: 'DELETE',
+    token: ownerToken,
+  });
+  expectStatus(deleteManager, 200);
+
+  const deletedManagerRequest = await apiRequest('/orders', {
+    token: changedManagerToken,
+  });
+  expectStatus(deletedManagerRequest, 401);
+  assert.equal(deletedManagerRequest.payload.code, 'SESSION_INVALIDATED');
 
   const usersList = await apiRequest('/users', { token: ownerToken });
   expectStatus(usersList, 200);

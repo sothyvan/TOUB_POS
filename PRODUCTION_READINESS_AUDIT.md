@@ -79,6 +79,7 @@ These controls should be preserved during remediation.
 
 #### P1-1. Cash checkout is presented as available while offline, but no offline sale queue exists
 
+- **Status:** Resolved on 2026-07-30 by adopting explicit online-only checkout; retained here as the original finding and acceptance record.
 - **Severity:** P1
 - **Category:** Reliability / UX
 - **Business impact:** Cashiers are told they can continue taking cash, but checkout still requires the backend. During an outage the sale fails, and refresh or session expiry can lose the cart.
@@ -86,10 +87,12 @@ These controls should be preserved during remediation.
 - **Recommended remediation:** For the first production version, disable all checkout while offline and use truthful recovery messaging. Only claim offline sales after implementing a durable encrypted queue, conflict rules, idempotency, reconciliation, and operator visibility.
 - **Acceptance criteria:** With the API unreachable, the UI never tells a cashier a sale can be completed; the current cart survives the documented recovery path.
 - **Estimated size:** S for honest online-only behavior; XL for real offline sales
-- **Dependencies:** Product decision on offline scope.
+- **Dependencies:** Resolved: the current release is explicitly online-only.
+- **Resolution:** The cashier now probes `/api/health` at startup, every five seconds, and after browser reconnect/focus. Cash and KHQR controls, including an open cash-confirmation dialog, remain disabled while the API is unreachable. `useOrders` independently rejects offline checkout and preserves the cart plus pending idempotency state. UI text now tells the cashier not to accept payment and to retry after reconnection. True offline order synchronization remains future scope.
 
 #### P1-2. Active JWTs do not reflect user deactivation, deletion, or role changes
 
+- **Status:** Resolved on 2026-07-30 with database-backed session versions and targeted socket invalidation; retained here as the original finding and acceptance record.
 - **Severity:** P1
 - **Category:** Authentication / session revocation
 - **Business impact:** A deactivated owner, manager, or cashier can continue using an existing eight-hour token until expiry unless another device or assignment check happens to reject that session.
@@ -98,6 +101,7 @@ These controls should be preserved during remediation.
 - **Acceptance criteria:** Deactivation, deletion, or role change prevents the next API request and disconnects affected sockets without waiting for JWT expiry.
 - **Estimated size:** L
 - **Dependencies:** User schema migration; auth/session policy; cache strategy if query cost matters.
+- **Resolution:** Added `users.session_version` and included it in newly issued JWTs. Protected HTTP and Socket.IO authentication now loads the current user and requires an active, non-deleted row with matching username, role, owner scope, and version. User edits and soft deletion atomically increment the version, emit `user:session_invalidated`, and disconnect that user's sockets. The frontend clears stale sessions while preserving cashier terminal registration. Live tests verify deactivation, reactivation, password change, role change, deletion, and `401 SESSION_INVALIDATED`.
 
 #### P1-3. LocalStorage JWT makes an XSS compromise an eight-hour account compromise
 
@@ -453,7 +457,7 @@ The live tests were not run during this audit because they require a running bac
 
 - [x] Resolve P0-1 checkout idempotency with automated concurrent replay tests.
 - [x] Resolve P0-2 cashier device/assignment stall consistency with automated regression tests.
-- [ ] Approve the production product scope, especially offline behavior, refunds/voids, cash reconciliation, taxes/fees, inventory, and currencies.
+- [ ] Approve the remaining production product scope, especially refunds/voids, cash reconciliation, taxes/fees, inventory, and currencies.
 - [ ] Remove or formally risk-accept all high/critical production dependency findings.
 - [ ] Establish clean, versioned database migrations and a tested baseline.
 - [ ] Remove/rotate any potentially real data or credentials from Git history.
@@ -481,9 +485,9 @@ The live tests were not run during this audit because they require a running bac
 ### Application
 
 - [ ] Validate every mutation with shared schemas and business limits.
-- [ ] Implement current-user/session invalidation.
+- [x] Implement current-user/session invalidation.
 - [x] Implement checkout idempotency and pending-payment recovery.
-- [ ] Make offline messaging truthful or implement full offline synchronization.
+- [x] Make offline messaging truthful by enforcing online-only checkout.
 - [ ] Make Telegram dispatch durable and observable.
 - [ ] Add error boundaries and safe production error responses.
 - [ ] Confirm KHQR flags remain disabled in all production environments.
@@ -525,11 +529,11 @@ Deploy production observability, encrypted backups, restore drills, runbooks, in
 
 1. **Completed:** Implement and test an idempotency contract for order creation and cash checkout.
 2. **Completed:** Enforce that cashier assignment, device stall, JWT stall, product scope, and order scope are identical on every request/socket.
-3. Decide online-only versus true offline POS behavior; immediately remove the false offline-cash promise if online-only.
+3. **Completed:** Adopt online-only checkout, remove the false offline-cash promise, preserve the cart during connection failure, and automatically re-enable payment after API recovery.
 4. Establish a migration framework and baseline the current database.
 5. Determine whether the tracked SQL dump is synthetic; purge/rotate if uncertain or real.
 6. Remove the suspended KHQR runtime dependency or isolate it, then remediate remaining high dependency advisories.
-7. Implement current-user/session revocation and production-safe token handling.
+7. **Partially completed:** Current-user/session revocation is implemented and live-tested. Production-safe token storage remains open under P1-3.
 8. Make paid-order Telegram dispatch durable with an outbox and retry visibility.
 9. Add CI with clean installs, lint, tests, build, audit policy, and disposable MySQL integration tests.
 10. Define and test production operations: verified DB TLS, readiness, graceful shutdown, logging/alerts, encrypted backups, and restore.
@@ -556,6 +560,9 @@ Deploy production observability, encrypted backups, restore drills, runbooks, in
 | `backend: npm run test:orders` after P0 remediation | Passed: trusted totals, idempotency, cash rules, history, stale-session rejection, and new-stall scope |
 | `backend: npm test` after P0 remediation | Passed: 16 tests, 0 failures |
 | Frontend lint/build after P0 remediation | Passed; the existing 575.34 kB owner-portal chunk warning remains |
+| Frontend lint/build after P1-1 remediation | Passed; backend availability checks and online-only payment guards compile cleanly |
+| `backend: npm run migrate:user-session-version` | Passed; added the user session-version column |
+| `backend: npm run test:credentials` after P1-2 remediation | Passed: deactivation, reactivation, credential/role changes, deletion, and stale JWT rejection |
 
 The first sandboxed npm audit attempts could not reach the registry. They were repeated with approved network access and produced the vulnerability results above.
 
@@ -571,7 +578,7 @@ The first sandboxed npm audit attempts could not reach the registry. They were r
 
 ### Product and finance
 
-- Is production strictly online-only?
+- Current-release checkout is approved as online-only; true offline order synchronization remains future scope.
 - What are the approved refund, void, correction, and cash reconciliation workflows?
 - Are service fee and tax actually required? If so, what legal calculation and rounding rules apply?
 - Which currencies can be tendered, and how is the KHR rate set and snapshotted?

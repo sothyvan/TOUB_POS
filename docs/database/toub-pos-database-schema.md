@@ -153,6 +153,7 @@ through a self-referencing `owner_id`.
 | `role` | `ENUM` | Required; `cashier` |  | `platform_admin`, `owner`, `manager`, or `cashier` |
 | `is_active` | `BOOLEAN` | Required; `TRUE` |  | Whether authentication is allowed |
 | `is_deleted` | `BOOLEAN` | Required; `FALSE` in model |  | Soft-delete marker used by repositories |
+| `session_version` | `INT` | Required; `1` |  | Incremented after account changes to invalidate older JWT and Socket.IO sessions |
 | `created_at` | `DATETIME` | Required/current time |  | Creation time |
 | `updated_at` | `DATETIME` | Required/auto update |  | Last model update |
 
@@ -700,4 +701,3 @@ and service code remains the executable query behavior.
 5. Should positive money/quantity and credential-exclusivity rules become MySQL
    `CHECK` constraints?
 6. Who owns production migrations and backup restoration during deployment?
-

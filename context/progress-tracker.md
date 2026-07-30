@@ -900,14 +900,29 @@ Update this file after every meaningful implementation change.
   - Cashier assignment moves are transactional, each cashier is database-limited to one stall, and reassignment/unassignment disconnects active cashier sessions without deregistering the physical terminal.
   - The frontend clears the stale cashier session while preserving its device registration so the terminal can be reused after a correct reassignment.
   - Applied the idempotent one-stall assignment migration. Backend lint has zero errors, 16 unit tests pass, the live order/reassignment test passes, and frontend lint/build pass.
+- **Closed production audit P1-1 with truthful online-only checkout**:
+  - Added a cashier backend-availability check at startup, every five seconds, and on browser reconnect/focus.
+  - Cash and KHQR payment controls, including cash confirmation, are disabled whenever the TouB POS API cannot be reached.
+  - Checkout logic independently blocks unavailable-server attempts, preserves the cart and pending idempotency state, and immediately records network failures for the UI.
+  - Replaced misleading offline-cash text with explicit instructions not to accept payment until reconnection; true offline synchronization remains future scope.
+  - Frontend lint and production build pass. The existing owner-portal chunk-size warning remains.
+- **Closed production audit P1-2 with immediate user-session invalidation**:
+  - Added `users.session_version`, included it in every new JWT, and applied the idempotent migration to the configured database.
+  - Protected HTTP and Socket.IO authentication now verifies the current user is active/not deleted and that username, role, owner scope, and session version still match the token.
+  - User edits and soft deletion increment the target's session version and emit a targeted `user:session_invalidated` event to Cashier and Owner/Manager browsers.
+  - Frontend invalidation clears only the auth session, preserving registered Cashier terminal identity for a fresh PIN login.
+  - Fixed soft deletion for 50-character usernames by truncating before adding the unique deletion suffix.
+  - Backend lint has zero errors, 16 unit tests pass, the expanded live credential/session suite passes, and frontend lint/build pass.
 
 ## Next Up
 
 - Production-readiness remediation:
   - A comprehensive read-only audit is recorded in `PRODUCTION_READINESS_AUDIT.md`.
   - P0-1 checkout idempotency and P0-2 cashier stall-session consistency are implemented and verified.
+  - P1-1 online-only checkout behavior is implemented and verified.
+  - P1-2 active user-session invalidation is implemented and verified.
   - Current production recommendation remains No-Go until the remaining P1 security, migration, reliability, dependency, CI, and operational controls are fixed and verified.
-  - Next priority: make the online-only checkout behavior truthful and recoverable when the backend is unavailable.
+  - Next security decision: retain the documented localStorage JWT exception for the final project or schedule the P1-3 HttpOnly refresh-token architecture for production.
   - Follow the audit's phased P0/P1 plan only after team review and approval.
 
 - Post-Phase 6 Operations & Security Hardening.

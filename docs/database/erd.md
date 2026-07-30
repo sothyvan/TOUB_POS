@@ -13,6 +13,8 @@ erDiagram
         varchar pin "nullable bcrypt hash for cashier"
         enum role "platform_admin, owner, manager, cashier"
         boolean is_active
+        boolean is_deleted
+        int session_version "increments to invalidate active sessions"
         datetime created_at
         datetime updated_at
     }

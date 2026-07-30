@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import * as userRepository from '../repositories/user.repository.js';
 import { hashPin } from '../utils/pin.util.js';
 import { httpError } from '../utils/http-error.util.js';
+import { emitUserSessionInvalidated } from './websocket.service.js';
 
 const CUSTOMER_ROLES = ['owner', 'manager', 'cashier'];
 const PASSWORD_ROLES = ['platform_admin', 'owner', 'manager'];
@@ -204,10 +205,17 @@ export async function updateUser(actor, userId, payload) {
     payload.pin,
   );
 
-  const success = await userRepository.updateUserById(userId, updateData);
+  const success = await userRepository.updateUserById(
+    userId,
+    updateData,
+    { invalidateSession: true },
+  );
   if (!success) {
     throw httpError('User not found or no changes made.', 404);
   }
+  emitUserSessionInvalidated(userId, {
+    message: 'Your account details, credentials, or permissions changed. Please sign in again.',
+  });
 }
 
 export async function deleteUser(actor, userId) {
@@ -219,6 +227,9 @@ export async function deleteUser(actor, userId) {
   if (!success) {
     throw httpError('User not found.', 404);
   }
+  emitUserSessionInvalidated(userId, {
+    message: 'Your account was deleted. Contact the business owner if this was unexpected.',
+  });
 }
 
 export async function getAssignedStall(actor) {

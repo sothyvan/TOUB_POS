@@ -24,6 +24,19 @@ export function setUnauthorizedHandler(handler) {
   onUnauthorized = handler;
 }
 
+export async function checkApiHealth(timeout = 3000) {
+  try {
+    const response = await apiClient.get('/health', {
+      timeout,
+      params: { check: Date.now() },
+      headers: { 'Cache-Control': 'no-cache' },
+    });
+    return response.status === 200 && response.data?.success === true;
+  } catch {
+    return false;
+  }
+}
+
 function normalizePath(path) {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   return normalizedPath;
