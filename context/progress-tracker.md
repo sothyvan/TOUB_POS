@@ -52,6 +52,14 @@ Update this file after every meaningful implementation change.
   - Preserved all route/controller/background-checker imports through `backend/src/services/order.service.js`.
   - Backend lint passes with no errors; facade export parity and full Express app imports pass.
 
+- **Split backend reporting by responsibility (Step 3)**:
+  - Reduced `report.service.js` from a 717-line mixed module to report validation, mapping, trend composition, and response orchestration.
+  - Added `report.repository.js` for owner-scoped raw SQL summary/breakdown/trend queries and the paginated Sequelize transaction ledger.
+  - Added `report-range.util.js` for Cambodia-local date boundaries, Monday-based weeks, custom ranges, previous-period comparisons, UTC SQL formatting, and trend granularity.
+  - Preserved the `getSalesReport` export and existing controller/API response contract.
+  - Backend lint passes with no errors; report/app imports, public export parity, custom-range formatting, and granularity checks pass.
+  - A live MySQL response comparison remains pending because the backend was not running during this refactor.
+
 - **Standardized SweetAlert notifications**:
   - Changed management success/error feedback to bottom-right toast notifications with a 3-second timeout and visible progress bar.
   - Kept destructive confirmations and blocking loading dialogs centered so they cannot disappear before the user responds or the operation finishes.
