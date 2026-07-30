@@ -26,6 +26,7 @@ implementation records.
 | UI/UX standards | [UI/UX Design Brief](design/toub-pos-ui-ux-design-brief.md) |
 | API contract | [API Endpoints](api/endpoints.md) |
 | Authentication behavior | [Authentication Flow](api/auth-flow.md) |
+| Dependency security exceptions | [Dependency Risk Register](security/dependency-risk-register.md) |
 | Current payment behavior | [Payment Flow](design/payment-flow.md) |
 | Database design | [Database Schema Document](database/toub-pos-database-schema.md) |
 | Executable course SQL | [schema.sql](database/schema.sql) and [queries.sql](database/queries.sql) |
@@ -41,8 +42,8 @@ implementation records.
 - Sequelize models and `docs/database/schema.sql` must remain synchronized.
 - `context/progress-tracker.md` records completed work, open questions, and next
   steps.
-- KHQR is currently suspended behind disabled-by-default feature flags. The
-  current payment document is `docs/design/payment-flow.md`.
+- KHQR is suspended and its legacy generator SDK has been removed. The current
+  payment document is `docs/design/payment-flow.md`.
 
 ## Archive
 

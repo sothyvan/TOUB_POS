@@ -4,7 +4,10 @@
 **Repository state:** `main` at `26135e4` (`Docs cleanup`)  
 **Audit mode:** Read-only inspection and non-destructive verification
 
-**Remediation update (2026-07-30):** P0-1 checkout idempotency and P0-2 cashier stall-assignment consistency have been implemented and verified. The production recommendation remains unchanged because the P1 security, migration, recovery, dependency, CI, and operational controls are still open.
+**Remediation update (2026-07-31):** P0-1/P0-2 and P1-1 through P1-6
+have been implemented or closed with documented bounded exceptions. The
+production recommendation remains unchanged because later P1 infrastructure,
+CI, validation, readiness, and operational controls are still open.
 
 ## 1. Executive Summary
 
@@ -19,13 +22,13 @@ It is not ready for an unsupervised production launch. The original audit found 
 
 Both original P0 findings are now closed. P0-1 uses a per-cashier idempotency key, request fingerprint, database uniqueness, frontend pending-order recovery, and concurrent live tests. P0-2 now requires the current assignment, JWT stall, and registered-device stall to match; assignment moves are transactional, stale API/socket sessions are invalidated, and the one-stall-per-cashier rule is database-enforced.
 
-The managed migration/rollback gap and Telegram transaction-recovery gap have
-since been closed. Production readiness remains blocked by known dependency
-vulnerabilities, weak production observability and readiness checks, lack of a
-CI quality gate, no automated browser tests, and a tracked SQL dump containing
-operational and credential-shaped records. KHQR is correctly disabled, but the
-disabled integration and its vulnerable dependency remain in the production
-dependency graph.
+The managed migration/rollback, Telegram transaction-recovery, and applicable
+dependency gaps have since been closed. Production readiness remains blocked by
+weak production observability and readiness checks, lack of a CI quality gate,
+no automated browser tests, and a tracked SQL dump containing operational and
+credential-shaped records. The vulnerable KHQR SDK has been removed; bounded
+Sequelize/UUID and React Router scanner exceptions are time-limited in the
+dependency risk register.
 
 **Go/no-go:** **No-Go for production.** A supervised school demonstration using prepared data, cash payments, a controlled network, and a tested rollback laptop is reasonable after the P0 issues are fixed and the demo checklist is completed.
 
@@ -154,13 +157,14 @@ These controls should be preserved during remediation.
 - **Estimated size:** L
 - **Dependencies:** Database owner; backup/restore test; deployment pipeline.
 
-#### P1-6. Known production dependency vulnerabilities remain
+#### P1-6. Known production dependency vulnerabilities remain - Resolved With Bounded Exceptions
 
 - **Severity:** P1
 - **Category:** Supply-chain security
 - **Business impact:** Published vulnerabilities remain in production dependency trees. The disabled KHQR library brings an obsolete Axios version with high-severity advisories.
-- **Evidence:** `npm audit --omit=dev` reported backend **5** vulnerabilities (2 high, 2 moderate, 1 low), including `bakong-khqr`/transitive Axios and Sequelize/UUID. Frontend reported **4** (2 high, 1 moderate, 1 low), including React Router, PostCSS, and DOMPurify. Direct versions are listed in `backend/package.json:24-46` and `frontend/package.json:12-35`.
-- **Recommended remediation:** Remove `bakong-khqr` from the deployed runtime while KHQR is suspended, or isolate it outside the active service. Upgrade frontend packages to patched releases and assess the Sequelize advisory's actual call paths before selecting an upgrade/replacement.
+- **Resolution:** Removed `bakong-khqr` and its obsolete Axios tree; startup now rejects KHQR enablement until a new provider adapter is installed. Updated `body-parser` to 1.20.6, React Router DOM/Router to 7.18.2, PostCSS to 8.5.25, and DOMPurify to 3.4.12.
+- **Residual scan:** Backend production audit reports two moderate entries for one Sequelize/UUID dependency chain and no high/critical findings. Frontend reports one high React Router advisory twice (direct wrapper and transitive package). The Router finding is non-applicable to TouB's client-only `BrowserRouter` SPA because no RSC, SSR, data-router action, loader, or server-action boundary exists.
+- **Risk decisions:** `docs/security/dependency-risk-register.md` records owners, call-path evidence, rationale, controls, review deadlines, and exit conditions. npm's proposed Sequelize downgrade and Router downgrade/forced version mismatch were rejected as higher-risk changes.
 - **Acceptance criteria:** Production audit has no unresolved high/critical findings; any accepted lower finding has owner, rationale, exposure analysis, and expiry date; regression tests pass.
 - **Estimated size:** M
 - **Dependencies:** Payment-provider decision; dependency compatibility testing.
@@ -476,7 +480,7 @@ The live tests were not run during this audit because they require a running bac
 - [x] Resolve P0-1 checkout idempotency with automated concurrent replay tests.
 - [x] Resolve P0-2 cashier device/assignment stall consistency with automated regression tests.
 - [ ] Approve the remaining production product scope, especially refunds/voids, cash reconciliation, taxes/fees, inventory, and currencies.
-- [ ] Remove or formally risk-accept all high/critical production dependency findings.
+- [x] Remove applicable high/critical production dependency findings and formally record non-applicable scanner findings.
 - [x] Establish clean, versioned database migrations and a tested baseline.
 - [ ] Remove/rotate any potentially real data or credentials from Git history.
 - [ ] Build required CI and protected-branch checks.
@@ -596,6 +600,10 @@ Deploy production observability, encrypted backups, restore drills, runbooks, in
 | P1-5 clean-schema migration drill | Passed on a disposable database: two ordered migrations applied and `schema_migrations` reported zero pending |
 | P1-5 rollback/forward drill | Passed on an empty disposable database: rollback was blocked without the explicit safety flag, both migrations reverted with the flag, and both reapplied successfully |
 | P1-5 backup/restore drill | Passed: an empty migrated schema was exported with `mysqldump`, restored into a second disposable database, and retained both ledger entries with zero pending migrations |
+| Backend dependency remediation after P1-6 | `bakong-khqr`/Axios removed; `body-parser` patched; production audit now reports 0 high, 0 critical, and one accepted moderate Sequelize/UUID chain (shown as two entries) |
+| Frontend dependency remediation after P1-6 | Router 7.18.2, PostCSS 8.5.25, and DOMPurify 3.4.12 installed; only the documented non-applicable RSC-action Router advisory remains |
+| Backend verification after P1-6 | Lint passed with 0 errors and 65 existing warnings; 19 unit tests passed |
+| Frontend verification after P1-6 | Lint and production build passed; existing 575.79 kB Owner Portal chunk warning remains |
 
 The first sandboxed npm audit attempts could not reach the registry. They were repeated with approved network access and produced the vulnerability results above.
 
