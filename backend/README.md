@@ -271,3 +271,5 @@ npm run lint
 npm run test:credentials
 npm run seed
 ```
+
+`npm run test:credentials` expects the local API and a seeded Owner account. It creates temporary Manager, Cashier, Stall, assignment, and registered-device records, verifies device-bound PIN login and credential response safety, then cleans up those records.
