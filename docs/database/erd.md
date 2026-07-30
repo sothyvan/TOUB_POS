@@ -173,6 +173,20 @@ erDiagram
         varchar completed_by_name
     }
 
+    telegram_dispatch_jobs {
+        bigint id PK
+        int order_id FK,UK
+        enum status
+        int attempt_count
+        datetime next_attempt_at
+        datetime last_attempt_at
+        datetime locked_at
+        varchar locked_by
+        varchar last_error
+        datetime created_at
+        datetime updated_at
+    }
+
     users ||--o{ stalls : "owns"
     users ||--o{ categories : "manages"
     users ||--o{ stall_staff : "assigned to"
@@ -192,6 +206,7 @@ erDiagram
     orders ||--|{ order_items : "contains"
     products ||--o{ order_items : "referenced by"
     orders ||--o{ telegram_tickets : "dispatched to"
+    orders ||--o| telegram_dispatch_jobs : "queues kitchen delivery"
     users ||--o{ users : "supervises"
 ```
 
@@ -217,6 +232,7 @@ erDiagram
 - `telegram_cooks` is a stall-scoped allowlist of Telegram identities. Cooks are not web users and never receive JWT credentials.
 - `telegram_group_connections` stores only SHA-256 hashes of short-lived, one-time Telegram `startgroup` setup tokens. Consuming a valid token binds the selected Telegram group to its stall.
 - `telegram_tickets.completed_by_telegram_user_id` and `completed_by_name` preserve who completed a kitchen ticket.
+- `telegram_dispatch_jobs` is the durable delivery outbox. One unique job per paid order is committed in the payment transaction, claimed with a database lock, retried with backoff, and retained as `failed` when manual review is safer than an automatic resend.
 - `stalls.owner_id` identifies the business owner responsible for each stall.
 - `stalls.location` stores the physical location of the stall (e.g. AEON Mall, Night Market, University).
 - `stall_devices` supports multiple independently revocable terminals per stall. The raw token is stored only in the registered browser; MySQL stores `token_hash`.

@@ -21,7 +21,7 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 5. Cashier selects **Cash** checkout.
    - Cash: confirmation dialog → backend validates the received amount and records the order as paid.
    - KHQR: temporarily unavailable while TouB POS evaluates an approved merchant payment provider.
-6. On payment confirmation, the order payload is forwarded to the **Telegram kitchen bot**, which posts a structured order ticket to the stall's kitchen channel.
+6. On payment confirmation, a durable delivery job is committed with the paid order. A background worker forwards the order to the **Telegram kitchen bot** and retries temporary failures.
 7. Cook taps "Done" in Telegram → bot edits the message to mark it complete.
 8. Transaction is recorded to the central database under the stall and cashier.
 
@@ -52,6 +52,7 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 ### Kitchen Display (Telegram Bot)
 
 - Real-time order relay to stall's Telegram kitchen channel
+- Durable database outbox with restart recovery, locked worker claims, bounded retry, and manual recovery for uncertain sends
 - Guided Owner-only connection of one Telegram kitchen group per stall using a short-lived one-time link
 - Structured digital order tickets (items, qty, modifiers, stall label)
 - Chronological queue by payment timestamp

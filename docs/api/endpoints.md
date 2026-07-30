@@ -401,9 +401,14 @@ Allowed for:
 
 The backend enforces order ownership/same-business access before retrying.
 
-Use this when a paid order has no Telegram ticket or has a `failed` ticket. `pending` means the original dispatch is still in progress and cannot be retried. Orders with `sent` or `done` Telegram tickets are not resent to avoid duplicate kitchen messages.
+Use this when a paid order has no Telegram ticket or has a `failed` ticket. The endpoint requeues the order's durable dispatch job; the background worker performs the external Telegram request. `pending` means the original dispatch is still in progress or ended in an uncertain network state and cannot be retried until the backend marks it failed. Orders with `sent` or `done` Telegram tickets are not resent to avoid duplicate kitchen messages.
 
 **Response `200`**
+
+The response confirms that the durable job was requeued. Delivery continues
+asynchronously, so the included latest ticket may still show its previous
+`failed` state until the worker emits `kitchen_ticket_updated`.
+
 ```json
 {
   "success": true,
@@ -411,7 +416,7 @@ Use this when a paid order has no Telegram ticket or has a `failed` ticket. `pen
     "id": 42,
     "status": "paid",
     "TelegramTickets": [
-      { "id": 10, "status": "sent", "sent_at": "2026-07-09T10:30:00.000Z" }
+      { "id": 10, "status": "failed", "sent_at": null }
     ]
   }
 }
@@ -423,7 +428,7 @@ Use this when a paid order has no Telegram ticket or has a `failed` ticket. `pen
 | 400  | Order is not paid, or stall has no Telegram chat configured |
 | 403  | Actor is not allowed for this order |
 | 404  | Order not found |
-| 409  | Telegram ticket is already pending, sent, or done |
+| 409  | Telegram ticket is pending/sent/done, or its durable job is already queued/processing/completed |
 | 503  | Telegram bot token is not configured |
 
 ### GET `/orders/mine`

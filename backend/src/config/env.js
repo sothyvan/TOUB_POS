@@ -83,7 +83,14 @@ export function validateEnvironment() {
 
   validateBooleanEnv('KHQR_ENABLED', errors);
   validateBooleanEnv('KHQR_BACKGROUND_CHECK_ENABLED', errors);
+  validateBooleanEnv('TELEGRAM_DISPATCH_WORKER_ENABLED', errors);
   validatePositiveIntegerEnv('REFRESH_SESSION_EXPIRES_HOURS', errors, { max: 720 });
+  validatePositiveIntegerEnv('TELEGRAM_DISPATCH_INTERVAL_MS', errors, { max: 60000 });
+  validatePositiveIntegerEnv('TELEGRAM_DISPATCH_BATCH_SIZE', errors, { max: 100 });
+  validatePositiveIntegerEnv('TELEGRAM_DISPATCH_MAX_ATTEMPTS', errors, { max: 20 });
+  validatePositiveIntegerEnv('TELEGRAM_DISPATCH_RETRY_BASE_MS', errors, { max: 300000 });
+  validatePositiveIntegerEnv('TELEGRAM_DISPATCH_LOCK_TIMEOUT_MS', errors, { max: 600000 });
+  validatePositiveIntegerEnv('TELEGRAM_API_TIMEOUT_MS', errors, { max: 120000 });
 
   if (!isBlank(process.env.AUTH_COOKIE_SAME_SITE)) {
     const sameSite = String(process.env.AUTH_COOKIE_SAME_SITE).trim().toLowerCase();

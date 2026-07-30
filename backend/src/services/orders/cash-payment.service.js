@@ -14,7 +14,10 @@ import {
   parsePositiveInteger,
   parseUsdCents,
 } from './order-access.js';
-import { dispatchPaidOrderToTelegram } from './order-telegram.service.js';
+import {
+  enqueuePaidOrderTelegramDispatch,
+  requestPaidOrderTelegramDispatch,
+} from './order-telegram.service.js';
 
 export async function confirmCashPayment(orderId, actor, cashReceivedUsd) {
   const parsedOrderId = parsePositiveInteger(orderId, 'order ID');
@@ -77,6 +80,7 @@ export async function confirmCashPayment(orderId, actor, cashReceivedUsd) {
       },
     }, { transaction });
 
+    await enqueuePaidOrderTelegramDispatch(order.id, transaction);
     confirmedOrderId = order.id;
     await transaction.commit();
   } catch (error) {
@@ -92,6 +96,6 @@ export async function confirmCashPayment(orderId, actor, cashReceivedUsd) {
     paymentMethod: confirmedOrder.payment_method,
     changeType: 'paid',
   });
-  dispatchPaidOrderToTelegram(confirmedOrder, 'cash confirm');
+  requestPaidOrderTelegramDispatch();
   return confirmedOrder;
 }

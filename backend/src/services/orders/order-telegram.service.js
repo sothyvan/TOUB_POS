@@ -1,6 +1,10 @@
 import { Order, TelegramTicket } from '../../models/index.js';
+import {
+  enqueueTelegramDispatch,
+  requeueTelegramDispatchJob,
+} from '../../repositories/telegram-dispatch-job.repository.js';
 import { httpError } from '../../utils/http-error.util.js';
-import { dispatchToTelegram } from '../telegram.service.js';
+import { requestTelegramDispatchRun } from '../telegram-dispatch-worker.service.js';
 import {
   buildOrderAccessInclude,
   canAccessOrder,
@@ -8,10 +12,20 @@ import {
   parsePositiveInteger,
 } from './order-access.js';
 
+export function enqueuePaidOrderTelegramDispatch(orderId, transaction) {
+  return enqueueTelegramDispatch(orderId, { transaction });
+}
+
+export function requestPaidOrderTelegramDispatch() {
+  requestTelegramDispatchRun();
+}
+
 export function dispatchPaidOrderToTelegram(order, context) {
-  dispatchToTelegram(order).catch((error) => {
-    console.error(`[Telegram] Unexpected dispatch error after ${context}:`, error);
-  });
+  enqueueTelegramDispatch(order.id)
+    .then(() => requestTelegramDispatchRun())
+    .catch((error) => {
+      console.error(`[Telegram] Failed to queue dispatch after ${context}:`, error.message);
+    });
 }
 
 export async function retryTelegramDispatch(orderId, actor) {
@@ -50,6 +64,14 @@ export async function retryTelegramDispatch(orderId, actor) {
     throw httpError('This order stall does not have a Telegram kitchen chat configured.');
   }
 
-  await dispatchToTelegram(fullOrder, { forceRetry: true });
+  const requeueResult = await requeueTelegramDispatchJob(parsedOrderId);
+  if (!requeueResult.requeued) {
+    const jobStatus = requeueResult.job.status;
+    const message = jobStatus === 'sent'
+      ? 'Telegram dispatch has already completed.'
+      : 'Telegram dispatch is already queued or in progress.';
+    throw httpError(message, 409);
+  }
+  requestTelegramDispatchRun();
   return getOrderById(parsedOrderId);
 }

@@ -23,7 +23,11 @@ import {
   normalizeOptionalText,
   parsePositiveInteger,
 } from './order-access.js';
-import { dispatchPaidOrderToTelegram } from './order-telegram.service.js';
+import {
+  dispatchPaidOrderToTelegram,
+  enqueuePaidOrderTelegramDispatch,
+  requestPaidOrderTelegramDispatch,
+} from './order-telegram.service.js';
 
 function assertBakongPaidResultMatchesOrder(order, providerResult) {
   if (providerResult.amount === null || providerResult.amount === undefined) {
@@ -144,6 +148,7 @@ async function confirmKhqrOrder(order, providerResult, checkContext) {
         },
       }, { transaction });
 
+      await enqueuePaidOrderTelegramDispatch(lockedOrder.id, transaction);
       confirmedOrderId = lockedOrder.id;
       await transaction.commit();
     }
@@ -289,7 +294,7 @@ async function checkKhqrPaymentStatusInternal(orderId, actor, options = {}) {
       confirmedOrder.cashier_id,
       buildPaymentConfirmedPayload(confirmedOrder),
     );
-    dispatchPaidOrderToTelegram(confirmedOrder, 'KHQR confirm');
+    requestPaidOrderTelegramDispatch();
   } else {
     dispatchPaidOrderToTelegram(confirmedOrder, 'already-paid KHQR confirm');
   }

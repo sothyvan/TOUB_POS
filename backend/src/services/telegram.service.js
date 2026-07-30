@@ -4,6 +4,7 @@ import { emitKitchenTicketUpdated } from './websocket.service.js';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_API_BASE = `https://api.telegram.org/bot${BOT_TOKEN}`;
+const DEFAULT_TELEGRAM_TIMEOUT_MS = 10000;
 let cachedBotIdentity = null;
 
 // ── Telegram API Helpers ──────────────────────────────────
@@ -15,17 +16,23 @@ let cachedBotIdentity = null;
  */
 async function callTelegramApi(method, body) {
   const url = `${TELEGRAM_API_BASE}/${method}`;
-  const options = {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  };
+  const timeoutValue = Number(process.env.TELEGRAM_API_TIMEOUT_MS);
+  const timeoutMs = Number.isInteger(timeoutValue) && timeoutValue > 0
+    ? timeoutValue
+    : DEFAULT_TELEGRAM_TIMEOUT_MS;
 
   let lastError;
   // Attempt up to 2 times — handles transient connection drops
   for (let attempt = 1; attempt <= 2; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const response = await fetch(url, options);
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
       const json = await response.json();
 
       if (!json.ok) {
@@ -40,8 +47,10 @@ async function callTelegramApi(method, body) {
             
             body.chat_id = newChatId;
             const retryResponse = await fetch(url, {
-              ...options,
-              body: JSON.stringify(body)
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+              signal: controller.signal,
             });
             const retryJson = await retryResponse.json();
             if (retryJson.ok) {
@@ -63,6 +72,8 @@ async function callTelegramApi(method, body) {
         // Small delay before retry
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
@@ -209,8 +220,8 @@ export async function sendNotification(chatId, text) {
  * Sends a confirmed order to the stall's Telegram kitchen group.
  * Creates a TelegramTicket row to track the dispatch lifecycle.
  *
- * IMPORTANT: This function must never throw. A Telegram outage should
- * never affect the HTTP response for a payment confirmation.
+ * Telegram API failures are persisted on the returned ticket. Unexpected
+ * database failures may throw to the outbox worker, never to payment confirmation.
  */
 export async function dispatchToTelegram(order, options = {}) {
   const existingTicket = await TelegramTicket.findOne({
@@ -296,6 +307,7 @@ export async function dispatchToTelegram(order, options = {}) {
       completedAt: ticket.completed_at,
     });
     console.error(`[Telegram] Failed to dispatch order #${order.id}:`, error.message);
+    ticket.dispatchError = error;
   }
 
   return ticket;

@@ -60,12 +60,14 @@ async function cleanupTestData(ids) {
     Stall,
     StallDevice,
     StallStaff,
+    TelegramDispatchJob,
     TelegramTicket,
     User,
   } = await import('../src/models/index.js');
 
   try {
     if (ids.orderIds.length > 0) {
+      await TelegramDispatchJob.destroy({ where: { order_id: ids.orderIds } });
       await TelegramTicket.destroy({ where: { order_id: ids.orderIds } });
       await AuditLog.destroy({ where: { order_id: ids.orderIds } });
       await OrderItem.destroy({ where: { order_id: ids.orderIds } });
@@ -387,6 +389,12 @@ test('live order flow enforces trusted totals, stall scope, cash rules, and RBAC
   assert.equal(Number(confirmation.payload.data.cash_received_usd), 6);
   assert.equal(Number(confirmation.payload.data.change_due_usd), 0.5);
   assert.ok(confirmation.payload.data.completed_at);
+
+  const { TelegramDispatchJob } = await import('../src/models/index.js');
+  const dispatchJob = await TelegramDispatchJob.findOne({
+    where: { order_id: order.id },
+  });
+  assert.ok(dispatchJob, 'Cash confirmation should transactionally enqueue a Telegram dispatch job.');
 
   const duplicateConfirmation = await apiRequest(`/orders/${order.id}/confirm-cash`, {
     method: 'POST',

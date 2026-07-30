@@ -456,8 +456,8 @@ export const swaggerDocument = {
                 summary: 'Retry Telegram kitchen ticket dispatch',
                 description: [
                     'Allowed for the creating cashier, or an owner/manager within the same business owner scope.',
-                    'Retries Telegram dispatch for paid orders whose kitchen ticket is missing or failed.',
-                    'Pending tickets are still in progress. Orders with pending, sent, or done Telegram tickets are not resent.'
+                    'Requeues the durable Telegram dispatch job for paid orders whose kitchen ticket is missing or failed.',
+                    'The background worker performs the external send. Orders with pending, sent, or done Telegram tickets are not resent.'
                 ].join(' '),
                 parameters: [
                     {
@@ -468,12 +468,12 @@ export const swaggerDocument = {
                     }
                 ],
                 responses: {
-                    200: { description: 'Telegram dispatch retried; response contains the refreshed order' },
+                    200: { description: 'Telegram dispatch requeued; response contains the refreshed order' },
                     400: { $ref: '#/components/responses/BadRequest' },
                     401: { $ref: '#/components/responses/Unauthorized' },
                     403: { $ref: '#/components/responses/Forbidden' },
                     404: { $ref: '#/components/responses/NotFound' },
-                    409: { description: 'Telegram ticket is already pending, sent, or done' },
+                    409: { description: 'Telegram ticket/job is already queued, processing, sent, or done' },
                     503: { description: 'Telegram bot is not configured' }
                 }
             }

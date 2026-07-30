@@ -28,6 +28,7 @@
 - `backend/src/services/` — Core business logic for auth, users, products, categories, stalls/devices, orders, reports, Telegram callbacks, WebSocket sessions, and external providers.
 - `backend/src/repositories/` — Database queries and data access logic.
 - `backend/src/services/telegram.service.js` — Low-level Telegram Bot API integration and outbound kitchen ticket dispatch.
+- `backend/src/services/telegram-dispatch-worker.service.js` — Durable outbox worker that claims paid-order delivery jobs, retries transient failures, and records terminal outcomes.
 - `backend/src/services/telegram-callback.service.js` — Inbound cook callback workflow, ticket state updates, and real-time UI notification.
 - `backend/src/services/websocket.service.js` — WebSocket server; maps `cashier_id → socket` for isolated push.
 - `backend/src/services/order.service.js` — Stable public order-service facade consumed by controllers and background jobs.
@@ -58,6 +59,7 @@
 ## Storage Model
 
 - **MySQL Database**: Stores all relational data including Users, Stalls, Staff assignments, Orders, Order Items (with modifiers), and Payment Confirmations.
+- **Telegram dispatch outbox**: `telegram_dispatch_jobs` stores one durable job per paid Order. The payment transaction and enqueue either commit together or roll back together; a database-locking worker performs the external Telegram call afterward.
 - **ImageKit**: Stores product photo binary assets. The backend issues short-lived browser-upload authentication parameters to Owner/Manager users only, while MySQL stores only the delivered asset URL in `products.image_url`.
 - **Browser auth storage**: Short-lived access JWTs and the public user session
   exist only in JavaScript memory. A rotating opaque refresh token is held in a
@@ -181,6 +183,8 @@
 - When KHQR is explicitly enabled, `startup/khqr-background-checker.js` periodically checks unexpired pending KHQR orders through Bakong. It stays stopped by default.
 - KHQR-paid orders reuse the same `dispatchToTelegram` kitchen ticket flow as confirmed cash orders.
 - Owner/Manager order history surfaces `telegram_tickets.status` and can retry missing or failed Telegram dispatches for paid orders in their business. Cashiers can retry only their own paid orders. Pending tickets are treated as in-progress and are not retryable; sent/done tickets are not resent.
+- Cash and retained KHQR confirmation create a unique `telegram_dispatch_jobs` row inside the payment transaction. The worker claims due jobs with `FOR UPDATE SKIP LOCKED`, retries temporary failures with exponential backoff, and resumes pending work after restart.
+- If the process stops while a Telegram `sendMessage` result is unknown, the worker marks the pending ticket/job failed for manual review instead of automatically risking a duplicate kitchen message.
 - When Telegram dispatch finishes as `sent` or `failed`, the backend emits `kitchen_ticket_updated` so the UI does not stay stuck on the temporary `pending` state.
 - When an authorized cook taps "Done" in Telegram, the callback records their Telegram identity, updates the ticket to `done`, and emits `kitchen_ticket_updated` to the creating cashier and same-business Owner/Manager sockets.
 - The Telegram bot should post a structured ticket with inline "Done" button after paid order confirmation.
@@ -209,6 +213,7 @@
 - **OrderItem**: Links `Order` to `Product`. Stores quantity, price snapshot, and **`notes`** (modifiers like "no ice").
 - **AuditLog**: Records sensitive POS actions such as order creation and cash payment confirmation, including the actor, action, order, details, and timestamp.
 - **TelegramTicket**: Tracks Telegram kitchen dispatch state for an order, including Telegram message/chat IDs, send status, and cook completion timestamp.
+- **TelegramDispatchJob**: Durable one-per-Order kitchen delivery instruction with claim lock, attempt count, retry time, and bounded failure detail.
 - **TelegramCook**: Stall-scoped Telegram-only identity allowed to complete kitchen tickets. It has no password, PIN, JWT, or management UI access beyond its Telegram callback permission.
 - **TelegramGroupConnection**: Short-lived, one-time setup attempt that stores a SHA-256 token hash, stall, management creator, expiry, and consumed Telegram group metadata.
 
@@ -223,7 +228,7 @@
 |---|------|----------|------------|
 | 1 | **KHQR / Bakong integration** | 🟢 Controlled | Disabled by default through backend and frontend feature flags because the available Open API polling allowance is not suitable for normal POS volume. Keep the retained integration inactive until an approved merchant provider and operating limits are confirmed. |
 | 2 | **WebSocket routing — accidental broadcast to wrong cashier** | 🔴 High | `websocket.service.js` authenticates cashier sockets with JWT, keeps a strict `Map<cashier_id, socketIds>`, and emits only to the mapped cashier sockets. Continue to avoid broad `io.emit()` payment broadcasts. |
-| 3 | **Telegram Bot async failures** | 🟡 Medium | Telegram failure must never block or rollback the order. Strategy: (1) Always log the error. (2) Store Telegram dispatch state in `telegram_tickets.status` (`pending` / `sent` / `failed` / `done`) instead of mutating payment state on `orders`. (3) Emit live ticket updates when dispatch finishes. (4) Show status in the management ledger, allow Owner/Manager retry for business orders, and allow Cashier retry for their own missing/failed tickets. Pending tickets are in-progress and are not retryable. Auto-retry queue is out of scope (Future). |
+| 3 | **Telegram Bot async failures** | 🟢 Controlled | Payment commits a unique durable outbox job in the same transaction. A database-locking worker retries transient failures with backoff and records terminal failures; `telegram_tickets` remains independent from payment state and existing role-scoped manual retry remains available. A crash during the external send is treated as ambiguous and requires manual review because Telegram `sendMessage` has no idempotency key. |
 | 3A | **Unauthorized Telegram ticket completion** | 🟢 Controlled | Telegram callbacks require a valid webhook secret, exact order/ticket/chat/message context, matching stall chat, and an active stall-scoped cook identity. Completion records the Telegram actor ID/name. |
 | 4 | **KHR exchange rate — hardcoded vs. live** | 🟡 Medium | Decision required before building the product form. Recommend: hardcode the rate as a `.env` constant (`KHR_RATE=4100`) for now. Add a note in the admin panel showing the current rate. Live rate API is out of scope. |
 | 5 | **Stall data isolation — cross-stall data leak** | 🔴 High | Every query that returns cashier-facing products, orders, or staff must scope by the authenticated user and their backend stall assignment. Never trust a client-supplied stall ID for cashier access. |
