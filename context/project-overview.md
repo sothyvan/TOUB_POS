@@ -20,7 +20,7 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 4. Cashier optionally adds **order modifiers** (e.g., "no ice", "extra spicy") per item.
 5. Cashier selects **Cash** or **KHQR** checkout.
    - Cash: confirmation dialog → order recorded as paid.
-   - KHQR: dynamic QR generated → backend webhook detects payment → WebSocket pushes confirmation **only to that cashier's screen**.
+   - KHQR: dynamic QR generated → backend checks Bakong by QR MD5 → WebSocket pushes confirmation **only to that cashier's screen**.
 6. On payment confirmation, the order payload is forwarded to the **Telegram kitchen bot**, which posts a structured order ticket to the stall's kitchen channel.
 7. Cook taps "Done" in Telegram → bot edits the message to mark it complete.
 8. Transaction is recorded to the central database under the stall and cashier.
@@ -46,7 +46,7 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 ### Payment Integration
 
 - Dynamic KHQR generation (Bakong-compliant)
-- Backend webhook listener (ABA PayWay / Bakong)
+- Backend Bakong Open API status checking by QR MD5, with frontend polling and a process-local background checker
 - WebSocket isolated notification routing → specific cashier only
 
 ### Kitchen Display (Telegram Bot)
@@ -92,7 +92,7 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 - Menu management with dual-currency pricing (USD / KHR).
 - Order modifiers/notes per item.
 - Service Fee (3%) and Estimated Tax (8%) calculation.
-- KHQR payment integration via backend webhook.
+- KHQR payment integration through backend-owned Bakong Open API verification.
 - Telegram kitchen display bot.
 
 ### Out of Scope (Current Phase)

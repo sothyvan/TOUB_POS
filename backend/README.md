@@ -233,14 +233,6 @@ Owner/Manager order history shows Telegram kitchen ticket state (`pending`, `sen
 |--------|------|------|-------------|
 | GET | `/api/reports/daily` | Owner / Manager | Daily sales summary |
 
-### Webhooks
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/api/webhook/payment` | No | Legacy placeholder; use `/api/orders/:id/check-khqr-status` |
-
----
-
 ## Standard Response Shape
 
 ```json

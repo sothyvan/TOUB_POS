@@ -544,16 +544,6 @@ export const swaggerDocument = {
                     403: { description: 'Owner/Manager role required' }
                 }
             }
-        },
-        '/api/webhook/payment': {
-            post: {
-                summary: 'Legacy payment webhook placeholder',
-                description: 'Use /api/orders/{id}/check-khqr-status for Bakong status checking.',
-                security: [],
-                responses: {
-                    501: { description: 'Legacy placeholder path' }
-                }
-            }
         }
     }
 };

@@ -21,7 +21,7 @@
 | Error & Logging | `middleware/error.middleware.js`, `logger.middleware.js` | Standard `{success, message}` shape |
 | **Orders** | `order.controller.js`, `order.service.js` | **Completed:** DB transactions, validation, insert items |
 | **Reports** | `report.controller.js`, `report.service.js` | **Completed:** Sales statistics, daily revenue summaries |
-| **Payment webhook** | `webhook.controller.js`, `payment.service.js` | **Completed:** Row-lock idempotency, status transitions |
+| **KHQR status verification** | `services/orders/khqr-payment.service.js`, `startup/khqr-background-checker.js` | **Completed:** Bakong MD5 checking, row-lock idempotency, trusted paid transition |
 | Swagger Docs | `src/config/swagger.js` | **Completed:** API documentation |
 
 ### 🔴 Stubbed / not implemented at all
@@ -191,7 +191,7 @@ export function emitPaymentConfirmed(cashierId, orderId) {
 }
 ```
 - Wire `initWebSocket` into `index.js` `http.createServer`.
-- Hook `emitPaymentConfirmed` into existing `webhook.controller.js` to emit to specific cashier upon Bakong success.
+- `emitPaymentConfirmed` is called by `khqr-payment.service.js` after Bakong verification succeeds.
 
 ### 4.3 Telegram Kitchen Bot
 New file: **`src/services/telegram.service.js`**
@@ -220,7 +220,7 @@ export async function sendOrderTicket(stallChatId, order) {
 }
 ```
 - `handleCallback(callbackQuery)` to mark ticket "✅ Done".
-- New endpoint: `POST /api/webhooks/telegram` in `webhook.routes.js`.
+- Telegram callback endpoint: `POST /api/telegram/callback` in `telegram.routes.js`.
 
 ### 4.4 TelegramSession Management
 New: `src/repositories/telegram-session.repository.js` + minimal controller/routes under `/api/stalls/:id/telegram-sessions` for cooks identity locking.
@@ -296,8 +296,8 @@ New: `src/repositories/telegram-session.repository.js` + minimal controller/rout
 | GET | `/api/orders/mine` | JWT | ✅ done |
 | GET | `/api/orders/:id` | JWT | ✅ done |
 | PATCH | `/api/orders/:id/cancel` | JWT | ✅ done |
-| POST | `/api/webhooks/payment` | shared secret | ✅ done |
-| POST | `/api/webhooks/telegram` | Telegram | 🔴 Week 2 |
+| POST | `/api/orders/:id/check-khqr-status` | JWT | ✅ done |
+| POST | `/api/telegram/callback` | Telegram secret header | ✅ done |
 | GET | `/api/reports/daily` | JWT | ✅ done |
 | GET | `/api/reports/trend` | JWT | ✅ done |
 | GET | `/api/reports/top-products` | JWT | ✅ done |

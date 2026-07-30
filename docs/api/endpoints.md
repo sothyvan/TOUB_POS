@@ -382,14 +382,6 @@ Use this when a paid order has no Telegram ticket or has a `failed` ticket. `pen
 
 ---
 
-## Legacy Webhook — `/api/webhook`
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/webhook/payment` | No | Legacy placeholder; use `/orders/:id/check-khqr-status` |
-
----
-
 ## Real-Time Events — Socket.IO
 
 TouB POS also exposes a Socket.IO server from the same backend origin, for example `http://localhost:3000`.
