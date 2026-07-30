@@ -35,6 +35,10 @@ Update this file after every meaningful implementation change.
 - Phase UI-4: Responsive & Polish — **COMPLETE** ✅
 - Pagination & Performance Optimization — **COMPLETE**
 
+- **Standardized SweetAlert notifications**:
+  - Changed management success/error feedback to bottom-right toast notifications with a 3-second timeout and visible progress bar.
+  - Kept destructive confirmations and blocking loading dialogs centered so they cannot disappear before the user responds or the operation finishes.
+
 - **Implemented multi-device terminal identity and real-time revocation**:
   - Added `stall_devices` with hashed tokens, device names, active/revoked state, last-seen time, and most recent cashier metadata.
   - Added startup migration from the former single `stalls.device_token` registration without invalidating existing registered browsers.
