@@ -1,6 +1,10 @@
 import * as stallRepository from '../repositories/stall.repository.js';
 import * as stallDeviceRepository from '../repositories/stall-device.repository.js';
 import * as userRepository from '../repositories/user.repository.js';
+import {
+  revokeDeviceRefreshSessions,
+  revokeUserRefreshSessions,
+} from '../repositories/refresh-session.repository.js';
 import { generateDeviceToken } from '../utils/device-token.util.js';
 import { httpError } from '../utils/http-error.util.js';
 import { maskTelegramChatId } from '../utils/telegram-identifier.util.js';
@@ -116,6 +120,7 @@ export async function assignStaff(actor, rawStallId, rawUserId) {
   }
   const result = await stallRepository.assignStaffToStall(stallId, userId);
   if (result.changed) {
+    await revokeUserRefreshSessions(userId);
     emitCashierSessionInvalidated(userId, {
       message: 'Your stall assignment changed. Please sign in again on the correct terminal.',
     });
@@ -133,6 +138,7 @@ export async function unassignStaff(actor, stallId, userId) {
   if (!success) {
     throw httpError('Assignment not found.', 404);
   }
+  await revokeUserRefreshSessions(userId);
   emitCashierSessionInvalidated(userId, {
     message: 'You were unassigned from this stall. Please contact a manager before signing in again.',
   });
@@ -188,6 +194,7 @@ export async function deregisterDevice(actor, rawStallId, rawDeviceId) {
 
   if (device.is_active) {
     await stallDeviceRepository.revokeDevice(deviceId, actor.id);
+    await revokeDeviceRefreshSessions(deviceId);
     emitDeviceRevoked(deviceId, {
       message: 'This terminal was deregistered by management.',
     });

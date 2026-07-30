@@ -68,7 +68,9 @@ Do not run this seeder against production or any live merchant database.
 | `DB_PASSWORD` | MySQL password, if required by local DB | `your_password` |
 | `DB_NAME` | MySQL database name | `toub_pos` |
 | `JWT_SECRET` | Secret key for signing JWTs | `a_long_random_string` |
-| `JWT_EXPIRES_IN` | JWT expiry duration | `8h` |
+| `JWT_ACCESS_EXPIRES_IN` | Short-lived access JWT duration | `15m` |
+| `REFRESH_SESSION_EXPIRES_HOURS` | Absolute rotating refresh-session lifetime | `8` |
+| `AUTH_COOKIE_SAME_SITE` | Cookie cross-site policy (`lax` locally; usually `none` for separate HTTPS production origins) | `lax` |
 | `PLATFORM_ADMIN_USERNAME` | Development bootstrap platform admin username | `platform_admin` |
 | `PLATFORM_ADMIN_PASSWORD` | Development bootstrap platform admin password | `platform123` |
 | `PLATFORM_ADMIN_ROLE` | Development bootstrap role; must be `platform_admin` | `platform_admin` |
@@ -146,10 +148,17 @@ RBAC rules:
 
 Security notes:
 
-- JWT access tokens are stored by the frontend in localStorage for final-project simplicity.
+- Short-lived access JWTs remain only in frontend memory.
+- Rotating refresh tokens are Secure/HttpOnly in production and stored as SHA-256 hashes in MySQL.
+- Refresh and logout require a matching CSRF cookie and `X-CSRF-Token` header.
 - Login and PIN endpoints are rate-limited.
 - Helmet security headers are enabled.
-- HttpOnly refresh tokens are a future production improvement.
+
+Apply the refresh-session schema before starting a production deployment:
+
+```bash
+npm run migrate:refresh-sessions
+```
 
 ---
 
@@ -276,6 +285,7 @@ npm run migrate:telegram-groups
 npm run migrate:order-idempotency
 npm run migrate:single-stall-assignment
 npm run migrate:user-session-version
+npm run migrate:refresh-sessions
 ```
 
 Run `npm run migrate:order-idempotency` once for an existing database before

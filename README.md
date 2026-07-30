@@ -11,7 +11,7 @@ A lightweight Point-of-Sale system for small merchant teams operating across mul
 | Frontend | React + Vite | Owner/manager portal and cashier POS workspace |
 | Backend | Node.js + Express | REST API, JWT auth, RBAC, order/payment business rules |
 | Database | MySQL + Sequelize | Users, stalls, products, orders, order items, audit logs |
-| Auth | JWT access token | Stored in frontend localStorage for this final-project scope |
+| Auth | Short-lived JWT + rotating refresh session | Access JWT in memory; refresh token in Secure HttpOnly cookie |
 | Security | Helmet + rate limiting | Security headers and login/PIN abuse protection |
 
 ```text

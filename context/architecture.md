@@ -59,11 +59,31 @@
 
 - **MySQL Database**: Stores all relational data including Users, Stalls, Staff assignments, Orders, Order Items (with modifiers), and Payment Confirmations.
 - **ImageKit**: Stores product photo binary assets. The backend issues short-lived browser-upload authentication parameters to Owner/Manager users only, while MySQL stores only the delivered asset URL in `products.image_url`.
-- **localStorage (Frontend)**: Raw per-device registration token, registration metadata, auth JWT, and active user session. The raw device token is never stored in MySQL; the database stores its SHA-256 hash. Device data is cleared on remote revocation, while normal cashier logout preserves terminal registration. This is accepted for the final project; production should move to short-lived access tokens plus HttpOnly refresh-token cookies.
+- **Browser auth storage**: Short-lived access JWTs and the public user session
+  exist only in JavaScript memory. A rotating opaque refresh token is held in a
+  Secure, HttpOnly cookie; MySQL stores only its SHA-256 hash and rotation
+  lineage. A non-credential CSRF proof returned by login/refresh is persisted
+  separately and sent as `X-CSRF-Token`; it must match both the API cookie and
+  stored hash on refresh/logout. This supports separate frontend/API domains.
+- **localStorage (Frontend)**: Limited to the raw per-device registration token,
+  registration metadata, theme, and other non-auth preferences. The raw device
+  token is never stored in MySQL; the database stores its SHA-256 hash. Device
+  data is cleared on remote revocation, while normal cashier logout preserves
+  terminal registration.
 
 ## Auth and Access Model
 
 - Every web user signs in through a JWT-secured auth endpoint.
+- Credential login issues a short-lived access JWT plus an opaque refresh token
+  with an eight-hour absolute expiry. The refresh token rotates after every use,
+  is stored only in an HttpOnly cookie, and is represented by a hash in
+  `refresh_sessions`.
+- Page reload restores the session through `POST /api/auth/refresh`; the access
+  token is never restored from localStorage. Axios shares one refresh operation
+  across concurrent expired requests and retries each original request once.
+- Refresh and logout use double-submit CSRF protection. Production cookies are
+  Secure; `AUTH_COOKIE_SAME_SITE` must match the chosen same-site or cross-site
+  deployment topology.
 - Owner/Manager username-password login and Cashier PIN login are separate, rate-limited flows.
 - The system uses Role-Based Access Control (RBAC).
 - The active roles are `platform_admin`, `owner`, `manager`, and `cashier`.
@@ -210,7 +230,7 @@
 | 6 | **Legacy localStorage fallback regression** | 🟡 Medium | Products, categories, stalls, users, and orders are now backend-owned. Future UI work must not reintroduce localStorage as the source of truth for persisted POS data; localStorage should remain limited to auth/session/device-style browser state. |
 | 7 | **Duplicate KHQR status checks** | 🔴 High | Frontend polling and the background checker may verify the same order concurrently. The KHQR confirmation service uses a database row lock, rechecks status inside the transaction, and writes the payment audit log only for the first successful transition. |
 | 8 | **QR amount or destination mismatch** | 🔴 High | A provider result may belong to the wrong amount or account. The backend validates Bakong amount, USD currency, and destination account against trusted order/environment values before marking an order paid. |
-| 9 | **JWT expiry mid-shift** | 🟡 Medium | Cashier's 8h token can expire while they are mid-order. The next API call returns `401`, the cart is lost, and the cashier is confused. Mitigation: frontend must intercept all `401` responses, store the current cart in `sessionStorage`, redirect to PIN re-entry, and restore the cart after re-authentication. |
+| 9 | **Session expiry mid-shift** | 🟢 Controlled | Access JWTs expire after about 15 minutes and are transparently renewed through a rotating refresh session with an eight-hour absolute shift limit. A rejected refresh returns to PIN login; checkout idempotency and the existing cart preserve incomplete work. |
 | 10 | **Device token lifecycle** | 🟢 Controlled | `stall_devices` supports multiple named terminals per stall with SHA-256 token hashes. Owner/Manager users can revoke one device; backend middleware rejects its device-bound JWT requests and Socket.IO emits a targeted forced logout. Future production work may add token expiry/rotation and dedicated device audit events. |
 | 11 | **Future platform admin data access** | 🔴 High | The current `platform_admin` role is limited to owner bootstrap only. If TouB POS becomes a multi-customer SaaS product, expand it with tenant isolation, support-session auditing, and least-privilege access before enabling any broader cross-customer administration. |
 

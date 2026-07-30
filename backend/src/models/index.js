@@ -12,6 +12,7 @@ import ProductStall from './product-stall.model.js';
 import StallDevice from './stall-device.model.js';
 import TelegramCook from './telegram-cook.model.js';
 import TelegramGroupConnection from './telegram-group-connection.model.js';
+import RefreshSession from './refresh-session.model.js';
 
 // ── User ↔ Stall Ownership ──────────────────────────────────
 Stall.belongsTo(User, { as: 'Owner', foreignKey: 'owner_id', onDelete: 'SET NULL' });
@@ -20,6 +21,12 @@ User.hasMany(Stall, { as: 'OwnedStalls', foreignKey: 'owner_id' });
 // ── User Subordination (Owner has Managers/Cashiers) ─────────
 User.belongsTo(User, { as: 'Owner', foreignKey: 'owner_id', onDelete: 'SET NULL' });
 User.hasMany(User, { as: 'Staff', foreignKey: 'owner_id' });
+
+// ── User ↔ Rotating Refresh Sessions ────────────────────────
+RefreshSession.belongsTo(User, { as: 'User', foreignKey: 'user_id', onDelete: 'CASCADE' });
+User.hasMany(RefreshSession, { as: 'RefreshSessions', foreignKey: 'user_id' });
+RefreshSession.belongsTo(StallDevice, { as: 'Device', foreignKey: 'device_id', onDelete: 'CASCADE' });
+StallDevice.hasMany(RefreshSession, { as: 'RefreshSessions', foreignKey: 'device_id' });
 
 // ── Stall ↔ Staff (Many-to-Many via StallStaff) ──────────────
 Stall.belongsToMany(User, { through: StallStaff, foreignKey: 'stall_id', otherKey: 'user_id' });
@@ -102,4 +109,5 @@ export {
   StallDevice,
   TelegramCook,
   TelegramGroupConnection,
+  RefreshSession,
 };

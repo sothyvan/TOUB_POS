@@ -1,13 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { authApi, setUnauthorizedHandler } from '../../services/apiClient';
 import {
+  authApi,
+  hasRefreshSessionHint,
+  setAccessToken,
+  setAuthSessionHandler,
+  setUnauthorizedHandler,
+} from '../../services/apiClient';
+import {
+  clearLogoutPending,
+  clearStoredCsrfToken,
   clearStoredDeviceRegistration,
   clearStoredSession,
-  readStoredSession,
-  writeStoredSession,
+  isLogoutPending,
+  markLogoutPending,
 } from './authStorage';
 import { AuthContext } from './authContext';
 import { toDisplayRole } from '../../utils/permissions';
+import { updateSocketAccessToken } from '../../services/socketClient';
 
 function normalizeAuthUser(user) {
   const role = toDisplayRole(user?.role);
@@ -23,35 +32,91 @@ function normalizeAuthUser(user) {
 
 export function AuthProvider({ children }) {
   const [authNotice, setAuthNotice] = useState('');
-  const [session, setSession] = useState(() => {
-    const stored = readStoredSession();
-    return {
-      token: stored.token,
-      user: stored.user ? normalizeAuthUser(stored.user) : null,
-    };
-  });
+  const [isRestoring, setIsRestoring] = useState(
+    () => isLogoutPending() || hasRefreshSessionHint(),
+  );
+  const [session, setSession] = useState({ token: null, user: null });
 
-  const clearSession = useCallback(() => {
-    clearStoredSession();
+  const clearSession = useCallback(({ preserveCsrf = false } = {}) => {
+    clearStoredSession({ preserveCsrf });
+    setAccessToken(null);
+    updateSocketAccessToken(null);
     setSession({ token: null, user: null });
+  }, []);
+
+  const applySession = useCallback((authData) => {
+    const user = normalizeAuthUser(authData.user);
+    clearLogoutPending();
+    setAccessToken(authData.token);
+    updateSocketAccessToken(authData.token);
+    setSession({ token: authData.token, user });
+    return user;
   }, []);
 
   const handleDeviceRevoked = useCallback((message = 'This terminal was deregistered by management.') => {
     clearStoredDeviceRegistration();
-    clearStoredSession();
-    setSession({ token: null, user: null });
+    clearSession();
     setAuthNotice(message);
-  }, []);
+  }, [clearSession]);
 
   const handleSessionInvalidated = useCallback((message = 'Your session is no longer valid. Please sign in again.') => {
-    clearStoredSession();
-    setSession({ token: null, user: null });
+    clearSession();
     setAuthNotice(message);
-  }, []);
+  }, [clearSession]);
 
   const clearAuthNotice = useCallback(() => {
     setAuthNotice('');
   }, []);
+
+  useEffect(() => {
+    clearStoredSession({ preserveCsrf: true });
+    setAuthSessionHandler((authData) => {
+      applySession(authData);
+    });
+
+    let active = true;
+    if (isLogoutPending()) {
+      authApi.logout()
+        .then(() => {
+          clearLogoutPending();
+          clearStoredCsrfToken();
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (active) {
+            setIsRestoring(false);
+          }
+        });
+      return () => {
+        active = false;
+        setAuthSessionHandler(null);
+      };
+    }
+
+    if (!hasRefreshSessionHint()) {
+      return () => {
+        active = false;
+        setAuthSessionHandler(null);
+      };
+    }
+
+    authApi.refresh()
+      .catch(() => {
+        if (active) {
+          clearSession();
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setIsRestoring(false);
+        }
+      });
+
+    return () => {
+      active = false;
+      setAuthSessionHandler(null);
+    };
+  }, [applySession, clearSession]);
 
   useEffect(() => {
     setUnauthorizedHandler(({ payload } = {}) => {
@@ -74,48 +139,60 @@ export function AuthProvider({ children }) {
     const response = await authApi.login(username, password);
     const authData = response?.data || response;
 
-    if (!authData?.token || !authData?.user) {
-      throw new Error('Login response did not include a token and user.');
+    if (!authData?.token || !authData?.user || !authData?.csrfToken) {
+      throw new Error('Login response did not include the required session data.');
     }
 
     const user = normalizeAuthUser(authData.user);
     if (options.persist !== false) {
-      writeStoredSession(authData.token, user);
-      setSession({ token: authData.token, user });
+      applySession(authData);
     }
     return user;
-  }, []);
+  }, [applySession]);
 
   const loginPin = useCallback(async (userId, pin, options = {}) => {
     setAuthNotice('');
     const response = await authApi.loginPin(userId, pin);
     const authData = response?.data || response;
 
-    if (!authData?.token || !authData?.user) {
-      throw new Error('Login response did not include a token and user.');
+    if (!authData?.token || !authData?.user || !authData?.csrfToken) {
+      throw new Error('Login response did not include the required session data.');
     }
 
     const user = normalizeAuthUser(authData.user);
     if (options.persist !== false) {
-      writeStoredSession(authData.token, user);
-      setSession({ token: authData.token, user });
+      applySession(authData);
     }
     return user;
-  }, []);
+  }, [applySession]);
+
+  const logout = useCallback(async () => {
+    markLogoutPending();
+    const revocation = authApi.logout();
+    clearSession({ preserveCsrf: true });
+    try {
+      await revocation;
+      clearLogoutPending();
+      clearStoredCsrfToken();
+    } catch {
+      // The pending marker prevents cookie-based restoration until revocation succeeds.
+    }
+  }, [clearSession]);
 
   const value = useMemo(() => ({
     token: session.token,
     user: session.user,
     isAuthenticated: Boolean(session.token && session.user),
+    isRestoring,
     login,
     loginPin,
-    logout: clearSession,
+    logout,
     clearSession,
     authNotice,
     clearAuthNotice,
     handleDeviceRevoked,
     handleSessionInvalidated,
-  }), [session.token, session.user, login, loginPin, clearSession, authNotice, clearAuthNotice, handleDeviceRevoked, handleSessionInvalidated]);
+  }), [session.token, session.user, isRestoring, login, loginPin, logout, clearSession, authNotice, clearAuthNotice, handleDeviceRevoked, handleSessionInvalidated]);
 
   return (
     <AuthContext.Provider value={value}>

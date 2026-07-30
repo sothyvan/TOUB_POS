@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import * as userRepository from '../repositories/user.repository.js';
+import { revokeUserRefreshSessions } from '../repositories/refresh-session.repository.js';
 import { hashPin } from '../utils/pin.util.js';
 import { httpError } from '../utils/http-error.util.js';
 import { emitUserSessionInvalidated } from './websocket.service.js';
@@ -213,6 +214,7 @@ export async function updateUser(actor, userId, payload) {
   if (!success) {
     throw httpError('User not found or no changes made.', 404);
   }
+  await revokeUserRefreshSessions(userId);
   emitUserSessionInvalidated(userId, {
     message: 'Your account details, credentials, or permissions changed. Please sign in again.',
   });
@@ -227,6 +229,7 @@ export async function deleteUser(actor, userId) {
   if (!success) {
     throw httpError('User not found.', 404);
   }
+  await revokeUserRefreshSessions(userId);
   emitUserSessionInvalidated(userId, {
     message: 'Your account was deleted. Contact the business owner if this was unexpected.',
   });

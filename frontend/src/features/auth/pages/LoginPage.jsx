@@ -113,6 +113,7 @@ export default function LoginPage() {
 
         const role = String(authData?.user?.role || '').toLowerCase();
         if (role !== 'owner' && role !== 'manager') {
+          await logout();
           setLoginError('Only owner or manager accounts can register a terminal.');
           return false;
         }
@@ -152,6 +153,7 @@ export default function LoginPage() {
       const { device_token, device, stall } = payload.data;
 
       writeStoredDeviceRegistration(device_token, stall, device);
+      await logout();
 
       setDeviceToken(device_token);
       setDeviceRegistered(true);
@@ -166,7 +168,8 @@ export default function LoginPage() {
     }
   };
 
-  const handleCancelRegistration = () => {
+  const handleCancelRegistration = async () => {
+    await logout();
     setOwnerToken(null);
     setAvailableStalls([]);
     setLoginError('');

@@ -90,7 +90,8 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 - Core POS UI for tablet/mobile web browsers.
 - Multi-stall architecture with stall-isolated data.
 - Real-time WebSocket notification routing (cashier-specific).
-- JWT Authentication and RBAC (Owner / Manager / Cashier).
+- Short-lived JWT authentication with rotating HttpOnly refresh sessions and
+  RBAC (Owner / Manager / Cashier).
 - Menu management with dual-currency pricing (USD / KHR).
 - Order modifiers/notes per item.
 - Service Fee (3%) and Estimated Tax (8%) calculation.

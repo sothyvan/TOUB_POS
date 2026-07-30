@@ -1,5 +1,4 @@
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import {
   findCashiersByStallId,
   findAssignedStallByUserId,
@@ -9,6 +8,7 @@ import {
 } from '../repositories/user.repository.js';
 import { findDeviceByToken, markDeviceSeen } from '../repositories/stall-device.repository.js';
 import { hashPin, verifyPin } from '../utils/pin.util.js';
+import { createAuthSession } from './auth-session.service.js';
 
 function authError(message, status = 401, code = null) {
   const err = new Error(message);
@@ -46,22 +46,7 @@ export async function loginUser(username, password) {
     throw authError('User account is inactive.', 403);
   }
 
-  const token = jwt.sign(
-    {
-      id: user.id,
-      username: user.username,
-      role: user.role,
-      owner_id: user.owner_id,
-      session_version: user.session_version,
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
-  );
-
-  return {
-    token,
-    user: { id: user.id, username: user.username, role: user.role, owner_id: user.owner_id },
-  };
+  return createAuthSession(user);
 }
 
 /**
@@ -103,24 +88,12 @@ export async function loginWithPin(userId, pin, deviceToken) {
 
   await markDeviceSeen(device.id, user.id);
 
-  const token = jwt.sign(
-    {
-      id: user.id,
-      username: user.username,
-      role: user.role,
-      owner_id: user.owner_id,
-      session_version: user.session_version,
-      device_id: device.id,
-      stall_id: device.stall_id,
+  return createAuthSession(user, {
+    deviceContext: {
+      deviceId: Number(device.id),
+      stallId: Number(device.stall_id),
     },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
-  );
-
-  return {
-    token,
-    user: { id: user.id, username: user.username, role: user.role, owner_id: user.owner_id },
-  };
+  });
 }
 
 export async function listCashiersForDevice(deviceToken) {

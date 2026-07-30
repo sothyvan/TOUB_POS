@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
-import { AUTH_STORAGE_KEYS, readStoredDeviceToken } from '../features/auth/authStorage';
-import { API_BASE_URL } from './apiClient';
+import { readStoredDeviceToken } from '../features/auth/authStorage';
+import { API_BASE_URL, getAccessToken } from './apiClient';
 
 let cashierSocket = null;
 let managementSocket = null;
@@ -41,6 +41,15 @@ export function subscribeToManagementUpdates(listener) {
   return () => managementUpdateListeners.delete(listener);
 }
 
+export function updateSocketAccessToken(token) {
+  if (cashierSocket) {
+    cashierSocket.auth = { ...cashierSocket.auth, token };
+  }
+  if (managementSocket) {
+    managementSocket.auth = { ...managementSocket.auth, token };
+  }
+}
+
 export function connectCashierSocket({
   onPaymentConfirmed,
   onKitchenTicketUpdated,
@@ -48,7 +57,7 @@ export function connectCashierSocket({
   onSessionInvalidated,
   onConnectError,
 } = {}) {
-  const token = localStorage.getItem(AUTH_STORAGE_KEYS.TOKEN);
+  const token = getAccessToken();
   const deviceToken = readStoredDeviceToken();
   if (!token || !deviceToken) {
     return null;
@@ -94,7 +103,7 @@ export function connectManagementSocket({
   onSessionInvalidated,
   onConnectError,
 } = {}) {
-  const token = localStorage.getItem(AUTH_STORAGE_KEYS.TOKEN);
+  const token = getAccessToken();
   if (!token) {
     return null;
   }

@@ -13,12 +13,13 @@ Current roles:
 
 Auth/security notes:
 
-- JWT access tokens are stored in frontend localStorage for this final-project scope.
+- Access JWTs are short-lived and stored only in frontend memory.
+- Rotating refresh tokens use Secure, HttpOnly cookies and hashed MySQL sessions.
+- Refresh/logout require the CSRF cookie value in `X-CSRF-Token`.
 - Platform Admin/Owner/Manager use username + password.
 - Cashier uses PIN login.
 - Cashier PINs are bcrypt-hashed.
 - Login and PIN endpoints are rate-limited and may return `429`.
-- HttpOnly refresh tokens are a future production improvement.
 - Bakong Open API tokens are backend-only. The frontend calls TouB POS endpoints and never calls Bakong directly.
 
 ---
@@ -40,14 +41,19 @@ Auth/security notes:
 
 | Method | Path           | Auth | Role | Description       |
 |--------|----------------|------|------|-------------------|
-| POST   | `/auth/login`  | No   | Platform Admin / Owner / Manager | Issue JWT token with username/password |
-| POST   | `/auth/pin`    | Device token | Cashier | Issue a device-bound JWT with cashier PIN |
+| POST   | `/auth/login`  | No   | Platform Admin / Owner / Manager | Issue access JWT plus rotating refresh session |
+| POST   | `/auth/pin`    | Device token | Cashier | Issue device-bound access JWT plus rotating refresh session |
+| POST   | `/auth/refresh` | Refresh + CSRF cookies | Signed-in user | Rotate refresh token and issue a new access JWT |
+| POST   | `/auth/logout` | Refresh + CSRF cookies | Signed-in user | Revoke current refresh session and clear cookies |
 | GET    | `/auth/cashiers` | Device token | Terminal | List active cashiers assigned to the device stall |
 | GET    | `/auth/device-status` | JWT + device token | Cashier | Validate that the bound terminal remains active |
 
 ### POST `/auth/login`
 
 Platform Admin, Owner, and Manager accounts use this endpoint. Cashier accounts must use `/auth/pin`. Platform Admin is API/bootstrap-only in the current project and does not access the management portal.
+The JSON response contains a short-lived access JWT. The response also sets
+`toub_refresh_token` as HttpOnly and `toub_csrf_token` as a readable companion
+cookie. Raw refresh tokens are never returned in JSON.
 
 **Request body**
 ```json
@@ -63,6 +69,7 @@ Platform Admin, Owner, and Manager accounts use this endpoint. Cashier accounts 
   "success": true,
   "data": {
     "token": "<jwt>",
+    "csrfToken": "<csrf-proof>",
     "user": {
       "id": 1,
       "username": "owner",
@@ -97,6 +104,7 @@ Cashier accounts use this endpoint after selecting a profile in the terminal UI.
   "success": true,
   "data": {
     "token": "<jwt>",
+    "csrfToken": "<csrf-proof>",
     "user": {
       "id": 2,
       "username": "cashier1",
@@ -121,6 +129,35 @@ deactivated, or deleted account receives `401 SESSION_INVALIDATED`. Successful
 cashier JWTs additionally contain `device_id` and `stall_id`; every protected
 cashier request must send both this JWT and the same `X-Device-Token`. A revoked
 device receives `401` with code `DEVICE_REVOKED`.
+
+### POST `/auth/refresh`
+
+Send the browser-managed `toub_refresh_token` cookie and the non-credential
+`csrfToken` proof returned by the previous login/refresh in `X-CSRF-Token`.
+The backend also requires its CSRF cookie and stored hash to match. Cashier
+refresh requests must additionally send the registered terminal's
+`X-Device-Token`.
+
+On success, the backend consumes the old refresh token, writes a hashed
+replacement in the same family, rotates both cookies, and returns a new access
+JWT and public user object. The family keeps its original maximum eight-hour
+expiry; rotation does not extend the shift indefinitely.
+
+| Code | Reason |
+| --- | --- |
+| 401 `REFRESH_REQUIRED` | Refresh cookie is missing |
+| 401 `REFRESH_INVALID` | Refresh token is unknown |
+| 401 `REFRESH_EXPIRED` | Maximum session lifetime ended |
+| 401 `REFRESH_REUSED` | A consumed/revoked token was presented; family revoked |
+| 401 `SESSION_INVALIDATED` | User, device, role, or stall assignment changed |
+| 403 `CSRF_INVALID` | CSRF header/cookie proof is missing or invalid |
+| 429 | Too many refresh attempts |
+
+### POST `/auth/logout`
+
+Requires the same refresh cookie and CSRF proof. It revokes the current refresh
+session and expires both browser cookies. The frontend always clears its
+in-memory access token even if the backend is temporarily unreachable.
 
 ---
 

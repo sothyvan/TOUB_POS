@@ -32,7 +32,7 @@ export async function findUserById(id) {
   });
 }
 
-export function findUserSessionById(id) {
+export function findUserSessionById(id, { transaction } = {}) {
   return User.findByPk(id, {
     attributes: [
       'id',
@@ -43,6 +43,7 @@ export function findUserSessionById(id) {
       'is_deleted',
       'session_version',
     ],
+    transaction,
   });
 }
 

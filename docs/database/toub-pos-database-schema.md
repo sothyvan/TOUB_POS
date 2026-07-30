@@ -100,6 +100,8 @@ erDiagram
 
     STALLS ||--o{ STALL_DEVICES : "registers"
     USERS ||--o{ STALL_DEVICES : "registers, uses, or revokes"
+    USERS ||--o{ REFRESH_SESSIONS : "authenticates through"
+    STALL_DEVICES ||--o{ REFRESH_SESSIONS : "binds cashier sessions"
 
     CATEGORIES ||--o{ PRODUCTS : "contains"
     PRODUCTS ||--o{ STALL_PRODUCTS : "is configured through"
@@ -135,6 +137,7 @@ erDiagram
 | 11 | `telegram_cooks` | Kitchen | One authorized Telegram identity at a Stall | `stall_id` |
 | 12 | `telegram_group_connections` | Kitchen | One short-lived setup attempt | `stall_id` |
 | 13 | `telegram_tickets` | Kitchen | One Telegram dispatch state record | `order_id` |
+| 14 | `refresh_sessions` | Identity | One rotating browser login credential | `user_id` and optional `device_id` |
 
 ## 6. Identity And Tenancy Tables
 
@@ -181,6 +184,29 @@ a `CHECK` constraint for this rule.
 **Deletion:** User deletion is a soft delete. The repository sets
 `is_deleted = TRUE`, sets `is_active = FALSE`, and changes the username so its
 former unique value can be reused.
+
+### 6.2 `refresh_sessions`
+
+**Purpose:** Stores revocable, rotating browser sessions without storing raw
+refresh or CSRF tokens.
+
+| Column | Type | Null/default | Key | Meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `BIGINT` | Auto increment | PK | Session record |
+| `user_id` | `INT` | Required | FK → `users.id` | Authenticated user |
+| `device_id` | `INT` | Nullable | FK → `stall_devices.id` | Required cashier terminal binding |
+| `token_hash` | `VARCHAR(64)` | Required | Unique | SHA-256 refresh-token hash |
+| `csrf_token_hash` | `VARCHAR(64)` | Required |  | SHA-256 CSRF-token hash |
+| `family_id` | `VARCHAR(36)` | Required | Index | Rotation lineage |
+| `session_version` | `INT` | Required |  | User version when issued |
+| `expires_at` | `DATETIME` | Required | Index | Absolute session expiry |
+| `last_used_at` | `DATETIME` | Nullable |  | Rotation/logout use time |
+| `revoked_at` | `DATETIME` | Nullable | Index | Consumption or revocation time |
+| `replaced_by_token_hash` | `VARCHAR(64)` | Nullable |  | One-way link to rotation replacement |
+| `created_at` | `DATETIME` | Required/current time |  | Issue time |
+
+The raw refresh token exists only in a Secure, HttpOnly cookie. The readable
+CSRF cookie is validated against both `X-CSRF-Token` and its stored hash.
 
 ## 7. Stall Operations Tables
 
@@ -454,6 +480,8 @@ cascades to its tickets.
 | Parent | Child/relationship | Cardinality | Delete behavior |
 | --- | --- | --- | --- |
 | `users` Owner | `users` staff | One-to-many | Staff `owner_id` becomes `NULL` |
+| `users` | `refresh_sessions` | One-to-many | Cascade |
+| `stall_devices` | `refresh_sessions` | One-to-many | Cascade |
 | `users` Owner | `stalls` | One-to-many | Stall `owner_id` becomes `NULL` |
 | `users` Owner | `categories` | One-to-many | Categories cascade |
 | `stalls` | `stall_devices` | One-to-many | Cascade |
@@ -545,7 +573,8 @@ currently missing from `schema.sql`; see Section 15.
 | Device token | Secret | Raw token browser-only; SHA-256 hash in MySQL |
 | Group setup token | Secret | Raw token link-only; SHA-256 hash in MySQL |
 | Telegram full IDs | Sensitive operational identifier | Backend/MySQL only; mask in management responses |
-| JWT | Session secret | Browser localStorage; not MySQL |
+| Access JWT | Short-lived session credential | Browser memory; not MySQL |
+| Refresh token | Durable rotating session credential | HttpOnly cookie; SHA-256 hash and lineage in `refresh_sessions` |
 | Product image | Public business media | Binary in ImageKit; URL in MySQL |
 | Order totals/change | Financial record | Backend-calculated and persisted |
 | Audit details | Security/financial evidence | JSON in MySQL; access should remain restricted |

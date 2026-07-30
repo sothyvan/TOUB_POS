@@ -913,6 +913,24 @@ Update this file after every meaningful implementation change.
   - Frontend invalidation clears only the auth session, preserving registered Cashier terminal identity for a fresh PIN login.
   - Fixed soft deletion for 50-character usernames by truncating before adding the unique deletion suffix.
   - Backend lint has zero errors, 16 unit tests pass, the expanded live credential/session suite passes, and frontend lint/build pass.
+- **Closed production audit P1-3 with rotating HttpOnly refresh sessions**:
+  - Removed active access JWT and public-user persistence from localStorage; access
+    credentials now remain only in frontend memory.
+  - Added `refresh_sessions` with hash-only refresh/CSRF storage, absolute expiry,
+    session-version and optional Cashier device binding, revocation state, and
+    rotation-family lineage.
+  - Added `POST /api/auth/refresh` and `/api/auth/logout`, one-time rotation,
+    refresh reuse detection, double-submit CSRF validation, credentialed CORS,
+    and proactive revocation after user or device changes.
+  - Layered a broad authentication IP limit with stricter per-IP/account
+    password and PIN limits so one shared POS network does not exhaust every
+    user's login allowance.
+  - Added startup session restoration, shared Axios refresh/retry behavior,
+    Socket.IO token synchronization, legacy localStorage auth cleanup, and
+    immediate local logout.
+  - Applied the idempotent refresh-session migration. Backend/frontend lint,
+    backend unit tests, the live refresh security test, frontend build, and a
+    browser login/reload/logout verification pass.
 
 ## Next Up
 
@@ -921,8 +939,9 @@ Update this file after every meaningful implementation change.
   - P0-1 checkout idempotency and P0-2 cashier stall-session consistency are implemented and verified.
   - P1-1 online-only checkout behavior is implemented and verified.
   - P1-2 active user-session invalidation is implemented and verified.
+  - P1-3 rotating HttpOnly refresh-token architecture is implemented and verified.
   - Current production recommendation remains No-Go until the remaining P1 security, migration, reliability, dependency, CI, and operational controls are fixed and verified.
-  - Next security decision: retain the documented localStorage JWT exception for the final project or schedule the P1-3 HttpOnly refresh-token architecture for production.
+  - Next priority: P1-4 durable Telegram kitchen dispatch/outbox behavior.
   - Follow the audit's phased P0/P1 plan only after team review and approval.
 
 - Post-Phase 6 Operations & Security Hardening.
@@ -961,7 +980,7 @@ Record of key architectural and product decisions made, with rationale.
 | 2 | **Device token in `localStorage`** (not server session) | Terminals are semi-permanent physical devices. A persistent browser token survives page refreshes without a server round-trip on every load. Simpler for offline resilience future work. |
 | 3 | **Controller-Service-Repository pattern** | Industry-standard separation for Express backends. Keeps route handlers thin, business logic testable in isolation, and DB queries swappable. |
 | 4 | **KHR rate hardcoded as `.env` constant** | Live exchange rate APIs add an external dependency, failure point, and cost. Rate changes infrequently in practice. Admin can update `.env` and restart. |
-| 5 | **JWT expiry set to 8h** | Matches a typical shift length. Balances security (short-lived token) vs. UX (cashier doesn't get logged out mid-shift). |
+| 5 | **15-minute access JWT + 8-hour refresh session** | Limits XSS token exposure while keeping a Cashier authenticated for one normal shift through rotation. |
 | 6 | **Cart state in `localStorage`** (not server) | Reduces backend round-trips during item selection. Cart is ephemeral — only persisted to DB at checkout. Acceptable trade-off for speed. |
 | 7 | **PIN validated client-side** (Phase 1) | Pragmatic shortcut for the initial build. Fast UX, no extra API call per login. Flagged as tech debt — must move server-side before production. |
 | 8 | **Telegram Bot for kitchen display** (not custom screen) | Eliminates the need for a dedicated kitchen hardware/display build. Cooks already use Telegram. Saves significant scope while delivering real-time order relay. |
@@ -969,6 +988,7 @@ Record of key architectural and product decisions made, with rationale.
 | 10 | **platform_admin is separate from customer roles** | TouB POS needs a developer/operator bootstrap role to create business Owners. It must stay outside customer RBAC so platform support access does not blur with Owner, Manager, or Cashier permissions. |
 | 11 | **KHQR Individual before Merchant KHQR** | Final-project scope does not have official MerchantID and AcquiringBank credentials. Individual KHQR can use owner/stall Bakong account ID and is easier to demo while keeping backend-owned payment status. |
 | 12 | **Suspend KHQR behind explicit feature flags** | The available Bakong Open API polling allowance is not suitable for normal POS polling volume. Cash remains active while the team evaluates an approved merchant provider; KHQR code and historical data are retained to avoid destructive rollback. |
+| 13 | **Rotating HttpOnly refresh sessions** | Production readiness requires durable credentials to be inaccessible to JavaScript. Access JWTs stay in memory, refresh tokens rotate in Secure/HttpOnly cookies, and refresh/logout use CSRF proof. |
 
 ---
 

@@ -105,6 +105,9 @@ These controls should be preserved during remediation.
 
 #### P1-3. LocalStorage JWT makes an XSS compromise an eight-hour account compromise
 
+- **Status:** Resolved on 2026-07-30 with short-lived in-memory access JWTs and
+  rotating HttpOnly refresh sessions; retained here as the original finding and
+  acceptance record.
 - **Severity:** P1
 - **Category:** Frontend security
 - **Business impact:** Any successful same-origin script injection can read and exfiltrate owner, manager, or cashier JWTs and perform actions until expiry.
@@ -113,6 +116,15 @@ These controls should be preserved during remediation.
 - **Acceptance criteria:** Refresh credentials are inaccessible to JavaScript, access tokens are short-lived, refresh reuse is detected, and CSRF/XSS tests cover the chosen design.
 - **Estimated size:** L
 - **Dependencies:** Auth API/schema changes; HTTPS; cookie/CORS/CSRF design.
+- **Resolution:** Removed active JWT/user persistence from localStorage. Login
+  now issues a short-lived access JWT plus an opaque eight-hour refresh token
+  stored in a Secure, HttpOnly cookie. MySQL stores only SHA-256 token/CSRF
+  hashes, family lineage, expiry, revocation, user session version, and optional
+  cashier device binding. Refresh rotates both tokens once, detects reuse,
+  requires double-submit CSRF proof, and revokes on logout or user/device
+  invalidation. Axios restores sessions after reload, serializes concurrent
+  refresh attempts, retries failed protected requests once, and keeps Socket.IO
+  credentials current.
 
 #### P1-4. Telegram kitchen dispatch is not durable across process failure
 
@@ -533,7 +545,9 @@ Deploy production observability, encrypted backups, restore drills, runbooks, in
 4. Establish a migration framework and baseline the current database.
 5. Determine whether the tracked SQL dump is synthetic; purge/rotate if uncertain or real.
 6. Remove the suspended KHQR runtime dependency or isolate it, then remediate remaining high dependency advisories.
-7. **Partially completed:** Current-user/session revocation is implemented and live-tested. Production-safe token storage remains open under P1-3.
+7. **Completed:** Current-user revocation plus short-lived in-memory access JWTs,
+   rotating HttpOnly refresh sessions, CSRF protection, and reuse detection are
+   implemented and live/browser-tested.
 8. Make paid-order Telegram dispatch durable with an outbox and retry visibility.
 9. Add CI with clean installs, lint, tests, build, audit policy, and disposable MySQL integration tests.
 10. Define and test production operations: verified DB TLS, readiness, graceful shutdown, logging/alerts, encrypted backups, and restore.
@@ -563,6 +577,11 @@ Deploy production observability, encrypted backups, restore drills, runbooks, in
 | Frontend lint/build after P1-1 remediation | Passed; backend availability checks and online-only payment guards compile cleanly |
 | `backend: npm run migrate:user-session-version` | Passed; added the user session-version column |
 | `backend: npm run test:credentials` after P1-2 remediation | Passed: deactivation, reactivation, credential/role changes, deletion, and stale JWT rejection |
+| `backend: npm run migrate:refresh-sessions` | Passed twice; migration is repeatable |
+| `backend: npm run test:auth-refresh` after P1-3 remediation | Passed: HttpOnly cookie issuance, CSRF rejection, rotation, reuse-family revocation, and logout |
+| `backend: npm run test:credentials` after P1-3 remediation | Passed with layered account/IP rate limits and refresh-session revocation |
+| `backend: npm run test:orders` after P1-3 remediation | Passed; checkout, totals, RBAC, and idempotency were unchanged |
+| Browser auth verification after P1-3 remediation | Passed: no JWT/user in localStorage, protected reload restored through refresh cookie, and logout cleared cookies |
 
 The first sandboxed npm audit attempts could not reach the registry. They were repeated with approved network access and produced the vulnerability results above.
 

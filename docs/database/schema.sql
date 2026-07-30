@@ -68,6 +68,30 @@ CREATE TABLE stall_devices (
   FOREIGN KEY (revoked_by_user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
+-- ── Rotating Browser Refresh Sessions ────────────────────
+-- Raw refresh and CSRF tokens are sent only as cookies; MySQL stores SHA-256
+-- hashes. Access JWTs are short-lived and are never persisted by the browser.
+CREATE TABLE refresh_sessions (
+  id                     BIGINT AUTO_INCREMENT PRIMARY KEY,
+  user_id                INT NOT NULL,
+  device_id              INT DEFAULT NULL,                 -- required for cashier sessions
+  token_hash             VARCHAR(64) NOT NULL,
+  csrf_token_hash        VARCHAR(64) NOT NULL,
+  family_id              VARCHAR(36) NOT NULL,
+  session_version        INT NOT NULL,
+  expires_at             DATETIME NOT NULL,
+  last_used_at           DATETIME DEFAULT NULL,
+  revoked_at             DATETIME DEFAULT NULL,
+  replaced_by_token_hash VARCHAR(64) DEFAULT NULL,
+  created_at             DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_refresh_sessions_token_hash (token_hash),
+  KEY idx_refresh_sessions_user_active_expiry (user_id, revoked_at, expires_at),
+  KEY idx_refresh_sessions_family (family_id),
+  KEY idx_refresh_sessions_device (device_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (device_id) REFERENCES stall_devices(id) ON DELETE CASCADE
+);
+
 -- ── Telegram-Only Kitchen Identities ─────────────────────
 -- Cooks are not web users and receive no password, PIN, JWT, or portal role.
 -- A Telegram identity must be explicitly authorized for each stall it serves.
