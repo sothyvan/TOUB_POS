@@ -83,7 +83,7 @@
 
 1. Request handlers must only handle HTTP routing; business logic strictly belongs in the services layer.
 2. Auth must be enforced at every mutation boundary.
-3. A KHQR transaction cannot be marked as paid without a verified Bakong provider result matching the order amount, currency, and destination account; cash requires explicit cashier/manager/owner confirmation.
+3. Cash requires explicit cashier/manager/owner confirmation. If KHQR is re-enabled after provider approval, it cannot be marked paid without a verified provider result matching the trusted order.
 4. WebSocket payment notifications must only be pushed to the socket registered by the cashier who initiated that specific QR session. No broadcast.
 5. A terminal may only load menu items and staff rosters scoped to its registered stall. Multiple devices may belong to one stall, and revoking one must not affect another.
 6. Telegram callback authorization needs a replacement cook-identity model before production; current Telegram persistence is limited to order ticket dispatch state.
@@ -117,7 +117,13 @@
 - Successful cash confirmation requires `cash_received_usd`, rejects underpayment, stores backend-calculated `change_due_usd`, changes `orders.status` to `paid`, sets `completed_at`, and writes a `cash_payment_confirmed` audit log.
 - The frontend must not create paid orders locally or submit trusted fields such as totals, status, `cashier_id`, or `stall_id`.
 
-## KHQR Individual Payment Flow (Phase 5)
+## KHQR Individual Payment Flow (Suspended)
+
+- KHQR is disabled by default while TouB POS evaluates an approved merchant payment provider.
+- Backend `KHQR_ENABLED` and frontend `VITE_KHQR_ENABLED` both require an explicit `true` before the retained integration is exposed.
+- With KHQR disabled, backend order creation and status checks return `503` with code `KHQR_DISABLED`; the background checker does not query MySQL or Bakong.
+- Cash checkout, historical KHQR order reads, reports, receipts, and audit history remain unaffected.
+- The implementation below is retained for a possible approved provider rollout and is not the current cashier payment flow.
 
 - TouB POS uses Generate KHQR (Individual)
 - Backend KHQR generation uses the `bakong-khqr` SDK.
@@ -139,7 +145,7 @@
 - Cashier, Owner, and Manager sockets authenticate with the existing JWT. Platform Admin sockets are rejected because the temporary bootstrap role has no live POS UI.
 - The service maintains strict socket maps by `cashier_id`, device ID, and management `owner_id`. It emits `payment_confirmed` only to the creating cashier, `device:revoked` only to the selected terminal, and `device_registry_updated` only to same-business management sockets so device lists refresh after registration or revocation. No payment or revocation broadcast.
 - Owner/Manager sockets receive `order_updated` for same-business order creation and payment status changes, then refresh order history from the backend.
-- `startup/khqr-background-checker.js` periodically checks unexpired pending KHQR orders through Bakong, using system audit metadata instead of pretending a cashier clicked the status-check button.
+- When KHQR is explicitly enabled, `startup/khqr-background-checker.js` periodically checks unexpired pending KHQR orders through Bakong. It stays stopped by default.
 - KHQR-paid orders reuse the same `dispatchToTelegram` kitchen ticket flow as confirmed cash orders.
 - Owner/Manager order history surfaces `telegram_tickets.status` and can retry missing or failed Telegram dispatches for paid orders in their business. Cashiers can retry only their own paid orders. Pending tickets are treated as in-progress and are not retryable; sent/done tickets are not resent.
 - When Telegram dispatch finishes as `sent` or `failed`, the backend emits `kitchen_ticket_updated` so the UI does not stay stuck on the temporary `pending` state.
@@ -178,7 +184,7 @@
 
 | # | Risk | Severity | Mitigation |
 |---|------|----------|------------|
-| 1 | **KHQR / Bakong integration** | 🟡 Medium | Phase 5 now uses SDK-generated Individual KHQR payloads plus backend-only Bakong Open API checking by md5/hash. Production Bakong testing has passed; keep monitoring response contracts, destination account fields, and operational failure handling. |
+| 1 | **KHQR / Bakong integration** | 🟢 Controlled | Disabled by default through backend and frontend feature flags because the available Open API polling allowance is not suitable for normal POS volume. Keep the retained integration inactive until an approved merchant provider and operating limits are confirmed. |
 | 2 | **WebSocket routing — accidental broadcast to wrong cashier** | 🔴 High | `websocket.service.js` authenticates cashier sockets with JWT, keeps a strict `Map<cashier_id, socketIds>`, and emits only to the mapped cashier sockets. Continue to avoid broad `io.emit()` payment broadcasts. |
 | 3 | **Telegram Bot async failures** | 🟡 Medium | Telegram failure must never block or rollback the order. Strategy: (1) Always log the error. (2) Store Telegram dispatch state in `telegram_tickets.status` (`pending` / `sent` / `failed` / `done`) instead of mutating payment state on `orders`. (3) Emit live ticket updates when dispatch finishes. (4) Show status in the management ledger, allow Owner/Manager retry for business orders, and allow Cashier retry for their own missing/failed tickets. Pending tickets are in-progress and are not retryable. Auto-retry queue is out of scope (Future). |
 | 4 | **KHR exchange rate — hardcoded vs. live** | 🟡 Medium | Decision required before building the product form. Recommend: hardcode the rate as a `.env` constant (`KHR_RATE=4100`) for now. Add a note in the admin panel showing the current rate. Live rate API is out of scope. |

@@ -14,6 +14,21 @@ function requireEnv(name, errors) {
   }
 }
 
+function validateBooleanEnv(name, errors) {
+  if (isBlank(process.env[name])) {
+    return;
+  }
+
+  const normalized = String(process.env[name]).trim().toLowerCase();
+  if (!['true', 'false'].includes(normalized)) {
+    errors.push(`${name} must be true or false.`);
+  }
+}
+
+export function isKhqrEnabled() {
+  return String(process.env.KHQR_ENABLED || '').trim().toLowerCase() === 'true';
+}
+
 function applyDevelopmentPlatformAdminDefaults() {
   if (process.env.NODE_ENV === 'production') {
     return;
@@ -47,6 +62,9 @@ export function validateEnvironment() {
   if (process.env.DB_PASSWORD_REQUIRED === 'true') {
     requireEnv('DB_PASSWORD', errors);
   }
+
+  validateBooleanEnv('KHQR_ENABLED', errors);
+  validateBooleanEnv('KHQR_BACKGROUND_CHECK_ENABLED', errors);
 
   const dbPort = Number(process.env.DB_PORT);
   if (!isBlank(process.env.DB_PORT) && (!Number.isInteger(dbPort) || dbPort <= 0)) {

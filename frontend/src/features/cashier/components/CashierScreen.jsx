@@ -61,6 +61,7 @@ export default function CashierScreen({
   onViewReceipt,
   onRetryTelegramDispatch,
   onResumeKhqrPayment,
+  khqrEnabled,
   categories,
   categoryById,
   selectedCategory,
@@ -456,7 +457,7 @@ export default function CashierScreen({
                           </Button>
                         ) : null}
 
-                        {canResumeKhqrPayment(order) && onResumeKhqrPayment ? (
+                        {khqrEnabled && canResumeKhqrPayment(order) && onResumeKhqrPayment ? (
                           <Button
                             type="button"
                             size="sm"
@@ -512,6 +513,7 @@ export default function CashierScreen({
           checkoutLoading={checkoutLoading}
           checkoutError={checkoutError}
           isOnline={isOnline}
+          khqrEnabled={khqrEnabled}
         />
       )}
 

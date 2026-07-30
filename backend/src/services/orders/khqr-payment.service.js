@@ -3,6 +3,7 @@ import {
   AuditLog,
   Order,
 } from '../../models/index.js';
+import { isKhqrEnabled } from '../../config/env.js';
 import { httpError } from '../../utils/http-error.util.js';
 import {
   checkBakongTransactionByMd5,
@@ -158,6 +159,14 @@ async function confirmKhqrOrder(order, providerResult, checkContext) {
 }
 
 async function checkKhqrPaymentStatusInternal(orderId, actor, options = {}) {
+  if (!isKhqrEnabled()) {
+    throw httpError(
+      'KHQR payment checking is temporarily unavailable.',
+      503,
+      'KHQR_DISABLED',
+    );
+  }
+
   const parsedOrderId = parsePositiveInteger(orderId, 'order ID');
   const checkContext = resolveKhqrCheckContext(actor, options);
   const checkMode = getBakongCheckMode();

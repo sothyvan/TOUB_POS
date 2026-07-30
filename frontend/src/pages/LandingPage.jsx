@@ -7,10 +7,10 @@ import ThemeToggle from '../shared/theme/ThemeToggle';
 
 const features = [
   {
-    icon: 'khqr',
-    title: 'KHQR Smart Payments',
+    icon: 'cash',
+    title: 'Backend-Owned Checkout',
     description:
-      'Generate Bakong-compliant dynamic KHQR codes at checkout. Payments are verified server-side and confirmed automatically.',
+      'Trusted totals and cash confirmation stay on the backend, keeping cashier checkout accurate and auditable.',
     tone: 'bg-brand-action/10 text-brand-action border-brand-action/30',
   },
   {
@@ -51,9 +51,9 @@ const steps = [
   },
   {
     step: '03',
-    title: 'Checkout with Live Confirmation',
+    title: 'Confirm and Send',
     description:
-      'Select items, choose Cash or KHQR, and the order is confirmed and pushed to the kitchen instantly.',
+      'Select items, confirm cash received, and send the paid order to the kitchen instantly.',
   },
 ];
 
@@ -179,12 +179,11 @@ export default function LandingPage() {
         </span>
         <h1 className="m-0 max-w-3xl text-4xl font-black leading-tight tracking-tight text-brand-text md:text-6xl">
           Fast, stall-scoped POS with
-          <span className="text-brand-action"> instant KHQR confirmation</span>.
+          <span className="text-brand-action"> trusted backend checkout</span>.
         </h1>
         <p className="m-0 max-w-2xl text-base leading-relaxed text-text-soft md:text-lg">
           ToubPOS keeps cashiers, kitchens, and owners in sync across physical booths —
-          real-time payment confirmation routed only to the cashier who opened the session,
-          plus a Telegram kitchen display and per-stall reporting.
+          backend-owned cash confirmation, a Telegram kitchen display, and per-stall reporting.
         </p>
         <div className="flex flex-col gap-3 sm:flex-row">
           <Button size="lg" className="min-w-56" onClick={goCashier} iconName="cash" iconPosition="left">

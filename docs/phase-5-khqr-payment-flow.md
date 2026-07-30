@@ -1,5 +1,7 @@
 # Phase 5 KHQR Individual Payment Flow
 
+> **Current status:** Phase 5 records what was implemented and tested. The integration is now suspended behind disabled-by-default backend and frontend feature flags pending an approved merchant payment solution.
+
 ## 1. Goal
 
 Phase 5 makes KHQR checkout backend-owned and production Bakong-backed.

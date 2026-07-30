@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { KHQR_ENABLED } from '../config/features';
 import { getPermissions, roleToApiRole } from '../utils/permissions';
 import { api } from '../services/api';
 import { connectCashierSocket, disconnectCashierSocket } from '../services/socketClient';
@@ -167,6 +168,14 @@ export default function CashierPage() {
   const handleCheckoutWithReceipt = async (method) => {
     setCashierNotice(null);
     if (method === 'KHQR') {
+      if (!KHQR_ENABLED) {
+        setCashierNotice({
+          variant: 'warning',
+          title: 'KHQR unavailable',
+          message: 'KHQR payments are temporarily unavailable. Please use cash.',
+        });
+        return;
+      }
       setKhqrPollingError(null);
       setIsKhqrConfirmOpen(true);
       return;
@@ -253,7 +262,7 @@ export default function CashierPage() {
   }, [fetchOrders]);
 
   useEffect(() => {
-    if (pendingPaymentMethod !== 'KHQR' || !pendingKhqrOrder?.id) {
+    if (!KHQR_ENABLED || pendingPaymentMethod !== 'KHQR' || !pendingKhqrOrder?.id) {
       return undefined;
     }
 
@@ -493,7 +502,8 @@ export default function CashierPage() {
         isOnline={isOnline}
         assignedStall={assignedStall}
         onRetryTelegramDispatch={handleRetryTelegramDispatch}
-        onResumeKhqrPayment={handleResumeKhqrPayment}
+        onResumeKhqrPayment={KHQR_ENABLED ? handleResumeKhqrPayment : undefined}
+        khqrEnabled={KHQR_ENABLED}
       />
 
       <ReceiptModal
@@ -514,50 +524,54 @@ export default function CashierPage() {
         />
       ) : null}
 
-      <ConfirmDialog
-        isOpen={isKhqrConfirmOpen}
-        size="compact"
-        title="Create KHQR payment?"
-        message={(
-          <div className="w-full rounded-lg border border-ui-border bg-ui-surface p-4 text-left">
-            <div className="flex items-center justify-between gap-4 border-b border-ui-border pb-3 text-sm">
-              <span className="text-brand-subtext">Items</span>
-              <span className="text-brand-text">{itemCount}</span>
+      {KHQR_ENABLED ? (
+        <ConfirmDialog
+          isOpen={isKhqrConfirmOpen}
+          size="compact"
+          title="Create KHQR payment?"
+          message={(
+            <div className="w-full rounded-lg border border-ui-border bg-ui-surface p-4 text-left">
+              <div className="flex items-center justify-between gap-4 border-b border-ui-border pb-3 text-sm">
+                <span className="text-brand-subtext">Items</span>
+                <span className="text-brand-text">{itemCount}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4 pt-3 text-sm">
+                <span className="text-brand-subtext">Total</span>
+                <span className="text-state-success">${Number(total || 0).toFixed(2)}</span>
+              </div>
             </div>
-            <div className="flex items-center justify-between gap-4 pt-3 text-sm">
-              <span className="text-brand-subtext">Total</span>
-              <span className="text-state-success">${Number(total || 0).toFixed(2)}</span>
+          )}
+          icon={(
+            <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-brand-action mb-4">
+              <Icon name="khqr" className="w-7 h-7" />
             </div>
-          </div>
-        )}
-        icon={(
-          <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-brand-action mb-4">
-            <Icon name="khqr" className="w-7 h-7" />
-          </div>
-        )}
-        cancelLabel="Back to cart"
-        confirmLabel="Create KHQR"
-        cancelTone="secondary"
-        confirmTone="primary"
-        isBusy={checkoutLoading}
-        onCancel={() => {
-          if (!checkoutLoading) setIsKhqrConfirmOpen(false);
-        }}
-        onConfirm={handleCreateKhqrPayment}
-      />
+          )}
+          cancelLabel="Back to cart"
+          confirmLabel="Create KHQR"
+          cancelTone="secondary"
+          confirmTone="primary"
+          isBusy={checkoutLoading}
+          onCancel={() => {
+            if (!checkoutLoading) setIsKhqrConfirmOpen(false);
+          }}
+          onConfirm={handleCreateKhqrPayment}
+        />
+      ) : null}
 
-      <KhqrPaymentModal
-        isOpen={pendingPaymentMethod === 'KHQR'}
-        total={pendingKhqrOrder?.total ?? total}
-        order={pendingKhqrOrder}
-        qrPayload={pendingKhqrOrder?.qrPayload}
-        pollingError={khqrPollingError}
-        onCancel={() => {
-          setPendingPaymentMethod(null);
-          setPendingKhqrOrder(null);
-          setKhqrPollingError(null);
-        }}
-      />
+      {KHQR_ENABLED ? (
+        <KhqrPaymentModal
+          isOpen={pendingPaymentMethod === 'KHQR'}
+          total={pendingKhqrOrder?.total ?? total}
+          order={pendingKhqrOrder}
+          qrPayload={pendingKhqrOrder?.qrPayload}
+          pollingError={khqrPollingError}
+          onCancel={() => {
+            setPendingPaymentMethod(null);
+            setPendingKhqrOrder(null);
+            setKhqrPollingError(null);
+          }}
+        />
+      ) : null}
     </PageShell>
   );
 }

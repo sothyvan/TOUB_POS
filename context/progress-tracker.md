@@ -34,6 +34,19 @@ Update this file after every meaningful implementation change.
 - Phase UI-3: Owner/Manager Screens — **COMPLETE** ✅
 - Phase UI-4: Responsive & Polish — **COMPLETE** ✅
 - Pagination & Performance Optimization — **COMPLETE**
+- KHQR Provider Transition — **SUSPENDED SAFELY** ✅
+  - Cash remains the active checkout method.
+  - Backend KHQR creation, explicit status checks, and the background checker are disabled by default.
+  - Frontend KHQR checkout, polling modal, and resume actions are hidden by default.
+  - Historical KHQR orders, reports, receipts, audit data, schema fields, and provider code are retained for a future approved merchant integration.
+
+- **Safely suspended KHQR payment processing**:
+  - Added explicit opt-in `KHQR_ENABLED` and `VITE_KHQR_ENABLED` feature flags, both defaulting to `false`.
+  - Backend KHQR order creation and status checking return `503 KHQR_DISABLED` before database or provider work begins.
+  - The startup background checker exits before querying pending orders or calling Bakong when KHQR is disabled.
+  - Cashier checkout now shows cash as the only payment action; pending historical KHQR orders remain visible but cannot be resumed.
+  - Added a database-free regression test covering creation, status checking, and background-checker suspension.
+  - Updated active README, API, payment-flow, Swagger, project, and architecture documentation without deleting historical implementation records.
 
 - **Completed backend service-layer cleanup (Step 1)**:
   - Added dedicated product, category, stall/device, user/RBAC, and Telegram callback services.
@@ -836,8 +849,13 @@ Update this file after every meaningful implementation change.
 
 - Phase 7C Demo Stabilization & Polish.
   - Manually test the Owner/Manager report filters against seeded and real orders.
-  - Run the final end-to-end demo script with real cash, KHQR, Telegram, receipt, and retry flows.
+  - Run the final end-to-end demo script with cash, Telegram, receipt, and retry flows.
   - Prepare presentation screenshots and a concise known-risks list for the final defense.
+
+- Future Payment Provider:
+  - Confirm an approved merchant QR provider and suitable transaction-status contract.
+  - Keep KHQR disabled until provider credentials, request limits, reconciliation, and production support are formally suitable for POS use.
+  - Reuse backend-owned totals and payment-state rules when implementing the replacement.
 
 - Future SaaS / Multi-Customer Platform Administration:
   - `platform_admin` now exists as a temporary API-only bootstrap role for creating business Owner accounts.
@@ -846,7 +864,7 @@ Update this file after every meaningful implementation change.
 
 ## Open Questions
 
-- Continue monitoring production Bakong Open API response fields for amount, currency, transaction hash, and destination account before a real merchant rollout.
+- Which approved merchant payment provider and transaction-confirmation contract should replace the suspended Open API polling flow?
 - Confirm KHR exchange rate strategy: hardcoded `.env` constant (recommended) or live API?
 
 ---
@@ -868,6 +886,7 @@ Record of key architectural and product decisions made, with rationale.
 | 9 | **Customer RBAC: Owner / Manager / Cashier** | Separates full business control from day-to-day operations. Each customer business has one Owner; extra supervisors should be Managers; Cashier remains stall-scoped to POS sales. |
 | 10 | **platform_admin is separate from customer roles** | TouB POS needs a developer/operator bootstrap role to create business Owners. It must stay outside customer RBAC so platform support access does not blur with Owner, Manager, or Cashier permissions. |
 | 11 | **KHQR Individual before Merchant KHQR** | Final-project scope does not have official MerchantID and AcquiringBank credentials. Individual KHQR can use owner/stall Bakong account ID and is easier to demo while keeping backend-owned payment status. |
+| 12 | **Suspend KHQR behind explicit feature flags** | The available Bakong Open API polling allowance is not suitable for normal POS polling volume. Cash remains active while the team evaluates an approved merchant provider; KHQR code and historical data are retained to avoid destructive rollback. |
 
 ---
 
@@ -882,5 +901,5 @@ Intentional shortcuts taken during development that must be resolved before prod
 | 3 | **No input sanitization on order modifiers** | `order_items.notes` | 🟡 Medium — add max-length enforcement and strip dangerous characters before DB write |
 | 4 | **No auth endpoint rate limiting** | `POST /api/auth/login` / `POST /api/auth/pin` | ✅ Resolved — added `express-rate-limit` |
 | 5 | **Seed owner password is a placeholder hash** | `docs/database/schema.sql` | 🔴 High — generate real bcrypt hash and store securely before any live deployment |
-| 6 | **KHQR background checker is process-local** | `startup/khqr-background-checker.js` | 🟡 Medium — The checker runs inside the API process. For production or multiple server instances, move this to one scheduled worker/queue to avoid duplicate provider calls. |
+| 6 | **KHQR background checker is process-local** | `startup/khqr-background-checker.js` | Deferred — KHQR is disabled. Reassess worker/queue design as part of any approved replacement provider implementation. |
 

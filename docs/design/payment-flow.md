@@ -1,6 +1,8 @@
 # Payment Flow
 
-This document describes the current cash and KHQR payment behavior.
+This document describes the active cash flow and the retained, currently suspended KHQR design.
+
+> **Current availability:** Cash checkout is enabled. KHQR checkout, status polling, and background reconciliation are disabled by default while TouB POS evaluates an approved merchant payment provider. Historical KHQR data remains available for reporting and audit.
 
 ## Current Cash Payment Flow
 
@@ -65,7 +67,7 @@ pending_payment ──▶ paid
 
 ## KHQR Individual Payment Flow
 
-Phase 5 uses Generate KHQR (Individual), not Merchant KHQR. This is because the project does not have official MerchantID and AcquiringBank credentials. Individual KHQR requires the configured owner/stall Bakong account ID and is appropriate for final-project/demo scope.
+The following design is retained but inactive unless KHQR is deliberately enabled in both backend and frontend configuration. It must not be enabled for a merchant rollout until an approved provider and suitable transaction-checking allowance are confirmed.
 
 The backend owns QR generation and payment status. The frontend displays the QR and polls the TouB backend status-check endpoint as a fallback; it never calls Bakong directly and never marks a KHQR order as paid by itself. The backend also runs a background checker for unexpired pending KHQR orders.
 
@@ -122,6 +124,8 @@ sequenceDiagram
 
 Important rules:
 
+- `KHQR_ENABLED=false` blocks backend creation, explicit status checks, and background reconciliation.
+- `VITE_KHQR_ENABLED=false` hides cashier KHQR checkout and resume actions.
 - Frontend sends only product IDs, quantities, notes, and payment method.
 - Backend calculates trusted totals from MySQL.
 - Backend requires `BAKONG_ACCOUNT_ID`; it does not fall back to a demo account.
