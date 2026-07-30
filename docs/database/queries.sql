@@ -644,6 +644,18 @@ ALTER TABLE orders
   ADD COLUMN idempotency_key VARCHAR(64) DEFAULT NULL AFTER cashier_id,
   ADD COLUMN idempotency_fingerprint VARCHAR(64) DEFAULT NULL AFTER idempotency_key,
   ADD UNIQUE INDEX uq_orders_cashier_idempotency (cashier_id, idempotency_key);
+
+-- Validate and enforce one stall assignment per cashier. Resolve any rows
+-- returned by this query before applying the unique index.
+SELECT user_id, COUNT(*) AS assignment_count
+FROM stall_staff
+GROUP BY user_id
+HAVING COUNT(*) > 1;
+
+ALTER TABLE stall_staff
+  DROP INDEX uq_stall_user,
+  ADD UNIQUE INDEX uq_stall_staff_user (user_id),
+  ADD INDEX idx_stall_staff_stall_id (stall_id);
 -- Development-only Phase 5 KHQR metadata migration
 ALTER TABLE orders
 ADD COLUMN qr_md5 VARCHAR(64) DEFAULT NULL AFTER qr_payload,

@@ -107,7 +107,8 @@ CREATE TABLE stall_staff (
   id        INT AUTO_INCREMENT PRIMARY KEY,
   stall_id  INT NOT NULL,
   user_id   INT NOT NULL,
-  UNIQUE KEY uq_stall_user (stall_id, user_id),
+  UNIQUE KEY uq_stall_staff_user (user_id),            -- each cashier belongs to at most one stall
+  KEY idx_stall_staff_stall_id (stall_id),
   FOREIGN KEY (stall_id) REFERENCES stalls(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id)  REFERENCES users(id)  ON DELETE CASCADE
 );

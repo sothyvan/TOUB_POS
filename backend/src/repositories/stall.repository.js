@@ -1,4 +1,10 @@
-import { Stall, StallDevice, User, StallStaff } from '../models/index.js';
+import {
+  sequelize,
+  Stall,
+  StallDevice,
+  User,
+  StallStaff,
+} from '../models/index.js';
 import { revokeDevicesByStallId } from './stall-device.repository.js';
 import { parsePagination, buildOrderClause, paginatedResponse } from '../utils/pagination.js';
 
@@ -121,16 +127,66 @@ export async function deleteStallById(id) {
  * Ensures the staff member is only assigned to one stall.
  */
 export async function assignStaffToStall(stallId, userId) {
-  // First, remove the user from any other stall assignments
-  await StallStaff.destroy({ where: { user_id: userId } });
-  return StallStaff.create({ stall_id: stallId, user_id: userId });
+  const transaction = await sequelize.transaction();
+  try {
+    const existing = await StallStaff.findOne({
+      where: { user_id: userId },
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+    if (existing && Number(existing.stall_id) === Number(stallId)) {
+      await transaction.commit();
+      return {
+        assignment: existing,
+        changed: false,
+        previousStallId: Number(existing.stall_id),
+      };
+    }
+
+    const previousStallId = existing ? Number(existing.stall_id) : null;
+    if (existing) {
+      await existing.destroy({ transaction });
+    }
+    const assignment = await StallStaff.create(
+      { stall_id: stallId, user_id: userId },
+      { transaction },
+    );
+    await transaction.commit();
+    return { assignment, changed: true, previousStallId };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
 }
 
 /**
  * Remove a staff member from a stall.
  */
 export async function removeStaffFromStall(stallId, userId) {
-  const affectedRows = await StallStaff.destroy({ where: { stall_id: stallId, user_id: userId } });
-  return affectedRows > 0;
+  const transaction = await sequelize.transaction();
+  try {
+    const assignment = await StallStaff.findOne({
+      where: { stall_id: stallId, user_id: userId },
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+    if (!assignment) {
+      await transaction.commit();
+      return false;
+    }
+    await assignment.destroy({ transaction });
+    await transaction.commit();
+    return true;
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
 }
 
+export function findStaffAssignmentByUserId(userId, options = {}) {
+  return StallStaff.findOne({
+    where: { user_id: userId },
+    attributes: ['id', 'stall_id', 'user_id'],
+    ...options,
+  });
+}

@@ -1,5 +1,4 @@
 import * as productRepository from '../repositories/product.repository.js';
-import * as userRepository from '../repositories/user.repository.js';
 import * as stallRepository from '../repositories/stall.repository.js';
 import * as categoryRepository from '../repositories/category.repository.js';
 import * as imagekitService from './imagekit.service.js';
@@ -89,11 +88,11 @@ async function requireOwnedProduct(productId, ownerId) {
 
 export async function listProducts(actor, query = {}) {
   if (actor?.role === 'cashier') {
-    const stall = await userRepository.findAssignedStallByUserId(actor.id);
-    if (!stall) {
-      return { data: [] };
+    const stallId = parsePositiveInteger(actor.stall_id);
+    if (!stallId) {
+      throw httpError('Cashier session does not have a verified stall.', 401);
     }
-    const products = await productRepository.findAllProductsForStall(stall.id, { is_visible: true });
+    const products = await productRepository.findAllProductsForStall(stallId, { is_visible: true });
     return { data: products };
   }
 

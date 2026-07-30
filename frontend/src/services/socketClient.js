@@ -45,6 +45,7 @@ export function connectCashierSocket({
   onPaymentConfirmed,
   onKitchenTicketUpdated,
   onDeviceRevoked,
+  onSessionInvalidated,
   onConnectError,
 } = {}) {
   const token = localStorage.getItem(AUTH_STORAGE_KEYS.TOKEN);
@@ -70,6 +71,9 @@ export function connectCashierSocket({
 
   cashierSocket.on('device:revoked', (payload) => {
     onDeviceRevoked?.(payload);
+  });
+  cashierSocket.on('cashier:session_invalidated', (payload) => {
+    onSessionInvalidated?.(payload);
   });
 
   cashierSocket.on('connect_error', (error) => {

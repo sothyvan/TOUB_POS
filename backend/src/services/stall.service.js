@@ -5,6 +5,7 @@ import { generateDeviceToken } from '../utils/device-token.util.js';
 import { httpError } from '../utils/http-error.util.js';
 import { maskTelegramChatId } from '../utils/telegram-identifier.util.js';
 import {
+  emitCashierSessionInvalidated,
   emitDeviceRevoked,
   emitManagementDeviceRegistryUpdated,
 } from './websocket.service.js';
@@ -113,7 +114,12 @@ export async function assignStaff(actor, rawStallId, rawUserId) {
   if (user.role !== 'cashier') {
     throw httpError('Only cashier users can be assigned to stalls.');
   }
-  await stallRepository.assignStaffToStall(stallId, userId);
+  const result = await stallRepository.assignStaffToStall(stallId, userId);
+  if (result.changed) {
+    emitCashierSessionInvalidated(userId, {
+      message: 'Your stall assignment changed. Please sign in again on the correct terminal.',
+    });
+  }
 }
 
 export async function unassignStaff(actor, stallId, userId) {
@@ -127,6 +133,9 @@ export async function unassignStaff(actor, stallId, userId) {
   if (!success) {
     throw httpError('Assignment not found.', 404);
   }
+  emitCashierSessionInvalidated(userId, {
+    message: 'You were unassigned from this stall. Please contact a manager before signing in again.',
+  });
 }
 
 export async function registerDevice(actor, rawStallId, payload) {

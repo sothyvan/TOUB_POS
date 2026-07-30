@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { findDeviceByToken } from '../repositories/stall-device.repository.js';
+import { findStaffAssignmentByUserId } from '../repositories/stall.repository.js';
 
 function deviceAuthError(res, code, message) {
   return res.status(401).json({ success: false, code, message });
@@ -46,6 +47,20 @@ export async function authenticate(req, res, next) {
       return deviceAuthError(res, 'DEVICE_REVOKED', 'This terminal has been deregistered.');
     }
 
+    const assignment = await findStaffAssignmentByUserId(req.user.id);
+    if (
+      !assignment
+      || Number(assignment.stall_id) !== Number(req.user.stall_id)
+      || Number(assignment.stall_id) !== Number(device.stall_id)
+    ) {
+      return deviceAuthError(
+        res,
+        'STALL_ASSIGNMENT_CHANGED',
+        'Your stall assignment changed. Please sign in again on the correct terminal.',
+      );
+    }
+
+    req.user.stall_id = Number(assignment.stall_id);
     req.device = device;
     return next();
   } catch (error) {

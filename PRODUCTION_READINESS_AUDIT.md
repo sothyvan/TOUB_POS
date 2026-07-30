@@ -4,7 +4,7 @@
 **Repository state:** `main` at `26135e4` (`Docs cleanup`)  
 **Audit mode:** Read-only inspection and non-destructive verification
 
-**Remediation update (2026-07-30):** P0-1 checkout idempotency has been implemented and verified with unit and live concurrent-request coverage. P0-2 remains open, so the production recommendation is unchanged.
+**Remediation update (2026-07-30):** P0-1 checkout idempotency and P0-2 cashier stall-assignment consistency have been implemented and verified. The production recommendation remains unchanged because the P1 security, migration, recovery, dependency, CI, and operational controls are still open.
 
 ## 1. Executive Summary
 
@@ -17,7 +17,7 @@ It is not ready for an unsupervised production launch. The original audit found 
 1. Retrying checkout after a lost response can create a second paid order because order creation has no idempotency key and the frontend does not retain the first order ID.
 2. Reassigning a cashier can leave an authenticated terminal bound to one stall while product and order services use the cashier's new stall assignment.
 
-P0-1 has since been closed with a per-cashier idempotency key, request fingerprint, database uniqueness, frontend pending-order recovery, and concurrent live tests. P0-2 remains a launch blocker.
+Both original P0 findings are now closed. P0-1 uses a per-cashier idempotency key, request fingerprint, database uniqueness, frontend pending-order recovery, and concurrent live tests. P0-2 now requires the current assignment, JWT stall, and registered-device stall to match; assignment moves are transactional, stale API/socket sessions are invalidated, and the one-stall-per-cashier rule is database-enforced.
 
 Production readiness is also blocked by the absence of a managed migration/rollback system, incomplete transaction recovery, known dependency vulnerabilities, weak production observability and readiness checks, lack of a CI quality gate, no automated browser tests, and a tracked SQL dump containing operational and credential-shaped records. KHQR is correctly disabled, but the disabled integration and its vulnerable dependency remain in the production dependency graph.
 
@@ -64,6 +64,7 @@ These controls should be preserved during remediation.
 
 #### P0-2. Cashier reassignment can break terminal stall isolation
 
+- **Status:** Resolved on 2026-07-30; retained here as the original finding and acceptance record.
 - **Severity:** P0
 - **Category:** Authorization / tenant and stall scoping
 - **Business impact:** A terminal registered to Stall A can begin loading and selling Stall B products if its logged-in cashier is reassigned to Stall B. The order can be attributed and routed to the wrong stall while the device session still appears valid.
@@ -72,6 +73,7 @@ These controls should be preserved during remediation.
 - **Acceptance criteria:** Reassigning a logged-in cashier causes the old terminal session to receive a specific authorization error and log out; it cannot read or sell products from either an unbound or newly assigned stall until a valid login on the correct terminal.
 - **Estimated size:** M
 - **Dependencies:** Auth middleware/repository change; Socket.IO check; reassignment event; integration tests.
+- **Resolution:** Cashier API and Socket.IO authentication now compare the current assignment with the JWT and device stalls. Product and order services use the verified request stall, reassignment/unassignment invalidates active cashier sessions without deregistering terminals, assignment moves run transactionally, and `stall_staff.user_id` is unique. The live order suite verifies rejection of the stale terminal and correct catalog/order scope after login on the newly assigned terminal.
 
 ### P1 - Must Be Addressed Before Production
 
@@ -86,14 +88,14 @@ These controls should be preserved during remediation.
 - **Estimated size:** S for honest online-only behavior; XL for real offline sales
 - **Dependencies:** Product decision on offline scope.
 
-#### P1-2. Active JWTs do not reflect user deactivation, deletion, role changes, or reassignment
+#### P1-2. Active JWTs do not reflect user deactivation, deletion, or role changes
 
 - **Severity:** P1
 - **Category:** Authentication / session revocation
-- **Business impact:** A deactivated owner or manager can continue using an existing eight-hour token. Cashier device revocation is checked, but current user state and assignment are not consistently checked.
-- **Evidence:** `backend/src/middleware/auth.middleware.js:17-27` accepts verified non-cashier JWTs without querying the user. Cashier checks at `:30-49` validate the device, not current user status or assignment. Socket authentication in `backend/src/services/websocket.service.js:83-139` has the same pattern. Inactive status is checked only during login in `backend/src/services/auth.service.js:45` and `:85`.
-- **Recommended remediation:** Add a session version or revocation timestamp and verify current active/deleted/role/owner state for protected requests and socket connections. Invalidate sessions on credential, role, active-state, assignment, and ownership changes.
-- **Acceptance criteria:** Deactivation, deletion, role change, or reassignment prevents the next API request and disconnects affected sockets without waiting for JWT expiry.
+- **Business impact:** A deactivated owner, manager, or cashier can continue using an existing eight-hour token until expiry unless another device or assignment check happens to reject that session.
+- **Evidence:** Protected requests verify JWT claims but do not consistently query the current user row for active/deleted/role state. Inactive status is checked during login, while P0-2 separately resolves cashier assignment changes.
+- **Recommended remediation:** Add a session version or revocation timestamp and verify current active/deleted/role/owner state for protected requests and socket connections. Invalidate sessions on credential, role, active-state, and ownership changes.
+- **Acceptance criteria:** Deactivation, deletion, or role change prevents the next API request and disconnects affected sockets without waiting for JWT expiry.
 - **Estimated size:** L
 - **Dependencies:** User schema migration; auth/session policy; cache strategy if query cost matters.
 
@@ -450,7 +452,7 @@ The live tests were not run during this audit because they require a running bac
 ### Release gate
 
 - [x] Resolve P0-1 checkout idempotency with automated concurrent replay tests.
-- [ ] Resolve P0-2 cashier device/assignment stall consistency with automated regression tests.
+- [x] Resolve P0-2 cashier device/assignment stall consistency with automated regression tests.
 - [ ] Approve the production product scope, especially offline behavior, refunds/voids, cash reconciliation, taxes/fees, inventory, and currencies.
 - [ ] Remove or formally risk-accept all high/critical production dependency findings.
 - [ ] Establish clean, versioned database migrations and a tested baseline.
@@ -480,7 +482,7 @@ The live tests were not run during this audit because they require a running bac
 
 - [ ] Validate every mutation with shared schemas and business limits.
 - [ ] Implement current-user/session invalidation.
-- [ ] Implement checkout idempotency and pending-payment recovery.
+- [x] Implement checkout idempotency and pending-payment recovery.
 - [ ] Make offline messaging truthful or implement full offline synchronization.
 - [ ] Make Telegram dispatch durable and observable.
 - [ ] Add error boundaries and safe production error responses.
@@ -522,7 +524,7 @@ Deploy production observability, encrypted backups, restore drills, runbooks, in
 ## 9. First 10 Actions
 
 1. **Completed:** Implement and test an idempotency contract for order creation and cash checkout.
-2. Enforce that cashier assignment, device stall, JWT stall, product scope, and order scope are identical on every request/socket.
+2. **Completed:** Enforce that cashier assignment, device stall, JWT stall, product scope, and order scope are identical on every request/socket.
 3. Decide online-only versus true offline POS behavior; immediately remove the false offline-cash promise if online-only.
 4. Establish a migration framework and baseline the current database.
 5. Determine whether the tracked SQL dump is synthetic; purge/rotate if uncertain or real.
@@ -550,6 +552,10 @@ Deploy production observability, encrypted backups, restore drills, runbooks, in
 | Type check | Not available; project is JavaScript and neither package defines a type-check script |
 | Frontend automated tests | Not available; no frontend test script/suite is defined |
 | Backend live API tests | Not run; they require live MySQL/API and mutate data |
+| `backend: npm run migrate:single-stall-assignment` | Passed; enforced one stall assignment per cashier while retaining the stall foreign-key index |
+| `backend: npm run test:orders` after P0 remediation | Passed: trusted totals, idempotency, cash rules, history, stale-session rejection, and new-stall scope |
+| `backend: npm test` after P0 remediation | Passed: 16 tests, 0 failures |
+| Frontend lint/build after P0 remediation | Passed; the existing 575.34 kB owner-portal chunk warning remains |
 
 The first sandboxed npm audit attempts could not reach the registry. They were repeated with approved network access and produced the vulnerability results above.
 
@@ -599,4 +605,4 @@ The first sandboxed npm audit attempts could not reach the registry. They were r
 
 **No-Go for production at this repository state.**
 
-Proceed first with Phase A and the P0 acceptance tests. After P0 closure, re-audit P1 security, migrations, recovery, dependency, CI, and operational controls in a production-like environment. Keep KHQR disabled until an approved provider and reconciliation model exist. A controlled final-project demo can continue on a separate readiness track, but it should not be described as a real production deployment.
+The original P0 acceptance tests are now closed. Proceed with the P1 security, migrations, recovery, dependency, CI, and operational controls, then re-audit in a production-like environment. Keep KHQR disabled until an approved provider and reconciliation model exist. A controlled final-project demo can continue on a separate readiness track, but it should not be described as a real production deployment.

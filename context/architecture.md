@@ -86,6 +86,8 @@
 3. Cash requires explicit cashier/manager/owner confirmation. If KHQR is re-enabled after provider approval, it cannot be marked paid without a verified provider result matching the trusted order.
 4. WebSocket payment notifications must only be pushed to the socket registered by the cashier who initiated that specific QR session. No broadcast.
 5. A terminal may only load menu items and staff rosters scoped to its registered stall. Multiple devices may belong to one stall, and revoking one must not affect another.
+   - Every cashier request and socket connection must prove that the current `stall_staff` assignment, JWT `stall_id`, and registered device `stall_id` are identical.
+   - A cashier has at most one `stall_staff` row. Moving or removing that assignment invalidates all active sessions for that cashier without deregistering the physical terminals.
 6. Telegram ticket completion requires an exact ticket/chat/message match and an active stall-scoped `telegram_cooks` identity. Cooks remain outside web RBAC.
 7. Telegram group routing may only be connected through a short-lived, one-time, hashed setup token created by the same-business Owner. Managers may manage cook identities but cannot reroute the kitchen destination. Client-submitted `telegram_chat_id` values are not trusted.
 8. Order item modifiers/notes must be stored as a snapshot at time of order — not linked to a live config.
@@ -114,6 +116,7 @@
 - Each checkout attempt sends a client-generated `Idempotency-Key`. The backend stores the key uniquely per cashier with a SHA-256 request fingerprint, returns the original order for an exact replay, and rejects key reuse with changed order data.
 - The frontend retains the key and created order ID in `sessionStorage` until checkout succeeds. A retry resumes the same pending order and never creates another order merely because a create or confirmation response was lost.
 - The backend derives `cashier_id` from the JWT and `stall_id` from the cashier's staff assignment.
+- Authentication verifies the current cashier assignment against both the JWT and registered terminal. Order creation rechecks and locks that same assignment inside its transaction before using the verified stall ID.
 - The backend loads product prices from MySQL, calculates trusted subtotal/total values, snapshots item names/prices, and creates the order as `pending_payment`.
 - Cash confirmation uses `POST /api/orders/:id/confirm-cash`.
 - Cash confirmation is allowed for the creating Cashier, or an Owner/Manager within the same business owner scope.

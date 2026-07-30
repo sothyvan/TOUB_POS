@@ -412,4 +412,77 @@ test('live order flow enforces trusted totals, stall scope, cash rules, and RBAC
     ownerOrders.payload.data.some((candidate) => candidate.id === order.id),
     'Owner order history should contain the same-business order.',
   );
+
+  const reassignment = await apiRequest(`/stalls/${stallBId}/staff`, {
+    method: 'POST',
+    token: ownerToken,
+    body: { userId: ids.userId },
+  });
+  expectStatus(reassignment, 200);
+
+  const staleProductRequest = await apiRequest('/products', {
+    token: cashierToken,
+    deviceToken,
+  });
+  expectStatus(staleProductRequest, 401);
+  assert.equal(staleProductRequest.payload.code, 'STALL_ASSIGNMENT_CHANGED');
+
+  const staleOrderRequest = await apiRequest('/orders', {
+    method: 'POST',
+    token: cashierToken,
+    deviceToken,
+    idempotencyKey: uniqueName('checkout'),
+    body: {
+      items: [{ product_id: otherStallProductId, quantity: 1 }],
+      paymentMethod: 'cash',
+    },
+  });
+  expectStatus(staleOrderRequest, 401);
+  assert.equal(staleOrderRequest.payload.code, 'STALL_ASSIGNMENT_CHANGED');
+
+  const stallBDeviceRegistration = await apiRequest(`/stalls/${stallBId}/register-device`, {
+    method: 'POST',
+    token: ownerToken,
+    body: { device_name: uniqueName('order_test_terminal_b') },
+  });
+  expectStatus(stallBDeviceRegistration, 200);
+  const stallBDeviceToken = stallBDeviceRegistration.payload?.data?.device_token;
+  assert.ok(stallBDeviceToken, 'The new stall terminal should return its token once.');
+
+  const stallBCashierLogin = await apiRequest('/auth/pin', {
+    method: 'POST',
+    deviceToken: stallBDeviceToken,
+    body: { userId: ids.userId, pin: cashierPin },
+  });
+  expectStatus(stallBCashierLogin, 200);
+  const stallBCashierToken = stallBCashierLogin.payload?.data?.token;
+  assert.ok(stallBCashierToken, 'Cashier should log in on the newly assigned stall terminal.');
+
+  const stallBProducts = await apiRequest('/products', {
+    token: stallBCashierToken,
+    deviceToken: stallBDeviceToken,
+  });
+  expectStatus(stallBProducts, 200);
+  assert.ok(
+    stallBProducts.payload.data.some((product) => product.id === otherStallProductId),
+    'The new terminal should receive products assigned to Stall B.',
+  );
+  assert.ok(
+    !stallBProducts.payload.data.some((product) => product.id === visibleProductId),
+    'The new terminal must not receive products assigned only to Stall A.',
+  );
+
+  const stallBOrderCreate = await apiRequest('/orders', {
+    method: 'POST',
+    token: stallBCashierToken,
+    deviceToken: stallBDeviceToken,
+    idempotencyKey: uniqueName('checkout'),
+    body: {
+      items: [{ product_id: otherStallProductId, quantity: 1 }],
+      paymentMethod: 'cash',
+    },
+  });
+  expectStatus(stallBOrderCreate, 201);
+  ids.orderIds.push(stallBOrderCreate.payload.data.id);
+  assert.equal(stallBOrderCreate.payload.data.stall_id, stallBId);
 });

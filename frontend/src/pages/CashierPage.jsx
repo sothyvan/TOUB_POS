@@ -20,7 +20,12 @@ import Button from '../components/ui/Button';
 import LoadingState from '../components/ui/LoadingState';
 
 export default function CashierPage() {
-  const { user: currentUser, logout, handleDeviceRevoked } = useAuth();
+  const {
+    user: currentUser,
+    logout,
+    handleDeviceRevoked,
+    handleSessionInvalidated,
+  } = useAuth();
   const { isCashier } = getPermissions(currentUser);
 
   // ── Stall assignment (cashiers only) ──────────────────────────────────────
@@ -351,6 +356,11 @@ export default function CashierPage() {
           handleDeviceRevoked(payload?.message);
         }
       },
+      onSessionInvalidated: (payload) => {
+        if (mounted) {
+          handleSessionInvalidated(payload?.message);
+        }
+      },
       onKitchenTicketUpdated: async (payload) => {
         if (mounted) {
           await refreshOrderSnapshot(payload?.orderId);
@@ -401,7 +411,14 @@ export default function CashierPage() {
       mounted = false;
       disconnectCashierSocket();
     };
-  }, [currentUser, fetchOrders, handleDeviceRevoked, refreshOrderSnapshot, scheduleOrderSnapshotRefresh]);
+  }, [
+    currentUser,
+    fetchOrders,
+    handleDeviceRevoked,
+    handleSessionInvalidated,
+    refreshOrderSnapshot,
+    scheduleOrderSnapshotRefresh,
+  ]);
 
   // ── UI state ──────────────────────────────────────────────────────────────
   const [activeCashierTab, setActiveCashierTab] = useState('sale');
