@@ -52,6 +52,7 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 ### Kitchen Display (Telegram Bot)
 
 - Real-time order relay to stall's Telegram kitchen channel
+- Guided Owner-only connection of one Telegram kitchen group per stall using a short-lived one-time link
 - Structured digital order tickets (items, qty, modifiers, stall label)
 - Chronological queue by payment timestamp
 - Authorized stall cook taps "Done" → bot edits message state in real time

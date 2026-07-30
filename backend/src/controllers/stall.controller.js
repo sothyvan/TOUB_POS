@@ -1,5 +1,6 @@
 import * as stallService from '../services/stall.service.js';
 import * as telegramCookService from '../services/telegram-cook.service.js';
+import * as telegramGroupConnectionService from '../services/telegram-group-connection.service.js';
 
 export async function getStalls(req, res, next) {
   try {
@@ -117,6 +118,22 @@ export async function revokeTelegramCook(req, res, next) {
     res.json({
       success: true,
       message: 'Telegram cook access revoked.',
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function createTelegramGroupConnection(req, res, next) {
+  try {
+    const data = await telegramGroupConnectionService.createTelegramGroupConnectionLink(
+      req.user,
+      req.params.id,
+    );
+    res.status(201).json({
+      success: true,
+      message: 'Telegram group connection link created.',
       data,
     });
   } catch (error) {

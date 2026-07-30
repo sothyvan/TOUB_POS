@@ -14,7 +14,6 @@ export async function upsertStall(seed, ownerId) {
     await stall.update({
       owner_id: ownerId,
       location: seed.location,
-      telegram_chat_id: seed.telegram_chat_id || null,
     });
   }
 

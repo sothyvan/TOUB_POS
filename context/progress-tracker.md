@@ -46,6 +46,13 @@ Update this file after every meaningful implementation change.
   - Inbound callbacks can no longer self-heal or rewrite authoritative stall/ticket chat IDs.
   - Ticket completion stores the authorized Telegram actor ID and display name.
   - Added database-free regression tests for wrong-context, unauthorized, and authorized callbacks.
+- Telegram Kitchen Group Connection — **COMPLETE** ✅
+  - Owner can generate a short-lived Telegram group-selection link from Stall Management; Managers may manage cooks but cannot reroute the kitchen destination.
+  - Connection links store only a SHA-256 token hash, expire after a configurable short window, and are single-use.
+  - Authenticated Telegram webhook updates bind the selected group to the intended stall and reject private chats, expired/reused tokens, and groups already connected to another active stall.
+  - Stall Management shows the connected group and refreshes through a management Socket.IO event with a three-second polling fallback while setup is pending.
+  - Manual `telegram_chat_id` mutation was removed from the normal stall update service.
+  - Added Sequelize/raw SQL parity, an idempotent migration, Swagger/API docs, and database-free regression tests.
 
 - **Safely suspended KHQR payment processing**:
   - Added explicit opt-in `KHQR_ENABLED` and `VITE_KHQR_ENABLED` feature flags, both defaulting to `false`.

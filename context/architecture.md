@@ -87,7 +87,8 @@
 4. WebSocket payment notifications must only be pushed to the socket registered by the cashier who initiated that specific QR session. No broadcast.
 5. A terminal may only load menu items and staff rosters scoped to its registered stall. Multiple devices may belong to one stall, and revoking one must not affect another.
 6. Telegram ticket completion requires an exact ticket/chat/message match and an active stall-scoped `telegram_cooks` identity. Cooks remain outside web RBAC.
-7. Order item modifiers/notes must be stored as a snapshot at time of order — not linked to a live config.
+7. Telegram group routing may only be connected through a short-lived, one-time, hashed setup token created by the same-business Owner. Managers may manage cook identities but cannot reroute the kitchen destination. Client-submitted `telegram_chat_id` values are not trusted.
+8. Order item modifiers/notes must be stored as a snapshot at time of order — not linked to a live config.
 
 ## Frontend State Management
 
@@ -157,7 +158,8 @@
 
 - **Outbound**: `telegram.service.js` uses the Bot API `sendMessage` with inline keyboard buttons after each confirmed order.
 - **Inbound**: `POST /api/telegram/callback` receives callback queries from cook button taps.
-- **Security**: The webhook secret authenticates Telegram as caller. `telegram_cooks` then authorizes the individual callback actor for the ticket's stall. Inbound callbacks cannot rewrite stall or ticket chat IDs.
+- **Group connection**: Owner requests a short-lived `startgroup` link for one same-business stall. Telegram consumes the one-time hashed token inside the selected group, and the backend stores that group's ID/title as the stall's kitchen destination.
+- **Security**: The webhook secret authenticates Telegram as caller. Group setup additionally requires an unexpired one-time token; ticket completion requires an authorized stall cook. Arbitrary frontend payloads and ordinary inbound callbacks cannot rewrite stall chat routing.
 - **State update**: Uses `editMessageText` + `editMessageReplyMarkup` to mutate the ticket in-place (no new messages).
 - **Format**: Ticket includes stall label, order ID, item list with modifiers, totals, and timestamp.
 
@@ -175,6 +177,7 @@
 - **AuditLog**: Records sensitive POS actions such as order creation and cash payment confirmation, including the actor, action, order, details, and timestamp.
 - **TelegramTicket**: Tracks Telegram kitchen dispatch state for an order, including Telegram message/chat IDs, send status, and cook completion timestamp.
 - **TelegramCook**: Stall-scoped Telegram-only identity allowed to complete kitchen tickets. It has no password, PIN, JWT, or management UI access beyond its Telegram callback permission.
+- **TelegramGroupConnection**: Short-lived, one-time setup attempt that stores a SHA-256 token hash, stall, management creator, expiry, and consumed Telegram group metadata.
 
 ## Error Handling Strategy
 

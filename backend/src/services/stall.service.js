@@ -81,9 +81,6 @@ export async function updateStall(actor, stallId, payload) {
   if (payload.location !== undefined) {
     updateData.location = payload.location;
   }
-  if (payload.telegram_chat_id !== undefined) {
-    updateData.telegram_chat_id = payload.telegram_chat_id || null;
-  }
   await stallRepository.updateStallById(stallId, updateData);
 }
 

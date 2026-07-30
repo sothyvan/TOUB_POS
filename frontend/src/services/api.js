@@ -98,6 +98,9 @@ function mapStallToFrontend(s) {
     id: s.id,
     name: s.name,
     location: s.location,
+    telegramChatId: s.telegram_chat_id || null,
+    telegramChatTitle: s.telegram_chat_title || null,
+    telegramConnectedAt: s.telegram_connected_at || null,
     status: 'active',
     online: true,
     deviceRegistered: devices.some((device) => device.active),
@@ -360,6 +363,18 @@ export const api = {
         method: 'DELETE',
       });
       return res.data;
+    },
+    async createTelegramGroupConnection(stallId) {
+      const res = await apiRequest(`/stalls/${stallId}/telegram-connection`, {
+        method: 'POST',
+      });
+      return {
+        stallId: res.data.stall_id,
+        stallName: res.data.stall_name,
+        botUsername: res.data.bot_username,
+        connectUrl: res.data.connect_url,
+        expiresAt: res.data.expires_at,
+      };
     }
   },
   auth: {

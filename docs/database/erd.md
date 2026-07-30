@@ -24,6 +24,8 @@ erDiagram
         varchar location "nullable"
         varchar device_token UK "deprecated migration-only"
         bigint telegram_chat_id "nullable"
+        varchar telegram_chat_title "nullable"
+        datetime telegram_connected_at "nullable"
         datetime created_at
         datetime updated_at
     }
@@ -56,6 +58,19 @@ erDiagram
         boolean is_active
         datetime created_at
         datetime updated_at
+    }
+
+    telegram_group_connections {
+        int id PK
+        int stall_id FK
+        int created_by_user_id FK "nullable"
+        varchar token_hash UK "SHA-256; raw token never stored"
+        datetime expires_at
+        datetime consumed_at "nullable"
+        bigint connected_chat_id "nullable"
+        varchar connected_chat_title "nullable"
+        bigint connected_by_telegram_user_id "nullable"
+        datetime created_at
     }
 
     categories {
@@ -145,6 +160,8 @@ erDiagram
     stalls ||--o{ stall_staff : "has staff"
     stalls ||--o{ stall_devices : "registers terminals"
     stalls ||--o{ telegram_cooks : "authorizes kitchen identities"
+    stalls ||--o{ telegram_group_connections : "receives connection attempts"
+    users ||--o{ telegram_group_connections : "creates setup link"
     users ||--o{ stall_devices : "registers/uses/revokes"
     categories ||--o{ products : "groups"
     stalls ||--o{ stall_products : "sells"
@@ -175,6 +192,7 @@ erDiagram
 - `telegram_tickets.telegram_msg_id` stores the Telegram message ID so the bot can edit the existing message when the cook taps "Done".
 - `telegram_tickets` enforces a unique `(telegram_chat_id, telegram_msg_id)` pair.
 - `telegram_cooks` is a stall-scoped allowlist of Telegram identities. Cooks are not web users and never receive JWT credentials.
+- `telegram_group_connections` stores only SHA-256 hashes of short-lived, one-time Telegram `startgroup` setup tokens. Consuming a valid token binds the selected Telegram group to its stall.
 - `telegram_tickets.completed_by_telegram_user_id` and `completed_by_name` preserve who completed a kitchen ticket.
 - `stalls.owner_id` identifies the business owner responsible for each stall.
 - `stalls.location` stores the physical location of the stall (e.g. AEON Mall, Night Market, University).

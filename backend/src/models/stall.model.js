@@ -30,6 +30,16 @@ const Stall = sequelize.define('Stall', {
     defaultValue: null,
     field: 'telegram_chat_id',
   },
+  telegram_chat_title: {
+    type: DataTypes.STRING(255),
+    defaultValue: null,
+    field: 'telegram_chat_title',
+  },
+  telegram_connected_at: {
+    type: DataTypes.DATE,
+    defaultValue: null,
+    field: 'telegram_connected_at',
+  },
   is_active: {
     type: DataTypes.BOOLEAN,
     allowNull: false,

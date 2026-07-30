@@ -109,6 +109,9 @@ export function connectManagementSocket({
   managementSocket.on('device_registry_updated', (payload) => {
     notifyManagementUpdate('device_registry_updated', payload);
   });
+  managementSocket.on('telegram_group_updated', (payload) => {
+    notifyManagementUpdate('telegram_group_updated', payload);
+  });
 
   managementSocket.on('connect_error', (error) => {
     if (onConnectError) {

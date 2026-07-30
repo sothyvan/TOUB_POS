@@ -1,4 +1,5 @@
 import { processTelegramCallback } from '../services/telegram-callback.service.js';
+import { processTelegramGroupConnection } from '../services/telegram-group-connection.service.js';
 import { timingSafeEqual } from 'node:crypto';
 
 function isValidTelegramRequest(req) {
@@ -22,5 +23,12 @@ export async function handleCallback(req, res) {
     return;
   }
 
-  await processTelegramCallback(req.body);
+  try {
+    const handledConnection = await processTelegramGroupConnection(req.body);
+    if (!handledConnection) {
+      await processTelegramCallback(req.body);
+    }
+  } catch (error) {
+    console.error('[Telegram] Failed to process authenticated update:', error.message);
+  }
 }
