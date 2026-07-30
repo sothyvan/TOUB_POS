@@ -38,8 +38,13 @@ TOUB_POS/
 cd backend
 cp .env.example .env
 npm install
+npm run db:migrate
 npm run dev
 ```
+
+Development startup also applies pending migrations automatically. Production
+deployments must run `npm run db:migrate` before starting the API; production
+startup checks the migration ledger and refuses to mutate an outdated schema.
 
 The API runs at `http://localhost:3000`.
 

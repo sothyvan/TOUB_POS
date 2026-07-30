@@ -19,7 +19,13 @@ It is not ready for an unsupervised production launch. The original audit found 
 
 Both original P0 findings are now closed. P0-1 uses a per-cashier idempotency key, request fingerprint, database uniqueness, frontend pending-order recovery, and concurrent live tests. P0-2 now requires the current assignment, JWT stall, and registered-device stall to match; assignment moves are transactional, stale API/socket sessions are invalidated, and the one-stall-per-cashier rule is database-enforced.
 
-Production readiness is also blocked by the absence of a managed migration/rollback system, incomplete transaction recovery, known dependency vulnerabilities, weak production observability and readiness checks, lack of a CI quality gate, no automated browser tests, and a tracked SQL dump containing operational and credential-shaped records. KHQR is correctly disabled, but the disabled integration and its vulnerable dependency remain in the production dependency graph.
+The managed migration/rollback gap and Telegram transaction-recovery gap have
+since been closed. Production readiness remains blocked by known dependency
+vulnerabilities, weak production observability and readiness checks, lack of a
+CI quality gate, no automated browser tests, and a tracked SQL dump containing
+operational and credential-shaped records. KHQR is correctly disabled, but the
+disabled integration and its vulnerable dependency remain in the production
+dependency graph.
 
 **Go/no-go:** **No-Go for production.** A supervised school demonstration using prepared data, cash payments, a controlled network, and a tested rollback laptop is reasonable after the P0 issues are fixed and the demo checklist is completed.
 
@@ -137,13 +143,13 @@ These controls should be preserved during remediation.
 - **Estimated size:** L
 - **Dependencies:** Migration; background worker; monitoring; Telegram idempotency policy.
 
-#### P1-5. Production schema changes have no managed migration and rollback system
+#### P1-5. Production schema changes have no managed migration and rollback system - Resolved
 
 - **Severity:** P1
 - **Category:** Database operations
 - **Business impact:** Deployments can encounter schema drift or partially applied changes, with no migration ledger or tested rollback. This can prevent startup or corrupt expectations between code and database.
-- **Evidence:** Startup always calls `sequelize.sync()` in `backend/src/server.js:32-36`; development uses `alter: true`. Only isolated scripts exist under `backend/src/scripts/migrations/`, with no ordered migration runner or rollback metadata.
-- **Recommended remediation:** Adopt one migration tool, create a baseline for existing production databases, make deploys run forward-only reviewed migrations, and document restore/rollback procedures. Do not use `sync({ alter: true })` outside disposable local databases.
+- **Resolution:** TouB POS now uses ordered Umzug migrations under `backend/src/database/migrations/`, with successful migration names stored in MySQL `schema_migrations`. The immutable baseline creates a clean database or validates an existing current schema. Production startup performs a pending-migration check without changing schema; deployments run `npm run db:migrate`. Development startup and seed commands apply pending migrations without `sequelize.sync()`.
+- **Rollback policy:** One-step rollback is explicitly gated by `ALLOW_MIGRATION_ROLLBACK=true`; the baseline refuses destructive rollback when core business rows exist. The backend README documents backup verification, deployment order, rollback, and restore preference.
 - **Acceptance criteria:** A clean database and a copy of the current schema both migrate to the same version; migration state is recorded; failed migration and rollback/restore drills are documented and tested.
 - **Estimated size:** L
 - **Dependencies:** Database owner; backup/restore test; deployment pipeline.
@@ -471,7 +477,7 @@ The live tests were not run during this audit because they require a running bac
 - [x] Resolve P0-2 cashier device/assignment stall consistency with automated regression tests.
 - [ ] Approve the remaining production product scope, especially refunds/voids, cash reconciliation, taxes/fees, inventory, and currencies.
 - [ ] Remove or formally risk-accept all high/critical production dependency findings.
-- [ ] Establish clean, versioned database migrations and a tested baseline.
+- [x] Establish clean, versioned database migrations and a tested baseline.
 - [ ] Remove/rotate any potentially real data or credentials from Git history.
 - [ ] Build required CI and protected-branch checks.
 
@@ -586,6 +592,10 @@ Deploy production observability, encrypted backups, restore drills, runbooks, in
 | `backend: npm test` after P1-4 remediation | Passed: 17 tests, including Telegram retry-backoff coverage |
 | `backend: npm run test:orders` after P1-4 remediation | Passed; cash confirmation transactionally creates the Telegram dispatch job |
 | Frontend lint/build after P1-4 remediation | Passed; no frontend behavior changed and the existing 575.79 kB owner-portal chunk warning remains |
+| `backend: npm run db:migrate` after P1-5 remediation | Passed on the configured current schema and applied zero changes on repeat |
+| P1-5 clean-schema migration drill | Passed on a disposable database: two ordered migrations applied and `schema_migrations` reported zero pending |
+| P1-5 rollback/forward drill | Passed on an empty disposable database: rollback was blocked without the explicit safety flag, both migrations reverted with the flag, and both reapplied successfully |
+| P1-5 backup/restore drill | Passed: an empty migrated schema was exported with `mysqldump`, restored into a second disposable database, and retained both ledger entries with zero pending migrations |
 
 The first sandboxed npm audit attempts could not reach the registry. They were repeated with approved network access and produced the vulnerability results above.
 

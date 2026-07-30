@@ -14,6 +14,7 @@
 import 'dotenv/config';
 import { faker } from '@faker-js/faker';
 import sequelize, { ensureDatabaseExists } from '../config/db.js';
+import { migrateDatabase } from '../database/migrator.js';
 import { Order, AuditLog, User } from '../models/index.js';
 import { roundUsd, toKhr, randomRecentDate } from '../scripts/seeders/helpers.js';
 import { SEED_MARKER } from '../scripts/seeders/data.js';
@@ -136,8 +137,7 @@ function buildRow(cashOrders, khqrOrders, fallbackCashierIds) {
 async function main() {
   await ensureDatabaseExists();
   await sequelize.authenticate();
-  const syncOptions = process.env.NODE_ENV === 'development' ? { alter: true } : {};
-  await sequelize.sync(syncOptions);
+  await migrateDatabase();
 
   console.log('[seed:audit] Database connection established.');
 

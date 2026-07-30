@@ -637,9 +637,9 @@ change because adding fields/indexes can affect existing databases.
 
 ### 16.1 Must Resolve Before Production
 
-1. Synchronize lifecycle fields and Order indexes between Sequelize and SQL.
+1. Keep lifecycle fields and indexes synchronized between Sequelize, managed migrations, and SQL reference docs.
 2. Replace development placeholder credential hashes.
-3. Adopt ordered, versioned migrations instead of production schema mutation.
+3. Preserve the ordered, versioned migration workflow for every future schema change.
 4. Test backup restoration, not only backup creation.
 5. Restrict database accounts by least privilege and network source.
 
@@ -660,16 +660,17 @@ change because adding fields/indexes can affect existing databases.
 
 1. Configure database environment variables.
 2. Create the database.
-3. Apply the corrected canonical schema or allow development Sequelize sync.
+3. Run `npm run db:migrate`.
 4. Run approved development seed scripts.
 5. Verify every expected table, foreign key, and index.
 
 ### 17.2 Current Runtime Behavior
 
-- Development may run `sequelize.sync({ alter: true })`.
-- Production does not run `alter`.
-- Startup includes focused compatibility work for legacy terminal data.
-- Telegram Cook/group changes have focused idempotent migration scripts.
+- Ordered migrations live under `backend/src/database/migrations/`.
+- Successful migration names are recorded in the MySQL `schema_migrations` table.
+- Development startup and seed commands apply pending migrations.
+- Production startup never mutates the schema and stops if migrations are pending.
+- The immutable baseline creates a clean schema or validates an existing current schema before enrolling it.
 
 ### 17.3 Recommended Production Migration Rules
 
@@ -680,6 +681,19 @@ change because adding fields/indexes can affect existing databases.
 5. Make additive changes before removing old columns.
 6. Verify row counts, foreign keys, and indexes after migration.
 7. Record rollback steps and application-version compatibility.
+
+Useful commands:
+
+```bash
+cd backend
+npm run db:migrate:status
+npm run db:migrate
+```
+
+`npm run db:migrate:down` reverts one migration and requires
+`ALLOW_MIGRATION_ROLLBACK=true`. Take and verify a backup first. Prefer restoring
+that backup for data-changing failures; the baseline refuses to drop tables
+containing users, stalls, products, or orders.
 
 ## 18. Backup And Recovery
 
