@@ -8,6 +8,14 @@ function isBlank(value) {
   return value === undefined || value === null || String(value).trim() === '';
 }
 
+function isConfiguredValue(value) {
+  const normalized = String(value || '').trim();
+  return Boolean(normalized)
+    && !normalized.startsWith('your_')
+    && !normalized.startsWith('replace_')
+    && !normalized.startsWith('change_');
+}
+
 function requireEnv(name, errors) {
   if (isBlank(process.env[name])) {
     errors.push(`${name} is required.`);
@@ -65,6 +73,10 @@ export function validateEnvironment() {
 
   validateBooleanEnv('KHQR_ENABLED', errors);
   validateBooleanEnv('KHQR_BACKGROUND_CHECK_ENABLED', errors);
+
+  if (isConfiguredValue(process.env.TELEGRAM_BOT_TOKEN)) {
+    requireEnv('TELEGRAM_WEBHOOK_SECRET', errors);
+  }
 
   const dbPort = Number(process.env.DB_PORT);
   if (!isBlank(process.env.DB_PORT) && (!Number.isInteger(dbPort) || dbPort <= 0)) {

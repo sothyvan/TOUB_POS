@@ -318,7 +318,8 @@ WHERE o.cashier_id = 2
 ORDER BY o.created_at DESC;
 
 -- Fetch Telegram tickets for an order
-SELECT id, order_id, telegram_msg_id, telegram_chat_id, status, sent_at, completed_at
+SELECT id, order_id, telegram_msg_id, telegram_chat_id, status, sent_at, completed_at,
+       completed_by_telegram_user_id, completed_by_name
 FROM telegram_tickets
 WHERE order_id = 1
 ORDER BY id DESC;
@@ -354,7 +355,33 @@ VALUES (
   JSON_OBJECT('payment_reference', 'TOUB-1-ABC123', 'qr_md5', 'b8fb54c15be1759f0e25770f1737b41c', 'amount', 15.75, 'currency', 'USD', 'source', 'bakong_status_check')
 );
 
--- ── 6b. FUTURE TELEGRAM TICKETS ───────────────────────────
+-- ── 6b. TELEGRAM COOK AUTHORIZATION AND TICKETS ───────────
+
+-- List Telegram-only cooks authorized for a stall
+SELECT id, stall_id, telegram_user_id, display_name, is_active, created_at, updated_at
+FROM telegram_cooks
+WHERE stall_id = 1
+ORDER BY is_active DESC, display_name ASC;
+
+-- Authorize or reactivate a Telegram cook for one stall
+INSERT INTO telegram_cooks (stall_id, telegram_user_id, display_name, is_active)
+VALUES (1, 123456789, 'Kitchen Dara', TRUE)
+ON DUPLICATE KEY UPDATE
+  display_name = VALUES(display_name),
+  is_active = TRUE,
+  updated_at = NOW();
+
+-- Verify the Telegram callback actor before accepting "Mark as Done"
+SELECT id, display_name
+FROM telegram_cooks
+WHERE stall_id = 1
+  AND telegram_user_id = 123456789
+  AND is_active = TRUE;
+
+-- Revoke kitchen access without deleting identity history
+UPDATE telegram_cooks
+SET is_active = FALSE, updated_at = NOW()
+WHERE id = 1 AND stall_id = 1;
 
 -- Mark a kitchen ticket sent once Telegram returns a message ID
 UPDATE telegram_tickets
@@ -363,7 +390,10 @@ WHERE id = 1;
 
 -- Mark a kitchen ticket done from an authorized Telegram callback
 UPDATE telegram_tickets
-SET status = 'done', completed_at = NOW()
+SET status = 'done',
+    completed_at = NOW(),
+    completed_by_telegram_user_id = 123456789,
+    completed_by_name = 'Kitchen Dara'
 WHERE id = 1;
 
 

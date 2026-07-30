@@ -11,6 +11,7 @@ import FormInput from '../../../components/ui/FormInput';
 import ModalShell from '../../../components/ui/ModalShell';
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { subscribeToManagementUpdates } from '../../../services/socketClient';
+import TelegramCookManager from './TelegramCookManager';
 
 // ── Seed data ─────────────────────────────────────────────────────────────────
 const AVATAR_COLORS = ['#eef2ff','#dcfce7','#f3e8ff','#fff1f2','#fef3c7','#e0f2fe'];
@@ -781,6 +782,10 @@ export default function StallOwner({ users = [] }) {
               </div>
             )}
           </section>
+
+          {selectedStall ? (
+            <TelegramCookManager key={selectedStall.id} stall={selectedStall} />
+          ) : null}
 
           {assignedUsers.length > 0 && (
             <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))' }}>

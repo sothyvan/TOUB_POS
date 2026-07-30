@@ -123,6 +123,10 @@ function mapTelegramTicketsToFrontend(tickets) {
     status: ticket.status,
     sentAt: ticket.sent_at || ticket.sentAt || null,
     completedAt: ticket.completed_at || ticket.completedAt || null,
+    completedByTelegramUserId: ticket.completed_by_telegram_user_id
+      || ticket.completedByTelegramUserId
+      || null,
+    completedByName: ticket.completed_by_name || ticket.completedByName || null,
   }));
 }
 
@@ -339,6 +343,23 @@ export const api = {
     },
     async deregisterDevice(stallId, deviceId) {
       return apiRequest(`/stalls/${stallId}/devices/${deviceId}`, { method: 'DELETE' });
+    },
+    async getTelegramCooks(stallId) {
+      const res = await apiRequest(`/stalls/${stallId}/telegram-cooks`);
+      return res.data || [];
+    },
+    async authorizeTelegramCook(stallId, payload) {
+      const res = await apiRequest(`/stalls/${stallId}/telegram-cooks`, {
+        method: 'POST',
+        body: payload,
+      });
+      return res.data;
+    },
+    async revokeTelegramCook(stallId, cookId) {
+      const res = await apiRequest(`/stalls/${stallId}/telegram-cooks/${cookId}`, {
+        method: 'DELETE',
+      });
+      return res.data;
     }
   },
   auth: {

@@ -82,6 +82,8 @@ Do not run this seeder against production or any live merchant database.
 | `KHQR_BACKGROUND_CHECK_ENABLED` | Enable background polling only when `KHQR_ENABLED=true` | `false` |
 | `KHQR_BACKGROUND_CHECK_INTERVAL_MS` | Background KHQR check interval in milliseconds | `5000` |
 | `KHQR_BACKGROUND_CHECK_BATCH_SIZE` | Maximum pending KHQR orders checked per run | `10` |
+| `TELEGRAM_BOT_TOKEN` | Backend-only Telegram bot token used for kitchen tickets | `replace_with_bot_token` |
+| `TELEGRAM_WEBHOOK_SECRET` | Random secret required whenever the Telegram bot is configured | `replace_with_random_secret` |
 
 ---
 
@@ -228,6 +230,8 @@ The retained integration can only be re-enabled deliberately with matching backe
 
 Owner/Manager order history shows Telegram kitchen ticket state (`pending`, `sent`, `failed`, or `done`) and can retry missing or failed kitchen ticket delivery through `POST /api/orders/:id/retry-telegram`. `pending` means the backend is still sending the ticket and is not retryable. Cashiers can also retry their own paid orders from the cashier order history when kitchen dispatch fails. The backend emits `order_updated` when same-business orders are created or paid, and emits `kitchen_ticket_updated` when Telegram dispatch finishes or a cook taps `Mark as Done`, so order-history screens refresh without a full page reload.
 
+Telegram cooks remain Telegram-only identities, not web-app users. An Owner or Manager must authorize each cook's numeric Telegram user ID for a specific stall before that cook can complete the stall's ticket. Run `npm run migrate:telegram-cooks` once on an existing database, then re-register the Telegram webhook so Telegram sends the configured secret header.
+
 ### Reports
 
 | Method | Path | Role | Description |
@@ -266,8 +270,9 @@ npm run test:credentials
 npm run test:orders
 npm run test:live
 npm run seed
+npm run migrate:telegram-cooks
 ```
 
 `npm run test:credentials` expects the local API and a seeded Owner account. It creates temporary Manager, Cashier, Stall, assignment, and registered-device records, verifies device-bound PIN login and credential response safety, then cleans up those records.
 
-`npm test` runs database-free report range tests. `npm run test:orders` expects the local API, MySQL, and a seeded Owner account; it creates uniquely named cashier, stall, category, product, device, and order records, verifies trusted totals, stall scoping, cash change, duplicate confirmation, order history, and RBAC, then removes its database records. `npm run test:live` runs both live API suites.
+`npm test` runs database-free report range and Telegram callback authorization tests. `npm run test:orders` expects the local API, MySQL, and a seeded Owner account; it creates uniquely named cashier, stall, category, product, device, and order records, verifies trusted totals, stall scoping, cash change, duplicate confirmation, order history, and RBAC, then removes its database records. `npm run test:live` runs both live API suites.

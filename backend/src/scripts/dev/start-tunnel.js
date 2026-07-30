@@ -54,6 +54,13 @@ function getNgrokToken() {
 }
 
 async function start() {
+  if (!BOT_TOKEN) {
+    throw new Error('TELEGRAM_BOT_TOKEN is required before registering the Telegram webhook.');
+  }
+  if (!SECRET_TOKEN) {
+    throw new Error('TELEGRAM_WEBHOOK_SECRET is required before registering the Telegram webhook.');
+  }
+
   const token = getNgrokToken();
   console.log(`Starting ngrok tunnel on port ${PORT}...`);
   if (token) {
@@ -80,7 +87,7 @@ async function start() {
     const { spawnSync } = await import('node:child_process');
     const payload = JSON.stringify({
       url: webhookUrl,
-      secret_token: SECRET_TOKEN || undefined,
+      secret_token: SECRET_TOKEN,
     });
 
     const result = spawnSync('curl', [

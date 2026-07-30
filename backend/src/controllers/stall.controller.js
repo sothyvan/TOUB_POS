@@ -1,4 +1,5 @@
 import * as stallService from '../services/stall.service.js';
+import * as telegramCookService from '../services/telegram-cook.service.js';
 
 export async function getStalls(req, res, next) {
   try {
@@ -73,6 +74,49 @@ export async function deregisterDevice(req, res, next) {
     res.json({
       success: true,
       message: 'Terminal deregistered successfully.',
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getTelegramCooks(req, res, next) {
+  try {
+    const data = await telegramCookService.listTelegramCooks(req.user, req.params.id);
+    res.json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function authorizeTelegramCook(req, res, next) {
+  try {
+    const data = await telegramCookService.authorizeTelegramCook(
+      req.user,
+      req.params.id,
+      req.body,
+    );
+    res.status(201).json({
+      success: true,
+      message: 'Telegram cook authorized successfully.',
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function revokeTelegramCook(req, res, next) {
+  try {
+    const data = await telegramCookService.revokeTelegramCook(
+      req.user,
+      req.params.id,
+      req.params.cookId,
+    );
+    res.json({
+      success: true,
+      message: 'Telegram cook access revoked.',
       data,
     });
   } catch (error) {
