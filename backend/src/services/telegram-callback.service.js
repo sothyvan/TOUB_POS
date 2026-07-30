@@ -1,4 +1,5 @@
 import { TelegramTicket, Order, OrderItem, Stall, User } from '../models/index.js';
+import * as telegramCookRepository from '../repositories/telegram-cook.repository.js';
 import {
   editMessageDone,
   answerCallbackQuery,
@@ -6,44 +7,24 @@ import {
 } from './telegram.service.js';
 import { emitKitchenTicketUpdated } from './websocket.service.js';
 
-async function findTicket(orderId, chatId, messageId) {
-  const orderTicket = await TelegramTicket.findOne({
-    where: { order_id: orderId },
-  });
-  if (orderTicket) {
-    return orderTicket;
-  }
+function findTicket(orderId, chatId, messageId) {
   return TelegramTicket.findOne({
     where: {
+      order_id: orderId,
       telegram_chat_id: String(chatId),
       telegram_msg_id: String(messageId),
     },
   });
 }
 
-function getCompletedByName(callbackQuery) {
-  const telegramUser = callbackQuery.from;
-  return [telegramUser.first_name, telegramUser.last_name].filter(Boolean).join(' ');
-}
-
-async function updateTicketChatId(ticket, chatId) {
-  if (String(ticket.telegram_chat_id) === String(chatId)) {
-    return;
-  }
-  console.log(`[Telegram] Self-healing: updating ticket chat ID from ${ticket.telegram_chat_id} to ${chatId}`);
-  ticket.telegram_chat_id = String(chatId);
-  await ticket.save();
-}
-
-async function updateStallChatId(stall, chatId) {
-  if (!stall || String(stall.telegram_chat_id) === String(chatId)) {
-    return;
-  }
-  console.log(`[Telegram] Self-healing: updating stall #${stall.id} chat ID from ${stall.telegram_chat_id} to ${chatId}`);
-  await Stall.update(
-    { telegram_chat_id: String(chatId) },
-    { where: { id: stall.id } },
-  );
+function findOrder(orderId) {
+  return Order.findByPk(orderId, {
+    include: [
+      { model: OrderItem, as: 'Items' },
+      { model: Stall, attributes: ['id', 'name', 'owner_id', 'telegram_chat_id'] },
+      { model: User, as: 'Cashier', attributes: ['id', 'username'] },
+    ],
+  });
 }
 
 async function handleEditFailure(error, order, completedByName) {
@@ -64,15 +45,17 @@ async function handleEditFailure(error, order, completedByName) {
   });
 }
 
-async function markTicketDone(ticket, order, completedByName, callbackQueryId, chatId, messageId) {
+async function markTicketDone(ticket, order, cook, callbackQueryId, chatId, messageId) {
   try {
-    await editMessageDone(chatId, messageId, order, completedByName);
+    await editMessageDone(chatId, messageId, order, cook.display_name);
   } catch (error) {
-    await handleEditFailure(error, order, completedByName);
+    await handleEditFailure(error, order, cook.display_name);
   }
 
   ticket.status = 'done';
   ticket.completed_at = new Date();
+  ticket.completed_by_telegram_user_id = String(cook.telegram_user_id);
+  ticket.completed_by_name = cook.display_name;
   await ticket.save();
 
   emitKitchenTicketUpdated({
@@ -88,7 +71,20 @@ async function markTicketDone(ticket, order, completedByName, callbackQueryId, c
   console.log(`[Telegram] Order #${order.id} marked as done by cook.`);
 }
 
-export async function processTelegramCallback(update) {
+export async function processTelegramCallback(update, dependencyOverrides = {}) {
+  const dependencies = {
+    answerCallbackQuery,
+    completeTicket: markTicketDone,
+    findActiveCook: telegramCookRepository.findActiveCook,
+    findOrder,
+    findTicket,
+    ...dependencyOverrides,
+  };
+
+  const safeAnswer = (callbackQueryId, message) => (
+    dependencies.answerCallbackQuery(callbackQueryId, message).catch(() => {})
+  );
+
   if (!update.callback_query) {
     return;
   }
@@ -101,49 +97,75 @@ export async function processTelegramCallback(update) {
   } = callbackQuery;
   const chatId = message?.chat?.id;
   const messageId = message?.message_id;
+  const telegramUserId = callbackQuery.from?.id;
   const doneMatch = String(callbackData ?? '').match(/^done:(\d+)$/);
   if (!doneMatch) {
-    await answerCallbackQuery(callbackQueryId, 'Unknown action.').catch(() => {});
+    await safeAnswer(callbackQueryId, 'Unknown action.');
     return;
   }
 
   const orderId = Number.parseInt(doneMatch[1], 10);
   try {
-    const ticket = await findTicket(orderId, chatId, messageId);
-    if (!ticket) {
-      await answerCallbackQuery(callbackQueryId, 'Ticket not found.').catch(() => {});
+    if (!chatId || !messageId || !telegramUserId) {
+      await safeAnswer(callbackQueryId, 'Invalid Telegram callback identity.');
       return;
     }
 
-    await updateTicketChatId(ticket, chatId);
-    if (ticket.status === 'done') {
-      await answerCallbackQuery(callbackQueryId, 'Already marked as done!').catch(() => {});
+    const ticket = await dependencies.findTicket(orderId, chatId, messageId);
+    if (
+      !ticket
+      || Number(ticket.order_id) !== orderId
+      || String(ticket.telegram_chat_id) !== String(chatId)
+      || String(ticket.telegram_msg_id) !== String(messageId)
+    ) {
+      await safeAnswer(callbackQueryId, 'Ticket not found.');
       return;
     }
 
-    const order = await Order.findByPk(orderId, {
-      include: [
-        { model: OrderItem, as: 'Items' },
-        { model: Stall, attributes: ['id', 'name', 'owner_id', 'telegram_chat_id'] },
-        { model: User, as: 'Cashier', attributes: ['id', 'username'] },
-      ],
-    });
+    const order = await dependencies.findOrder(orderId);
     if (!order) {
-      await answerCallbackQuery(callbackQueryId, 'Order not found.').catch(() => {});
+      await safeAnswer(callbackQueryId, 'Order not found.');
       return;
     }
 
-    await updateStallChatId(order.Stall, chatId);
-    await markTicketDone(
+    if (!order.Stall || String(order.Stall.telegram_chat_id) !== String(chatId)) {
+      await safeAnswer(callbackQueryId, 'This ticket does not belong to this kitchen chat.');
+      return;
+    }
+
+    if (order.status !== 'paid') {
+      await safeAnswer(callbackQueryId, 'Only paid orders can be completed.');
+      return;
+    }
+
+    const cook = await dependencies.findActiveCook(order.stall_id, telegramUserId);
+    if (!cook) {
+      await safeAnswer(
+        callbackQueryId,
+        `Not authorized for this stall. Your Telegram ID is ${telegramUserId}.`,
+      );
+      return;
+    }
+
+    if (ticket.status === 'done') {
+      await safeAnswer(callbackQueryId, 'Already marked as done!');
+      return;
+    }
+    if (ticket.status !== 'sent') {
+      await safeAnswer(callbackQueryId, 'This kitchen ticket is not ready to complete.');
+      return;
+    }
+
+    await dependencies.completeTicket(
       ticket,
       order,
-      getCompletedByName(callbackQuery),
+      cook,
       callbackQueryId,
       chatId,
       messageId,
     );
   } catch (error) {
     console.error(`[Telegram] Error handling done callback for order #${orderId}:`, error.message);
-    await answerCallbackQuery(callbackQueryId, 'Something went wrong.').catch(() => {});
+    await safeAnswer(callbackQueryId, 'Something went wrong.');
   }
 }

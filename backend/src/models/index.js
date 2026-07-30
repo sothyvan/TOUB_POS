@@ -10,6 +10,7 @@ import TelegramTicket from './telegram-ticket.model.js';
 import AuditLog from './audit-log.model.js';
 import ProductStall from './product-stall.model.js';
 import StallDevice from './stall-device.model.js';
+import TelegramCook from './telegram-cook.model.js';
 
 // ── User ↔ Stall Ownership ──────────────────────────────────
 Stall.belongsTo(User, { as: 'Owner', foreignKey: 'owner_id', onDelete: 'SET NULL' });
@@ -34,6 +35,10 @@ Stall.hasMany(StallDevice, { as: 'Devices', foreignKey: 'stall_id' });
 StallDevice.belongsTo(User, { as: 'RegisteredBy', foreignKey: 'registered_by_user_id', onDelete: 'SET NULL' });
 StallDevice.belongsTo(User, { as: 'LastCashier', foreignKey: 'last_cashier_id', onDelete: 'SET NULL' });
 StallDevice.belongsTo(User, { as: 'RevokedBy', foreignKey: 'revoked_by_user_id', onDelete: 'SET NULL' });
+
+// ── Stall ↔ Telegram Cook Identities ───────────────────────
+TelegramCook.belongsTo(Stall, { as: 'Stall', foreignKey: 'stall_id', onDelete: 'CASCADE' });
+Stall.hasMany(TelegramCook, { as: 'TelegramCooks', foreignKey: 'stall_id' });
 
 // ── Product Associations ─────────────────────────────────────
 Product.belongsToMany(Stall, { through: ProductStall, foreignKey: 'product_id', otherKey: 'stall_id', onDelete: 'CASCADE' });
@@ -88,4 +93,5 @@ export {
   AuditLog,
   ProductStall,
   StallDevice,
+  TelegramCook,
 };

@@ -462,6 +462,37 @@ export const swaggerDocument = {
                 description: 'Owner/Manager only.'
             }
         },
+        '/api/stalls/{id}/telegram-cooks': {
+            get: {
+                summary: 'List stall Telegram cooks',
+                description: 'Owner/Manager only. Returns Telegram-only identities for a same-business stall.'
+            },
+            post: {
+                summary: 'Authorize a Telegram cook',
+                description: 'Owner/Manager only. Creates or reactivates a stall-scoped Telegram identity. This does not create a web user or JWT role.',
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                required: ['telegram_user_id', 'display_name'],
+                                properties: {
+                                    telegram_user_id: { type: 'string', example: '123456789' },
+                                    display_name: { type: 'string', example: 'Kitchen Dara' }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        '/api/stalls/{id}/telegram-cooks/{cookId}': {
+            delete: {
+                summary: 'Revoke a Telegram cook',
+                description: 'Owner/Manager only. Deactivates one stall-scoped Telegram identity without affecting other cooks.'
+            }
+        },
         '/api/stalls/{id}/register-device': {
             post: {
                 summary: 'Register a cashier terminal to a stall',

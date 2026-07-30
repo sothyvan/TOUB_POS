@@ -37,6 +37,16 @@ const TelegramTicket = sequelize.define('TelegramTicket', {
     defaultValue: null,
     field: 'completed_at',
   },
+  completed_by_telegram_user_id: {
+    type: DataTypes.BIGINT,
+    defaultValue: null,
+    field: 'completed_by_telegram_user_id',
+  },
+  completed_by_name: {
+    type: DataTypes.STRING(100),
+    defaultValue: null,
+    field: 'completed_by_name',
+  },
 }, {
   tableName: 'telegram_tickets',
   timestamps: false,

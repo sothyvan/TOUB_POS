@@ -64,6 +64,22 @@ CREATE TABLE stall_devices (
   FOREIGN KEY (revoked_by_user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
+-- ── Telegram-Only Kitchen Identities ─────────────────────
+-- Cooks are not web users and receive no password, PIN, JWT, or portal role.
+-- A Telegram identity must be explicitly authorized for each stall it serves.
+CREATE TABLE telegram_cooks (
+  id               INT AUTO_INCREMENT PRIMARY KEY,
+  stall_id         INT NOT NULL,
+  telegram_user_id BIGINT NOT NULL,
+  display_name     VARCHAR(100) NOT NULL,
+  is_active        BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_telegram_cooks_stall_user (stall_id, telegram_user_id),
+  KEY idx_telegram_cooks_stall_active (stall_id, is_active),
+  FOREIGN KEY (stall_id) REFERENCES stalls(id) ON DELETE CASCADE
+);
+
 -- ── Stall ↔ Staff Assignment ──────────────────────────────
 CREATE TABLE stall_staff (
   id        INT AUTO_INCREMENT PRIMARY KEY,
@@ -178,6 +194,8 @@ CREATE TABLE telegram_tickets (
   status           ENUM('pending', 'sent', 'failed', 'done') NOT NULL DEFAULT 'pending',
   sent_at          DATETIME DEFAULT NULL,
   completed_at     DATETIME DEFAULT NULL,
+  completed_by_telegram_user_id BIGINT DEFAULT NULL,
+  completed_by_name VARCHAR(100) DEFAULT NULL,
   KEY idx_telegram_tickets_order_id (order_id),
   KEY idx_telegram_tickets_chat_id (telegram_chat_id),
   KEY idx_telegram_tickets_status (status),

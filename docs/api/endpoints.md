@@ -539,10 +539,17 @@ Requires `owner` or `manager` role.
 | DELETE | `/stalls/:id/staff/:userId` | ✅ | Owner / Manager | Remove cashier from stall |
 | POST | `/stalls/:id/register-device` | ✅ | Owner / Manager | Register an additional named terminal |
 | DELETE | `/stalls/:id/devices/:deviceId` | ✅ | Owner / Manager | Revoke one terminal without affecting the others |
+| GET | `/stalls/:id/telegram-cooks` | ✅ | Owner / Manager | List Telegram-only kitchen identities |
+| POST | `/stalls/:id/telegram-cooks` | ✅ | Owner / Manager | Authorize or reactivate one Telegram cook |
+| DELETE | `/stalls/:id/telegram-cooks/:cookId` | ✅ | Owner / Manager | Revoke one Telegram cook |
 
 Stall create/update accepts normal editable fields such as `name` and `location`. The backend does not trust privileged frontend-submitted fields such as `owner_id`, `device_token`, or `telegram_chat_id`.
 
 Stall list responses expose safe `devices` metadata and the aggregate `device_registered` boolean. They never expose token hashes or raw tokens. Registering requires `{ "device_name": "Front Counter Tablet" }` and returns the raw token once. Deregistration marks only the selected `stall_devices` row inactive, rejects its future cashier requests, and sends a targeted real-time logout event. Other devices at that stall remain active.
+
+Telegram cooks are not web users. Authorizing a cook requires a numeric `telegram_user_id` and `display_name`, stores a stall-scoped allowlist record, and grants only the ability to complete that stall's Telegram kitchen tickets. Revoking one identity does not affect other cooks or cashier accounts.
+
+`POST /api/telegram/callback` is called by Telegram, not the frontend. It requires the configured `X-Telegram-Bot-Api-Secret-Token`, an exact order/ticket/chat/message match, a chat matching the order's stall, and an active `telegram_cooks` assignment for `callback_query.from.id`. Rejected callbacks never mutate ticket or stall chat data.
 
 ---
 

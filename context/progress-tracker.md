@@ -39,6 +39,13 @@ Update this file after every meaningful implementation change.
   - Backend KHQR creation, explicit status checks, and the background checker are disabled by default.
   - Frontend KHQR checkout, polling modal, and resume actions are hidden by default.
   - Historical KHQR orders, reports, receipts, audit data, schema fields, and provider code are retained for a future approved merchant integration.
+- Telegram Cook Authorization Hardening — **COMPLETE** ✅
+  - Added stall-scoped Telegram-only cook identities without adding a web-app cook role.
+  - Owner/Manager can authorize, reactivate, list, and revoke individual cook identities from Stall Management.
+  - Telegram Done callbacks now require webhook-secret authentication, an exact ticket/chat/message match, the stall's configured chat, and an active cook assignment.
+  - Inbound callbacks can no longer self-heal or rewrite authoritative stall/ticket chat IDs.
+  - Ticket completion stores the authorized Telegram actor ID and display name.
+  - Added database-free regression tests for wrong-context, unauthorized, and authorized callbacks.
 
 - **Safely suspended KHQR payment processing**:
   - Added explicit opt-in `KHQR_ENABLED` and `VITE_KHQR_ENABLED` feature flags, both defaulting to `false`.
@@ -844,7 +851,6 @@ Update this file after every meaningful implementation change.
 
 - Post-Phase 6 Operations & Security Hardening.
   - Add payment monitoring and operational alerting for failed Bakong or Telegram operations.
-  - Keep cook authorization Telegram-only, and strengthen the Telegram cook identity model before production.
   - Decide whether failed Telegram dispatches need an automatic retry worker or if manual retry is enough for the final demo.
 
 - Phase 7C Demo Stabilization & Polish.

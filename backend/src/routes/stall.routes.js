@@ -9,6 +9,9 @@ import {
   unassignStaff,
   registerDevice,
   deregisterDevice,
+  getTelegramCooks,
+  authorizeTelegramCook,
+  revokeTelegramCook,
 } from '../controllers/stall.controller.js';
 
 const router = Router();
@@ -39,5 +42,10 @@ router.post('/:id/register-device', registerDevice);
 
 // DELETE /api/stalls/:id/devices/:deviceId — Revoke one registered terminal
 router.delete('/:id/devices/:deviceId', deregisterDevice);
+
+// Telegram-only cook identities authorized to complete this stall's kitchen tickets
+router.get('/:id/telegram-cooks', getTelegramCooks);
+router.post('/:id/telegram-cooks', authorizeTelegramCook);
+router.delete('/:id/telegram-cooks/:cookId', revokeTelegramCook);
 
 export default router;

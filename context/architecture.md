@@ -86,7 +86,7 @@
 3. Cash requires explicit cashier/manager/owner confirmation. If KHQR is re-enabled after provider approval, it cannot be marked paid without a verified provider result matching the trusted order.
 4. WebSocket payment notifications must only be pushed to the socket registered by the cashier who initiated that specific QR session. No broadcast.
 5. A terminal may only load menu items and staff rosters scoped to its registered stall. Multiple devices may belong to one stall, and revoking one must not affect another.
-6. Telegram callback authorization needs a replacement cook-identity model before production; current Telegram persistence is limited to order ticket dispatch state.
+6. Telegram ticket completion requires an exact ticket/chat/message match and an active stall-scoped `telegram_cooks` identity. Cooks remain outside web RBAC.
 7. Order item modifiers/notes must be stored as a snapshot at time of order — not linked to a live config.
 
 ## Frontend State Management
@@ -149,15 +149,15 @@
 - KHQR-paid orders reuse the same `dispatchToTelegram` kitchen ticket flow as confirmed cash orders.
 - Owner/Manager order history surfaces `telegram_tickets.status` and can retry missing or failed Telegram dispatches for paid orders in their business. Cashiers can retry only their own paid orders. Pending tickets are treated as in-progress and are not retryable; sent/done tickets are not resent.
 - When Telegram dispatch finishes as `sent` or `failed`, the backend emits `kitchen_ticket_updated` so the UI does not stay stuck on the temporary `pending` state.
-- When a cook taps "Done" in Telegram, the callback updates the ticket to `done` and emits `kitchen_ticket_updated` to the creating cashier and same-business Owner/Manager sockets so order-history UI can refresh without a page reload.
+- When an authorized cook taps "Done" in Telegram, the callback records their Telegram identity, updates the ticket to `done`, and emits `kitchen_ticket_updated` to the creating cashier and same-business Owner/Manager sockets.
 - The Telegram bot should post a structured ticket with inline "Done" button after paid order confirmation.
-- Cook taps "Done" → Telegram sends a callback query → backend edits the message, persists the ticket as done, emits `kitchen_ticket_updated`, and must later validate cook authorization through a Telegram-only cook identity model before production.
+- Cook taps "Done" → Telegram sends a callback query → backend verifies the webhook secret, exact ticket context, stall chat, and active cook identity before editing or persisting the ticket.
 
 ## Telegram Kitchen Bot Architecture
 
 - **Outbound**: `telegram.service.js` uses the Bot API `sendMessage` with inline keyboard buttons after each confirmed order.
 - **Inbound**: `POST /api/telegram/callback` receives callback queries from cook button taps.
-- **Security**: Telegram ticket state is stored in `TelegramTicket`; cook authorization rules still need a replacement model before production.
+- **Security**: The webhook secret authenticates Telegram as caller. `telegram_cooks` then authorizes the individual callback actor for the ticket's stall. Inbound callbacks cannot rewrite stall or ticket chat IDs.
 - **State update**: Uses `editMessageText` + `editMessageReplyMarkup` to mutate the ticket in-place (no new messages).
 - **Format**: Ticket includes stall label, order ID, item list with modifiers, totals, and timestamp.
 
@@ -174,6 +174,7 @@
 - **OrderItem**: Links `Order` to `Product`. Stores quantity, price snapshot, and **`notes`** (modifiers like "no ice").
 - **AuditLog**: Records sensitive POS actions such as order creation and cash payment confirmation, including the actor, action, order, details, and timestamp.
 - **TelegramTicket**: Tracks Telegram kitchen dispatch state for an order, including Telegram message/chat IDs, send status, and cook completion timestamp.
+- **TelegramCook**: Stall-scoped Telegram-only identity allowed to complete kitchen tickets. It has no password, PIN, JWT, or management UI access beyond its Telegram callback permission.
 
 ## Error Handling Strategy
 
@@ -187,6 +188,7 @@
 | 1 | **KHQR / Bakong integration** | 🟢 Controlled | Disabled by default through backend and frontend feature flags because the available Open API polling allowance is not suitable for normal POS volume. Keep the retained integration inactive until an approved merchant provider and operating limits are confirmed. |
 | 2 | **WebSocket routing — accidental broadcast to wrong cashier** | 🔴 High | `websocket.service.js` authenticates cashier sockets with JWT, keeps a strict `Map<cashier_id, socketIds>`, and emits only to the mapped cashier sockets. Continue to avoid broad `io.emit()` payment broadcasts. |
 | 3 | **Telegram Bot async failures** | 🟡 Medium | Telegram failure must never block or rollback the order. Strategy: (1) Always log the error. (2) Store Telegram dispatch state in `telegram_tickets.status` (`pending` / `sent` / `failed` / `done`) instead of mutating payment state on `orders`. (3) Emit live ticket updates when dispatch finishes. (4) Show status in the management ledger, allow Owner/Manager retry for business orders, and allow Cashier retry for their own missing/failed tickets. Pending tickets are in-progress and are not retryable. Auto-retry queue is out of scope (Future). |
+| 3A | **Unauthorized Telegram ticket completion** | 🟢 Controlled | Telegram callbacks require a valid webhook secret, exact order/ticket/chat/message context, matching stall chat, and an active stall-scoped cook identity. Completion records the Telegram actor ID/name. |
 | 4 | **KHR exchange rate — hardcoded vs. live** | 🟡 Medium | Decision required before building the product form. Recommend: hardcode the rate as a `.env` constant (`KHR_RATE=4100`) for now. Add a note in the admin panel showing the current rate. Live rate API is out of scope. |
 | 5 | **Stall data isolation — cross-stall data leak** | 🔴 High | Every query that returns cashier-facing products, orders, or staff must scope by the authenticated user and their backend stall assignment. Never trust a client-supplied stall ID for cashier access. |
 | 6 | **Legacy localStorage fallback regression** | 🟡 Medium | Products, categories, stalls, users, and orders are now backend-owned. Future UI work must not reintroduce localStorage as the source of truth for persisted POS data; localStorage should remain limited to auth/session/device-style browser state. |

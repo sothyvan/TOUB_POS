@@ -48,6 +48,16 @@ erDiagram
         int user_id FK
     }
 
+    telegram_cooks {
+        int id PK
+        int stall_id FK
+        bigint telegram_user_id
+        varchar display_name
+        boolean is_active
+        datetime created_at
+        datetime updated_at
+    }
+
     categories {
         int id PK
         int owner_id FK
@@ -125,6 +135,8 @@ erDiagram
         enum status
         datetime sent_at
         datetime completed_at
+        bigint completed_by_telegram_user_id
+        varchar completed_by_name
     }
 
     users ||--o{ stalls : "owns"
@@ -132,6 +144,7 @@ erDiagram
     users ||--o{ stall_staff : "assigned to"
     stalls ||--o{ stall_staff : "has staff"
     stalls ||--o{ stall_devices : "registers terminals"
+    stalls ||--o{ telegram_cooks : "authorizes kitchen identities"
     users ||--o{ stall_devices : "registers/uses/revokes"
     categories ||--o{ products : "groups"
     stalls ||--o{ stall_products : "sells"
@@ -161,6 +174,8 @@ erDiagram
 - `telegram_tickets.status` tracks the kitchen ticket progress independently from the order payment status.
 - `telegram_tickets.telegram_msg_id` stores the Telegram message ID so the bot can edit the existing message when the cook taps "Done".
 - `telegram_tickets` enforces a unique `(telegram_chat_id, telegram_msg_id)` pair.
+- `telegram_cooks` is a stall-scoped allowlist of Telegram identities. Cooks are not web users and never receive JWT credentials.
+- `telegram_tickets.completed_by_telegram_user_id` and `completed_by_name` preserve who completed a kitchen ticket.
 - `stalls.owner_id` identifies the business owner responsible for each stall.
 - `stalls.location` stores the physical location of the stall (e.g. AEON Mall, Night Market, University).
 - `stall_devices` supports multiple independently revocable terminals per stall. The raw token is stored only in the registered browser; MySQL stores `token_hash`.

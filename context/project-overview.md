@@ -54,8 +54,8 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 - Real-time order relay to stall's Telegram kitchen channel
 - Structured digital order tickets (items, qty, modifiers, stall label)
 - Chronological queue by payment timestamp
-- Cook taps "Done" → bot edits message state in real time
-- Cook interaction authorization requires a replacement identity model before production
+- Authorized stall cook taps "Done" → bot edits message state in real time
+- Telegram-only cook allowlist; cooks do not receive web-app credentials or roles
 
 ### Owner & Manager Portal
 
