@@ -69,7 +69,7 @@ Implement an analytical dashboard that provides owners and managers with revenue
 - Avatar-based cashier login with 4-digit PIN pad.
 - Menu management with dual-currency pricing (USD / KHR).
 - Order modifiers and notes per item (e.g., "no ice", "extra spicy").
-- Service fee (3%) and estimated tax (8%) calculations.
+- Backend-owned item subtotal and final total, with no automatic service fee or tax in the current release.
 - KHQR payment integration via Bakong Open API backend webhook/polling.
 - Cash payment confirmation with change-due calculation.
 - Telegram Kitchen Display System for order relay and cook acknowledgement.
@@ -167,7 +167,7 @@ The backend strictly follows a **routes → controllers → services → reposit
 
 Testing was performed at multiple levels:
 
-- **Unit Testing:** Individual backend service functions were tested for correct business logic — for example, verifying that the order total calculation matches expected values for given product prices, service fee (3%), and tax (8%).
+- **Unit Testing:** Individual backend service functions were tested for correct business logic — for example, verifying that trusted order totals are calculated from database product prices and that the current-release final total equals the item subtotal.
 - **Integration Testing:** API endpoints were tested using **Swagger UI** and **Postman** collections to verify correct HTTP responses, error codes, JWT enforcement, and role-based access control boundaries.
 - **Manual End-to-End Testing:** Full checkout flows were tested on tablet form factors — both Cash and KHQR paths — verifying that payment confirmation updates the cashier's screen and dispatches the correct kitchen ticket to Telegram.
 - **Security Testing:** Cross-owner data access was tested by attempting to fetch resources (orders, stalls, products) belonging to a different owner's business — confirming that all queries correctly scope to the authenticated user's `owner_id`.
@@ -243,7 +243,7 @@ The following functional requirements define what the Toub POS system must do. E
 |------|--------|
 | **Purpose** | Allow cashiers to build a customer order from the stall-scoped product grid, with optional per-item modifier notes, and submit it to the backend for payment processing. |
 | **Input** | Selected product IDs, quantities, optional item notes (e.g., "no ice"), payment method (`cash` or `khqr`). |
-| **Output** | Order record created in `pending_payment` status; backend calculates and stores trusted totals (subtotal, service fee, tax, grand total) from database prices — the frontend never submits totals. |
+| **Output** | Order record created in `pending_payment` status; backend calculates and stores the trusted item subtotal and final total from database prices. Under the current policy they are equal, with no automatic fee or tax, and the frontend never submits totals. |
 
 ---
 

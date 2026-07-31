@@ -95,7 +95,7 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
   RBAC (Owner / Manager / Cashier).
 - Menu management with dual-currency pricing (USD / KHR).
 - Order modifiers/notes per item.
-- Service Fee (3%) and Estimated Tax (8%) calculation.
+- Backend-owned item subtotal and final total; the current release applies no automatic service fee or tax.
 - Cash payment confirmation and change calculation.
 - Historical KHQR data remains readable; new KHQR payment processing is temporarily out of active scope.
 - Telegram kitchen display bot.
@@ -108,6 +108,7 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 - Offline-first caching and background sync *(Future)*.
 - Transaction parking *(Future)*.
 - Full multi-customer SaaS administration and `platform_admin` UI/tooling *(Future)*.
+- Automatic service-fee or tax calculation until legal/accounting and product policy is approved.
 
 ## Success Criteria
 

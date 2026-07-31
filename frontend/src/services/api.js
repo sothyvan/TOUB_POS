@@ -158,8 +158,6 @@ function mapOrderToFrontend(o) {
     paymentReference: o.payment_reference || o.paymentReference || null,
     paymentExpiresAt: o.payment_expires_at || o.paymentExpiresAt || null,
     subtotal: parseFloat(o.subtotal_usd || o.total_usd || 0),
-    serviceFee: 0,
-    estimatedTax: 0,
     total: parseFloat(o.total_usd || 0),
     cashReceived: o.cash_received_usd === null || o.cash_received_usd === undefined
       ? null

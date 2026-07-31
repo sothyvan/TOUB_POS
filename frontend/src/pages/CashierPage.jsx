@@ -100,7 +100,7 @@ export default function CashierPage() {
   } = useProducts(false);
 
   const {
-    cart, cartById, itemCount, subtotal, serviceFee, estimatedTax, total,
+    cart, cartById, itemCount, subtotal, total,
     addToCart, updateQuantity, setCartItemQuantity, clearCart,
   } = useCart(categoryById, {
     currentUser,
@@ -575,8 +575,6 @@ export default function CashierPage() {
         setIsCartOpen={setIsCartOpen}
         itemCount={itemCount}
         subtotal={subtotal}
-        serviceFee={serviceFee}
-        estimatedTax={estimatedTax}
         total={total}
         clearCart={clearCart}
         handleCheckout={handleCheckoutWithReceipt}

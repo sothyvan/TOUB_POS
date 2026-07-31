@@ -10,8 +10,6 @@ import TotalsBreakdown from '../../../components/ui/TotalsBreakdown';
 export default function OrderPanel({
   cart,
   subtotal,
-  serviceFee,
-  estimatedTax,
   total,
   isCartOpen,
   setIsCartOpen,
@@ -99,8 +97,6 @@ export default function OrderPanel({
       <div className="p-6 border-t border-ui-border bg-ui-elevated shrink-0">
         <TotalsBreakdown
           subtotal={subtotal}
-          serviceFee={serviceFee}
-          estimatedTax={estimatedTax}
           total={total}
           variant="panel"
         />

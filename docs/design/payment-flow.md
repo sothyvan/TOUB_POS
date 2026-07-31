@@ -13,6 +13,11 @@ suspended KHQR design.
 
 Cash payment is backend-owned. The frontend may preview totals while the cashier builds a cart, but the backend calculates the trusted order total from database product prices.
 
+Under the current approved financial policy, the final total equals the item
+subtotal. TouB POS does not automatically add a service fee or tax. Any future
+charge must be defined and calculated by the backend before it can appear on a
+receipt or report.
+
 ```mermaid
 sequenceDiagram
     participant C as Cashier Browser

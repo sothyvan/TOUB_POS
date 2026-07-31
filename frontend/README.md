@@ -96,6 +96,7 @@ Credential rules:
 - The frontend does not create paid orders by itself.
 - Checkout calls `POST /api/orders`.
 - The backend calculates trusted prices and totals from MySQL.
+- Under the current financial policy, the final total equals the item subtotal; no automatic service fee or tax is added.
 - Cash orders start as `pending_payment`.
 - Cash confirmation calls `POST /api/orders/:id/confirm-cash`.
 - The cashier enters cash received; the frontend previews change, while the backend verifies the amount, calculates saved change due, changes cash orders to `paid`, and writes audit logs.
