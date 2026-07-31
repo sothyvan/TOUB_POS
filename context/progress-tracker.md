@@ -1268,13 +1268,21 @@ Update this file after every meaningful implementation change.
     only sanitized route/component metadata. The focused forced-render
     Playwright scenario passes and the event is ready for production monitoring
     integration.
-  - P2-9 Owner Portal code splitting is implemented for review. Build-manifest
+  - P2-9 Owner Portal code splitting is merged. Build-manifest
     measurement reduced the route entry from 578.77 kB (158.83 kB gzip) to
     96.94 kB (26.88 kB gzip), while dashboard, catalog, Stall, reports, staff,
     and financial settings now load as separate tab chunks. The largest tab is
     the 357.95 kB Recharts dashboard, so the production build no longer emits a
     chunk warning. A tested build plugin enforces 150 KiB entry and 450 KiB tab
     budgets; 16 frontend unit tests, lint, and the production build pass.
+  - P2-10 clean frontend dependency installation is implemented for review. A
+    fresh `npm ci` reproduced npm hoisting the bundled runtime children of the
+    skipped optional Tailwind `wasm32` package as six extraneous root modules;
+    npm 10.9.3 and 11.6.2 behave the same, and Tailwind 4.3.1 retains the same
+    package structure. The six already-locked versions are now exact build-only
+    development dependencies. A repeated clean install adds 257 packages and
+    `npm run deps:check` exits successfully without extraneous, missing, or
+    invalid dependencies; Frontend quality CI now enforces that check.
   - Follow the audit's phased P0/P1 plan only after team review and approval.
 
 - Post-Phase 6 Operations & Security Hardening.

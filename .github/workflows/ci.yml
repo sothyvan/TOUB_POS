@@ -98,6 +98,9 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
 
+      - name: Verify clean frontend dependency tree
+        run: npm run deps:check
+
       - name: Lint frontend
         run: npm run lint
 
