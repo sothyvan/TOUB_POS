@@ -200,6 +200,8 @@ Update this file after every meaningful implementation change.
     the USD price while the quantity or Add control remains aligned to the right.
   - Added KHR values directly below USD for each cart line total, the Cashier
     subtotal, and Total Amount so the full order remains readable in both currencies.
+  - Aligned the disposable-MySQL Order-flow test with the selector-free cash
+    contract and its backend-calculated USD/KHR change equivalents.
   - Added a forward migration, canonical schema/API/payment documentation, and
     focused policy, validation, calculation, idempotency, and live-flow test
     coverage. Local verification passes with 71 backend unit tests, 9 frontend

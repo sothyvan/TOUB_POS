@@ -388,16 +388,15 @@ test('live order flow enforces trusted totals, stall scope, cash rules, and RBAC
     body: {
       cash_received_usd: 1,
       cash_received_khr: 18450,
-      change_currency: 'khr',
     },
   });
   expectStatus(confirmation, 200);
   assert.equal(confirmation.payload.data.status, 'paid');
   assert.equal(Number(confirmation.payload.data.cash_received_usd), 1);
   assert.equal(Number(confirmation.payload.data.cash_received_khr), 18450);
-  assert.equal(confirmation.payload.data.change_currency, 'khr');
+  assert.equal(confirmation.payload.data.change_currency, null);
   assert.equal(Number(confirmation.payload.data.change_due_khr), 0);
-  assert.equal(confirmation.payload.data.change_due_usd, null);
+  assert.equal(Number(confirmation.payload.data.change_due_usd), 0);
   assert.ok(confirmation.payload.data.completed_at);
 
   const { TelegramDispatchJob } = await import('../src/models/index.js');
