@@ -27,8 +27,9 @@ export default function CategoryOwner({
   onMoveProducts,
   loading,
   error,
+  actionError,
 }) {
-  const { isFormOpen, handleSubmit, handleCancel, handleAddNewClick } =
+  const { isFormOpen, isSaving, handleSubmit, handleCancel, handleAddNewClick } =
     useOwnerForm(categoryForm, { onSave, onCancel });
 
   const [expandedCats, setExpandedCats] = useState({});
@@ -240,6 +241,7 @@ export default function CategoryOwner({
 
   const renderForm = ({ onCancel }) => (
     <form className="grid gap-4.5" onSubmit={handleSubmit}>
+      {actionError ? <Alert variant="danger">{actionError}</Alert> : null}
       <FormInput
         label="Name"
         value={categoryForm.name}
@@ -260,7 +262,11 @@ export default function CategoryOwner({
         ))}
       </FormSelect>
 
-      <FormActions submitLabel={categoryForm.id ? 'Save category' : 'Add category'} onCancel={onCancel} />
+      <FormActions
+        submitLabel={categoryForm.id ? 'Save category' : 'Add category'}
+        onCancel={onCancel}
+        isSaving={isSaving}
+      />
     </form>
   );
 

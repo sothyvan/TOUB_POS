@@ -5,6 +5,7 @@ import Pagination from '../../../components/ui/Pagination';
 import ReceiptModal from '../../payments/components/ReceiptModal';
 import { useSalesReport } from '../../../hooks/useSalesReport';
 import DateRangeDialog from './DateRangeDialog';
+import useNotifications from '../../../shared/notifications/useNotifications';
 
 const kitchenStatusConfig = {
   sent: {
@@ -117,6 +118,7 @@ function escapeCsv(value) {
 }
 
 export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDispatch }) {
+  const notifications = useNotifications();
   const today = localDateValue();
   const [dateFilter, setDateFilter] = useState('today'); // 'today' | 'week' | 'month' | 'custom'
   const [customDateRange, setCustomDateRange] = useState({ startDate: today, endDate: today });
@@ -514,6 +516,8 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
       const updatedOrder = await onRetryTelegramDispatch(order.id);
       if (updatedOrder?.kitchenStatus === 'failed') {
         setKitchenRetryError(`Telegram retry for ${order.orderNo} finished, but the ticket is still failed.`);
+      } else {
+        notifications.success(`Kitchen delivery was retried for ${order.orderNo}.`, 'Ticket retry started');
       }
     } catch (error) {
       setKitchenRetryError(error.message || 'Unable to retry Telegram kitchen ticket.');

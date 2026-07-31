@@ -2,15 +2,23 @@ import { useState } from 'react';
 
 export default function useOwnerForm(form, { onSave, onCancel }) {
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const isFormOpen = Boolean(form.id) || isAddingNew;
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    onSave();
-    setIsAddingNew(false);
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      const saved = await onSave();
+      if (saved !== false) setIsAddingNew(false);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCancel = () => {
+    if (isSaving) return;
     onCancel();
     setIsAddingNew(false);
   };
@@ -20,5 +28,5 @@ export default function useOwnerForm(form, { onSave, onCancel }) {
     setIsAddingNew(true);
   };
 
-  return { isFormOpen, handleSubmit, handleCancel, handleAddNewClick };
+  return { isFormOpen, isSaving, handleSubmit, handleCancel, handleAddNewClick };
 }

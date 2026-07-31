@@ -108,24 +108,27 @@ export function useUsers(canManageUsers, currentUser) {
 
   const toggleUserActive = async (userId) => {
     setActionError(null);
-    if (!canManageUsers) return;
+    if (!canManageUsers) return false;
     if (userId === currentUserId) {
       setActionError('You cannot disable the account currently logged in.');
-      return;
+      return false;
     }
     const target = rawUsers.find((u) => u.id === userId);
     if (target && !canManageUserRole(currentUser, target.role)) {
       setActionError('You do not have permission to manage this role.');
-      return;
+      return false;
     }
     if (target) {
       try {
         await api.users.save({ ...target, active: !target.active });
         await fetchUsers(false);
+        return true;
       } catch(err) {
         setActionError(err.message || 'Failed to toggle user status.');
+        return false;
       }
     }
+    return false;
   };
 
   const deleteUser = async (userId) => {

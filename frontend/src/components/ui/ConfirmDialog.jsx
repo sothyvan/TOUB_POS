@@ -33,6 +33,7 @@ export default function ConfirmDialog({
   overlayClassName,
   panelClassName = '',
   isBusy = false,
+  busyLabel = 'Processing...',
   isConfirmDisabled = false,
   onCancel,
   onConfirm,
@@ -76,7 +77,7 @@ export default function ConfirmDialog({
             variant={confirmTone}
             onClick={onConfirm}
           >
-            {isBusy ? 'Processing...' : confirmLabel}
+            {isBusy ? busyLabel : confirmLabel}
           </Button>
         </div>
       </div>

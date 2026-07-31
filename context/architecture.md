@@ -22,6 +22,7 @@
 - `frontend/src/features/` — Feature-owned UI grouped by business capability: authentication, cashier sales, catalog, management shell, payments, reports, staff, and stalls.
 - `frontend/src/shared/layout/` — Cross-feature page shells and top-level layout components.
 - `frontend/src/shared/theme/` — Persistent light/dark theme state and the shared theme toggle.
+- `frontend/src/shared/notifications/` — Application-wide, accessible transient action feedback with a bounded queue and domain-neutral notification API.
 - `frontend/src/components/ui/` — Reusable, domain-neutral UI primitives such as buttons, forms, dialogs, badges, pagination, and loading states.
 - `frontend/src/pages/` — Remaining route-level Cashier and Owner/Manager orchestration pages. The login route is owned by `features/auth/pages/`.
 - `frontend/src/hooks/`, `services/`, and `utils/` — Shared state/data hooks, Axios/Socket.IO clients, and domain-neutral helpers used across features.

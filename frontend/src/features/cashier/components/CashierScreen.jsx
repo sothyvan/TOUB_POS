@@ -11,6 +11,7 @@ import LoadingState from '../../../components/ui/LoadingState';
 import Pagination from '../../../components/ui/Pagination';
 import TabPills from '../../../components/ui/TabPills';
 import { getStorageItem, setStorageItem } from '../../../utils/storage';
+import useNotifications from '../../../shared/notifications/useNotifications';
 
 const CASHIER_MENU_VIEW_KEY = 'toub-cashier-menu-view';
 
@@ -95,6 +96,7 @@ export default function CashierScreen({
   isCheckingBackend,
   assignedStall,
 }) {
+  const notifications = useNotifications();
   const [retryingKitchenOrderId, setRetryingKitchenOrderId] = useState(null);
   const [kitchenRetryError, setKitchenRetryError] = useState('');
   const [isMobileMenu, setIsMobileMenu] = useState(() => window.matchMedia('(max-width: 639px)').matches);
@@ -166,6 +168,8 @@ export default function CashierScreen({
       const updatedOrder = await onRetryTelegramDispatch(order.id);
       if (updatedOrder?.kitchenStatus === 'failed') {
         setKitchenRetryError(`Retry for ${order.orderNo} finished, but the kitchen ticket is still failed.`);
+      } else {
+        notifications.success(`Kitchen delivery was retried for ${order.orderNo}.`, 'Ticket retry started');
       }
     } catch (error) {
       setKitchenRetryError(error.message || 'Unable to retry kitchen ticket.');
