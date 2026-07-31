@@ -69,3 +69,20 @@ export function getRateLimitStore(limiterName) {
     prefix: `${configuration.redisPrefix}:${limiterName}:`,
   });
 }
+
+export async function closeRateLimitStore() {
+  const client = redisClient;
+  redisClient = null;
+  rateLimitConfiguration = null;
+
+  if (!client?.isOpen) {
+    return;
+  }
+
+  try {
+    await client.quit();
+  } catch (error) {
+    writeStoreEvent('rate_limit_store_close_error', error);
+    client.destroy?.();
+  }
+}

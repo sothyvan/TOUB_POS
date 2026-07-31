@@ -1098,21 +1098,33 @@ Update this file after every meaningful implementation change.
     Redis alongside MySQL.
   - Final P1-12 closure requires setting and verifying the exact hop count
     through the selected production hosting provider's real proxy path.
-  - P1-13 current-tree repository and backup controls are implemented on
-    `p1-13-sql-dump-security`. The unverified operational SQL dump is removed,
+  - P1-13 repository and backup controls are implemented and merged. The
+    unverified operational SQL dump is removed,
     generated backup formats are ignored, and CI permits SQL only in canonical
     migration and course-document locations.
   - Automated backups now keep plaintext only in an OS temporary directory,
     retain an AES-256 GPG-encrypted `.sql.gpg` artifact, use a separate Actions
     passphrase secret, and expire uploaded artifacts after 14 days. Policy and
     backup regression tests verify path blocking and plaintext cleanup.
-  - Final P1-13 closure is administrator/team work: delete previous plaintext
-    Actions artifacts, reset affected account credentials and legacy terminal
-    registrations, perform the documented coordinated Git-history rewrite,
-    require every teammate to re-clone, and pass an encrypted restore drill.
-  - P1-14 readiness/liveness separation and graceful shutdown is the next code
-    priority only after the P1-13 pull request passes and the manual exposure
-    response is scheduled.
+  - The team reports completing P1-13 backup-secret, artifact, access-rotation,
+    and restore actions. Local verification still finds the removed dump in
+    `origin/main` history and several remote feature refs, so the coordinated
+    all-ref history rewrite and fresh-clone verification remain open.
+  - P1-14 readiness/liveness separation and graceful shutdown is implemented on
+    `p1-14-readiness-graceful-shutdown`. `/api/health/live` is process-only;
+    `/api/health/ready` and compatibility `/api/health` require ready lifecycle
+    state plus a bounded successful MySQL probe.
+  - SIGTERM/SIGINT now enters drain mode, rejects new business work, waits for
+    background runs, closes Socket.IO/HTTP, then closes Redis and Sequelize
+    within a validated grace period. Repeated signals are idempotent and timeout
+    forces remaining HTTP connections closed.
+  - Added database-free lifecycle/shutdown coverage. Backend integration CI now
+    stops disposable MySQL to require readiness `503` with liveness `200`, then
+    requires a completed graceful-shutdown event after SIGTERM.
+  - Final P1-14 closure requires its first pull-request CI run and production
+    host health/termination settings to use the documented endpoints/timeouts.
+  - P2-1 production-safe error responses and structured redacted diagnostics is
+    the next code priority after P1-14 is merged and deployment-verified.
   - Follow the audit's phased P0/P1 plan only after team review and approval.
 
 - Post-Phase 6 Operations & Security Hardening.

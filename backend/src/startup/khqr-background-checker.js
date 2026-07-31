@@ -8,6 +8,7 @@ const DEFAULT_BATCH_SIZE = 10;
 
 let timerId = null;
 let isChecking = false;
+let activeCheckPromise = null;
 
 function parsePositiveIntegerEnv(name, fallback) {
   const rawValue = process.env[name];
@@ -131,25 +132,34 @@ export function startKhqrBackgroundChecker() {
 
   const intervalMs = parsePositiveIntegerEnv('KHQR_BACKGROUND_CHECK_INTERVAL_MS', DEFAULT_INTERVAL_MS);
 
-  timerId = setInterval(() => {
-    runKhqrBackgroundCheckOnce().catch((error) => {
+  const requestCheck = () => {
+    if (activeCheckPromise) {
+      return activeCheckPromise;
+    }
+
+    activeCheckPromise = runKhqrBackgroundCheckOnce().catch((error) => {
       console.error('[khqr-background-checker] Unexpected run failure:', error);
+    }).finally(() => {
+      activeCheckPromise = null;
     });
-  }, intervalMs);
+    return activeCheckPromise;
+  };
+
+  timerId = setInterval(requestCheck, intervalMs);
 
   timerId.unref?.();
   console.info(`[khqr-background-checker] Started. Interval: ${intervalMs}ms.`);
 
-  runKhqrBackgroundCheckOnce().catch((error) => {
-    console.error('[khqr-background-checker] Initial run failed:', error);
-  });
+  requestCheck();
 }
 
-export function stopKhqrBackgroundChecker() {
-  if (!timerId) {
-    return;
+export async function stopKhqrBackgroundChecker() {
+  if (timerId) {
+    clearInterval(timerId);
+    timerId = null;
   }
 
-  clearInterval(timerId);
-  timerId = null;
+  if (activeCheckPromise) {
+    await activeCheckPromise;
+  }
 }

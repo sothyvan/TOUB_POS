@@ -40,6 +40,7 @@
 - `backend/src/repositories/report.repository.js` — Owner-scoped raw SQL aggregations and paginated Sequelize ledger access.
 - `backend/src/utils/report-range.util.js` — Validated business-local date boundaries, comparison ranges, timezone conversion, and trend granularity.
 - `backend/src/startup/` — Automatic boot-time maintenance and process-local workers started by `server.js`.
+- `backend/src/startup/graceful-shutdown.js` — Bounded SIGTERM/SIGINT drain orchestration for HTTP, Socket.IO, background workers, Redis, and Sequelize.
 - `backend/src/database/` — Ordered Umzug migrations, the immutable current-schema baseline, and the `schema_migrations` ledger integration.
 - `backend/src/scripts/dev/` — Manually invoked development operations such as the Ngrok/Telegram webhook tunnel.
 - `backend/tests/` — Node test-runner coverage. Unit tests are database-free; `*.live.test.js` suites require the local API/MySQL and own cleanup of temporary records.
@@ -243,6 +244,24 @@
 
 - **Backend**: All errors are caught by a global Express error handler and mapped to a standard JSON format: `{ success: false, code: 400, message: "..." }`.
 - **Frontend**: The `services/api.js` layer intercepts failing requests and surfaces them to the UI via toast notifications or inline error states, preventing silent failures.
+
+## Runtime Health And Shutdown
+
+- `GET /api/health/live` reports only that the Node process can answer HTTP. It
+  does not check MySQL and is suitable for a hosting liveness/restart probe.
+- `GET /api/health/ready` and compatibility path `GET /api/health` return `200`
+  only after startup completes and MySQL answers within
+  `READINESS_DATABASE_TIMEOUT_MS`. Starting, draining, timeout, and database
+  failure return sanitized `503` responses with caching disabled.
+- On SIGTERM/SIGINT, the application phase changes to `draining` before cleanup.
+  Health routes remain available, while new business requests receive
+  `503 SERVICE_DRAINING` with `Connection: close`.
+- Shutdown stops and awaits KHQR/Telegram worker runs, closes Socket.IO and the
+  HTTP listener, closes the shared Redis limiter client, and closes Sequelize.
+  `SHUTDOWN_GRACE_PERIOD_MS` bounds the sequence; after the deadline remaining
+  HTTP connections are forced closed and the process exits unsuccessfully.
+- The hosting platform termination allowance must be longer than the configured
+  application grace period. Readiness, not liveness, controls traffic routing.
 
 ## Risk Register
 

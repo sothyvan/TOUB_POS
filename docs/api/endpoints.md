@@ -26,14 +26,26 @@ Auth/security notes:
 
 ## Health
 
-| Method | Path           | Auth | Description       |
-|--------|----------------|------|-------------------|
-| GET    | `/health`      | No   | Server liveness check |
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/health` | No | Compatibility alias for readiness |
+| GET | `/health/live` | No | Node process liveness; does not check MySQL |
+| GET | `/health/ready` | No | Startup/drain state plus bounded MySQL readiness check |
 
-**Response**
+**Ready response (`200`)**
 ```json
-{ "success": true, "message": "Toub POS API is healthy." }
+{
+  "success": true,
+  "status": "ready",
+  "phase": "ready",
+  "checks": { "database": "available" }
+}
 ```
+
+Readiness returns `503` with `status: "not_ready"` while startup is incomplete,
+shutdown is draining, MySQL rejects the probe, or the probe exceeds
+`READINESS_DATABASE_TIMEOUT_MS`. Liveness remains `200` during dependency
+failure so hosting can distinguish a live process from one ready for traffic.
 
 ---
 

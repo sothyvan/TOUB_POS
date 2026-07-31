@@ -4,6 +4,7 @@ import {
   parseRateLimitRedisUrl,
   parseTrustProxyHops,
 } from './rate-limit.config.js';
+import { getLifecycleConfiguration } from './lifecycle.config.js';
 
 const DEFAULT_DEV_PLATFORM_ADMIN = {
   username: 'platform_admin',
@@ -158,6 +159,12 @@ export function validateEnvironment() {
     } catch (error) {
       errors.push(error.message);
     }
+  }
+
+  try {
+    getLifecycleConfiguration();
+  } catch (error) {
+    errors.push(error.message);
   }
 
   try {

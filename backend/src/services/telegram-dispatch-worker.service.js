@@ -223,9 +223,13 @@ export function startTelegramDispatchWorker() {
   requestTelegramDispatchRun();
 }
 
-export function stopTelegramDispatchWorker() {
+export async function stopTelegramDispatchWorker() {
   if (timerId) {
     clearInterval(timerId);
     timerId = null;
+  }
+
+  if (wakePromise) {
+    await wakePromise;
   }
 }

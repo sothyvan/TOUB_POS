@@ -2,11 +2,19 @@ import 'dotenv/config';
 import { createServer } from 'node:http';
 import bcrypt from 'bcryptjs';
 import { getPlatformAdminSeedConfig, validateEnvironment } from './config/env.js';
+import { getLifecycleConfiguration } from './config/lifecycle.config.js';
+import {
+  markApplicationDraining,
+  markApplicationReady,
+  markApplicationStarting,
+} from './services/application-lifecycle.service.js';
+import { createGracefulShutdown } from './startup/graceful-shutdown.js';
 
 const PORT = process.env.PORT || 3000;
 
 async function startServer() {
   try {
+    markApplicationStarting();
     validateEnvironment();
 
     const { default: sequelize, ensureDatabaseExists } = await import('./config/db.js');
@@ -14,16 +22,16 @@ async function startServer() {
       assertDatabaseMigrationsCurrent,
       migrateDatabase,
     } = await import('./database/migrator.js');
-    const { startKhqrBackgroundChecker } = await import(
+    const { startKhqrBackgroundChecker, stopKhqrBackgroundChecker } = await import(
       './startup/khqr-background-checker.js'
     );
-    const { startTelegramDispatchWorker } = await import(
+    const { startTelegramDispatchWorker, stopTelegramDispatchWorker } = await import(
       './services/telegram-dispatch-worker.service.js'
     );
-    const { initializeWebSocketServer } = await import(
+    const { initializeWebSocketServer, closeWebSocketServer } = await import(
       './services/websocket.service.js'
     );
-    const { initializeRateLimitStore } = await import(
+    const { initializeRateLimitStore, closeRateLimitStore } = await import(
       './services/rate-limit-store.service.js'
     );
 
@@ -78,13 +86,56 @@ async function startServer() {
     // Start HTTP + WebSocket server
     const httpServer = createServer(app);
     initializeWebSocketServer(httpServer);
-
-    httpServer.listen(PORT, () => {
-      console.log(`[server] Toub POS API running on http://localhost:${PORT}`);
-      startKhqrBackgroundChecker();
-      startTelegramDispatchWorker();
+    const { shutdownGracePeriodMs } = getLifecycleConfiguration();
+    const shutdown = createGracefulShutdown({
+      httpServer,
+      gracePeriodMs: shutdownGracePeriodMs,
+      markDraining: markApplicationDraining,
+      stopBackgroundWorkers: () => Promise.all([
+        stopKhqrBackgroundChecker(),
+        stopTelegramDispatchWorker(),
+      ]),
+      closeWebSockets: closeWebSocketServer,
+      closeRateLimitStore,
+      closeDatabase: () => sequelize.close(),
     });
+
+    let signalReceived = false;
+    const handleShutdownSignal = (signal) => {
+      if (signalReceived) {
+        return;
+      }
+      signalReceived = true;
+      shutdown(signal)
+        .then(() => process.exit(0))
+        .catch((error) => {
+          process.stderr.write(`${JSON.stringify({
+            level: 'error',
+            event: 'shutdown_failed',
+            signal,
+            code: error?.code || 'SHUTDOWN_ERROR',
+          })}\n`);
+          process.exit(1);
+        });
+    };
+    process.once('SIGTERM', () => handleShutdownSignal('SIGTERM'));
+    process.once('SIGINT', () => handleShutdownSignal('SIGINT'));
+
+    await new Promise((resolve, reject) => {
+      const handleListenError = (error) => reject(error);
+      httpServer.once('error', handleListenError);
+      httpServer.listen(PORT, () => {
+        httpServer.off('error', handleListenError);
+        resolve();
+      });
+    });
+
+    markApplicationReady();
+    console.log(`[server] Toub POS API running on http://localhost:${PORT}`);
+    startKhqrBackgroundChecker();
+    startTelegramDispatchWorker();
   } catch (err) {
+    markApplicationDraining();
     console.error('[server] Failed to start server:', err);
     process.exit(1);
   }

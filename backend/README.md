@@ -67,6 +67,8 @@ Do not run this seeder against production or any live merchant database.
 | `NODE_ENV` | Environment mode | `development` |
 | `FRONTEND_ORIGIN` | Allowed frontend origin | `http://localhost:5173` |
 | `REPORT_TIMEZONE_OFFSET` | Business-local offset used by sales report ranges and hourly buckets | `+07:00` |
+| `READINESS_DATABASE_TIMEOUT_MS` | Maximum duration of the MySQL readiness probe | `2000` |
+| `SHUTDOWN_GRACE_PERIOD_MS` | Maximum time to drain requests/workers and close dependencies after SIGTERM/SIGINT | `15000` |
 | `DB_HOST` | MySQL host | `localhost` |
 | `DB_PORT` | MySQL port | `3306` |
 | `DB_USER` | MySQL user | `root` |
@@ -204,7 +206,16 @@ All endpoints are prefixed with `/api`.
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/health` | No | Server health check |
+| GET | `/api/health` | No | Compatibility readiness check |
+| GET | `/api/health/live` | No | Process liveness check |
+| GET | `/api/health/ready` | No | Dependency-aware readiness check |
+
+Configure hosting liveness against `/api/health/live` and traffic readiness
+against `/api/health/ready` (or compatibility `/api/health`). Readiness performs
+a bounded MySQL probe and returns `503` during startup, dependency failure, or
+shutdown drain. Set the hosting termination allowance longer than
+`SHUTDOWN_GRACE_PERIOD_MS`; the API needs that window to finish active requests
+and close workers, Socket.IO, Redis, and Sequelize after SIGTERM.
 
 ### Auth
 

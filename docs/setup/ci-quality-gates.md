@@ -8,15 +8,15 @@ installation through `npm ci`.
 
 | Check | What it blocks |
 | --- | --- |
-| `CI policy` | Broken or overly broad dependency-audit exception logic |
+| `CI policy` | Broken dependency-audit exceptions, tracked database dumps, unapproved SQL paths, or unsafe backup regressions |
 | `Backend quality` | Backend lint errors, warning-count increases, unit-test failures, and unapproved high/critical production dependency findings |
 | `Frontend quality` | Frontend lint/build failures and unapproved high/critical production dependency findings |
 | `Clean database migration` | Migrations that cannot build a clean MySQL 8.4 database or leave migration status inconsistent |
-| `Backend integration` | Failures in live authentication, credential-policy, role/stall isolation, checkout, idempotency, payment, and order-history behavior |
+| `Backend integration` | Failures in live authentication, credential-policy, role/stall isolation, checkout, idempotency, payment, order history, dependency-aware readiness, or graceful shutdown |
 | `Browser E2E` | Regressions in management authentication/session restoration, terminal registration, Cashier PIN login, cash checkout, receipts, and browser route guards |
 
-The backend currently has 65 known lint warnings. CI uses
-`--max-warnings 65`, so existing warnings remain visible and any increase fails
+The backend currently has 64 known lint warnings. CI uses
+`--max-warnings 64`, so existing warnings remain visible and any increase fails
 the check. Reducing the warning baseline is encouraged.
 
 ## Dependency Audit Policy
@@ -58,7 +58,7 @@ Run these before opening a pull request:
 ```bash
 cd backend
 npm ci
-npm run lint -- --max-warnings 65
+npm run lint -- --max-warnings 64
 npm test
 
 cd ../frontend
@@ -80,11 +80,13 @@ node scripts/ci/check-npm-audit.mjs frontend
 The clean-migration job uses an isolated MySQL service in GitHub Actions and
 never connects to Aiven or uses production credentials.
 
-The backend-integration job also uses an isolated MySQL 8.4 service. It applies
+The backend-integration job also uses isolated MySQL 8.4 and Redis services. It applies
 the migrations, loads deterministic demo fixtures, starts the API with
 KHQR/background payment checks and Telegram dispatch disabled, and runs
-`npm run test:live`. A redacted backend log is retained for seven days only
-when the job fails.
+`npm run test:live`. It then stops MySQL and requires readiness to return `503`
+while liveness remains `200`, sends SIGTERM, and requires the process to log a
+completed graceful shutdown. A redacted backend log is retained for seven days
+only when the job fails.
 
 The live suite is intentionally not part of the local-equivalent commands
 above because it mutates its configured database. To run it locally, use a
