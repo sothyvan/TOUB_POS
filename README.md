@@ -28,7 +28,7 @@ TOUB_POS/
 
 ### Prerequisites
 
-- Node.js >= 18
+- Node.js 22.13 or newer
 - MySQL >= 8
 - npm
 
@@ -37,7 +37,7 @@ TOUB_POS/
 ```bash
 cd backend
 cp .env.example .env
-npm install
+npm ci
 npm run db:migrate
 npm run dev
 ```
@@ -52,7 +52,7 @@ The API runs at `http://localhost:3000`.
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
@@ -105,8 +105,9 @@ http://localhost:3000/api
 ```
 
 See the [`docs/` index](./docs/README.md), [`backend/README.md`](./backend/README.md),
-and [`docs/api/endpoints.md`](./docs/api/endpoints.md) for current project and
-endpoint documentation.
+[`production runbook`](./docs/setup/production-runbook.md), and
+[`docs/api/endpoints.md`](./docs/api/endpoints.md) for current project,
+deployment, and endpoint documentation.
 
 ---
 

@@ -16,11 +16,9 @@ Update this file after every meaningful implementation change.
   - Multiple Stall Product Assignment (choose 0 to many stalls per item) — **COMPLETE** ✅
   - ImageKit product photo upload integration — **COMPLETE** ✅
   - Strict Stall-Scoped Cashier Roster & Device Registration — **COMPLETE** ✅
-  - Programmatic Ngrok Tunnel & Webhook Auto-Registration — **COMPLETE** ✅
+  - Development-only Ngrok helper for Telegram webhook testing — **AVAILABLE**
   - Webgroup Migration Self-Healing & Done Callback updates — **COMPLETE** ✅
-  - WebSocket server for KHQR live notification — **COMPLETE** ✅
-  - KHQR paid-status check → Telegram dispatch — **COMPLETE** ✅
-  - KHQR background status checker — **COMPLETE** ✅
+  - Historical KHQR WebSocket/status-check components — **RETAINED BUT DISABLED**
   - Telegram ticket status and retry — **COMPLETE** ✅
 - Post-Phase 6 Operations & Security Hardening — **IN PROGRESS**
   - Owner/Manager Operations Watch for KHQR and Telegram ticket issues — **COMPLETE** ✅
@@ -218,6 +216,22 @@ Update this file after every meaningful implementation change.
     rejection, isolated import verification, and temporary plaintext cleanup.
   - The Owner/team approved a 24-hour RPO and 4-hour RTO. P2-7 closure now only
     requires evidence from the first successful workflow restore drill.
+
+- **Implemented production audit P2-11 documentation alignment**:
+  - Added `docs/setup/production-runbook.md` as the canonical source for release
+    boundaries, production configuration, migration order, health probes,
+    smoke tests, monitoring, rollback, and go-live decisions.
+  - Reclassified the course project report as a historical learning artifact
+    and removed it from the authoritative-document list rather than rewriting
+    its original implementation narrative.
+  - Updated active setup guidance to use Node.js 22.13+, locked `npm ci`
+    installs, and managed migrations instead of importing the readable SQL
+    schema directly.
+  - Corrected active authentication and database references to describe
+    short-lived access JWTs, rotating HttpOnly refresh sessions, and the lack
+    of a current Bakong payment webhook.
+  - Recorded P2-10 as merged and removed stale current-phase and tech-debt
+    statements that contradicted the implemented credential/validation model.
 
 - **Safely suspended KHQR payment processing**:
   - Added explicit opt-in `KHQR_ENABLED` and `VITE_KHQR_ENABLED` feature flags, both defaulting to `false`.
@@ -1275,7 +1289,7 @@ Update this file after every meaningful implementation change.
     the 357.95 kB Recharts dashboard, so the production build no longer emits a
     chunk warning. A tested build plugin enforces 150 KiB entry and 450 KiB tab
     budgets; 16 frontend unit tests, lint, and the production build pass.
-  - P2-10 clean frontend dependency installation is implemented for review. A
+  - P2-10 clean frontend dependency installation is merged. A
     fresh `npm ci` reproduced npm hoisting the bundled runtime children of the
     skipped optional Tailwind `wasm32` package as six extraneous root modules;
     npm 10.9.3 and 11.6.2 behave the same, and Tailwind 4.3.1 retains the same
@@ -1283,6 +1297,14 @@ Update this file after every meaningful implementation change.
     development dependencies. A repeated clean install adds 257 packages and
     `npm run deps:check` exits successfully without extraneous, missing, or
     invalid dependencies; Frontend quality CI now enforces that check.
+  - P2-11 canonical production documentation is implemented on
+    `p2-11-documentation-alignment`. Current setup and deployment guidance now
+    routes through `docs/setup/production-runbook.md`; the course report is
+    clearly historical, and active auth/payment/database statements are aligned
+    with the code. Relative links across 28 active Markdown files, repository
+    policy checks, 71 backend unit tests, backend lint at the 61-warning existing
+    baseline, 16 frontend unit tests, the clean dependency check, frontend
+    lint/build, and `git diff --check` pass.
   - Follow the audit's phased P0/P1 plan only after team review and approval.
 
 - Post-Phase 6 Operations & Security Hardening.
@@ -1323,7 +1345,7 @@ Record of key architectural and product decisions made, with rationale.
 | 4 | **Owner-managed business KHR rate with Order snapshots** | A live API adds an external dependency, while a frontend constant is not auditable. Only the Owner may update the bounded rate; each new Order freezes it for settlement, receipts, and reports. |
 | 5 | **15-minute access JWT + 8-hour refresh session** | Limits XSS token exposure while keeping a Cashier authenticated for one normal shift through rotation. |
 | 6 | **Cart state in `localStorage`** (not server) | Reduces backend round-trips during item selection. Cart is ephemeral — only persisted to DB at checkout. Acceptable trade-off for speed. |
-| 7 | **PIN validated client-side** (Phase 1) | Pragmatic shortcut for the initial build. Fast UX, no extra API call per login. Flagged as tech debt — must move server-side before production. |
+| 7 | **Cashier PIN validated by the backend** | The registered terminal sends the selected Cashier and PIN to `/api/auth/pin`; the backend verifies the bcrypt hash, role, assignment, device, and Stall before issuing a session. |
 | 8 | **Telegram Bot for kitchen display** (not custom screen) | Eliminates the need for a dedicated kitchen hardware/display build. Cooks already use Telegram. Saves significant scope while delivering real-time order relay. |
 | 9 | **Customer RBAC: Owner / Manager / Cashier** | Separates full business control from day-to-day operations. Each customer business has one Owner; extra supervisors should be Managers; Cashier remains stall-scoped to POS sales. |
 | 10 | **platform_admin is separate from customer roles** | TouB POS needs a developer/operator bootstrap role to create business Owners. It must stay outside customer RBAC so platform support access does not blur with Owner, Manager, or Cashier permissions. |
@@ -1342,7 +1364,7 @@ Intentional shortcuts taken during development that must be resolved before prod
 |---|------|----------|----------|
 | 1 | **Cashier PIN backend login missing** | `LoginPage.jsx` / backend auth routes | ✅ Resolved — integrated via `/api/auth/pin` |
 | 2 | **Frontend hooks use `localStorage` mock** | `useProducts`, `useOrders`, `useUsers` | ✅ Resolved — fully integrated with backend endpoints |
-| 3 | **No input sanitization on order modifiers** | `order_items.notes` | 🟡 Medium — add max-length enforcement and strip dangerous characters before DB write |
+| 3 | **Order modifier validation** | `order_items.notes` | ✅ Resolved — shared request validation trims notes, rejects invalid types/unknown fields, and enforces the database-aware maximum length |
 | 4 | **No auth endpoint rate limiting** | `POST /api/auth/login` / `POST /api/auth/pin` | ✅ Resolved — added `express-rate-limit` |
 | 5 | **Seed owner password is a placeholder hash** | `docs/database/schema.sql` | 🔴 High — generate real bcrypt hash and store securely before any live deployment |
 | 6 | **KHQR background checker is process-local** | `startup/khqr-background-checker.js` | Deferred — KHQR is disabled. Reassess worker/queue design as part of any approved replacement provider implementation. |

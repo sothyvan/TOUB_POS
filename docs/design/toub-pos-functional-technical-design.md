@@ -255,7 +255,8 @@ sequenceDiagram
 3. Backend validates the device token and active Stall.
 4. Backend validates Cashier role, active state, Stall assignment, and bcrypt PIN.
 5. Backend updates last-seen/last-Cashier metadata.
-6. Backend issues an eight-hour JWT containing `device_id` and `stall_id`.
+6. Backend issues a short-lived access JWT containing `device_id` and
+   `stall_id`, plus a rotating refresh session in a Secure, HttpOnly cookie.
 7. Cashier enters `/cashier`.
 
 ```mermaid

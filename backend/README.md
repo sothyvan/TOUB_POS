@@ -1,6 +1,6 @@
 # Toub POS Backend
 
-Node.js + Express REST API for TouB POS. The backend owns authentication, RBAC, products, stalls, staff assignments, orders, cash confirmation, KHQR status checks, cashier-scoped WebSocket payment notifications, audit logs, and report data.
+Node.js + Express REST API for TouB POS. The backend owns authentication, RBAC, products, stalls, staff assignments, orders, cash confirmation, cashier-scoped WebSocket notifications, Telegram dispatch, audit logs, and report data. Historical KHQR records and guarded endpoints remain, but KHQR processing is suspended.
 
 ---
 
@@ -8,14 +8,14 @@ Node.js + Express REST API for TouB POS. The backend owns authentication, RBAC, 
 
 ### Prerequisites
 
-- Node.js >= 18
+- Node.js 22.13 or newer
 - MySQL >= 8
 
 ### Install & Run
 
 ```bash
 cp .env.example .env
-npm install
+npm ci
 npm run db:migrate
 npm run dev
 ```

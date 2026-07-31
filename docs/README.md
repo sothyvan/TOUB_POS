@@ -15,6 +15,8 @@ implementation records.
    executable [schema.sql](database/schema.sql) for data design.
 5. Check [progress-tracker.md](../context/progress-tracker.md) for current
    implementation status and next work.
+6. Use the [Production Runbook](setup/production-runbook.md) for deployment and
+   operational checks.
 
 ## Authoritative Documents
 
@@ -34,8 +36,8 @@ implementation records.
 | Executable course SQL | [schema.sql](database/schema.sql) and [queries.sql](database/queries.sql) |
 | Entity relationship diagram | [ERD](database/erd.md) |
 | Local setup | [Getting Started](setup/getting-started.md) |
+| Production deployment and operations | [Production Runbook](setup/production-runbook.md) |
 | Pull-request quality gates | [CI Quality And Security Gates](setup/ci-quality-gates.md) |
-| Final-project report | [TouB POS Project Report](reports/TOUB_POS_Project_Report.md) |
 
 ## Source Of Truth
 
@@ -47,6 +49,13 @@ implementation records.
   steps.
 - KHQR is suspended and its legacy generator SDK has been removed. The current
   payment document is `docs/design/payment-flow.md`.
+
+## Historical Reports
+
+The [TouB POS Project Report](reports/TOUB_POS_Project_Report.md) records the
+course project's design and earlier implementation stages. It intentionally
+contains superseded KHQR, webhook, and Ngrok descriptions and is not a setup or
+deployment guide. Use the authoritative documents above for current behavior.
 
 ## Archive
 

@@ -1,11 +1,17 @@
-  # Toub POS — Cross-Disciplinary Project Report
+# Toub POS — Cross-Disciplinary Project Report
+
+> **Historical document — not current deployment guidance.** This report
+> preserves the course project's earlier goals and implementation narrative,
+> including superseded KHQR, Bakong webhook, Ngrok, authentication, and
+> production-readiness claims. For the implemented system, use the
+> [documentation index](../README.md), [payment flow](../design/payment-flow.md),
+> and [production runbook](../setup/production-runbook.md). Cash is the only
+> enabled checkout method; KHQR cannot be enabled with configuration alone.
 
 **Course:** Cross-Disciplinary Project (Year 2)
 **Institution:** Cambodian Academy of Digital Technology (CADT)
 **Project Name:** Toub POS — Point of Sale System
 **Technology Stack:** ReactJS · Node.js/Express · MySQL · WebSocket · Telegram Bot API
-
-> **Current payment status:** The report records the KHQR integration that the team implemented and tested. Automatic KHQR checkout is now disabled by default because the available Open API polling model is not suitable for normal POS volume. Cash checkout remains active, and the KHQR code/data model is retained for a future approved merchant provider.
 
 ---
 

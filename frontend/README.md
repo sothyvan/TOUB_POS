@@ -8,12 +8,12 @@ React + Vite web application for the TouB POS management portal and cashier work
 
 ### Prerequisites
 
-- Node.js >= 18
+- Node.js 22.13 or newer
 
 ### Install & Run
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
