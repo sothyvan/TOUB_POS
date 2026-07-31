@@ -36,6 +36,15 @@ jobs:
       - name: Test dependency audit policy
         run: node --test scripts/ci/check-npm-audit.test.mjs
 
+      - name: Test repository data policy
+        run: node --test scripts/ci/check-repository-data.test.mjs
+
+      - name: Reject tracked database dumps
+        run: node scripts/ci/check-repository-data.mjs
+
+      - name: Test encrypted backup handling
+        run: python3 -m unittest scripts/ci/test_backup_database.py
+
   backend:
     name: Backend quality
     runs-on: ubuntu-latest

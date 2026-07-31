@@ -699,11 +699,14 @@ containing users, stalls, products, or orders.
 
 ### 18.1 Minimum Final-Project Practice
 
-- Export a timestamped MySQL backup before the final demo.
+- Create a timestamped encrypted MySQL backup with the repository-root
+  `backup_database.py` command before the final demo.
 - Keep one clean-schema export and one demo-data export.
-- Store backups outside the running database host.
+- Store encrypted backups outside the running database host and outside Git.
 - Test importing the backup into a separate database.
-- Do not include real passwords, tokens, or provider secrets in shared backups.
+- Never share plaintext backups. Follow
+  `docs/security/database-backup-security.md` for encryption, access, restore,
+  and retention rules.
 
 ### 18.2 Suggested Recovery Test
 

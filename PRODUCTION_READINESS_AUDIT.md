@@ -257,10 +257,12 @@ These controls should be preserved during remediation.
 
 - **Severity:** P1
 - **Category:** Privacy / repository hygiene
+- **Status:** Current-tree and future-backup controls implemented on 2026-07-31. Final closure requires deleting historical plaintext Actions artifacts, rotating affected credentials/device registrations, rewriting shared Git history, and verifying from a fresh clone.
 - **Business impact:** If any row is real, repository readers receive password/PIN hashes, user records, order history, audit data, Telegram routing identifiers, and historical KHQR payloads. Even demo dumps normalize unsafe backup handling.
 - **Evidence:** `backups/toubpos_db_backup_2026-07-13_23-10-21.sql:57` contains audit rows; `:166` contains order/payment records and QR payloads. The dump also contains user and Telegram-related tables.
 - **Recommended remediation:** Establish whether the dump is synthetic. If not provably synthetic, remove it from Git history, rotate affected credentials/identifiers, and document the incident. Store encrypted backups outside source control and ignore dump files.
 - **Acceptance criteria:** Secret/history scanning finds no live data in current history; backup storage is encrypted and access-controlled; a documented synthetic fixture replaces any needed demo data.
+- **Implementation:** Removed the unverified dump from the current tree, ignored generated dump/backup formats, and added a CI allowlist that permits SQL only in the canonical migration and course-document locations. Automated backups now create plaintext only in an operating-system temporary directory, encrypt the result with GPG AES-256 using a separate protected passphrase, retain only `.sql.gpg`, and upload the encrypted artifact for 14 days with read-only workflow permission. Regression tests verify the path policy and plaintext cleanup. `docs/security/database-backup-security.md` records the exposure classes, rotation decisions, old-artifact deletion, restore procedure, and administrator-only history rewrite. The current Git ancestry still contains the old object until that coordinated rewrite is completed.
 - **Estimated size:** M, potentially L if history/credential rotation is required
 - **Dependencies:** Data owner determination; repository visibility; secret rotation authority.
 

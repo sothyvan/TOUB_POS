@@ -1,110 +1,152 @@
-"""
-TOUB POS — Database Backup Script
-----------------------------------
-Reads your DB credentials directly from backend/.env,
-then runs mysqldump to produce a timestamped .sql backup file.
+"""Create an encrypted TouB POS MySQL backup outside source control.
 
-Usage:
-    python backup_database.py
-
-Requirements:
-    - Python 3.x (stdlib only, no pip installs needed)
-    - mysqldump installed  → sudo apt install mysql-client
+The script reads settings from process environment variables first and falls
+back to backend/.env for local operations. It writes the mysqldump plaintext to
+an operating-system temporary directory and keeps only an AES-256 encrypted
+``.sql.gpg`` artifact under ``backups/``.
 """
 
+import datetime
 import os
 import subprocess
-import datetime
+import tempfile
 
-# ── 1. Find and read backend/.env ────────────────────────────────────────────
 
-# This script lives in the project root, so .env is one folder down.
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-ENV_FILE   = os.path.join(SCRIPT_DIR, "backend", ".env")
+ENV_FILE = os.path.join(SCRIPT_DIR, "backend", ".env")
+BACKUP_DIR = os.path.join(SCRIPT_DIR, "backups")
 
 
 def load_env(filepath: str) -> dict:
-    """
-    Parse a .env file into a plain dict.
-    Ignores blank lines and comments (lines starting with #).
-    """
-    env = {}
-    with open(filepath, "r") as f:
-        for line in f:
-            line = line.strip()
-            # Skip blank lines and comments
-            if not line or line.startswith("#"):
+    """Read the small KEY=VALUE subset needed by the local backup command."""
+    if not os.path.exists(filepath):
+        return {}
+
+    values = {}
+    with open(filepath, "r", encoding="utf-8") as env_file:
+        for raw_line in env_file:
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
                 continue
-            # Split on the FIRST '=' only, handles values that contain '='
-            if "=" in line:
-                key, value = line.split("=", 1)
-                env[key.strip()] = value.strip()
-    return env
+            key, value = line.split("=", 1)
+            values[key.strip()] = value.strip()
+    return values
 
 
-# ── 2. Extract DB credentials ─────────────────────────────────────────────────
-
-env = load_env(ENV_FILE)
-
-DB_HOST     = env.get("DB_HOST", "localhost")
-DB_PORT     = env.get("DB_PORT", "3306")
-DB_USER     = env.get("DB_USER", "root")
-DB_PASSWORD = env.get("DB_PASSWORD", "")
-DB_NAME     = env.get("DB_NAME", "toub_pos")
+def get_setting(file_env: dict, name: str, default=None):
+    """Prefer CI/host environment variables over the optional local .env."""
+    return os.environ.get(name) or file_env.get(name, default)
 
 
-# ── 3. Build output filename with a timestamp ─────────────────────────────────
-
-BACKUP_DIR = os.path.join(SCRIPT_DIR, "backups")
-os.makedirs(BACKUP_DIR, exist_ok=True)   # creates ./backups/ if it doesn't exist
-
-timestamp   = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-output_file = os.path.join(BACKUP_DIR, f"{DB_NAME}_backup_{timestamp}.sql")
-
-
-# ── 4. Run mysqldump ──────────────────────────────────────────────────────────
-
-# We pass the password via the MYSQL_PWD environment variable instead of
-# using the -p flag, which would expose it in the process list.
-dump_env = os.environ.copy()
-dump_env["MYSQL_PWD"] = DB_PASSWORD
-
-command = [
-    "mysqldump",
-    f"--host={DB_HOST}",
-    f"--port={DB_PORT}",
-    f"--user={DB_USER}",
-    "--single-transaction",   # consistent snapshot without locking tables
-    "--routines",             # include stored procedures & functions
-    "--triggers",             # include triggers
-    DB_NAME,
-]
-
-print(f"[+] Connecting to  : {DB_USER}@{DB_HOST}:{DB_PORT}")
-print(f"[+] Database       : {DB_NAME}")
-print(f"[+] Output file    : {output_file}")
-print("[+] Running mysqldump ...")
-
-try:
-    with open(output_file, "w") as out_file:
-        result = subprocess.run(
-            command,
-            stdout=out_file,      # dump goes straight into the file
-            stderr=subprocess.PIPE,
-            env=dump_env,
-            text=True,
+def require_settings(settings: dict) -> None:
+    missing = [name for name, value in settings.items() if not value]
+    if missing:
+        raise SystemExit(
+            "Missing required backup settings: " + ", ".join(sorted(missing))
         )
 
-    if result.returncode != 0:
-        # mysqldump prints errors to stderr
-        print("\n[✗] Backup FAILED:")
-        print(result.stderr)
-        # Remove the empty/partial file so it isn't mistaken for a good backup
-        os.remove(output_file)
-    else:
-        size_kb = os.path.getsize(output_file) / 1024
-        print(f"[✓] Backup complete! File size: {size_kb:.1f} KB")
 
-except FileNotFoundError:
-    print("\n[✗] 'mysqldump' not found.")
-    print("    Install it with:  sudo apt install mysql-client")
+def run_backup() -> str:
+    """Create an encrypted backup and return its final path."""
+    file_env = load_env(ENV_FILE)
+    settings = {
+        "DB_HOST": get_setting(file_env, "DB_HOST"),
+        "DB_PORT": get_setting(file_env, "DB_PORT", "3306"),
+        "DB_USER": get_setting(file_env, "DB_USER"),
+        "DB_PASSWORD": get_setting(file_env, "DB_PASSWORD"),
+        "DB_NAME": get_setting(file_env, "DB_NAME"),
+        "BACKUP_ENCRYPTION_PASSPHRASE": get_setting(
+            file_env, "BACKUP_ENCRYPTION_PASSPHRASE"
+        ),
+    }
+    require_settings(settings)
+
+    passphrase = settings["BACKUP_ENCRYPTION_PASSPHRASE"]
+    if len(passphrase) < 20 or "\n" in passphrase or "\r" in passphrase:
+        raise SystemExit(
+            "BACKUP_ENCRYPTION_PASSPHRASE must be at least 20 characters "
+            "and contain no line breaks."
+        )
+
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+    timestamp = datetime.datetime.now(datetime.timezone.utc).strftime(
+        "%Y-%m-%d_%H-%M-%S_UTC"
+    )
+    base_name = f"{settings['DB_NAME']}_backup_{timestamp}.sql"
+    encrypted_file = os.path.join(BACKUP_DIR, f"{base_name}.gpg")
+
+    dump_environment = os.environ.copy()
+    dump_environment["MYSQL_PWD"] = settings["DB_PASSWORD"]
+    dump_command = [
+        "mysqldump",
+        f"--host={settings['DB_HOST']}",
+        f"--port={settings['DB_PORT']}",
+        f"--user={settings['DB_USER']}",
+        "--single-transaction",
+        "--routines",
+        "--triggers",
+        settings["DB_NAME"],
+    ]
+
+    try:
+        with tempfile.TemporaryDirectory(prefix="toub-pos-backup-") as temp_dir:
+            plaintext_file = os.path.join(temp_dir, base_name)
+            with open(plaintext_file, "w", encoding="utf-8") as output:
+                dump_result = subprocess.run(
+                    dump_command,
+                    stdout=output,
+                    stderr=subprocess.PIPE,
+                    env=dump_environment,
+                    text=True,
+                    check=False,
+                )
+
+            if dump_result.returncode != 0:
+                raise SystemExit(
+                    "mysqldump failed. Review database connectivity and "
+                    "credentials in the protected workflow logs."
+                )
+
+            encryption_result = subprocess.run(
+                [
+                    "gpg",
+                    "--batch",
+                    "--yes",
+                    "--pinentry-mode",
+                    "loopback",
+                    "--passphrase-fd",
+                    "0",
+                    "--symmetric",
+                    "--cipher-algo",
+                    "AES256",
+                    "--output",
+                    encrypted_file,
+                    plaintext_file,
+                ],
+                input=f"{passphrase}\n",
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=False,
+            )
+
+            if encryption_result.returncode != 0:
+                if os.path.exists(encrypted_file):
+                    os.remove(encrypted_file)
+                raise SystemExit(
+                    "Backup encryption failed. No plaintext backup was retained."
+                )
+    except FileNotFoundError as error:
+        executable = error.filename or "required command"
+        raise SystemExit(f"{executable} is not installed or available on PATH.") from error
+
+    size_kb = os.path.getsize(encrypted_file) / 1024
+    print(
+        f"Encrypted backup created: {os.path.basename(encrypted_file)} "
+        f"({size_kb:.1f} KB)"
+    )
+    return encrypted_file
+
+
+if __name__ == "__main__":
+    run_backup()
