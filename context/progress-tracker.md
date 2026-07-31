@@ -182,6 +182,33 @@ Update this file after every meaningful implementation change.
     and `git diff --check`. The existing frontend large-chunk build warning is
     unrelated to P2-5.
 
+- **Implemented production audit P2-6 dual-currency and rounding policy**:
+  - Added an Owner-only financial setting for one business-wide KHR-per-USD
+    rate, constrained to 1,000–10,000 in increments of 100 and protected by an
+    administrative audit event.
+  - New Orders snapshot trusted USD/KHR totals and the current rate so later
+    setting changes cannot rewrite receipts or reports. New Cashier orders use
+    USD as the canonical settlement value; historical pricing snapshots remain readable.
+  - Cash confirmation accepts independent USD and KHR amounts, supports mixed
+    tender, evaluates underpayment with integer cents/riel arithmetic, and
+    stores both equivalent USD and KHR change values without a return-currency selector.
+  - Cashier product cards, payment confirmation, receipts, Telegram tickets,
+    and Owner reports now respect the saved dual-currency settlement data.
+    Editing either product price now regenerates the other from the Owner's
+    saved rate, removing independent prices and checkout pricing-currency buttons.
+  - Refined the full Cashier product card so its KHR price sits directly below
+    the USD price while the quantity or Add control remains aligned to the right.
+  - Added KHR values directly below USD for each cart line total, the Cashier
+    subtotal, and Total Amount so the full order remains readable in both currencies.
+  - Aligned the disposable-MySQL Order-flow test with the selector-free cash
+    contract and its backend-calculated USD/KHR change equivalents.
+  - Added a forward migration, canonical schema/API/payment documentation, and
+    focused policy, validation, calculation, idempotency, and live-flow test
+    coverage. Local verification passes with 71 backend unit tests, 9 frontend
+    unit tests, frontend lint/build, capped backend lint at the 61 pre-existing
+    warnings, and `git diff --check`; disposable-MySQL migration/live-flow and
+    browser CI remain pending.
+
 - **Safely suspended KHQR payment processing**:
   - Added explicit opt-in `KHQR_ENABLED` and `VITE_KHQR_ENABLED` feature flags, both defaulting to `false`.
   - Backend KHQR order creation and status checking return `503 KHQR_DISABLED` before database or provider work begins.
@@ -1249,7 +1276,7 @@ Update this file after every meaningful implementation change.
 ## Open Questions
 
 - Which approved merchant payment provider and transaction-confirmation contract should replace the suspended Open API polling flow?
-- Confirm KHR exchange rate strategy: hardcoded `.env` constant (recommended) or live API?
+- No unresolved KHR rate-source question remains: P2-6 uses an audited Owner-managed business rate and snapshots it on new Orders. A live-rate provider remains out of scope.
 
 ---
 
@@ -1262,7 +1289,7 @@ Record of key architectural and product decisions made, with rationale.
 | 1 | **Tailwind CSS v4** (not v3 or plain CSS) | v4 offers native CSS variable-based theming, no config file needed, and better performance at build time. Chosen early to avoid migration cost later. |
 | 2 | **Device token in `localStorage`** (not server session) | Terminals are semi-permanent physical devices. A persistent browser token survives page refreshes without a server round-trip on every load. Simpler for offline resilience future work. |
 | 3 | **Controller-Service-Repository pattern** | Industry-standard separation for Express backends. Keeps route handlers thin, business logic testable in isolation, and DB queries swappable. |
-| 4 | **KHR rate hardcoded as `.env` constant** | Live exchange rate APIs add an external dependency, failure point, and cost. Rate changes infrequently in practice. Admin can update `.env` and restart. |
+| 4 | **Owner-managed business KHR rate with Order snapshots** | A live API adds an external dependency, while a frontend constant is not auditable. Only the Owner may update the bounded rate; each new Order freezes it for settlement, receipts, and reports. |
 | 5 | **15-minute access JWT + 8-hour refresh session** | Limits XSS token exposure while keeping a Cashier authenticated for one normal shift through rotation. |
 | 6 | **Cart state in `localStorage`** (not server) | Reduces backend round-trips during item selection. Cart is ephemeral — only persisted to DB at checkout. Acceptable trade-off for speed. |
 | 7 | **PIN validated client-side** (Phase 1) | Pragmatic shortcut for the initial build. Fast UX, no extra API call per login. Flagged as tech debt — must move server-side before production. |

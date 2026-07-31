@@ -11,6 +11,7 @@ import Icon from '../../../components/ui/Icon';
 import OwnerSidebar from './OwnerSidebar';
 import OwnerHeader from './OwnerHeader';
 import ThemeToggle from '../../../shared/theme/ThemeToggle';
+import FinancialSettings from './FinancialSettings';
 
 const notificationToast = Swal.mixin({
   toast: true,
@@ -32,6 +33,7 @@ const ownerTabIcons = {
   orders: 'orders',
   users: 'users',
   stalls: 'location',
+  settings: 'settings',
 };
 
 const ownerTabLabels = {
@@ -40,9 +42,10 @@ const ownerTabLabels = {
   stalls: 'Stall Management',
   orders: 'Sales Reports',
   users: 'Staff Management',
+  settings: 'Financial Settings',
 };
 
-const ownerTabOrder = ['dashboard', 'products', 'stalls', 'users', 'orders'];
+const ownerTabOrder = ['dashboard', 'products', 'stalls', 'users', 'orders', 'settings'];
 
 const navButtonClass = (isActive) =>
   `flex items-center gap-3 w-full min-h-11.5 px-4 rounded-md border text-[14px] font-semibold capitalize transition-all duration-200 cursor-pointer active:scale-[0.98] ${
@@ -94,6 +97,10 @@ export default function OwnerWorkspace({
   clearProductsActionError,
   usersActionError,
   clearUsersActionError,
+  financialSettings,
+  financialSettingsLoading,
+  financialSettingsError,
+  onSaveFinancialSettings,
 }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showMobileLogoutConfirm, setShowMobileLogoutConfirm] = useState(false);
@@ -267,6 +274,7 @@ export default function OwnerWorkspace({
               error={productsError}
               actionError={productsActionError}
               clearActionError={clearProductsActionError}
+              exchangeRateKhrPerUsd={financialSettings?.exchangeRateKhrPerUsd}
             />
           )}
 
@@ -298,6 +306,16 @@ export default function OwnerWorkspace({
               error={usersError}
               actionError={usersActionError}
               clearActionError={clearUsersActionError}
+            />
+          )}
+
+          {visibleOwnerTab === 'settings' && (
+            <FinancialSettings
+              key={financialSettings?.updatedAt || financialSettings?.exchangeRateKhrPerUsd || 'default'}
+              settings={financialSettings}
+              loading={financialSettingsLoading}
+              error={financialSettingsError}
+              onSave={onSaveFinancialSettings}
             />
           )}
         </div>

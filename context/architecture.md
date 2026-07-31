@@ -135,6 +135,7 @@
 7. Telegram group routing may only be connected through a short-lived, one-time, hashed setup token created by the same-business Owner. Managers may manage cook identities but cannot reroute the kitchen destination. Client-submitted `telegram_chat_id` values are not trusted.
 8. Order item modifiers/notes must be stored as a snapshot at time of order — not linked to a live config.
 9. For the current release, the trusted final order total equals the backend-calculated item subtotal. The frontend must not invent service fees or taxes. Any future charge requires an approved backend-owned policy covering rates, rounding, exemptions, snapshots, receipts, and reports.
+10. Product USD/KHR prices are synchronized in the management UI using the Owner's saved rate; editing either field regenerates the other. Every Order stores trusted USD and whole-riel KHR totals and the Owner's business exchange rate at creation time. New cashier Orders use USD as the canonical settlement value while showing both totals. Cash confirmation may accept independent USD and KHR amounts, but conversion, underpayment checks, and both equivalent change amounts are backend-owned. Historical orders retain their original pricing-currency and rate snapshots; changing the current setting never rewrites them.
 
 ## Frontend State Management
 
@@ -176,7 +177,7 @@
 - The backend loads product prices from MySQL, calculates trusted subtotal/total values, snapshots item names/prices, and creates the order as `pending_payment`.
 - Cash confirmation uses `POST /api/orders/:id/confirm-cash`.
 - Cash confirmation is allowed for the creating Cashier, or an Owner/Manager within the same business owner scope.
-- Successful cash confirmation requires `cash_received_usd`, rejects underpayment, stores backend-calculated `change_due_usd`, changes `orders.status` to `paid`, sets `completed_at`, and writes a `cash_payment_confirmed` audit log.
+- Successful cash confirmation requires at least one of `cash_received_usd` or `cash_received_khr`, evaluates the combined tender with the Order's saved rate, rejects underpayment, stores each physical tender amount plus equivalent USD and KHR change values, changes `orders.status` to `paid`, sets `completed_at`, and writes a `cash_payment_confirmed` audit log.
 - The frontend must not create paid orders locally or submit trusted fields such as totals, status, `cashier_id`, or `stall_id`.
 
 ## KHQR Individual Payment Flow (Suspended)
@@ -233,7 +234,7 @@
 - **StallStaff**: Junction — maps `User` to `Stall` (a cashier can belong to one stall).
 - **Category**: Global menu group shared across stalls.
 - **Product**: Shared catalog item metadata with name, owner-scoped category, image, and default USD/KHR prices. A product may remain in the management catalog with zero stall assignments; its default price is retained for later reassignment while it stays unavailable to cashiers.
-- **StallProduct**: Junction that maps a `Product` to a `Stall` and stores that stall's `price_usd`, `price_khr`, and visibility.
+- **StallProduct**: Junction that maps a `Product` to a `Stall` and stores synchronized `price_usd`/`price_khr` display values plus visibility.
 - **Order**: A transaction. Belongs to a `User` (cashier) and a `Stall`. Has payment method, status, totals, KHQR metadata when relevant, and cash received/change fields when cash is confirmed.
 - **OrderItem**: Links `Order` to `Product`. Stores quantity, price snapshot, and **`notes`** (modifiers like "no ice").
 - **AuditLog**: Append-only, tenant-scoped history for payment and privileged administrative actions. It stores the actor, stable action, Owner scope, target, request correlation, safe before/after summary, and timestamp; the business mutation and audit insert share one transaction.
@@ -274,7 +275,7 @@
 | 2 | **WebSocket routing — accidental broadcast to wrong cashier** | 🔴 High | `websocket.service.js` authenticates cashier sockets with JWT, keeps a strict `Map<cashier_id, socketIds>`, and emits only to the mapped cashier sockets. Continue to avoid broad `io.emit()` payment broadcasts. |
 | 3 | **Telegram Bot async failures** | 🟢 Controlled | Payment commits a unique durable outbox job in the same transaction. A database-locking worker retries transient failures with backoff and records terminal failures; `telegram_tickets` remains independent from payment state and existing role-scoped manual retry remains available. A crash during the external send is treated as ambiguous and requires manual review because Telegram `sendMessage` has no idempotency key. |
 | 3A | **Unauthorized Telegram ticket completion** | 🟢 Controlled | Telegram callbacks require a valid webhook secret, exact order/ticket/chat/message context, matching stall chat, and an active stall-scoped cook identity. Completion records the Telegram actor ID/name. |
-| 4 | **KHR exchange rate — hardcoded vs. live** | 🟡 Medium | Decision required before building the product form. Recommend: hardcode the rate as a `.env` constant (`KHR_RATE=4100`) for now. Add a note in the admin panel showing the current rate. Live rate API is out of scope. |
+| 4 | **KHR exchange rate governance** | ✅ Resolved by P2-6 | Owner-managed per business, constrained to whole-hundred KHR values and audited. New Orders snapshot the rate; historical records never use a later setting. A live-rate API remains out of scope. |
 | 5 | **Stall data isolation — cross-stall data leak** | 🔴 High | Every query that returns cashier-facing products, orders, or staff must scope by the authenticated user and their backend stall assignment. Never trust a client-supplied stall ID for cashier access. |
 | 6 | **Legacy localStorage fallback regression** | 🟡 Medium | Products, categories, stalls, users, and orders are now backend-owned. Future UI work must not reintroduce localStorage as the source of truth for persisted POS data; localStorage should remain limited to auth/session/device-style browser state. |
 | 7 | **Duplicate KHQR status checks** | 🔴 High | Frontend polling and the background checker may verify the same order concurrently. The KHQR confirmation service uses a database row lock, rechecks status inside the transaction, and writes the payment audit log only for the first successful transition. |

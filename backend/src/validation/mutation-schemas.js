@@ -233,7 +233,7 @@ function orderItem(value, index) {
 }
 
 export function createOrderBody(value) {
-  const body = assertAllowedFields(value, ['paymentMethod', 'payment_method', 'items']);
+  const body = assertAllowedFields(value, ['paymentMethod', 'payment_method', 'pricingCurrency', 'pricing_currency', 'items']);
   if (body.paymentMethod !== undefined && body.payment_method !== undefined) {
     throw validationError('Use either paymentMethod or payment_method, not both.');
   }
@@ -249,22 +249,57 @@ export function createOrderBody(value) {
       ['cash', 'khqr'],
       { required: true },
     ),
+    pricingCurrency: enumField(
+      body.pricingCurrency ?? body.pricing_currency ?? 'usd',
+      'pricingCurrency',
+      ['usd', 'khr'],
+      { required: true },
+    ),
     items: items.map(orderItem),
   };
 }
 
 export function confirmCashBody(value) {
-  const body = assertAllowedFields(value, ['cash_received_usd', 'cashReceivedUsd']);
+  const body = assertAllowedFields(value, [
+    'cash_received_usd', 'cashReceivedUsd',
+    'cash_received_khr', 'cashReceivedKhr',
+  ]);
   if (body.cash_received_usd !== undefined && body.cashReceivedUsd !== undefined) {
     throw validationError('Use either cash_received_usd or cashReceivedUsd, not both.');
   }
+  if (body.cash_received_khr !== undefined && body.cashReceivedKhr !== undefined) {
+    throw validationError('Use either cash_received_khr or cashReceivedKhr, not both.');
+  }
+  const cashReceivedUsd = decimalField(
+    body.cash_received_usd ?? body.cashReceivedUsd,
+    'cash_received_usd',
+    { max: LIMITS.USD_AMOUNT },
+  );
+  const cashReceivedKhr = positiveIntegerField(
+    body.cash_received_khr ?? body.cashReceivedKhr,
+    'cash_received_khr',
+    { max: LIMITS.KHR_AMOUNT },
+  );
+  if (cashReceivedUsd === undefined && cashReceivedKhr === undefined) {
+    throw validationError('At least one received cash amount is required.');
+  }
   return {
-    cash_received_usd: decimalField(
-      body.cash_received_usd ?? body.cashReceivedUsd,
-      'cash_received_usd',
-      { required: true, max: LIMITS.USD_AMOUNT },
-    ),
+    ...(cashReceivedUsd === undefined ? {} : { cash_received_usd: cashReceivedUsd }),
+    ...(cashReceivedKhr === undefined ? {} : { cash_received_khr: cashReceivedKhr }),
   };
+}
+
+export function updateFinancialSettingsBody(value) {
+  const body = assertAllowedFields(value, ['exchange_rate_khr_per_usd']);
+  const rate = positiveIntegerField(
+    body.exchange_rate_khr_per_usd,
+    'exchange_rate_khr_per_usd',
+    { required: true, max: 10000 },
+  );
+  if (rate < 1000 || rate % 100 !== 0) {
+    throw validationError('exchange_rate_khr_per_usd must be from 1000 to 10000 in increments of 100.');
+  }
+  return { exchange_rate_khr_per_usd: rate };
 }
 
 export { emptyBody };

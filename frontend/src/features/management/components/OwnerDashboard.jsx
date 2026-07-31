@@ -82,7 +82,7 @@ export default function OwnerDashboard({ orders = [] }) {
 
     const todaysOrders = orders.filter((order) => isToday(order.createdAt));
     const paidOrders = todaysOrders.filter((order) => order.status === 'paid');
-    const revenue = paidOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+    const revenue = paidOrders.reduce((sum, order) => sum + Number(order.reportingTotal ?? order.total ?? 0), 0);
     const activeStalls = new Set(
       todaysOrders
         .map((order) => order.stallName)

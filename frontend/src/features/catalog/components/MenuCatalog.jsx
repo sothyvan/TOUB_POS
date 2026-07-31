@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import Icon from '../../../components/ui/Icon';
 import CategoryOwner from './CategoryOwner';
-import { money } from '../../../utils/format';
+import { khrMoney, money } from '../../../utils/format';
 import FormInput from '../../../components/ui/FormInput';
 import FormSelect from '../../../components/ui/FormSelect';
 import StatusBadge from '../../../components/ui/StatusBadge';
@@ -11,15 +11,10 @@ import Switch from '../../../components/ui/Switch';
 import Alert from '../../../components/ui/Alert';
 import { api } from '../../../services/api';
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
+import { convertKhrPriceToUsd, convertUsdPriceToKhr } from '../../../../config/financial-policy';
 
-// KHR exchange rate (approx)
-const KHR_RATE = 4000;
 const PRODUCT_PAGE_SIZE = 12;
 const PRODUCT_IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp';
-
-function toKHR(usd) {
-  return Math.round(parseFloat(usd || 0) * KHR_RATE).toLocaleString();
-}
 
 function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete, viewMode = 'list' }) {
   const category = categories.find(c => c.id === product.categoryId);
@@ -145,7 +140,7 @@ function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete,
               {money(product.price)}
             </p>
             <p className="m-0 text-xs font-medium text-text-soft">
-              {toKHR(product.price)}៛
+              {khrMoney(product.priceKhr)}
             </p>
           </div>
 
@@ -179,7 +174,7 @@ function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete,
 }
 
 // ── Editor panel ──────────────────────────────────────────────────────────────
-function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsError, onSave, onCancel, isNew, actionError }) {
+function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsError, onSave, onCancel, isNew, actionError, exchangeRateKhrPerUsd }) {
   const [uploadProgress, setUploadProgress] = useState(null);
   const [uploadError, setUploadError] = useState('');
   const [isUploading, setIsUploading] = useState(false);
@@ -188,12 +183,17 @@ function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsE
   const handleSave = (e) => {
     e.preventDefault();
     const parsedPrice = Number(form.price);
+    const parsedPriceKhr = Number(form.priceKhr);
     if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
       setPriceValidationError(
         (form.stallIds || []).length > 0
           ? 'Enter a valid positive price before assigning this product to a stall.'
           : 'Enter a valid positive default price for this product.'
       );
+      return;
+    }
+    if (!Number.isSafeInteger(parsedPriceKhr) || parsedPriceKhr <= 0) {
+      setPriceValidationError('Enter a valid positive whole-riel KHR price.');
       return;
     }
     setPriceValidationError('');
@@ -416,7 +416,12 @@ function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsE
               value={form.price}
               onChange={e => {
                 setPriceValidationError('');
-                setForm(f => ({ ...f, price: e.target.value }));
+                const price = e.target.value;
+                setForm(f => ({
+                  ...f,
+                  price,
+                  priceKhr: price === '' ? '' : convertUsdPriceToKhr(price, exchangeRateKhrPerUsd),
+                }));
               }}
               placeholder="2.00"
               error={priceValidationError || undefined}
@@ -425,22 +430,24 @@ function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsE
             <FormInput
               label="Price (KHR)"
               type="number" min="0" step="1"
-              value={form.price === '' || isNaN(parseFloat(form.price)) ? '' : Math.round(parseFloat(form.price) * KHR_RATE)}
+              value={form.priceKhr || ''}
               onChange={e => {
                 setPriceValidationError('');
-                const val = e.target.value;
-                if (val === '') {
-                  setForm(f => ({ ...f, price: '' }));
-                } else {
-                  const usd = parseFloat(val) / KHR_RATE;
-                  setForm(f => ({ ...f, price: usd.toString() }));
-                }
+                const priceKhr = e.target.value;
+                setForm(f => ({
+                  ...f,
+                  priceKhr,
+                  price: priceKhr === '' ? '' : convertKhrPriceToUsd(priceKhr, exchangeRateKhrPerUsd),
+                }));
               }}
               placeholder="8000"
               error={priceValidationError || undefined}
               required
             />
           </div>
+          <p className="m-0 text-[11px] font-medium text-[#9ca3af]">
+            Prices stay synchronized using 1 USD = {Number(exchangeRateKhrPerUsd).toLocaleString()} KHR. USD is rounded to cents and KHR to whole riel.
+          </p>
 
           {/* Availability */}
           <div className="flex items-center justify-between py-1">
@@ -472,7 +479,7 @@ function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsE
 
 // ── Empty form factory ────────────────────────────────────────────────────────
 function emptyForm() {
-  return { id: null, name: '', image: '', price: '', categoryId: '', stallId: '', stallIds: [], tone: 'gold', available: true, code: '' };
+  return { id: null, name: '', image: '', price: '', priceKhr: '', categoryId: '', stallId: '', stallIds: [], tone: 'gold', available: true, code: '' };
 }
 
 // ── Main MenuCatalog ──────────────────────────────────────────────────────────
@@ -498,6 +505,7 @@ export default function MenuCatalog({
   onDeleteCategory,
   onCancelCategory,
   loading,
+  exchangeRateKhrPerUsd = 4100,
   error,
   actionError,
   clearActionError,
@@ -849,6 +857,7 @@ export default function MenuCatalog({
                 onCancel={handleCancel}
                 isNew={!editingProduct.id}
                 actionError={actionError}
+                exchangeRateKhrPerUsd={exchangeRateKhrPerUsd}
               />
             </div>
           </>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { money } from '../../../utils/format';
+import { khrMoney, money } from '../../../utils/format';
 import Icon from '../../../components/ui/Icon';
 import QuantityInput from './QuantityInput';
 
@@ -42,9 +42,14 @@ export default function CartItem({ item, updateQuantity, setCartItemQuantity }) 
           className="text-gray-900 font-bold"
         />
         {/* Line Total */}
-        <strong className="ml-auto min-w-16 text-right text-[15px] font-black text-text-strong">
-          {money(item.price * item.quantity)}
-        </strong>
+        <div className="ml-auto min-w-16 text-right">
+          <strong className="block text-[15px] font-black leading-none text-text-strong">
+            {money(item.price * item.quantity)}
+          </strong>
+          <span className="mt-1 block text-[11px] font-bold leading-none text-text-muted">
+            {khrMoney(Number(item.priceKhr || 0) * item.quantity)}
+          </span>
+        </div>
         {/* Remove Button */}
         <button
           className="text-text-muted hover:text-state-danger transition-colors border border-transparent hover:border-state-danger/30 hover:bg-state-danger/10 rounded-md p-2 cursor-pointer flex items-center justify-center"

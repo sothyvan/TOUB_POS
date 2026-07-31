@@ -40,6 +40,7 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 - Order modifiers per item (notes: "no ice", "extra spicy", etc.)
 - Floating order summary with quantity adjustments
 - Cash checkout with received-amount and change calculation
+- Mixed USD/KHR cash receipt with backend-calculated change and an Owner-managed business exchange rate
 - Cash confirmation dialog guardrail
 - "Park" transaction for later *(Future)*
 
@@ -66,7 +67,7 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
   - Platform Admin can create Owner users only as a temporary bootstrap role.
   - Owner can create and manage Manager and Cashier users only.
   - Manager can create and manage Cashier users only.
-- Menu management with dual-currency pricing (USD / KHR)
+- Menu management with synchronized USD/KHR pricing generated from the Owner's saved rate
 - Stall-scoped menu profile assignment
 - Analytical dashboards: Revenue trends, top products, staff performance
 - Report filters: Daily / Monthly / Yearly
@@ -93,10 +94,11 @@ Toub POS is a lightweight POS system built for small merchant teams operating ac
 - Real-time WebSocket notification routing (cashier-specific).
 - Short-lived JWT authentication with rotating HttpOnly refresh sessions and
   RBAC (Owner / Manager / Cashier).
-- Menu management with dual-currency pricing (USD / KHR).
+- Menu management with synchronized USD/KHR pricing generated from the Owner's saved rate.
 - Order modifiers/notes per item.
 - Backend-owned item subtotal and final total; the current release applies no automatic service fee or tax.
-- Cash payment confirmation and change calculation.
+- Cash payment confirmation with both USD and KHR change equivalents.
+- Owner-managed USD/KHR exchange rate with an immutable snapshot on each order that uses mixed-currency settlement.
 - Historical KHQR data remains readable; new KHQR payment processing is temporarily out of active scope.
 - Telegram kitchen display bot.
 

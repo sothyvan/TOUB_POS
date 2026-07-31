@@ -367,10 +367,12 @@ and test changes.
 
 #### P2-6. Currency and rounding rules are incomplete
 
+**Status (P2-6 implementation): Resolved locally, pending CI/live migration verification.** Owners manage one audited business rate; product USD/KHR fields synchronize from that rate and Orders snapshot both totals plus the rate. Cash confirmation accepts independent or mixed USD/KHR tender, calculates both change equivalents on the backend using integer cents/riel, and receipts/reports use the saved settlement data.
+
 - **Severity:** P2
 - **Category:** Financial correctness
-- **Business impact:** USD and KHR item snapshots exist, but order totals and cash settlement are USD-centric and the KHR exchange-rate lifecycle remains unresolved.
-- **Evidence:** Order items store both currencies, while `backend/src/models/order.model.js` and cash confirmation use USD total/cash fields. `context/progress-tracker.md` still asks how the KHR exchange rate is governed.
+- **Original business impact:** USD and KHR item snapshots existed, but order totals and cash settlement were USD-centric and the KHR exchange-rate lifecycle was unresolved.
+- **Original evidence:** Order items stored both currencies while Order settlement was USD-only and active frontend code used conflicting hardcoded rates without a sale-time snapshot.
 - **Recommended remediation:** Define accepted tender currencies, conversion source, effective date, rounding denomination, order-level rate snapshot, and receipt/report behavior.
 - **Acceptance criteria:** Boundary examples reconcile exactly across cart, backend, receipt, refund/void policy, and reports.
 - **Estimated size:** L
@@ -530,7 +532,7 @@ The live tests were not run during this audit because they require a running bac
 
 - [x] Resolve P0-1 checkout idempotency with automated concurrent replay tests.
 - [x] Resolve P0-2 cashier device/assignment stall consistency with automated regression tests.
-- [ ] Approve the remaining production product scope, especially refunds/voids, cash reconciliation, inventory, and currencies. Current-release taxes/fees are resolved as disabled; future charges require a new approved policy.
+- [ ] Approve the remaining production product scope, especially refunds/voids, cash reconciliation, and inventory. Current-release taxes/fees and dual-currency settlement now have explicit policies.
 - [x] Remove applicable high/critical production dependency findings and formally record non-applicable scanner findings.
 - [x] Establish clean, versioned database migrations and a tested baseline.
 - [ ] Remove/rotate any potentially real data or credentials from Git history.
@@ -685,7 +687,7 @@ was verified locally with deterministic fixtures.
 - Current-release checkout is approved as online-only; true offline order synchronization remains future scope.
 - What are the approved refund, void, correction, and cash reconciliation workflows?
 - Current release: no automatic service fee or tax. Reopen legal calculation, rounding, display, snapshot, and reporting requirements before introducing either charge.
-- Which currencies can be tendered, and how is the KHR rate set and snapshotted?
+- Current release: cash may be tendered independently or together in USD/KHR; the Owner-managed business rate is snapshotted on each new Order and historical records never use a later rate.
 - Is inventory management promised or explicitly out of scope?
 
 ### Backend and data

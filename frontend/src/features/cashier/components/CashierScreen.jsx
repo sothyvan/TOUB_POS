@@ -81,6 +81,8 @@ export default function CashierScreen({
   itemCount,
   subtotal,
   total,
+  subtotalKhr,
+  totalKhr,
   clearCart,
   handleCheckout,
   checkoutLoading,
@@ -501,6 +503,8 @@ export default function CashierScreen({
           cart={cart}
           subtotal={subtotal}
           total={total}
+          subtotalKhr={subtotalKhr}
+          totalKhr={totalKhr}
           isCartOpen={isCartOpen}
           setIsCartOpen={setIsCartOpen}
           clearCart={clearCart}

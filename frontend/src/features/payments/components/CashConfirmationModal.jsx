@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { money } from '../../../utils/format';
+import { khrMoney, money } from '../../../utils/format';
+import { calculateMixedCashPreview } from '../../../../config/financial-policy';
 import Alert from '../../../components/ui/Alert';
 import Button from '../../../components/ui/Button';
 import ModalShell from '../../../components/ui/ModalShell';
@@ -7,6 +8,9 @@ import ModalShell from '../../../components/ui/ModalShell';
 export default function CashConfirmationModal({
   isOpen,
   total = 0,
+  totalKhr = 0,
+  exchangeRateKhrPerUsd = 4100,
+  initialPricingCurrency = 'usd',
   isBusy = false,
   isOnline = true,
   isCheckingBackend = false,
@@ -15,26 +19,39 @@ export default function CashConfirmationModal({
   onConfirm,
 }) {
   const totalAmount = Number(total || 0);
-  const [cashReceived, setCashReceived] = useState(
-    totalAmount > 0 ? totalAmount.toFixed(2) : ''
+  const pricingCurrency = initialPricingCurrency;
+  const [cashReceivedUsd, setCashReceivedUsd] = useState(
+    initialPricingCurrency === 'usd' && totalAmount > 0 ? totalAmount.toFixed(2) : ''
   );
-
-  const parsedCashReceived = Number(cashReceived);
-  const hasValidAmount = useMemo(() => (
-    cashReceived.trim() !== ''
-      && Number.isFinite(parsedCashReceived)
-      && parsedCashReceived > 0
-  ), [cashReceived, parsedCashReceived]);
-  const changeDue = hasValidAmount ? parsedCashReceived - totalAmount : 0;
-  const isUnderpaid = hasValidAmount && changeDue < -0.001;
-  const canConfirm = hasValidAmount && !isUnderpaid && !isBusy && isOnline;
+  const [cashReceivedKhr, setCashReceivedKhr] = useState(
+    initialPricingCurrency === 'khr' && Number(totalKhr) > 0 ? String(totalKhr) : ''
+  );
+  const preview = useMemo(() => calculateMixedCashPreview({
+    totalUsd: totalAmount,
+    totalKhr,
+    pricingCurrency,
+    exchangeRateKhrPerUsd,
+    cashReceivedUsd,
+    cashReceivedKhr,
+  }), [
+    cashReceivedKhr,
+    cashReceivedUsd,
+    exchangeRateKhrPerUsd,
+    pricingCurrency,
+    totalAmount,
+    totalKhr,
+  ]);
+  const canConfirm = preview.isValid && !preview.isUnderpaid && !isBusy && isOnline;
 
   function handleConfirm() {
     if (!canConfirm) {
       return;
     }
 
-    onConfirm(parsedCashReceived.toFixed(2));
+    onConfirm({
+      cashReceivedUsd: Number(cashReceivedUsd) > 0 ? Number(cashReceivedUsd).toFixed(2) : null,
+      cashReceivedKhr: Number(cashReceivedKhr) > 0 ? Math.round(Number(cashReceivedKhr)) : null,
+    });
   }
 
   return (
@@ -51,12 +68,14 @@ export default function CashConfirmationModal({
 
         <div className="rounded-2xl bg-gray-50 border border-gray-100 p-4 mb-4 text-left space-y-3">
           <div className="flex items-center justify-between text-sm font-bold text-gray-500 mb-2">
-            <span>Order total</span>
+            <span>Order totals</span>
             <div className="text-right">
               <span className="text-xl text-state-success">{money(totalAmount)}</span>
-              <span className="block text-xs text-gray-400">{Math.round(totalAmount * 4000).toLocaleString()} ៛</span>
+              <span className="block text-xs text-gray-400">{khrMoney(totalKhr)}</span>
             </div>
           </div>
+
+          <p className="m-0 text-xs font-semibold text-gray-400">Saved rate: 1 USD = {Number(exchangeRateKhrPerUsd).toLocaleString()} KHR</p>
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
@@ -71,9 +90,9 @@ export default function CashConfirmationModal({
                   min="0"
                   step="0.01"
                   inputMode="decimal"
-                  value={cashReceived}
+                  value={cashReceivedUsd}
                   disabled={isBusy}
-                  onChange={(event) => setCashReceived(event.target.value)}
+                  onChange={(event) => setCashReceivedUsd(event.target.value)}
                   autoFocus
                 />
               </div>
@@ -89,17 +108,9 @@ export default function CashConfirmationModal({
                   min="0"
                   step="1"
                   inputMode="numeric"
-                  value={cashReceived === '' || isNaN(parsedCashReceived) ? '' : Math.round(parsedCashReceived * 4000)}
+                  value={cashReceivedKhr}
                   disabled={isBusy}
-                  onChange={(event) => {
-                    const val = event.target.value;
-                    if (val === '') {
-                      setCashReceived('');
-                    } else {
-                      const usd = parseFloat(val) / 4000;
-                      setCashReceived(usd.toString());
-                    }
-                  }}
+                  onChange={(event) => setCashReceivedKhr(event.target.value)}
                 />
                 <span className="text-xl font-bold text-gray-400 ml-1">៛</span>
               </div>
@@ -109,19 +120,19 @@ export default function CashConfirmationModal({
           <div className="flex items-center justify-between rounded-xl bg-white border border-gray-100 px-4 py-3">
             <span className="text-sm font-bold text-gray-500">Change due</span>
             <div className="text-right">
-              <span className={`block text-2xl font-black ${isUnderpaid ? 'text-state-danger' : 'text-state-success'}`}>
-                {money(Math.max(changeDue, 0))}
+              <span className={`block text-2xl font-black ${preview.isUnderpaid ? 'text-state-danger' : 'text-state-success'}`}>
+                {money(preview.changeUsd)}
               </span>
-              <span className={`block text-sm font-bold mt-0.5 ${isUnderpaid ? 'text-state-danger/70' : 'text-gray-400'}`}>
-                {Math.round(Math.max(changeDue, 0) * 4000).toLocaleString()} ៛
+              <span className={`block text-xs font-bold ${preview.isUnderpaid ? 'text-state-danger' : 'text-gray-400'}`}>
+                {khrMoney(preview.changeKhr)}
               </span>
             </div>
           </div>
         </div>
 
-        {isUnderpaid ? (
+        {preview.isUnderpaid ? (
           <Alert variant="warning" className="mb-4 text-left" title="Cash is short">
-            Cash received must be at least {money(totalAmount)}.
+            Combined USD and KHR cash is below the order total.
           </Alert>
         ) : null}
 

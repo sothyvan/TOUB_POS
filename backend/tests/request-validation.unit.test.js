@@ -140,6 +140,7 @@ test('order schemas reject trusted fields, oversized carts, invalid quantities, 
     items: [{ productId: '5', quantity: 2, notes: ' No ice ' }],
   }), {
     paymentMethod: 'cash',
+    pricingCurrency: 'usd',
     items: [{ product_id: 5, quantity: 2, notes: 'No ice' }],
   });
   assertValidationError(
@@ -171,7 +172,20 @@ test('order schemas reject trusted fields, oversized carts, invalid quantities, 
     () => confirmCashBody({ cash_received_usd: LIMITS.USD_AMOUNT + 0.01 }),
     /must be 99999999.99 or less/,
   );
-  assert.deepEqual(confirmCashBody({ cashReceivedUsd: '20.00' }), { cash_received_usd: 20 });
+  assert.deepEqual(confirmCashBody({ cashReceivedUsd: '20.00' }), {
+    cash_received_usd: 20,
+  });
+  assert.deepEqual(confirmCashBody({
+    cashReceivedUsd: '5.00',
+    cashReceivedKhr: 20500,
+  }), {
+    cash_received_usd: 5,
+    cash_received_khr: 20500,
+  });
+  assertValidationError(
+    () => confirmCashBody({ cashReceivedUsd: '5.00', changeCurrency: 'khr' }),
+    /unsupported fields: changeCurrency/,
+  );
 });
 
 test('bodyless mutation schema rejects accidental or privileged fields', () => {

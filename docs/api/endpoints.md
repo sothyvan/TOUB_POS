@@ -277,7 +277,7 @@ notes, or payment method returns `409` with code `IDEMPOTENCY_KEY_REUSED`.
   "items": [
     { "product_id": 1, "quantity": 2, "notes": "No sugar" }
   ],
-  "payment_method": "khqr | cash"
+  "payment_method": "cash"
 }
 ```
 
@@ -291,7 +291,7 @@ Backend behavior:
 - Derives stall ID from the cashier's assigned stall.
 - Loads product prices from MySQL.
 - Rejects hidden products, invalid quantities, and products outside the cashier's assigned stall.
-- Snapshots order item names and prices.
+- Snapshots order item names, synchronized USD/KHR prices, both totals, and the current business exchange rate. New Cashier orders use USD as their canonical settlement currency.
 - Creates orders as `pending_payment`.
 - Stores a per-cashier idempotency key and request fingerprint so a lost response cannot create a second order.
 - For KHQR, generates an Individual KHQR payload from backend-owned order totals.
@@ -373,12 +373,13 @@ Allowed for:
 - owner within the same business
 - manager within the same business
 
-Only cash orders in `pending_payment` status can be confirmed. The request must include the customer cash amount. The backend rejects underpayment, calculates `change_due_usd`, changes the status to `paid`, sets `completed_at`, and writes a `cash_payment_confirmed` audit log.
+Only cash orders in `pending_payment` status can be confirmed. The request must include at least one USD or KHR received amount. The backend combines them using the Order's saved rate, rejects underpayment, calculates both USD and KHR change equivalents, changes the status to `paid`, sets `completed_at`, and writes a `cash_payment_confirmed` audit log.
 
 **Request body**
 ```json
 {
-  "cash_received_usd": "20.00"
+  "cash_received_usd": "5.00",
+  "cash_received_khr": 20500
 }
 ```
 
@@ -392,8 +393,12 @@ The frontend must not send trusted fields such as `total`, `status`, `cashier_id
     "id": 42,
     "status": "paid",
     "total_usd": "7.00",
-    "cash_received_usd": "10.00",
-    "change_due_usd": "3.00",
+    "pricing_currency": "usd",
+    "exchange_rate_khr_per_usd": 4100,
+    "cash_received_usd": "5.00",
+    "cash_received_khr": 20500,
+    "change_due_usd": "0.00",
+    "change_due_khr": 0,
     "completed_at": "2026-06-29T10:30:00.000Z"
   }
 }
@@ -406,6 +411,18 @@ The frontend must not send trusted fields such as `total`, `status`, `cashier_id
 | 403  | Actor is not allowed for this order |
 | 404  | Order not found |
 | 409  | Order is already paid or cancelled |
+
+### GET `/financial-settings`
+
+Returns the authenticated business's current `exchange_rate_khr_per_usd` to Owner, Manager, or Cashier. The default is 4100 until the Owner saves a setting.
+
+### PUT `/financial-settings`
+
+Owner only. Updates the business exchange rate and writes a `financial_settings.updated` administrative audit event. The rate must be from 1,000 to 10,000 KHR in increments of 100. It affects new Orders only.
+
+```json
+{ "exchange_rate_khr_per_usd": 4100 }
+```
 
 ### POST `/orders/:id/retry-telegram`
 

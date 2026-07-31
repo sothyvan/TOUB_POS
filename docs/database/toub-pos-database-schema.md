@@ -102,6 +102,7 @@ erDiagram
     STALLS ||--o{ STALL_DEVICES : "registers"
     USERS ||--o{ STALL_DEVICES : "registers, uses, or revokes"
     USERS ||--o{ REFRESH_SESSIONS : "authenticates through"
+    USERS ||--o| BUSINESS_FINANCIAL_SETTINGS : "owns currency policy"
     STALL_DEVICES ||--o{ REFRESH_SESSIONS : "binds cashier sessions"
 
     CATEGORIES ||--o{ PRODUCTS : "contains"
@@ -141,6 +142,7 @@ erDiagram
 | 13 | `telegram_tickets` | Kitchen | One Telegram dispatch state record | `order_id` |
 | 14 | `refresh_sessions` | Identity | One rotating browser login credential | `user_id` and optional `device_id` |
 | 15 | `telegram_dispatch_jobs` | Kitchen | One durable paid-Order delivery job | `order_id` |
+| 16 | `business_financial_settings` | Finance | One current business exchange-rate policy | `owner_id` |
 
 ## 6. Identity And Tenancy Tables
 
@@ -210,6 +212,22 @@ refresh or CSRF tokens.
 
 The raw refresh token exists only in a Secure, HttpOnly cookie. The readable
 CSRF cookie is validated against both `X-CSRF-Token` and its stored hash.
+
+### 6.3 `business_financial_settings`
+
+**Purpose:** Stores the current Owner-managed business exchange rate used only
+for new Order snapshots. Updating this row never changes historical Orders.
+
+| Column | Type | Null/default | Key | Meaning |
+| --- | --- | --- | --- | --- |
+| `owner_id` | `INT` | Required | PK/FK → `users.id` | Business Owner scope |
+| `exchange_rate_khr_per_usd` | `INT` | Required; `4100` |  | Whole KHR represented by one USD |
+| `updated_by_user_id` | `INT` | Nullable | FK → `users.id` | Owner who last changed the rate |
+| `created_at` | `DATETIME` | Required/current time |  | Creation time |
+| `updated_at` | `DATETIME` | Required/auto update |  | Effective time of the current rate |
+
+The API accepts rates from 1,000 through 10,000 in increments of 100 and writes
+an administrative audit event for every update.
 
 ## 7. Stall Operations Tables
 
@@ -345,10 +363,11 @@ sellable at any Stall.
 
 **Purpose:** Stores one backend-owned checkout and payment state.
 
-**Current financial policy:** `total_usd` equals `subtotal_usd`, which is the
-sum of trusted item snapshots. No automatic service fee or tax is applied or
-stored in the current release. A future charge policy requires an approved
-schema and calculation change rather than a frontend-only adjustment.
+**Current financial policy:** Product USD/KHR prices are synchronized using the
+Owner's saved rate, and both totals are calculated from trusted item snapshots.
+New Cashier Orders use USD as the canonical payable total, while the business
+rate is copied to the Order for mixed-cash conversion. Historical pricing modes
+remain readable. No automatic service fee or tax is applied.
 
 | Column | Type | Null/default | Key | Meaning |
 | --- | --- | --- | --- | --- |
@@ -359,8 +378,15 @@ schema and calculation change rather than a frontend-only adjustment.
 | `status` | `ENUM` | Required; `pending_payment` |  | `pending_payment`, `paid`, `cancelled` |
 | `subtotal_usd` | `DECIMAL(10,2)` | Required; `0.00` |  | Sum before any future adjustments |
 | `total_usd` | `DECIMAL(10,2)` | Required |  | Trusted final total |
+| `subtotal_khr` | `INT` | Required; `0` |  | Trusted KHR item subtotal |
+| `total_khr` | `INT` | Required; `0` |  | Trusted KHR final total |
+| `pricing_currency` | `ENUM` | Required; `usd` |  | Canonical settlement currency; `khr` retained for historical rows |
+| `exchange_rate_khr_per_usd` | `INT` | Required |  | Sale-time business-rate snapshot |
 | `cash_received_usd` | `DECIMAL(10,2)` | Nullable |  | Customer cash accepted by backend |
-| `change_due_usd` | `DECIMAL(10,2)` | Nullable |  | Backend-calculated change |
+| `cash_received_khr` | `INT` | Nullable |  | KHR cash physically accepted |
+| `change_due_usd` | `DECIMAL(10,2)` | Nullable |  | Backend-calculated USD change equivalent |
+| `change_due_khr` | `INT` | Nullable |  | Backend-calculated KHR change equivalent |
+| `change_currency` | `ENUM` | Nullable |  | Legacy selected denomination; `NULL` for new dual-display change |
 | `qr_payload` | `TEXT` | Nullable |  | Retained KHQR payload |
 | `qr_md5` | `VARCHAR(64)` | Nullable |  | Retained KHQR payload digest |
 | `payment_reference` | `VARCHAR(100)` | Nullable | Unique | Retained payment reference |

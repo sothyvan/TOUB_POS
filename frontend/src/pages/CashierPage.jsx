@@ -100,7 +100,7 @@ export default function CashierPage() {
   } = useProducts(false);
 
   const {
-    cart, cartById, itemCount, subtotal, total,
+    cart, cartById, itemCount, subtotal, total, subtotalKhr, totalKhr,
     addToCart, updateQuantity, setCartItemQuantity, clearCart,
   } = useCart(categoryById, {
     currentUser,
@@ -123,6 +123,7 @@ export default function CashierPage() {
     });
 
   const [activeReceipt, setActiveReceipt] = useState(null);
+  const [financialSettings, setFinancialSettings] = useState({ exchangeRateKhrPerUsd: 4100 });
   const [cashierNotice, setCashierNotice] = useState(null);
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState(null);
   const [pendingCashOrder, setPendingCashOrder] = useState(null);
@@ -139,6 +140,19 @@ export default function CashierPage() {
       pageMountedRef.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!currentUser) return undefined;
+    let active = true;
+    api.financialSettings.get()
+      .then((settings) => {
+        if (active) setFinancialSettings(settings);
+      })
+      .catch(() => {
+        // Backend still snapshots and validates the authoritative rate.
+      });
+    return () => { active = false; };
+  }, [currentUser]);
 
   useEffect(() => {
     pendingPaymentMethodRef.current = pendingPaymentMethod;
@@ -269,11 +283,11 @@ export default function CashierPage() {
     }
   }, [handleCheckout]);
 
-  const handleConfirmPayment = useCallback(async (cashReceivedUsd) => {
+  const handleConfirmPayment = useCallback(async (payment) => {
     if (!pendingPaymentMethod) return;
     
     const method = pendingPaymentMethod;
-    const order = await handleCheckout(method, { cashReceivedUsd });
+    const order = await handleCheckout(method, payment);
     if (order) {
       setPendingPaymentMethod(null);
       setPendingCashOrder(null);
@@ -576,6 +590,8 @@ export default function CashierPage() {
         itemCount={itemCount}
         subtotal={subtotal}
         total={total}
+        subtotalKhr={subtotalKhr}
+        totalKhr={totalKhr}
         clearCart={clearCart}
         handleCheckout={handleCheckoutWithReceipt}
         checkoutLoading={checkoutLoading}
@@ -601,6 +617,9 @@ export default function CashierPage() {
         <CashConfirmationModal
           isOpen
           total={pendingCashOrder?.total ?? total}
+          totalKhr={pendingCashOrder?.totalKhr ?? totalKhr}
+          exchangeRateKhrPerUsd={pendingCashOrder?.exchangeRateKhrPerUsd ?? financialSettings.exchangeRateKhrPerUsd}
+          initialPricingCurrency={pendingCashOrder?.pricingCurrency ?? 'usd'}
           isBusy={checkoutLoading}
           isOnline={isOnline}
           isCheckingBackend={isCheckingBackend}

@@ -17,7 +17,7 @@ export function normalizeIdempotencyKey(value) {
   return key;
 }
 
-export function buildOrderFingerprint(paymentMethod, items, normalizeNotes) {
+export function buildOrderFingerprint(paymentMethod, items, normalizeNotes, pricingCurrency = 'usd') {
   const normalizedItems = items.map((item) => ({
     product_id: parsePositiveInteger(
       item.product_id ?? item.productId ?? item.id,
@@ -39,6 +39,7 @@ export function buildOrderFingerprint(paymentMethod, items, normalizeNotes) {
   const fingerprint = createHash('sha256')
     .update(JSON.stringify({
       payment_method: paymentMethod,
+      pricing_currency: pricingCurrency,
       items: canonicalItems,
     }))
     .digest('hex');

@@ -14,7 +14,7 @@ export default function OwnerPortalPage() {
   const { user: currentUser, logout, handleSessionInvalidated } = useAuth();
 
   // ── Permissions ───────────────────────────────────────────────────────────
-  const { canManageMenu, canManageUsers, canViewOrders } = getPermissions(currentUser);
+  const { canManageMenu, canManageUsers, canManageOwnerActions, canViewOrders } = getPermissions(currentUser);
 
   // ── Hooks ─────────────────────────────────────────────────────────────────
   const isOnline = useOnlineStatus();
@@ -39,6 +39,31 @@ export default function OwnerPortalPage() {
     useOrders(isOnline, [], () => {}, currentUser);
 
   const [ownerTab, setOwnerTab] = useState('dashboard');
+  const [financialSettings, setFinancialSettings] = useState(null);
+  const [financialSettingsLoading, setFinancialSettingsLoading] = useState(true);
+  const [financialSettingsError, setFinancialSettingsError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    api.financialSettings.get()
+      .then((settings) => {
+        if (active) setFinancialSettings(settings);
+      })
+      .catch((error) => {
+        if (active) setFinancialSettingsError(error.message || 'Unable to load financial settings.');
+      })
+      .finally(() => {
+        if (active) setFinancialSettingsLoading(false);
+      });
+    return () => { active = false; };
+  }, []);
+
+  const handleSaveFinancialSettings = async (rate) => {
+    const updated = await api.financialSettings.update(rate);
+    setFinancialSettings(updated);
+    setFinancialSettingsError('');
+    return updated;
+  };
 
   useEffect(() => {
     if (!currentUser || !canViewOrders) {
@@ -82,6 +107,7 @@ export default function OwnerPortalPage() {
     canManageMenu  ? 'stalls'   : null,
     canManageUsers ? 'users'    : null,
     canViewOrders  ? 'orders'   : null,
+    canManageOwnerActions ? 'settings' : null,
   ].filter(Boolean);
 
   const visibleOwnerTab = allowedOwnerTabs.includes(ownerTab) ? ownerTab : allowedOwnerTabs[0];
@@ -134,6 +160,10 @@ export default function OwnerPortalPage() {
         usersError={usersError}
         usersActionError={usersActionError}
         clearUsersActionError={clearUsersActionError}
+        financialSettings={financialSettings}
+        financialSettingsLoading={financialSettingsLoading}
+        financialSettingsError={financialSettingsError}
+        onSaveFinancialSettings={handleSaveFinancialSettings}
         todaysOrders={todaysOrders}
         todaysTotal={todaysTotal}
         onRetryTelegramDispatch={handleRetryTelegramDispatch}

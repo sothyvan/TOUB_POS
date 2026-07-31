@@ -21,6 +21,7 @@ export const AUDIT_ACTIONS = Object.freeze({
   TELEGRAM_COOK_REVOKED: 'telegram_cook.revoked',
   TELEGRAM_GROUP_LINK_CREATED: 'telegram_group.link_created',
   TELEGRAM_GROUP_CONNECTED: 'telegram_group.connected',
+  FINANCIAL_SETTINGS_UPDATED: 'financial_settings.updated',
 });
 
 const ALLOWED_ACTIONS = new Set(Object.values(AUDIT_ACTIONS));

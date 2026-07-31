@@ -339,6 +339,9 @@ test('live order flow enforces trusted totals, stall scope, cash rules, and RBAC
   ids.orderIds.push(order.id);
   assert.equal(Number(order.total_usd), 5.5);
   assert.equal(Number(order.subtotal_usd), 5.5);
+  assert.equal(Number(order.total_khr), 22000);
+  assert.equal(order.pricing_currency, 'usd');
+  assert.equal(Number(order.exchange_rate_khr_per_usd), 4100);
   assert.equal(order.status, 'pending_payment');
   assert.equal(order.cashier_id, ids.userId);
   assert.equal(order.stall_id, stallAId);
@@ -382,12 +385,18 @@ test('live order flow enforces trusted totals, stall scope, cash rules, and RBAC
     method: 'POST',
     token: cashierToken,
     deviceToken,
-    body: { cash_received_usd: 6 },
+    body: {
+      cash_received_usd: 1,
+      cash_received_khr: 18450,
+    },
   });
   expectStatus(confirmation, 200);
   assert.equal(confirmation.payload.data.status, 'paid');
-  assert.equal(Number(confirmation.payload.data.cash_received_usd), 6);
-  assert.equal(Number(confirmation.payload.data.change_due_usd), 0.5);
+  assert.equal(Number(confirmation.payload.data.cash_received_usd), 1);
+  assert.equal(Number(confirmation.payload.data.cash_received_khr), 18450);
+  assert.equal(confirmation.payload.data.change_currency, null);
+  assert.equal(Number(confirmation.payload.data.change_due_khr), 0);
+  assert.equal(Number(confirmation.payload.data.change_due_usd), 0);
   assert.ok(confirmation.payload.data.completed_at);
 
   const { TelegramDispatchJob } = await import('../src/models/index.js');

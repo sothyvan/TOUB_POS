@@ -1,4 +1,4 @@
-import { money } from '../../../utils/format';
+import { khrMoney, money } from '../../../utils/format';
 import Icon from '../../../components/ui/Icon';
 import ModalShell from '../../../components/ui/ModalShell';
 import TotalsBreakdown from '../../../components/ui/TotalsBreakdown';
@@ -46,11 +46,11 @@ export default function ReceiptModal({ activeReceipt, onClose }) {
                 <div className="min-w-0">
                   <strong className="block truncate text-sm font-bold text-text-strong">{item.name}</strong>
                   <span className="block mt-0.5 text-xs font-semibold text-text-soft">
-                    {item.quantity} x {money(item.price)}
+                    {item.quantity} × {money(item.price)} · {khrMoney(item.priceKhr)}
                   </span>
                 </div>
                 <strong className="shrink-0 text-sm font-bold text-text-strong">
-                  {money(item.lineTotal)}
+                  {activeReceipt.pricingCurrency === 'khr' ? khrMoney(item.lineTotalKhr) : money(item.lineTotal)}
                 </strong>
               </div>
             ))}
@@ -62,16 +62,35 @@ export default function ReceiptModal({ activeReceipt, onClose }) {
             total={activeReceipt.total}
             variant="receipt"
           />
+          <div className="flex justify-between text-sm font-bold text-text-soft">
+            <span>KHR total</span>
+            <span className="text-text-strong">{khrMoney(activeReceipt.totalKhr)}</span>
+          </div>
+          <div className="flex justify-between text-xs font-semibold text-text-muted">
+            <span>Pricing currency</span>
+            <span>{String(activeReceipt.pricingCurrency || 'usd').toUpperCase()}</span>
+          </div>
+          <div className="flex justify-between text-xs font-semibold text-text-muted">
+            <span>Saved exchange rate</span>
+            <span>1 USD = {Number(activeReceipt.exchangeRateKhrPerUsd).toLocaleString()} KHR</span>
+          </div>
 
-          {activeReceipt.paymentMethod === 'CASH' && activeReceipt.cashReceived !== null ? (
+          {activeReceipt.paymentMethod === 'CASH' && (activeReceipt.cashReceived !== null || activeReceipt.cashReceivedKhr !== null) ? (
             <div className="mt-4 space-y-2 border-t border-dashed border-ui-border pt-4 text-sm font-bold">
               <div className="flex justify-between text-text-soft">
-                <span>Cash received</span>
-                <span className="text-text-strong">{money(activeReceipt.cashReceived)}</span>
+                <span>Cash received (USD)</span>
+                <span className="text-text-strong">{money(activeReceipt.cashReceived || 0)}</span>
+              </div>
+              <div className="flex justify-between text-text-soft">
+                <span>Cash received (KHR)</span>
+                <span className="text-text-strong">{khrMoney(activeReceipt.cashReceivedKhr || 0)}</span>
               </div>
               <div className="flex justify-between text-text-soft">
                 <span>Change due</span>
-                <span className="text-state-success">{money(activeReceipt.changeDue || 0)}</span>
+                <span className="text-right text-state-success">
+                  <span className="block">{money(activeReceipt.changeDue || 0)}</span>
+                  <span className="block text-xs">{khrMoney(activeReceipt.changeDueKhr || 0)}</span>
+                </span>
               </div>
             </div>
           ) : null}

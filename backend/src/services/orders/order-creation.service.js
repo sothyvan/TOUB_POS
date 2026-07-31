@@ -23,6 +23,7 @@ import {
   normalizeIdempotencyKey,
 } from './order-idempotency.js';
 import { LIMITS } from '../../validation/request-validation.js';
+import { getExchangeRateForOwner } from '../financial-settings.service.js';
 
 const ALLOWED_PAYMENT_METHODS = new Set(['cash', 'khqr']);
 const FORBIDDEN_ITEM_FIELDS = [
@@ -110,6 +111,7 @@ export async function createOrder(
   cashierId,
   items,
   paymentMethod,
+  pricingCurrency = 'usd',
   rawIdempotencyKey,
   verifiedStallId,
 ) {
@@ -121,12 +123,19 @@ export async function createOrder(
   }
 
   const normalizedPaymentMethod = normalizePaymentMethod(paymentMethod);
+  const normalizedPricingCurrency = String(pricingCurrency || '').trim().toLowerCase();
+  if (!['usd', 'khr'].includes(normalizedPricingCurrency)) {
+    throw httpError('pricingCurrency must be usd or khr.');
+  }
   if (normalizedPaymentMethod === 'khqr' && !isKhqrEnabled()) {
     throw httpError(
       'KHQR payments are temporarily unavailable. Please use cash.',
       503,
       'KHQR_DISABLED',
     );
+  }
+  if (normalizedPaymentMethod === 'khqr' && normalizedPricingCurrency !== 'usd') {
+    throw httpError('KHQR orders must use USD pricing.');
   }
 
   const parsedCashierId = parsePositiveInteger(cashierId, 'cashier ID');
@@ -139,6 +148,7 @@ export async function createOrder(
     normalizedPaymentMethod,
     items,
     normalizeNotes,
+    normalizedPricingCurrency,
   );
   const replayedOrder = await findIdempotentOrder(
     parsedCashierId,
@@ -176,6 +186,7 @@ export async function createOrder(
       throw httpError('Assigned stall was not found.', 404);
     }
     createdOrderOwnerId = stall.owner_id;
+    const exchangeRateKhrPerUsd = await getExchangeRateForOwner(stall.owner_id, { transaction });
 
     const cashier = await User.findByPk(parsedCashierId, {
       attributes: ['id', 'username', 'role'],
@@ -242,6 +253,10 @@ export async function createOrder(
       status: 'pending_payment',
       subtotal_usd: totalUsd,
       total_usd: totalUsd,
+      subtotal_khr: totalKhr,
+      total_khr: totalKhr,
+      pricing_currency: normalizedPricingCurrency,
+      exchange_rate_khr_per_usd: exchangeRateKhrPerUsd,
       idempotency_key: idempotencyKey,
       idempotency_fingerprint: fingerprint,
     }, { transaction });
@@ -275,6 +290,8 @@ export async function createOrder(
         subtotal_usd: totalUsd,
         total_usd: totalUsd,
         total_khr: totalKhr,
+        pricing_currency: normalizedPricingCurrency,
+        exchange_rate_khr_per_usd: exchangeRateKhrPerUsd,
         ...(normalizedPaymentMethod === 'khqr' ? {
           payment_reference: order.payment_reference,
           qr_md5: order.qr_md5,

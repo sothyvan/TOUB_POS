@@ -4,7 +4,7 @@ import { api } from '../services/api';
 import { useAutoRefresh } from './useAutoRefresh';
 
 export const blankProductForm = (categoryId = '') => ({
-  id: null, name: '', code: '', price: '', categoryId, tone: 'gold', available: true, image: '', stallId: '', stallIds: []
+  id: null, name: '', code: '', price: '', priceKhr: '', categoryId, tone: 'gold', available: true, image: '', stallId: '', stallIds: []
 });
 
 const blankCategoryForm = () => ({ id: null, name: '', tone: 'gold' });
@@ -14,6 +14,7 @@ const hasProductDraft = (form) => Boolean(
   || form.name
   || form.code
   || form.price
+  || form.priceKhr
   || form.categoryId
   || form.image
   || form.stallId
@@ -168,6 +169,7 @@ export function useProducts(canManageMenu) {
     setActionError(null);
     const name = form.name.trim();
     const price = Number(form.price);
+    const priceKhr = Number(form.priceKhr);
     if (!canManageMenu || !name || !form.categoryId) {
       setActionError('Add a product name and category.');
       return null;
@@ -180,11 +182,16 @@ export function useProducts(canManageMenu) {
       );
       return null;
     }
+    if (!Number.isSafeInteger(priceKhr) || priceKhr <= 0) {
+      setActionError('Enter a valid positive whole-riel KHR price.');
+      return null;
+    }
     const product = {
       id: form.id,
       name,
       code: (form.code.trim() || suggestedCode(name)).toUpperCase(),
       price,
+      priceKhr,
       categoryId: form.categoryId,
       stallId: form.stallId,
       stallIds: form.stallIds || [],
@@ -204,7 +211,7 @@ export function useProducts(canManageMenu) {
   };
 
   const editProduct = (product) =>
-    setProductForm({ ...product, price: String(product.price) });
+    setProductForm({ ...product, price: String(product.price), priceKhr: String(product.priceKhr) });
 
   const cancelProductEdit = () => {
     setProductForm(blankProductForm(categories[0]?.id || ''));
