@@ -11,7 +11,7 @@ const allowedSqlPaths = [
   /^backend\/src\/database\/migrations\/[^/]+\.sql$/,
 ];
 
-const backupExtensions = /(?:\.dump|\.bak|\.backup|\.sql\.gz|\.sql\.gpg)$/i;
+const backupExtensions = /(?:\.dump|\.bak|\.backup|\.sql\.gz|\.sql\.gpg(?:\.sha256)?)$/i;
 const backupDirectories = /(?:^|\/)(?:backups?|dumps?)(?:\/|$)/i;
 
 export function findForbiddenDataFiles(files) {

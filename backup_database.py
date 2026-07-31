@@ -7,6 +7,7 @@ an operating-system temporary directory and keeps only an AES-256 encrypted
 """
 
 import datetime
+import hashlib
 import os
 import subprocess
 import tempfile
@@ -15,6 +16,19 @@ import tempfile
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ENV_FILE = os.path.join(SCRIPT_DIR, "backend", ".env")
 BACKUP_DIR = os.path.join(SCRIPT_DIR, "backups")
+
+
+def write_sha256(file_path: str) -> str:
+    """Write a portable checksum sidecar for an encrypted backup artifact."""
+    digest = hashlib.sha256()
+    with open(file_path, "rb") as backup_file:
+        for chunk in iter(lambda: backup_file.read(1024 * 1024), b""):
+            digest.update(chunk)
+
+    checksum_path = f"{file_path}.sha256"
+    with open(checksum_path, "w", encoding="utf-8", newline="\n") as checksum_file:
+        checksum_file.write(f"{digest.hexdigest()}  {os.path.basename(file_path)}\n")
+    return checksum_path
 
 
 def load_env(filepath: str) -> dict:
@@ -85,6 +99,8 @@ def run_backup() -> str:
         "--single-transaction",
         "--routines",
         "--triggers",
+        "--set-gtid-purged=OFF",
+        "--no-tablespaces",
         settings["DB_NAME"],
     ]
 
@@ -140,10 +156,11 @@ def run_backup() -> str:
         executable = error.filename or "required command"
         raise SystemExit(f"{executable} is not installed or available on PATH.") from error
 
+    checksum_file = write_sha256(encrypted_file)
     size_kb = os.path.getsize(encrypted_file) / 1024
     print(
         f"Encrypted backup created: {os.path.basename(encrypted_file)} "
-        f"({size_kb:.1f} KB)"
+        f"({size_kb:.1f} KB); checksum: {os.path.basename(checksum_file)}"
     )
     return encrypted_file
 

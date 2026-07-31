@@ -1,5 +1,6 @@
 """Security regression tests for the encrypted database backup script."""
 
+import hashlib
 import os
 import subprocess
 import tempfile
@@ -46,9 +47,19 @@ class BackupDatabaseTest(unittest.TestCase):
 
             self.assertTrue(encrypted_path.endswith(".sql.gpg"))
             self.assertTrue(os.path.exists(encrypted_path))
+            checksum_path = f"{encrypted_path}.sha256"
+            self.assertTrue(os.path.exists(checksum_path))
+            with open(checksum_path, "r", encoding="utf-8") as checksum_file:
+                self.assertEqual(
+                    checksum_file.read().strip(),
+                    f"{hashlib.sha256(b'encrypted-test-content').hexdigest()}  "
+                    f"{os.path.basename(encrypted_path)}",
+                )
             self.assertTrue(plaintext_paths)
             self.assertFalse(os.path.exists(plaintext_paths[0]))
             self.assertNotIn(settings["BACKUP_ENCRYPTION_PASSPHRASE"], str(command_arguments))
+            self.assertIn("--set-gtid-purged=OFF", command_arguments[0])
+            self.assertIn("--no-tablespaces", command_arguments[0])
 
     def test_backup_requires_encryption_passphrase(self):
         settings = {

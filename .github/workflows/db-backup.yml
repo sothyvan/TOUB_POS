@@ -16,11 +16,31 @@ concurrency:
 jobs:
   backup:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    services:
+      restore-mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: restore-ci-password
+          MYSQL_DATABASE: toub_pos_restore_verification
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -prestore-ci-password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
 
       - name: Install backup tools
         run: sudo apt-get update && sudo apt-get install -y mysql-client gnupg
@@ -39,7 +59,36 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: db-backup-${{ github.run_id }}
-          path: backups/*.sql.gpg
+          path: |
+            backups/*.sql.gpg
+            backups/*.sql.gpg.sha256
           if-no-files-found: error
           compression-level: 0
           retention-days: 14
+
+      - name: Restore backup into isolated MySQL and verify core tables
+        env:
+          BACKUP_ENCRYPTION_PASSPHRASE: ${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}
+          RESTORE_DB_HOST: 127.0.0.1
+          RESTORE_DB_PORT: 3306
+          RESTORE_DB_USER: root
+          RESTORE_DB_PASSWORD: restore-ci-password
+          RESTORE_DB_NAME: toub_pos_restore_verification
+        run: python3 verify_database_restore.py backups/*.sql.gpg
+
+      - name: Install locked backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Verify restored schema is application-current
+        working-directory: backend
+        env:
+          NODE_ENV: development
+          JWT_SECRET: restore-verification-only-secret
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_USER: root
+          DB_PASSWORD: restore-ci-password
+          DB_NAME: toub_pos_restore_verification
+          KHQR_ENABLED: "false"
+        run: npm run db:migrate:status
