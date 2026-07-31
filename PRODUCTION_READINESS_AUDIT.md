@@ -612,7 +612,7 @@ Deploy production observability, encrypted backups, restore drills, runbooks, in
 | Backend verification after P1-8 | Lint passed at the 65-warning ceiling; all 25 unit tests passed |
 | Frontend verification after P1-8 | Lint and production build passed; existing 575.79 kB Owner Portal chunk warning remains |
 | P1-8 GitHub enforcement | First pull-request workflow passed all four checks; teammate review and required checks are enforced on `main` |
-| P1-9 backend integration CI | Workflow definition added for disposable MySQL migrations, deterministic seed data, API health startup, and all backend live suites; first GitHub run pending |
+| P1-9 backend integration CI | First run correctly caught missing `products.is_active`/`products.is_deleted` migration columns during deterministic seeding; forward migration `202607310003` added and rerun pending |
 
 The P1-8 live npm audit request could not be run in this local environment
 because external dependency metadata egress was not approved. GitHub CI will run
