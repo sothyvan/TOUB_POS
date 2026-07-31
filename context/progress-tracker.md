@@ -1019,8 +1019,22 @@ Update this file after every meaningful implementation change.
     repositories use `products.is_active` and `products.is_deleted`, but the
     baseline migration did not create them. Added forward migration
     `202607310003-add-products-lifecycle-columns.js` and synchronized the
-    canonical SQL schema. The integration rerun and addition of this fifth
-    required check to branch protection remain pending.
+    canonical SQL schema.
+  - The integration rerun passed, the pull request merged, and `Backend
+    integration` is now the fifth required `main` branch check.
+- **Started production audit P1-9 browser E2E coverage**:
+  - Added Playwright Chromium with serial, retry-bounded execution and retained
+    failure screenshots, traces, videos, HTML report, and backend logs.
+  - Added a management journey covering protected-route redirect, Owner login,
+    refresh-session restoration, role redirect, logout, and post-logout route
+    protection.
+  - Added a cashier journey covering real terminal registration, stall-scoped
+    profile discovery, backend PIN login, product selection, cash confirmation,
+    paid receipt, and order-history visibility.
+  - Added a `Browser E2E` GitHub Actions job with isolated MySQL 8.4, managed
+    migrations, deterministic seed data, API health wait, Vite, and disabled
+    KHQR/Telegram external workers. Its first GitHub run and addition as the
+    sixth required branch check remain pending.
 
 ## Next Up
 
@@ -1036,10 +1050,12 @@ Update this file after every meaningful implementation change.
   - Current production recommendation remains No-Go until the remaining P1 security, reliability, dependency, CI, and operational controls are fixed and verified.
   - P1-7 verified database TLS is implemented and provider-verified.
   - P1-8 CI gates and branch protection are implemented and verified.
-  - P1-9 disposable backend integration CI is implemented; verify its first
-    GitHub run and add `Backend integration` as a fifth required check.
-  - Next repository priority: P1-9 deterministic browser E2E coverage for
-    highest-risk workflows.
+  - P1-9 disposable backend integration CI is implemented, passing, and
+    required by branch protection.
+  - P1-9 critical browser E2E coverage is implemented; verify its first GitHub
+    run and add `Browser E2E` as the sixth required check.
+  - After P1-9 verification, the next repository priority is P1-10 cart and
+    in-progress checkout recovery.
   - Follow the audit's phased P0/P1 plan only after team review and approval.
 
 - Post-Phase 6 Operations & Security Hardening.
