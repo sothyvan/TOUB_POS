@@ -4,7 +4,7 @@
 
 | Tool       | Version  | Install                          |
 |------------|----------|----------------------------------|
-| Node.js    | ≥ 20     | https://nodejs.org               |
+| Node.js    | ≥ 22.13  | https://nodejs.org               |
 | MySQL      | ≥ 8.0    | https://dev.mysql.com/downloads  |
 | npm        | ≥ 10     | Bundled with Node                |
 
@@ -17,23 +17,29 @@ git clone <repo-url>
 cd TOUB_POS
 
 # Install frontend dependencies
-cd frontend && npm install && cd ..
+cd frontend && npm ci && cd ..
 
 # Install backend dependencies
-cd backend && npm install && cd ..
+cd backend && npm ci && cd ..
 ```
 
 ---
 
 ## 2. Database Setup
 
-```bash
-# Log into MySQL
-mysql -u root -p
+Create an empty MySQL database or allow the local development account to create
+the configured database. After configuring the backend environment in the next
+section, apply the managed migrations from `backend/`:
 
-# Run the schema
-SOURCE docs/database/schema.sql;
+```bash
+cd backend
+npm run db:migrate
+npm run db:migrate:status
 ```
+
+Do not import `docs/database/schema.sql` as a deployment mechanism. It is a
+readable schema reference; ordered Sequelize migrations are the executable
+source of truth.
 
 ---
 
@@ -129,3 +135,6 @@ curl http://localhost:3000/api/health
 | `npm run dev`        | `frontend/`| Start Vite dev server    |
 | `npm run build`      | `frontend/`| Production bundle        |
 | `npm run lint`       | `frontend/`| ESLint check             |
+
+For production configuration, migration order, health probes, smoke tests, and
+rollback guidance, use the [Production Runbook](production-runbook.md).

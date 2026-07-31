@@ -234,7 +234,9 @@ erDiagram
 - `orders.idempotency_key` is unique per cashier. Exact checkout retries return the original order; reuse with different request data is rejected by comparing `idempotency_fingerprint`.
 - `stall_staff.user_id` is unique, so a cashier can have at most one current stall assignment. Assignment changes invalidate active cashier sessions.
 - `orders.qr_payload`, `qr_md5`, `payment_reference`, and `payment_expires_at` are populated for KHQR orders and remain `NULL` for cash orders.
-- `orders.payment_reference` is the unique bill number/reference used by the KHQR webhook.
+- `orders.payment_reference` retains the unique bill number/reference used by
+  the historical KHQR integration. Current checkout does not use a Bakong
+  payment webhook.
 - `users.username` is required and unique for every role.
 - `users.password` is used only for Platform Admin, Owner, and Manager username-password login and is `NULL` for Cashiers.
 - `users.pin` is used only for Cashier PIN login and is `NULL` for Platform Admins, Owners, and Managers.

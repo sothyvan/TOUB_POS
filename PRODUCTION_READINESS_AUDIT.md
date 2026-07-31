@@ -4,10 +4,11 @@
 **Repository state:** `main` at `26135e4` (`Docs cleanup`)  
 **Audit mode:** Read-only inspection and non-destructive verification
 
-**Remediation update (2026-07-31):** P0-1/P0-2 and P1-1 through P1-6
-have been implemented or closed with documented bounded exceptions. The
-production recommendation remains unchanged because later P1 infrastructure,
-CI, validation, readiness, and operational controls are still open.
+**Remediation update (2026-08-01):** P0-1/P0-2, P1 application controls, and
+P2-1 through P2-11 have been implemented or closed with documented bounded
+exceptions. The production recommendation remains unchanged because external
+infrastructure, operational ownership, product-policy, and production-like
+verification items are still open.
 
 ## 1. Executive Summary
 
@@ -22,13 +23,13 @@ It is not ready for an unsupervised production launch. The original audit found 
 
 Both original P0 findings are now closed. P0-1 uses a per-cashier idempotency key, request fingerprint, database uniqueness, frontend pending-order recovery, and concurrent live tests. P0-2 now requires the current assignment, JWT stall, and registered-device stall to match; assignment moves are transactional, stale API/socket sessions are invalidated, and the one-stall-per-cashier rule is database-enforced.
 
-The managed migration/rollback, Telegram transaction-recovery, and applicable
-dependency gaps have since been closed. Production readiness remains blocked by
-weak production observability and readiness checks, lack of a CI quality gate,
-no automated browser tests, and a tracked SQL dump containing operational and
-credential-shaped records. The vulnerable KHQR SDK has been removed; bounded
-Sequelize/UUID and React Router scanner exceptions are time-limited in the
-dependency risk register.
+Managed migrations, Telegram transaction recovery, safe logging, readiness and
+graceful shutdown, CI quality gates, and critical browser coverage have since
+been implemented. Production readiness remains blocked by unverified hosting
+and monitoring configuration, unresolved product/operational policies, and the
+open coordinated Git-history cleanup described under P1-13. The vulnerable
+KHQR SDK has been removed; bounded Sequelize/UUID and React Router scanner
+exceptions are time-limited in the dependency risk register.
 
 **Go/no-go:** **No-Go for production.** A supervised school demonstration using prepared data, cash payments, a controlled network, and a tested rollback laptop is reasonable after the P0 issues are fixed and the demo checklist is completed.
 
@@ -406,7 +407,7 @@ RPO and 4-hour RTO on 2026-07-31.
 - **Acceptance criteria:** A forced render exception shows a usable fallback, preserves recoverable checkout state, and reports a correlation identifier.
 - **Estimated size:** S
 - **Dependencies:** Logging/monitoring destination; cart recovery.
-- **Implementation status:** Implemented for review. `AppErrorBoundary` wraps the theme, auth, router, and lazy routes; its fallback offers retry/reload, preserves local recovery records, and shows a generated `ERR-...` reference. Structured browser diagnostics contain only the event name, correlation ID, sanitized pathname, and sanitized component names. Unit coverage verifies redaction and logger failure safety, while a development-only Playwright probe verifies the fallback, preserved cart/pending-checkout values, hidden raw error text, and retry recovery. Production ingestion/search for the structured browser event remains a deployment follow-up once the monitoring destination is selected.
+- **Implementation status:** Merged. `AppErrorBoundary` wraps the theme, auth, router, and lazy routes; its fallback offers retry/reload, preserves local recovery records, and shows a generated `ERR-...` reference. Structured browser diagnostics contain only the event name, correlation ID, sanitized pathname, and sanitized component names. Unit coverage verifies redaction and logger failure safety, while a development-only Playwright probe verifies the fallback, preserved cart/pending-checkout values, hidden raw error text, and retry recovery. Production ingestion/search for the structured browser event remains a deployment follow-up once the monitoring destination is selected.
 
 #### P2-9. Frontend production bundle has a large owner portal chunk
 
@@ -418,7 +419,7 @@ RPO and 4-hour RTO on 2026-07-31.
 - **Acceptance criteria:** No unexplained chunk warning; measured management route load improves on a throttled mobile profile with no functional regression.
 - **Estimated size:** M
 - **Dependencies:** Bundle analyzer and performance budget.
-- **Implementation status:** Implemented locally for review. Build-manifest analysis measured the merged P2-8 baseline Owner Portal entry at 578.77 kB (158.83 kB gzip). Dashboard, catalog, Stall, report, staff, and financial-settings tabs now load through separate React lazy boundaries with a shared loading state. The Owner Portal entry is 96.94 kB (26.88 kB gzip), an 83% minified reduction; the largest tab chunk is the Recharts-backed dashboard at 357.95 kB (104.29 kB gzip), and the production build has no chunk-size warning. A tested Vite plugin fails builds above a 150 KiB Owner Portal entry budget or 450 KiB tab budget. Authenticated tab navigation and a throttled deployment measurement remain review/deployment verification steps.
+- **Implementation status:** Merged. Build-manifest analysis measured the merged P2-8 baseline Owner Portal entry at 578.77 kB (158.83 kB gzip). Dashboard, catalog, Stall, report, staff, and financial-settings tabs now load through separate React lazy boundaries with a shared loading state. The Owner Portal entry is 96.94 kB (26.88 kB gzip), an 83% minified reduction; the largest tab chunk is the Recharts-backed dashboard at 357.95 kB (104.29 kB gzip), and the production build has no chunk-size warning. A tested Vite plugin fails builds above a 150 KiB Owner Portal entry budget or 450 KiB tab budget. Authenticated tab navigation and a throttled deployment measurement remain deployment verification steps.
 
 #### P2-10. Dependency installation is not clean
 
@@ -430,7 +431,7 @@ RPO and 4-hour RTO on 2026-07-31.
 - **Acceptance criteria:** Clean `npm ci` followed by `npm ls --depth=0` exits without extraneous/missing dependencies.
 - **Estimated size:** S
 - **Dependencies:** None.
-- **Implementation status:** Implemented locally for review. A clean Windows install reproduced six orphaned packages from `@tailwindcss/oxide-wasm32-wasi`: npm skips the incompatible optional `wasm32` parent but hoists its bundled runtime chain, causing `npm ls` to label the files extraneous. npm 10.9.3 and 11.6.2 behaved identically, and Tailwind 4.3.1 retains the same package structure. TouB now declares the six already-locked versions as exact build-only development dependencies, documenting npm's installed layout without changing application imports or broadly upgrading dependencies. `npm run deps:check` executes `npm ls --depth=0` and is enforced immediately after `npm ci` by Frontend quality CI.
+- **Implementation status:** Merged. A clean Windows install reproduced six orphaned packages from `@tailwindcss/oxide-wasm32-wasi`: npm skips the incompatible optional `wasm32` parent but hoists its bundled runtime chain, causing `npm ls` to label the files extraneous. npm 10.9.3 and 11.6.2 behaved identically, and Tailwind 4.3.1 retains the same package structure. TouB now declares the six already-locked versions as exact build-only development dependencies, documenting npm's installed layout without changing application imports or broadly upgrading dependencies. `npm run deps:check` executes `npm ls --depth=0` and is enforced immediately after `npm ci` by Frontend quality CI.
 
 #### P2-11. Documentation contains stale production and payment claims
 
@@ -442,6 +443,18 @@ RPO and 4-hour RTO on 2026-07-31.
 - **Acceptance criteria:** A new teammate can set up and explain the current system using canonical docs without encountering contradictory active guidance.
 - **Estimated size:** M
 - **Dependencies:** Product/payment decisions.
+- **Implementation status:** Implemented locally for review. Added
+  `docs/setup/production-runbook.md` as the canonical deployment and operations
+  guide, linked it from the active documentation entry points, and corrected
+  local setup to use locked installs and managed migrations. The course project
+  report is now explicitly historical and is no longer listed as authoritative
+  guidance. Active authentication and database notes now describe short-lived
+  access JWTs, rotating HttpOnly refresh sessions, suspended KHQR processing,
+  and the absence of a Bakong payment webhook. The progress tracker distinguishes
+  retained historical milestones from current behavior and records P2-10 as
+  merged. Active-document relative links, repository policies, 71 backend unit
+  tests, 16 frontend unit tests, both linters, the frontend dependency-tree
+  check and production build, and `git diff --check` pass.
 
 ### P3 - Optional or Longer-Term Improvements
 
@@ -450,7 +463,9 @@ RPO and 4-hour RTO on 2026-07-31.
 - **Severity:** P3
 - **Category:** Security
 - **Business impact:** MFA and step-up authentication reduce damage from stolen owner credentials.
-- **Evidence:** Current owner/manager authentication is username/password plus an eight-hour JWT.
+- **Evidence:** Current Owner/Manager authentication uses username/password,
+  a short-lived in-memory access JWT, and a rotating refresh session with an
+  eight-hour default absolute lifetime.
 - **Recommended remediation:** Add phishing-resistant MFA or TOTP and step-up checks for platform/owner destructive actions.
 - **Acceptance criteria:** Sensitive owner actions require recent strong authentication and have recovery procedures.
 - **Estimated size:** L
@@ -678,6 +693,7 @@ Deploy production observability, encrypted backups, restore drills, runbooks, in
 | P1-9 browser E2E | Playwright critical journeys and isolated CI job are implemented; Browser E2E passes and is a required `main` branch check |
 | Frontend verification after P2-9 | 16 unit tests and lint passed; production build passed without a chunk warning. Owner Portal entry fell from 578.77 kB to 96.94 kB and build-time budgets cover the entry and lazy tab chunks |
 | Frontend clean install after P2-10 | Passed: fresh `npm ci` installed 257 packages and `npm run deps:check` exited successfully with no extraneous, missing, or invalid dependencies; the audit policy reports no unapproved high/critical production findings |
+| Documentation alignment after P2-11 | Passed: relative links across 28 active Markdown files, repository audit/data policy tests, repository data scan, 71 backend unit tests, backend lint at 61 pre-existing warnings, 16 frontend unit tests, clean dependency tree, frontend lint/build, and `git diff --check` |
 
 The P1-8 live npm audit request could not be run in this local environment
 because external dependency metadata egress was not approved. GitHub CI will run
