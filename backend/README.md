@@ -341,7 +341,9 @@ schema; reconcile that database from a verified backup or reviewed SQL first.
 
 Before a production migration:
 
-1. Export a timestamped MySQL backup and restore it into a disposable database.
+1. Run the repository-root `backup_database.py` command with a protected
+   `BACKUP_ENCRYPTION_PASSPHRASE`, then restore its encrypted output into a
+   disposable database. Never commit or upload plaintext SQL.
 2. Stop application writes or enter a maintenance window.
 3. Run `npm run db:migrate:status`, then `npm run db:migrate`.
 4. Start the API and verify health, login, checkout, and kitchen dispatch.
@@ -357,6 +359,10 @@ npm run db:migrate:down
 Prefer restoring the verified backup when a migration has modified business
 data or when application compatibility is uncertain. The baseline migration
 will not drop tables that contain users, stalls, products, or orders.
+
+Backup handling, restore commands, access controls, and the P1-13 history
+cleanup procedure are documented in
+`docs/security/database-backup-security.md`.
 
 `npm run test:credentials` expects the local API and a seeded Owner account. It creates temporary Manager, Cashier, Stall, assignment, and registered-device records; verifies device-bound PIN login, credential response safety, deactivation/reactivation, credential/role changes, deletion, and stale-session rejection; then cleans up those records.
 
