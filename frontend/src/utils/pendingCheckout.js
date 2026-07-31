@@ -1,7 +1,9 @@
 const PENDING_CHECKOUT_PREFIX = 'toub-pending-checkout';
+const PENDING_CHECKOUT_VERSION = 1;
+const PENDING_CHECKOUT_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
-function getStorageKey(userId) {
-  return `${PENDING_CHECKOUT_PREFIX}:${userId}`;
+function getStorageKey(scope) {
+  return `${PENDING_CHECKOUT_PREFIX}:${scope.key}`;
 }
 
 export function createIdempotencyKey() {
@@ -38,26 +40,59 @@ export function createCheckoutSignature(orderPayload) {
   });
 }
 
-export function readPendingCheckout(userId) {
+export function readPendingCheckout(scope, now = Date.now()) {
+  if (!scope) return null;
+
   try {
-    const value = sessionStorage.getItem(getStorageKey(userId));
-    return value ? JSON.parse(value) : null;
+    const value = localStorage.getItem(getStorageKey(scope));
+    if (!value) return null;
+
+    const checkout = JSON.parse(value);
+    const updatedAt = Number(checkout?.updatedAt);
+    const orderId = checkout?.orderId === null ? null : Number(checkout?.orderId);
+    if (
+      checkout?.version !== PENDING_CHECKOUT_VERSION
+      || checkout?.userId !== scope.userId
+      || checkout?.deviceId !== scope.deviceId
+      || !Number.isFinite(updatedAt)
+      || now - updatedAt > PENDING_CHECKOUT_MAX_AGE_MS
+      || typeof checkout?.signature !== 'string'
+      || !checkout.signature
+      || typeof checkout?.idempotencyKey !== 'string'
+      || !checkout.idempotencyKey
+      || (orderId !== null && (!Number.isInteger(orderId) || orderId <= 0))
+    ) {
+      localStorage.removeItem(getStorageKey(scope));
+      return null;
+    }
+
+    return checkout;
   } catch {
     return null;
   }
 }
 
-export function writePendingCheckout(userId, checkout) {
+export function writePendingCheckout(scope, checkout, now = Date.now()) {
+  if (!scope) return;
+
   try {
-    sessionStorage.setItem(getStorageKey(userId), JSON.stringify(checkout));
+    localStorage.setItem(getStorageKey(scope), JSON.stringify({
+      ...checkout,
+      version: PENDING_CHECKOUT_VERSION,
+      userId: scope.userId,
+      deviceId: scope.deviceId,
+      updatedAt: now,
+    }));
   } catch {
     // The hook also retains this value in memory when storage is unavailable.
   }
 }
 
-export function clearPendingCheckout(userId) {
+export function clearPendingCheckout(scope) {
+  if (!scope) return;
+
   try {
-    sessionStorage.removeItem(getStorageKey(userId));
+    localStorage.removeItem(getStorageKey(scope));
   } catch {
     // Storage may be unavailable in restricted browser contexts.
   }

@@ -57,6 +57,18 @@ export function readStoredDeviceToken() {
   }
 }
 
+export function readStoredDeviceInfo() {
+  const storedDevice = localStorage.getItem(DEVICE_STORAGE_KEYS.DEVICE);
+  if (!storedDevice) return null;
+
+  try {
+    const device = JSON.parse(storedDevice);
+    return device && typeof device === 'object' ? device : null;
+  } catch {
+    return null;
+  }
+}
+
 export function writeStoredDeviceRegistration(token, stall, device) {
   localStorage.setItem(DEVICE_STORAGE_KEYS.TOKEN, JSON.stringify(token));
   localStorage.setItem(DEVICE_STORAGE_KEYS.STALL, JSON.stringify(stall));
@@ -66,4 +78,11 @@ export function writeStoredDeviceRegistration(token, stall, device) {
 
 export function clearStoredDeviceRegistration() {
   Object.values(DEVICE_STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
+
+  for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+    const key = localStorage.key(index);
+    if (key?.startsWith('toub-cart:') || key?.startsWith('toub-pending-checkout:')) {
+      localStorage.removeItem(key);
+    }
+  }
 }
