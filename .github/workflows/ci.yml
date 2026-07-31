@@ -43,7 +43,7 @@ jobs:
         run: node scripts/ci/check-repository-data.mjs
 
       - name: Test encrypted backup handling
-        run: python3 -m unittest scripts/ci/test_backup_database.py
+        run: python3 -m unittest scripts/ci/test_backup_database.py scripts/ci/test_verify_database_restore.py
 
   backend:
     name: Backend quality

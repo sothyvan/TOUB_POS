@@ -209,6 +209,16 @@ Update this file after every meaningful implementation change.
     warnings, and `git diff --check`; disposable-MySQL migration/live-flow and
     browser CI remain pending.
 
+- **Implemented technical production audit P2-7 backup restore verification**:
+  - Encrypted backup artifacts now include a SHA-256 checksum sidecar.
+  - Every scheduled/manual backup workflow uploads the encrypted files, restores
+    them into isolated MySQL, verifies core application tables, and requires the
+    restored migration ledger to be current.
+  - Added database-free regression coverage for checksum creation, corruption
+    rejection, isolated import verification, and temporary plaintext cleanup.
+  - The Owner/team approved a 24-hour RPO and 4-hour RTO. P2-7 closure now only
+    requires evidence from the first successful workflow restore drill.
+
 - **Safely suspended KHQR payment processing**:
   - Added explicit opt-in `KHQR_ENABLED` and `VITE_KHQR_ENABLED` feature flags, both defaulting to `false`.
   - Backend KHQR order creation and status checking return `503 KHQR_DISABLED` before database or provider work begins.

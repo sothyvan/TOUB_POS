@@ -380,10 +380,17 @@ and test changes.
 
 #### P2-7. Backup process lacks encryption and demonstrated restore validation
 
+**Implementation status (2026-07-31): Technical controls implemented locally.**
+Backups are AES-256 encrypted, accompanied by a SHA-256 checksum, retained for
+14 days, and uploaded before an automated isolated-MySQL restore drill verifies
+core tables and current migration status. Closure still requires the first
+successful scheduled/manual workflow run. The Owner/team approved a 24-hour
+RPO and 4-hour RTO on 2026-07-31.
+
 - **Severity:** P2
 - **Category:** Disaster recovery
 - **Business impact:** A backup can expose data, be incomplete, or prove unusable during an incident.
-- **Evidence:** `.github/workflows/db-backup.yml` uploads raw `backups/*.sql` artifacts for 30 days. No checksum, encryption, restore job, RPO/RTO, or restore drill is defined.
+- **Original evidence:** `.github/workflows/db-backup.yml` uploaded raw `backups/*.sql` artifacts for 30 days. No checksum, encryption, restore job, RPO/RTO, or restore drill was defined.
 - **Recommended remediation:** Use provider snapshots or encrypted object storage, documented retention, access control, checksums, and scheduled restore verification into an isolated database.
 - **Acceptance criteria:** A timed restore drill reaches a verified application-ready database within approved RTO/RPO, with evidence recorded.
 - **Estimated size:** M
@@ -552,8 +559,8 @@ The live tests were not run during this audit because they require a running bac
 
 ### Data and recovery
 
-- [ ] Encrypt backups outside source control.
-- [ ] Define RPO, RTO, retention, access, and deletion policy.
+- [x] Encrypt backups outside source control.
+- [x] Define RPO, RTO, retention, access, and deletion policy.
 - [ ] Run and record a full restore drill.
 - [ ] Test migration failure and rollback/restore.
 - [ ] Create deterministic synthetic demo/seed data.

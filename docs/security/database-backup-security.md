@@ -92,19 +92,28 @@ ordinary feature-branch code because it rewrites shared commit IDs.
    temporary directory.
 3. Encrypts it using GPG symmetric AES-256 encryption.
 4. Deletes the temporary plaintext when the operation ends.
-5. Keeps only an ignored `backups/*.sql.gpg` file.
+5. Creates a SHA-256 sidecar for corruption detection.
+6. Keeps only ignored `backups/*.sql.gpg` and `.sql.gpg.sha256` files.
 
 The GitHub workflow requires a separate
 `BACKUP_ENCRYPTION_PASSPHRASE` Actions secret of at least 20 characters. It
-uploads only encrypted artifacts, retains them for 14 days, and has read-only
-repository permission. The encryption passphrase must not equal the database
-password and must be stored in the team's approved password manager.
+uploads only the encrypted artifact and checksum, retains them for 14 days, and
+has read-only repository permission. The encryption passphrase must not equal
+the database password and must be stored in the team's approved password manager.
+
+Every scheduled run uploads the encrypted files first, then uses
+`verify_database_restore.py` to verify the checksum, decrypt into an operating-
+system temporary directory, import into an isolated MySQL service, and confirm
+the required application tables. The workflow finally runs the backend migration
+status command against that restored database. A failed drill makes the workflow
+fail without deleting the already-uploaded encrypted backup.
 
 To restore, download an approved encrypted artifact, decrypt it interactively
 in a restricted temporary directory, import it into a disposable database, and
 delete the plaintext immediately after verification:
 
 ```bash
+sha256sum --check toub_pos_backup_TIMESTAMP.sql.gpg.sha256
 gpg --output restore.sql --decrypt toub_pos_backup_TIMESTAMP.sql.gpg
 mysql --host=HOST --port=PORT --user=USER --password DATABASE < restore.sql
 ```
@@ -113,14 +122,31 @@ Test restoration before releases and after changing the passphrase. Losing the
 passphrase makes existing encrypted backups unrecoverable; rotating it does not
 re-encrypt old artifacts.
 
+## Recovery Targets And Evidence
+
+- Backup schedule: daily at 23:00 Asia/Phnom_Penh (16:00 UTC).
+- Encrypted artifact retention: 14 days in GitHub Actions.
+- Technical restore drill: every scheduled/manual backup run, into disposable MySQL.
+- Restore evidence: workflow run duration, restore-step result, and migration-status result.
+- Approved RPO: 24 hours. In a worst-case incident, the team accepts losing no
+  more than the transactions since the latest daily backup.
+- Approved RTO: 4 hours. The team must restore and validate application-ready
+  database service within four hours of declaring a database-recovery incident.
+- Access: repository Actions artifacts and the encryption passphrase are limited
+  to approved maintainers; production deployment must confirm the hosting plan's
+  member permissions and geographic redundancy.
+
 ## Closure Checklist
 
 - [x] Unsafe dump removed from the current repository tree.
 - [x] Generated backup and dump formats ignored.
 - [x] CI rejects unapproved tracked SQL and backup artifacts.
 - [x] Automated backup output encrypted without retained plaintext.
+- [x] Encrypted artifacts include a SHA-256 checksum.
+- [x] Scheduled workflow contains an isolated restore and migration-status drill.
 - [ ] Previous plaintext GitHub Actions backup artifacts deleted.
 - [ ] Affected user credentials, sessions, and device registrations reviewed and rotated.
 - [ ] Shared Git history rewritten and verified from a fresh clone.
 - [ ] All teammates re-cloned after the rewrite.
-- [ ] Encrypted backup restore drill passed.
+- [ ] Updated encrypted backup workflow completed its first successful restore drill.
+- [x] Business RPO of 24 hours and RTO of 4 hours approved and recorded.

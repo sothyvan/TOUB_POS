@@ -47,6 +47,7 @@ frontend/test-results/
 *_backup_*.sql
 *.sql.gz
 *.sql.gpg
+*.sql.gpg.sha256
 *.dump
 *.bak
 *.backup

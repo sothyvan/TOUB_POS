@@ -28,6 +28,7 @@ test('blocks dump and encrypted backup artifacts anywhere', () => {
     'output/database.sql.gz',
     'output/database.sql.gpg',
     'snapshot.backup',
+    'snapshot.sql.gpg.sha256',
   ];
 
   assert.deepEqual(findForbiddenDataFiles(files), files);
