@@ -1,6 +1,12 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../middleware/auth.middleware.js';
 import { getCategories, createCategory, updateCategory, deleteCategory } from '../controllers/category.controller.js';
+import { validateBody } from '../validation/request-validation.js';
+import {
+  createCategoryBody,
+  emptyBody,
+  updateCategoryBody,
+} from '../validation/mutation-schemas.js';
 
 const router = Router();
 
@@ -11,12 +17,12 @@ router.get('/', authenticate, getCategories);
 router.use(authenticate, authorize(['owner', 'manager']));
 
 // POST   /api/categories      — Create a new category
-router.post('/', createCategory);
+router.post('/', validateBody(createCategoryBody), createCategory);
 
 // PUT    /api/categories/:id  — Update a category
-router.put('/:id', updateCategory);
+router.put('/:id', validateBody(updateCategoryBody), updateCategory);
 
 // DELETE /api/categories/:id  — Delete a category
-router.delete('/:id', deleteCategory);
+router.delete('/:id', validateBody(emptyBody), deleteCategory);
 
 export default router;

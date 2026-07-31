@@ -14,20 +14,26 @@ import {
   refreshRateLimiter,
 } from '../middleware/rate-limit.middleware.js';
 import { authenticate, authorize } from '../middleware/auth.middleware.js';
+import { validateBody } from '../validation/request-validation.js';
+import {
+  emptyBody,
+  loginBody,
+  pinLoginBody,
+} from '../validation/mutation-schemas.js';
 
 const router = Router();
 
 // POST /api/auth/login
-router.post('/login', authIpRateLimiter, loginRateLimiter, login);
+router.post('/login', authIpRateLimiter, loginRateLimiter, validateBody(loginBody), login);
 
 // POST /api/auth/pin
-router.post('/pin', authIpRateLimiter, pinLoginRateLimiter, loginPin);
+router.post('/pin', authIpRateLimiter, pinLoginRateLimiter, validateBody(pinLoginBody), loginPin);
 
 // POST /api/auth/refresh
-router.post('/refresh', refreshRateLimiter, refresh);
+router.post('/refresh', refreshRateLimiter, validateBody(emptyBody), refresh);
 
 // POST /api/auth/logout
-router.post('/logout', logout);
+router.post('/logout', validateBody(emptyBody), logout);
 
 // GET /api/auth/cashiers
 router.get('/cashiers', getPublicCashiers);

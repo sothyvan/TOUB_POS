@@ -1072,8 +1072,20 @@ Update this file after every meaningful implementation change.
     instead of aborting the browser connection. Its cashier logout step now
     opens the Profile actions menu and confirms the actual dialog before
     re-authenticating, with a scoped 90-second budget for the expanded journey.
-  - The next repository priority is P1-11 consistent request validation limits
-    and schemas after P1-10 passes its pull-request checks.
+  - P1-11 centralized request validation is implemented on
+    `p1-11-request-validation`. Every application JSON mutation now uses a
+    route-bound schema that normalizes expected values, rejects unknown fields,
+    and returns `400 VALIDATION_ERROR` before database/provider work.
+  - Added storage-aware limits for model strings, two-decimal USD values,
+    integer KHR values, product prices, cash received, order item count, and
+    per-item quantity. Order creation also enforces aggregate storage limits as
+    service-level defense in depth.
+  - Added database-free boundary coverage for auth, user, catalog, stall,
+    staff/device/cook, order, cash-confirmation, and bodyless command schemas.
+    Telegram callbacks retain dedicated validation for their provider-owned
+    update envelope.
+  - The next repository priority is P1-12 proxy-aware, shared production rate
+    limiting after P1-11 passes its pull-request checks.
   - Follow the audit's phased P0/P1 plan only after team review and approval.
 
 - Post-Phase 6 Operations & Security Hardening.

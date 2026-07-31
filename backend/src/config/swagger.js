@@ -6,7 +6,7 @@ const errorResponse = {
                 type: 'object',
                 properties: {
                     success: { type: 'boolean', example: false },
-                    code: { type: 'integer', example: 400 },
+                    code: { type: 'string', example: 'VALIDATION_ERROR' },
                     message: { type: 'string', example: 'Validation failed' }
                 }
             }
@@ -104,10 +104,11 @@ export const swaggerDocument = {
                         'application/json': {
                             schema: {
                                 type: 'object',
+                                additionalProperties: false,
                                 required: ['username', 'password'],
                                 properties: {
-                                    username: { type: 'string', example: 'owner' },
-                                    password: { type: 'string', example: 'owner123' }
+                                    username: { type: 'string', maxLength: 50, example: 'owner' },
+                                    password: { type: 'string', maxLength: 72, example: 'owner123' }
                                 }
                             }
                         }
@@ -139,10 +140,11 @@ export const swaggerDocument = {
                         'application/json': {
                             schema: {
                                 type: 'object',
+                                additionalProperties: false,
                                 required: ['userId', 'pin'],
                                 properties: {
-                                    userId: { type: 'integer', example: 2 },
-                                    pin: { type: 'string', example: '1111' }
+                                    userId: { type: 'integer', minimum: 1, example: 2 },
+                                    pin: { type: 'string', pattern: '^\\d{4}$', example: '1111' }
                                 }
                             }
                         }
@@ -301,18 +303,22 @@ export const swaggerDocument = {
                         'application/json': {
                             schema: {
                                 type: 'object',
+                                additionalProperties: false,
                                 required: ['items', 'payment_method'],
                                 properties: {
                                     payment_method: { type: 'string', enum: ['cash', 'khqr'], example: 'cash' },
                                     items: {
                                         type: 'array',
+                                        minItems: 1,
+                                        maxItems: 100,
                                         items: {
                                             type: 'object',
+                                            additionalProperties: false,
                                             required: ['product_id', 'quantity'],
                                             properties: {
-                                                product_id: { type: 'integer', example: 1 },
-                                                quantity: { type: 'integer', example: 2 },
-                                                notes: { type: 'string', example: 'No sugar' }
+                                                product_id: { type: 'integer', minimum: 1, example: 1 },
+                                                quantity: { type: 'integer', minimum: 1, maximum: 100, example: 2 },
+                                                notes: { type: 'string', maxLength: 500, example: 'No sugar' }
                                             }
                                         }
                                     }
@@ -434,9 +440,16 @@ export const swaggerDocument = {
                         'application/json': {
                             schema: {
                                 type: 'object',
+                                additionalProperties: false,
                                 required: ['cash_received_usd'],
                                 properties: {
-                                    cash_received_usd: { type: 'string', example: '10.00' }
+                                    cash_received_usd: {
+                                        type: 'number',
+                                        minimum: 0.01,
+                                        maximum: 99999999.99,
+                                        multipleOf: 0.01,
+                                        example: 10.00
+                                    }
                                 }
                             }
                         }

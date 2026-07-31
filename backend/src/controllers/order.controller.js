@@ -1,79 +1,14 @@
 import * as orderService from '../services/order.service.js';
 import { sanitizeOrderTelegramMetadata } from '../utils/telegram-identifier.util.js';
 
-const FORBIDDEN_ORDER_FIELDS = [
-  'id',
-  'orderId',
-  'stall_id',
-  'stallId',
-  'cashier_id',
-  'cashierId',
-  'subtotal',
-  'subtotal_usd',
-  'total',
-  'total_usd',
-  'paid',
-  'status',
-  'cash_received_usd',
-  'cashReceivedUsd',
-  'change_due_usd',
-  'changeDueUsd',
-  'qr_payload',
-  'qrPayload',
-  'qr_md5',
-  'qrMd5',
-  'payment_reference',
-  'paymentReference',
-  'payment_expires_at',
-  'paymentExpiresAt',
-  'completed_at',
-  'completedAt',
-  'created_at',
-  'updated_at',
-];
-
-const FORBIDDEN_CASH_CONFIRM_FIELDS = [
-  'id',
-  'orderId',
-  'stall_id',
-  'stallId',
-  'cashier_id',
-  'cashierId',
-  'subtotal',
-  'subtotal_usd',
-  'total',
-  'total_usd',
-  'status',
-  'paid',
-  'change_due_usd',
-  'changeDueUsd',
-  'completed_at',
-  'completedAt',
-];
-
-function hasOwn(object, key) {
-  return Object.prototype.hasOwnProperty.call(object, key);
-}
-
 /**
  * cashier creates a new order
  */
 export async function createOrder(req, res, next) {
   try {
-    const forbiddenFields = FORBIDDEN_ORDER_FIELDS.filter((field) => hasOwn(req.body, field));
-    if (forbiddenFields.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Order request cannot include trusted fields: ${forbiddenFields.join(', ')}.`,
-      });
-    }
-
     const cashierId = req.user.id;
     const { items } = req.body;
-    const paymentMethod = req.body.paymentMethod ?? req.body.payment_method;
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ success: false, message: 'Order must contain items.' });
-    }
+    const paymentMethod = req.body.paymentMethod;
 
     const idempotencyKey = req.get('Idempotency-Key');
     const result = await orderService.createOrder(
@@ -99,16 +34,7 @@ export async function createOrder(req, res, next) {
  */
 export async function confirmCashPayment(req, res, next) {
   try {
-    const body = req.body || {};
-    const forbiddenFields = FORBIDDEN_CASH_CONFIRM_FIELDS.filter((field) => hasOwn(body, field));
-    if (forbiddenFields.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Cash confirmation cannot include trusted fields: ${forbiddenFields.join(', ')}.`,
-      });
-    }
-
-    const cashReceivedUsd = body.cash_received_usd ?? body.cashReceivedUsd;
+    const cashReceivedUsd = req.body.cash_received_usd;
     const order = await orderService.confirmCashPayment(req.params.id, req.user, cashReceivedUsd);
     res.json({ success: true, data: sanitizeOrderTelegramMetadata(order) });
   } catch (error) {

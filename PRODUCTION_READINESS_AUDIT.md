@@ -230,11 +230,13 @@ These controls should be preserved during remediation.
 #### P1-11. Production request validation lacks consistent limits and schemas
 
 - **Severity:** P1
+- **Status:** Resolved on 2026-07-31 with centralized mutation schemas and boundary tests; retained here as the original finding and acceptance record.
 - **Category:** Input validation / availability
 - **Business impact:** Extremely large quantities or values can produce unrealistic sales, overflow database fields, or trigger internal errors. Validation behavior varies by service.
 - **Evidence:** `backend/src/services/orders/order-creation.service.js:151` checks only that quantity is a positive integer; no maximum exists. Product price parsing in `backend/src/services/product.service.js:11-18` checks positivity but not maximum, USD decimal precision, or a shared schema. Notes alone have a clear 500-character limit at `order-creation.service.js:50-61`.
 - **Recommended remediation:** Add centralized request schemas with field presence, type, trim, length, precision, maximum quantity/value, unknown-field policy, and consistent 400 responses.
 - **Acceptance criteria:** Boundary tests cover every mutation; malformed and oversized input always returns a clean 4xx without a database/provider error.
+- **Resolution:** Added route-bound schemas for authentication, users, products, categories, stalls, staff/device/cook management, orders, cash confirmation, and bodyless commands. Schemas trim strings, enforce model lengths/types/enums, reject unknown fields, bound prices/cash/order quantities to storage-safe values, and return `400 VALIDATION_ERROR`. Order services retain defense-in-depth item-count, quantity, and aggregate-total limits. Database-free tests cover every application mutation schema; Telegram callbacks keep their dedicated provider-envelope validation.
 - **Estimated size:** L
 - **Dependencies:** Product limits; currency policy; API contract documentation.
 
