@@ -5,6 +5,7 @@ import {
   parseTrustProxyHops,
 } from './rate-limit.config.js';
 import { getLifecycleConfiguration } from './lifecycle.config.js';
+import { getApiDocsConfiguration } from './security.config.js';
 
 const DEFAULT_DEV_PLATFORM_ADMIN = {
   username: 'platform_admin',
@@ -97,6 +98,7 @@ export function validateEnvironment() {
     );
   }
   validateBooleanEnv('TELEGRAM_DISPATCH_WORKER_ENABLED', errors);
+  validateBooleanEnv('API_DOCS_ENABLED', errors);
   validatePositiveIntegerEnv('REFRESH_SESSION_EXPIRES_HOURS', errors, { max: 720 });
   validatePositiveIntegerEnv('TELEGRAM_DISPATCH_INTERVAL_MS', errors, { max: 60000 });
   validatePositiveIntegerEnv('TELEGRAM_DISPATCH_BATCH_SIZE', errors, { max: 100 });
@@ -169,6 +171,12 @@ export function validateEnvironment() {
 
   try {
     getDatabaseTlsOptions();
+  } catch (error) {
+    errors.push(error.message);
+  }
+
+  try {
+    getApiDocsConfiguration();
   } catch (error) {
     errors.push(error.message);
   }

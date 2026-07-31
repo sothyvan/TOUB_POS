@@ -2,6 +2,10 @@
 
 Base URL: `http://localhost:3000/api`
 
+Local Swagger documentation is available at `/api/docs`. Production omits this
+route by default. If operators explicitly enable it, separate Basic Auth
+credentials are mandatory; normal TouB POS user passwords are never reused.
+
 All protected routes require the `Authorization: Bearer <token>` header.
 
 Current roles:

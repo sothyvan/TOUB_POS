@@ -69,6 +69,9 @@ Do not run this seeder against production or any live merchant database.
 | `REPORT_TIMEZONE_OFFSET` | Business-local offset used by sales report ranges and hourly buckets | `+07:00` |
 | `READINESS_DATABASE_TIMEOUT_MS` | Maximum duration of the MySQL readiness probe | `2000` |
 | `SHUTDOWN_GRACE_PERIOD_MS` | Maximum time to drain requests/workers and close dependencies after SIGTERM/SIGINT | `15000` |
+| `API_DOCS_ENABLED` | Swagger availability; defaults to `true` in development and `false` in production | `false` |
+| `API_DOCS_USERNAME` | Separate production Swagger Basic Auth username; required only when production docs are enabled | `docs_operator` |
+| `API_DOCS_PASSWORD` | Separate strong production Swagger Basic Auth password; required only when production docs are enabled | `use_a_secret_manager` |
 | `DB_HOST` | MySQL host | `localhost` |
 | `DB_PORT` | MySQL port | `3306` |
 | `DB_USER` | MySQL user | `root` |
@@ -173,7 +176,10 @@ Security notes:
 - Refresh and logout require a matching CSRF cookie and `X-CSRF-Token` header.
 - Login, PIN, refresh, and broad authentication traffic are rate-limited. Production instances share counters through Redis; account subjects are SHA-256 hashed in Redis keys.
 - Production startup fails when Redis is unavailable or the exact reverse-proxy hop count is not configured. Store failures fail closed instead of silently bypassing limits.
-- Helmet security headers are enabled.
+- Helmet security headers and a deny-by-default API CSP are enabled.
+- Swagger is available at `/api/docs` in development. Production omits the
+  route unless `API_DOCS_ENABLED=true`; enabling it requires separate
+  `API_DOCS_USERNAME` and `API_DOCS_PASSWORD` values.
 
 Apply all pending schema changes before starting a production deployment:
 

@@ -27,6 +27,12 @@ http://localhost:3000/api
 
 Override it with `VITE_API_BASE_URL` if needed.
 
+The Vite build derives the enforcing frontend Content Security Policy from
+`VITE_API_BASE_URL`, including the matching Socket.IO origin. Production builds
+must therefore use the real HTTPS API URL (or `/api` for same-origin hosting).
+Browser-direct product uploads additionally allow only ImageKit's fixed upload
+origin; application scripts remain self-hosted.
+
 ---
 
 ## Project Structure

@@ -118,7 +118,8 @@
 - Cashier accounts store a bcrypt PIN hash and must have `password = NULL`.
 - Password hashes, raw PINs, and PIN hashes are never returned by normal API responses.
 - Internal session versions are never returned by normal user or login responses.
-- Express applies Helmet security headers while keeping local Swagger documentation compatible.
+- Express applies a deny-by-default CSP and Helmet security headers to API responses. The Vite build injects an enforcing frontend-document CSP derived from `VITE_API_BASE_URL`, allowing only self-hosted scripts, the configured API/Socket.IO origin, ImageKit uploads, and the existing bounded image/style requirements.
+- Swagger remains available without separate credentials only in development. Production omits `/api/docs` by default; explicitly enabling it requires separate Basic Auth credentials and applies an isolated documentation CSP.
 - Future SaaS/multi-customer versions should expand `platform_admin` into a full audited platform console with tenant isolation, subscription/license management, owner recovery, and support-only access rules.
 
 ## Invariants
