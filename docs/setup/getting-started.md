@@ -55,6 +55,8 @@ cp backend/.env.example backend/.env
 | `DB_NAME`        | `toub_pos`             | Database name                |
 | `DB_USER`        | `root`                 | MySQL user                   |
 | `DB_PASSWORD`    | `yourpassword`         | MySQL password               |
+| `DB_SSL_CA_PATH` | `./certs/provider-ca.pem` | Production provider CA file; use this or `DB_SSL_CA` |
+| `DB_SSL_CA`      | PEM value in secret manager | Inline production provider CA; supports literal `\n` |
 | `JWT_SECRET`     | `change_me_in_prod`    | JWT signing secret           |
 | `JWT_ACCESS_EXPIRES_IN` | `15m`          | In-memory access JWT lifetime |
 | `REFRESH_SESSION_EXPIRES_HOURS` | `8`    | Absolute refresh-session lifetime |
@@ -66,6 +68,10 @@ cp backend/.env.example backend/.env
 Use `http://localhost:5173` with the default `http://localhost:3000/api`
 configuration. Do not mix `localhost` and `127.0.0.1`; browsers treat them as
 different sites and will not send the development `SameSite=Lax` refresh cookie.
+
+For production, download the MySQL CA from the hosting provider and configure
+exactly one of `DB_SSL_CA_PATH` or `DB_SSL_CA`. The API and migration command
+verify the database certificate and hostname; an invalid CA fails closed.
 
 ---
 

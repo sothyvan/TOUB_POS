@@ -1,13 +1,12 @@
 import 'dotenv/config';
-import { ensureDatabaseExists } from '../config/db.js';
-import sequelize from '../config/db.js';
-import {
-  getDatabaseMigrationStatus,
-  migrateDatabase,
-  migrator,
-} from '../database/migrator.js';
+import { validateEnvironment } from '../config/env.js';
 
 const command = process.argv[2] || 'up';
+let sequelize;
+let ensureDatabaseExists;
+let getDatabaseMigrationStatus;
+let migrateDatabase;
+let migrator;
 
 function printMigrationList(label, migrations) {
   process.stdout.write(`${label}: ${migrations.length}\n`);
@@ -24,6 +23,14 @@ async function connect() {
 }
 
 async function run() {
+  validateEnvironment();
+  ({ default: sequelize, ensureDatabaseExists } = await import('../config/db.js'));
+  ({
+    getDatabaseMigrationStatus,
+    migrateDatabase,
+    migrator,
+  } = await import('../database/migrator.js'));
+
   await connect();
 
   if (command === 'up') {
@@ -59,5 +66,7 @@ run()
     process.exitCode = 1;
   })
   .finally(async () => {
-    await sequelize.close();
+    if (sequelize) {
+      await sequelize.close();
+    }
   });

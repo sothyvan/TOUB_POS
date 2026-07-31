@@ -976,6 +976,19 @@ Update this file after every meaningful implementation change.
     both exceptions are recorded in `docs/security/dependency-risk-register.md`.
   - Backend lint passed with zero errors, 19 unit tests passed, and frontend
     lint/build passed. The existing Owner Portal chunk-size warning remains.
+- **Implemented production audit P1-7 verified database TLS**:
+  - Added one shared TLS configuration path for Sequelize and raw MySQL
+    connections with `rejectUnauthorized: true`.
+  - Production API startup and migration commands now require exactly one
+    provider CA source through `DB_SSL_CA_PATH` or `DB_SSL_CA` and fail clearly
+    for missing, unreadable, ambiguous, or malformed CA configuration.
+  - Added database-free coverage for development behavior, missing/ambiguous
+    production CA settings, inline PEM normalization, CA-file loading, and
+    strict verification options.
+  - Backend lint passes with zero errors and 65 existing warnings; all 25
+    backend unit tests pass.
+  - Live provider verification remains a deployment task because the real
+    provider CA is intentionally not stored in the repository.
 
 ## Next Up
 
@@ -989,7 +1002,10 @@ Update this file after every meaningful implementation change.
   - P1-5 managed production migrations, rollback controls, and restore drill are implemented and verified.
   - P1-6 applicable production dependency vulnerabilities are remediated; bounded scanner exceptions are documented and time-limited.
   - Current production recommendation remains No-Go until the remaining P1 security, reliability, dependency, CI, and operational controls are fixed and verified.
-  - Next priority: P1-7 verified database TLS using the provider CA.
+  - P1-7 verified database TLS is implemented in code. Before deployment,
+    install the provider CA and prove correct-CA success plus wrong-CA/hostname
+    failure against the production-like database.
+  - Next repository priority: P1-8 pull-request CI quality and security gates.
   - Follow the audit's phased P0/P1 plan only after team review and approval.
 
 - Post-Phase 6 Operations & Security Hardening.

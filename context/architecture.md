@@ -61,6 +61,7 @@
 
 - **MySQL Database**: Stores all relational data including Users, Stalls, Staff assignments, Orders, Order Items (with modifiers), and Payment Confirmations.
 - **Schema lifecycle**: Ordered Umzug migrations are the only schema-change path. Production startup is read-only and fails when migrations are pending; deployment runs `npm run db:migrate` before starting the API. Development startup and seed commands apply pending migrations without using `sequelize.sync()`.
+- **Database transport**: Production MySQL connections require the hosting provider CA through `DB_SSL_CA_PATH` or `DB_SSL_CA`. Sequelize and raw MySQL connections use `rejectUnauthorized: true`; missing, unreadable, or invalid CA configuration fails startup/migration rather than disabling certificate or hostname verification.
 - **Telegram dispatch outbox**: `telegram_dispatch_jobs` stores one durable job per paid Order. The payment transaction and enqueue either commit together or roll back together; a database-locking worker performs the external Telegram call afterward.
 - **ImageKit**: Stores product photo binary assets. The backend issues short-lived browser-upload authentication parameters to Owner/Manager users only, while MySQL stores only the delivered asset URL in `products.image_url`.
 - **Browser auth storage**: Short-lived access JWTs and the public user session

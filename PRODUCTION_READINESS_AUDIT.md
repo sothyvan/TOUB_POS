@@ -169,13 +169,14 @@ These controls should be preserved during remediation.
 - **Estimated size:** M
 - **Dependencies:** Payment-provider decision; dependency compatibility testing.
 
-#### P1-7. Database TLS disables certificate verification
+#### P1-7. Database TLS disables certificate verification - Implemented; deployment verification pending
 
 - **Severity:** P1
 - **Category:** Infrastructure security
 - **Business impact:** An attacker able to intercept database traffic could impersonate the database endpoint despite TLS being enabled.
-- **Evidence:** `backend/src/config/db.js:32` sets `rejectUnauthorized: false`.
-- **Recommended remediation:** Install the database provider's CA certificate and enable certificate/hostname verification. Fail startup on invalid certificates.
+- **Former evidence:** `backend/src/config/db.js` previously set `rejectUnauthorized: false`.
+- **Resolution:** Added a shared database TLS resolver used by Sequelize and raw MySQL connections. Production requires exactly one provider CA source through `DB_SSL_CA_PATH` or `DB_SSL_CA`, enables `rejectUnauthorized: true`, and fails environment validation for missing, unreadable, ambiguous, or malformed CA configuration. The production migration command enforces the same contract.
+- **Remaining deployment check:** Install the real hosting-provider CA, verify a production-mode connection succeeds, then verify a wrong CA and hostname fail. No provider CA is stored in this repository.
 - **Acceptance criteria:** Production connects with `rejectUnauthorized: true` and the configured CA; a wrong CA or hostname fails.
 - **Estimated size:** S
 - **Dependencies:** Hosting provider CA and TLS documentation.
@@ -489,7 +490,8 @@ The live tests were not run during this audit because they require a running bac
 
 - [ ] Use HTTPS end to end and secure headers, including a tested CSP.
 - [ ] Configure exact CORS origins and trusted proxy hops.
-- [ ] Use verified MySQL TLS with provider CA and least-privilege DB credentials.
+- [x] Use verified MySQL TLS with provider CA.
+- [ ] Verify and document least-privilege production DB credentials.
 - [ ] Store secrets in the hosting secret manager; rotate before launch.
 - [ ] Define liveness/readiness checks and graceful shutdown.
 - [ ] Decide single-instance versus multi-instance Socket.IO/worker architecture.
