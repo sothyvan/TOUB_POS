@@ -242,7 +242,8 @@
 
 ## Error Handling Strategy
 
-- **Backend**: All errors are caught by a global Express error handler and mapped to a standard JSON format: `{ success: false, code: 400, message: "..." }`.
+- **Backend**: Every request receives a validated or server-generated correlation ID in `X-Request-ID`. The global Express error handler preserves intentional public application errors, but maps unexpected server failures to `{ success: false, code: "INTERNAL_SERVER_ERROR", message: "Internal server error.", request_id: "..." }` without exposing ORM, provider, configuration, or stack details.
+- **Diagnostics**: Request completion and failure events are emitted as one-line JSON records with the same correlation ID. Nested credentials, authorization/cookie/CSRF/session values, PINs, tokens, and secrets are recursively redacted; unexpected error name, internal code, message, and stack remain server-side for diagnosis.
 - **Frontend**: The `services/api.js` layer intercepts failing requests and surfaces them to the UI via toast notifications or inline error states, preventing silent failures.
 
 ## Runtime Health And Shutdown

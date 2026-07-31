@@ -89,6 +89,22 @@ Update this file after every meaningful implementation change.
   - Removed obsolete Admin/Cashier auth handoffs, the old frontend-auth implementation guide, the superseded full-project audit, the duplicate API workflow text diagram, and duplicate historical KHQR flow documents.
   - Kept current code, API, payment, database, setup, and final-project documentation unchanged except for repaired archive references.
 
+- **Implemented production audit P2-1 safe errors and correlated redacted logging**:
+  - Every HTTP request now receives a validated incoming or server-generated
+    correlation ID returned in `X-Request-ID`; error responses include the same
+    `request_id` for operator support.
+  - Unexpected server/ORM/provider failures return only the stable
+    `500 INTERNAL_SERVER_ERROR` contract, while intentional application errors
+    retain their safe messages and codes.
+  - Replaced human-formatted request output with one-line JSON completion and
+    failure events containing searchable request, actor, status, duration, and
+    internal error classification fields.
+  - Added recursive redaction for credentials, authorization/cookie/CSRF/session
+    data, PINs, tokens, secrets, circular metadata, and sensitive values embedded
+    in diagnostic strings.
+  - Added five database-free regression tests. All 50 backend unit tests pass;
+    backend lint passes with zero errors and 61 existing warnings.
+
 - **Safely suspended KHQR payment processing**:
   - Added explicit opt-in `KHQR_ENABLED` and `VITE_KHQR_ENABLED` feature flags, both defaulting to `false`.
   - Backend KHQR order creation and status checking return `503 KHQR_DISABLED` before database or provider work begins.
@@ -1124,7 +1140,9 @@ Update this file after every meaningful implementation change.
   - Final P1-14 closure requires its first pull-request CI run and production
     host health/termination settings to use the documented endpoints/timeouts.
   - P2-1 production-safe error responses and structured redacted diagnostics is
-    the next code priority after P1-14 is merged and deployment-verified.
+    implemented with focused regression coverage. Run the complete backend
+    lint/unit suite after restoring dependencies, then verify ingestion/search
+    against the selected production logging destination.
   - Follow the audit's phased P0/P1 plan only after team review and approval.
 
 - Post-Phase 6 Operations & Security Hardening.

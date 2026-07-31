@@ -981,9 +981,11 @@ TouB POS does not assume Bakong sends a payment webhook.
 
 - Controllers forward errors to the global handler.
 - Services create status-aware domain errors.
-- Global handler returns a clean JSON message and optional code.
-- Development logs include error detail; production responses do not include raw
-  stack traces.
+- Global handler preserves intentional public application errors and returns a
+  generic `INTERNAL_SERVER_ERROR` response for unexpected server failures.
+- Error responses and the `X-Request-ID` response header include the request's
+  correlation ID; production responses never include raw ORM/provider messages
+  or stack traces.
 
 Common statuses:
 
@@ -1001,13 +1003,17 @@ Common statuses:
 
 Request logging records:
 
-- UTC timestamp.
+- One-line JSON event name, severity, and UTC timestamp.
+- Validated or server-generated request correlation ID.
 - HTTP method and path.
 - Status.
 - Duration.
-- Sanitized body when present.
+- Sanitized query/body and authenticated actor metadata when present.
 
-It masks sensitive keys recursively.
+Failure events include internal error name, code, message, and stack for
+server-side diagnosis. Sensitive credential, authorization, cookie, CSRF,
+session, PIN, token, and secret fields are masked recursively in both request
+and error records.
 
 ### 14.3 Audit Logging
 

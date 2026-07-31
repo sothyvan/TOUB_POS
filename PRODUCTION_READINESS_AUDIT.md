@@ -289,6 +289,7 @@ These controls should be preserved during remediation.
 - **Evidence:** `backend/src/middleware/error.middleware.js:6-16` returns `err.message` for all statuses and logs full errors only outside production.
 - **Recommended remediation:** Return a generic message for unexpected 500s, preserve safe application errors, log structured internal details with correlation IDs, and redact sensitive fields.
 - **Acceptance criteria:** Forced DB errors return a generic response and create a searchable redacted log with request correlation.
+- **Implementation:** Added validated/client-propagated or server-generated request correlation IDs returned through `X-Request-ID` and error JSON. Unexpected server failures now return only `INTERNAL_SERVER_ERROR` with a generic message, while intentional application errors retain their stable public contract. Request completion and error diagnostics are one-line JSON events sharing the correlation ID; nested credentials, authorization/cookie/CSRF/session data, PINs, tokens, secrets, and sensitive values embedded in diagnostic strings are redacted. Database-free regression coverage forces a Sequelize-style failure and verifies the generic response, retained internal error classification, correlation, and redaction.
 - **Estimated size:** M
 - **Dependencies:** Logging/monitoring destination.
 
