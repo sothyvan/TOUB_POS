@@ -1084,8 +1084,8 @@ Update this file after every meaningful implementation change.
     staff/device/cook, order, cash-confirmation, and bodyless command schemas.
     Telegram callbacks retain dedicated validation for their provider-owned
     update envelope.
-  - P1-12 proxy-aware shared authentication rate limiting is implemented on
-    `p1-12-production-rate-limiting`. Production now requires an exact
+  - P1-12 proxy-aware shared authentication rate limiting is implemented,
+    merged, and protected by CI. Production now requires an exact
     `TRUST_PROXY_HOPS` value and Redis-compatible shared counter store, while
     local development may retain zero-proxy process-local counters.
   - Backend startup connects to and pings Redis before listening. Runtime store
@@ -1098,8 +1098,21 @@ Update this file after every meaningful implementation change.
     Redis alongside MySQL.
   - Final P1-12 closure requires setting and verifying the exact hop count
     through the selected production hosting provider's real proxy path.
-  - The next repository priority is P1-13 removal and rotation review for the
-    tracked SQL dump after P1-12 passes its pull-request checks.
+  - P1-13 current-tree repository and backup controls are implemented on
+    `p1-13-sql-dump-security`. The unverified operational SQL dump is removed,
+    generated backup formats are ignored, and CI permits SQL only in canonical
+    migration and course-document locations.
+  - Automated backups now keep plaintext only in an OS temporary directory,
+    retain an AES-256 GPG-encrypted `.sql.gpg` artifact, use a separate Actions
+    passphrase secret, and expire uploaded artifacts after 14 days. Policy and
+    backup regression tests verify path blocking and plaintext cleanup.
+  - Final P1-13 closure is administrator/team work: delete previous plaintext
+    Actions artifacts, reset affected account credentials and legacy terminal
+    registrations, perform the documented coordinated Git-history rewrite,
+    require every teammate to re-clone, and pass an encrypted restore drill.
+  - P1-14 readiness/liveness separation and graceful shutdown is the next code
+    priority only after the P1-13 pull request passes and the manual exposure
+    response is scheduled.
   - Follow the audit's phased P0/P1 plan only after team review and approval.
 
 - Post-Phase 6 Operations & Security Hardening.
