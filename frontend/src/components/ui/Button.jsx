@@ -18,6 +18,7 @@ const variantClasses = {
 };
 
 const sizeClasses = {
+  compact: 'min-h-8 gap-1.5 px-2 text-[11px] rounded-md',
   sm: 'min-h-9 px-3 text-xs rounded-md',
   md: 'min-h-11 px-4 text-sm rounded-lg',
   lg: 'min-h-12 px-5 text-[15px] rounded-lg',

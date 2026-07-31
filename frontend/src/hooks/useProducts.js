@@ -110,10 +110,10 @@ export function useProducts(canManageMenu) {
   const saveCategory = async () => {
     setActionError(null);
     const name = categoryForm.name.trim();
-    if (!canManageMenu || !name) return;
+    if (!canManageMenu || !name) return false;
     if (categories.some((c) => c.id !== categoryForm.id && c.name.toLowerCase() === name.toLowerCase())) {
       setActionError('That category already exists.');
-      return;
+      return false;
     }
     try {
       if (categoryForm.id) {
@@ -125,8 +125,10 @@ export function useProducts(canManageMenu) {
       
       await loadData(false);
       setCategoryForm(blankCategoryForm());
+      return true;
     } catch(err) {
       setActionError(err.message || 'Failed to save category.');
+      return false;
     }
   };
 
@@ -219,17 +221,19 @@ export function useProducts(canManageMenu) {
 
   const toggleProductAvailability = async (productId) => {
     setActionError(null);
-    if (!canManageMenu) return;
+    if (!canManageMenu) return false;
     const target = products.find((p) => p.id === productId);
     if (target) {
       try {
         await api.products.save({ ...target, available: !target.available });
         await loadData(false);
+        return true;
       } catch(err) {
         setActionError(err.message || 'Failed to toggle availability.');
+        return false;
       }
     }
-    return productId; // signal: remove from cart
+    return false;
   };
 
   const deleteProduct = async (productId) => {

@@ -9,9 +9,11 @@ import TabPills from '../../../components/ui/TabPills';
 import Pagination from '../../../components/ui/Pagination';
 import Switch from '../../../components/ui/Switch';
 import Alert from '../../../components/ui/Alert';
+import Button from '../../../components/ui/Button';
 import { api } from '../../../services/api';
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { convertKhrPriceToUsd, convertUsdPriceToKhr } from '../../../../config/financial-policy';
+import useNotifications from '../../../shared/notifications/useNotifications';
 
 const PRODUCT_PAGE_SIZE = 12;
 const PRODUCT_IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp';
@@ -43,6 +45,8 @@ function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete,
 
   return (
     <div
+      data-product-id={product.id}
+      tabIndex={-1}
       className={`group relative flex cursor-pointer transition-all duration-200 ${
         isGrid
           ? 'h-full min-w-0 flex-col gap-0 overflow-hidden rounded-lg border bg-ui-surface shadow-sm'
@@ -174,14 +178,16 @@ function ProductRow({ product, categories, stalls, isSelected, onEdit, onDelete,
 }
 
 // ── Editor panel ──────────────────────────────────────────────────────────────
-function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsError, onSave, onCancel, isNew, actionError, exchangeRateKhrPerUsd }) {
+function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsError, onSave, onCancel, onDelete, isNew, actionError, exchangeRateKhrPerUsd }) {
   const [uploadProgress, setUploadProgress] = useState(null);
   const [uploadError, setUploadError] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [priceValidationError, setPriceValidationError] = useState('');
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
+    if (isSaving || isUploading) return;
     const parsedPrice = Number(form.price);
     const parsedPriceKhr = Number(form.priceKhr);
     if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
@@ -197,7 +203,13 @@ function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsE
       return;
     }
     setPriceValidationError('');
-    onSave(form);
+    setIsSaving(true);
+    try {
+      const saved = await onSave(form);
+      if (!saved) setIsSaving(false);
+    } catch {
+      setIsSaving(false);
+    }
   };
 
   const handleImageUpload = async (file) => {
@@ -239,7 +251,7 @@ function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsE
             {isNew ? 'Creating new product' : `Editing: ${form.name || '—'}`}
           </p>
         </div>
-        <button type="button" onClick={onCancel}
+        <button type="button" onClick={onCancel} disabled={isSaving || isUploading}
           className="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-100 border-0"
           style={{ background: '#fafafa' }}>
           <Icon name="close" className="w-3.5 h-3.5 text-[#6b7280]" strokeWidth={2} />
@@ -460,16 +472,28 @@ function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsE
         </div>
 
         {/* Sticky footer */}
-        <div className="flex gap-2.5 px-5 py-4 border-t border-[#f3f4f6] mt-auto" style={{ background: '#fafafa' }}>
-          <button type="button" onClick={onCancel}
+        <div className="flex flex-wrap gap-2.5 px-5 py-4 border-t border-[#f3f4f6] mt-auto" style={{ background: '#fafafa' }}>
+          {!isNew ? (
+            <Button
+              type="button"
+              variant="danger"
+              iconName="delete"
+              className="h-[42px] shrink-0"
+              disabled={isSaving || isUploading}
+              onClick={() => onDelete(form.id)}
+            >
+              Delete
+            </Button>
+          ) : null}
+          <button type="button" onClick={onCancel} disabled={isSaving || isUploading}
             className="flex-1 rounded-[10px] border border-[#e5e7eb] cursor-pointer hover:bg-gray-50 transition-all font-bold"
             style={{ height: 42, fontSize: 13, color: '#6b7280', fontFamily: 'Inter, sans-serif', background: '#ffffff' }}>
             Cancel Changes
           </button>
-          <button type="submit"
+          <button type="submit" disabled={isSaving || isUploading}
             className="flex-[2] rounded-[10px] border-0 cursor-pointer hover:opacity-90 transition-all font-bold"
             style={{ height: 42, fontSize: 13, color: '#ffffff', background: '#003ec7', fontFamily: 'Inter, sans-serif' }}>
-            Save &amp; Publish Product
+            {isSaving ? 'Saving Product...' : 'Save & Publish Product'}
           </button>
         </div>
       </form>
@@ -510,6 +534,7 @@ export default function MenuCatalog({
   actionError,
   clearActionError,
 }) {
+  const notifications = useNotifications();
   const [subTab, setSubTab]         = useState('products');
   const [search, setSearch]         = useState('');
   const [editingProduct, setEditing] = useState(null); // null = no panel, object = form data
@@ -522,8 +547,10 @@ export default function MenuCatalog({
   const [stallFilter, setStallFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [productPage, setProductPage] = useState(1);
+  const [productToRevealId, setProductToRevealId] = useState(null);
   const [viewMode, setViewMode] = useState('list');
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1200);
+  const productListRef = useRef(null);
 
   useEffect(() => {
     const handleResize = () => {
@@ -588,6 +615,21 @@ export default function MenuCatalog({
     return filtered.slice(start, start + PRODUCT_PAGE_SIZE);
   }, [filtered, currentProductPage]);
 
+  useEffect(() => {
+    if (!productToRevealId || subTab !== 'products') return undefined;
+    if (!paginatedProducts.some((product) => Number(product.id) === Number(productToRevealId))) {
+      return undefined;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      const row = productListRef.current?.querySelector(`[data-product-id="${productToRevealId}"]`);
+      row?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      row?.focus({ preventScroll: true });
+      setProductToRevealId(null);
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [paginatedProducts, productToRevealId, subTab]);
+
   const openEditor = (product) => {
     clearActionError?.();
     setEditing({
@@ -608,6 +650,7 @@ export default function MenuCatalog({
     setProductForm(formData);
     const saved = await onSaveProduct(formData);
     if (saved) setEditing(null);
+    return saved;
   };
 
   const handleCancel = () => {
@@ -616,13 +659,25 @@ export default function MenuCatalog({
   };
 
   const handleDelete = (id) => {
-    onDeleteProduct(id);
-    if (editingProduct?.id === id) setEditing(null);
+    onDeleteProduct(id, () => {
+      setEditing((current) => Number(current?.id) === Number(id) ? null : current);
+      if (Number(editingProduct?.id) === Number(id)) onCancelProduct();
+    });
   };
 
   const handleEditProductFromCategory = (product) => {
+    const productIndex = products.findIndex((item) => Number(item.id) === Number(product.id));
+    const targetPage = productIndex >= 0 ? Math.floor(productIndex / PRODUCT_PAGE_SIZE) + 1 : 1;
+
+    setSearch('');
+    setCategoryFilter('');
+    setStallFilter('');
+    setStatusFilter('');
+    setProductPage(targetPage);
+    setProductToRevealId(product.id);
     openEditor(product);
     setSubTab('products');
+    notifications.info(`${product.name} is selected on page ${targetPage}.`, 'Product located');
   };
 
   // ── Categories sub-tab ────────────────────────────────────────────────────
@@ -645,6 +700,7 @@ export default function MenuCatalog({
           onMoveProducts={onMoveProducts}
           loading={loading}
           error={error}
+          actionError={actionError}
         />
       </div>
     );
@@ -789,7 +845,7 @@ export default function MenuCatalog({
           )}
 
           {/* Rows */}
-          <div className={`flex-1 overflow-y-auto ${effectiveViewMode === 'grid' ? 'p-4' : 'p-0'}`}>
+          <div ref={productListRef} className={`flex-1 overflow-y-auto ${effectiveViewMode === 'grid' ? 'p-4' : 'p-0'}`}>
             {loading ? (
               <div className="flex flex-col items-center justify-center h-40 gap-2 text-[#9ca3af]">
                 <span style={{ fontSize: 13, fontFamily: 'Inter, sans-serif' }} className="animate-pulse">Loading products...</span>
@@ -855,6 +911,7 @@ export default function MenuCatalog({
                 stallsError={stallsError}
                 onSave={handleSave}
                 onCancel={handleCancel}
+                onDelete={handleDelete}
                 isNew={!editingProduct.id}
                 actionError={actionError}
                 exchangeRateKhrPerUsd={exchangeRateKhrPerUsd}

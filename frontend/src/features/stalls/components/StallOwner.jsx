@@ -12,6 +12,7 @@ import ModalShell from '../../../components/ui/ModalShell';
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh';
 import { subscribeToManagementUpdates } from '../../../services/socketClient';
 import TelegramCookManager from './TelegramCookManager';
+import useNotifications from '../../../shared/notifications/useNotifications';
 
 // ── Seed data ─────────────────────────────────────────────────────────────────
 const AVATAR_COLORS = ['#eef2ff','#dcfce7','#f3e8ff','#fff1f2','#fef3c7','#e0f2fe'];
@@ -379,6 +380,7 @@ function DeregisterDeviceDialog({
 }
 
 export default function StallOwner({ users = [], currentUser }) {
+  const notifications = useNotifications();
   const cashierUsers = useMemo(() => {
     return users.filter((user) => roleToApiRole(user.role) === 'cashier');
   }, [users]);
@@ -387,7 +389,6 @@ export default function StallOwner({ users = [], currentUser }) {
   const [loading, setLoading] = useState(true);
   const [selectedStallId, setSelectedStallId] = useState(null);
   const [actionError, setActionError] = useState('');
-  const [actionNotice, setActionNotice] = useState('');
   
   const [staffSearch, setStaffSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -398,6 +399,8 @@ export default function StallOwner({ users = [], currentUser }) {
   const [isPoolOver, setIsPoolOver] = useState(false);
   const [deviceToDeregister, setDeviceToDeregister] = useState(null);
   const [isDeregistering, setIsDeregistering] = useState(false);
+  const [stallToDelete, setStallToDelete] = useState(null);
+  const [isDeletingStall, setIsDeletingStall] = useState(false);
 
   const loadStalls = useCallback(async (showSpinner = false) => {
     try {
@@ -527,6 +530,9 @@ export default function StallOwner({ users = [], currentUser }) {
       await api.stalls.assignStaff(toStallId, userId);
       updateAssignmentsLocally(toStallId, userId, null);
       await loadStalls(false);
+      const userName = users.find((user) => Number(user.id) === Number(userId))?.name || 'Employee';
+      const stallName = stalls.find((stall) => Number(stall.id) === Number(toStallId))?.name || 'the stall';
+      notifications.success(`${userName} is now assigned to ${stallName}.`, 'Staff assigned');
       return true;
     } catch (err) {
       setActionError(err.message || 'Failed to assign staff.');
@@ -547,9 +553,12 @@ export default function StallOwner({ users = [], currentUser }) {
     setActionError('');
     setPendingUserId(userId);
     try {
+      const userName = users.find((user) => Number(user.id) === Number(userId))?.name || 'Employee';
+      const stallName = selectedStall?.name || 'the stall';
       await api.stalls.unassignStaff(selectedStallId, userId);
       updateAssignmentsLocally(selectedStallId, null, userId);
       await loadStalls(false);
+      notifications.success(`${userName} was removed from ${stallName}.`, 'Staff unassigned');
       return true;
     } catch (err) {
       setActionError(err.message || 'Failed to unassign staff.');
@@ -566,6 +575,7 @@ export default function StallOwner({ users = [], currentUser }) {
       setStalls((current) => [...current, saved]);
       setSelectedStallId(saved.id);
       await loadStalls(false);
+      notifications.success(`${saved.name} is ready for staff and device setup.`, 'Location added');
       return true;
     } catch (err) {
       setActionError(err.message || 'Failed to create stall.');
@@ -577,7 +587,6 @@ export default function StallOwner({ users = [], currentUser }) {
     if (!selectedStall?.id || !deviceToDeregister?.id || isDeregistering) return;
 
     setActionError('');
-    setActionNotice('');
     setIsDeregistering(true);
     try {
       await api.stalls.deregisterDevice(selectedStall.id, deviceToDeregister.id);
@@ -595,11 +604,32 @@ export default function StallOwner({ users = [], currentUser }) {
       }));
       await loadStalls(false);
       setDeviceToDeregister(null);
-      setActionNotice(`${deviceToDeregister.name} was deregistered from ${selectedStall.name}.`);
+      notifications.success(
+        `${deviceToDeregister.name} was deregistered from ${selectedStall.name}.`,
+        'Terminal deregistered',
+      );
     } catch (err) {
       setActionError(err.message || 'Failed to deregister the terminal.');
     } finally {
       setIsDeregistering(false);
+    }
+  };
+
+  const handleDeleteStall = async () => {
+    if (!stallToDelete?.id || isDeletingStall) return;
+
+    setActionError('');
+    setIsDeletingStall(true);
+    try {
+      await api.stalls.delete(stallToDelete.id);
+      await loadStalls(false);
+      notifications.success(`${stallToDelete.name} was removed from active locations.`, 'Stall deleted');
+      setStallToDelete(null);
+    } catch (err) {
+      setActionError(err.message || 'Failed to delete the stall.');
+      notifications.error('The stall could not be deleted. Review the page message and try again.');
+    } finally {
+      setIsDeletingStall(false);
     }
   };
 
@@ -619,19 +649,6 @@ export default function StallOwner({ users = [], currentUser }) {
       {actionError && !showAddModal && !isManageStaffOpen && !deviceToDeregister && (
         <Alert variant="danger" className="fixed left-1/2 top-20 z-40 w-[min(92vw,520px)] -translate-x-1/2 shadow-lg">
           {actionError}
-        </Alert>
-      )}
-      {actionNotice && (
-        <Alert
-          variant="success"
-          className="fixed left-1/2 top-20 z-40 w-[min(92vw,520px)] -translate-x-1/2 shadow-lg"
-          actions={(
-            <Button size="sm" variant="ghost" onClick={() => setActionNotice('')}>
-              Dismiss
-            </Button>
-          )}
-        >
-          {actionNotice}
         </Alert>
       )}
       <div className="flex flex-col bg-white rounded-2xl shrink-0 w-full xl:w-[280px] xl:min-w-[240px] max-h-[300px] xl:max-h-none xl:h-auto xl:overflow-hidden">
@@ -726,6 +743,17 @@ export default function StallOwner({ users = [], currentUser }) {
               <Button size="sm" iconName="users" onClick={() => setIsManageStaffOpen(true)}>
                 Manage Staff
               </Button>
+              <Button
+                size="sm"
+                variant="danger"
+                iconName="delete"
+                onClick={() => {
+                  setActionError('');
+                  setStallToDelete(selectedStall);
+                }}
+              >
+                Delete Stall
+              </Button>
             </div>
           )}
         </div>
@@ -799,7 +827,6 @@ export default function StallOwner({ users = [], currentUser }) {
                       iconName="disable"
                       onClick={() => {
                         setActionError('');
-                        setActionNotice('');
                         setDeviceToDeregister(device);
                       }}
                     >
@@ -949,6 +976,26 @@ export default function StallOwner({ users = [], currentUser }) {
           setActionError('');
         }}
         onConfirm={handleDeregisterDevice}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(stallToDelete)}
+        size="compact"
+        title="Delete stall?"
+        message={`Delete "${stallToDelete?.name || ''}" from active locations? ${assignedUsers.length} staff assignment${assignedUsers.length === 1 ? '' : 's'} and ${activeDevices.length} active device${activeDevices.length === 1 ? '' : 's'} will no longer be usable at this stall. This action cannot be undone.`}
+        icon={<Icon name="delete" className="mb-1 h-8 w-8 text-state-danger" strokeWidth={2} />}
+        cancelTone="secondary"
+        confirmTone="danger"
+        confirmLabel="Delete Stall"
+        busyLabel="Deleting..."
+        isBusy={isDeletingStall}
+        onCancel={() => {
+          if (!isDeletingStall) {
+            setStallToDelete(null);
+            setActionError('');
+          }
+        }}
+        onConfirm={handleDeleteStall}
       />
 
       {transferConfirm && (

@@ -197,7 +197,7 @@ export default function StaffList({
   const close    = ()=>{ setShowModal(false); onCancel(); };
 
   return (
-    <div className="flex flex-col gap-4 h-full min-h-0">
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
       {roleOptions.length > 0 && (
         <div className="flex shrink-0 justify-end">
           <Button type="button" onClick={openNew} iconName="plus" className="max-[640px]:w-full">
@@ -253,7 +253,7 @@ export default function StaffList({
           ))}
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-x-hidden overflow-y-auto">
           {loading ? (
              <div className="flex flex-col items-center justify-center h-40 gap-2 text-[#9ca3af]">
                 <span style={{ fontSize: 13, fontFamily: 'Inter, sans-serif' }} className="animate-pulse">Loading staff...</span>
@@ -286,16 +286,16 @@ export default function StaffList({
                 <div className="max-[1200px]:justify-self-end">
                   <StatusBadge active={user.active} activeLabel="Active" inactiveLabel="Inactive" />
                 </div>
-                <div className="flex shrink-0 items-center gap-2 max-[1200px]:col-span-2 max-[1200px]:justify-end max-[640px]:grid max-[640px]:w-full max-[640px]:grid-cols-3">
+                <div className="flex shrink-0 items-center gap-1.5 max-[1200px]:col-span-2 max-[1200px]:justify-end max-[640px]:grid max-[640px]:w-full max-[640px]:grid-cols-3 max-[640px]:gap-2">
                   {canManageUserRole(currentUser, user.role) ? (
                     <>
-                      <Button size="sm" variant="ghost" iconName="edit" className="min-h-10 max-[640px]:w-full" onClick={() => openEdit(user)}>
+                      <Button size="compact" variant="ghost" iconName="edit" className="max-[640px]:min-h-10 max-[640px]:w-full" onClick={() => openEdit(user)}>
                         Edit
                       </Button>
-                      <Button size="sm" variant="secondary" iconName={user.active ? 'disable' : 'enable'} className="min-h-10 max-[640px]:w-full" onClick={() => onToggleActive(user.id)}>
+                      <Button size="compact" variant="secondary" iconName={user.active ? 'disable' : 'enable'} className="max-[640px]:min-h-10 max-[640px]:w-full" onClick={() => onToggleActive(user.id)}>
                         {user.active ? 'Disable' : 'Enable'}
                       </Button>
-                      <Button size="sm" variant="danger" iconName="delete" className="min-h-10 max-[640px]:w-full" onClick={() => onDelete(user.id)}>
+                      <Button size="compact" variant="danger" iconName="delete" className="max-[640px]:min-h-10 max-[640px]:w-full" onClick={() => onDelete(user.id)}>
                         Delete
                       </Button>
                     </>

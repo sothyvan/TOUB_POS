@@ -9,6 +9,7 @@ import { api } from '../services/api';
 import { connectManagementSocket, disconnectManagementSocket } from '../services/socketClient';
 import PageShell from '../shared/layout/PageShell';
 import OwnerWorkspace from '../features/management/components/OwnerWorkspace';
+import useNotifications from '../shared/notifications/useNotifications';
 
 export default function OwnerPortalPage() {
   const { user: currentUser, logout, handleSessionInvalidated } = useAuth();
@@ -18,6 +19,7 @@ export default function OwnerPortalPage() {
 
   // ── Hooks ─────────────────────────────────────────────────────────────────
   const isOnline = useOnlineStatus();
+  const notifications = useNotifications();
 
   const {
     categories, products, categoryById,
@@ -62,6 +64,79 @@ export default function OwnerPortalPage() {
     const updated = await api.financialSettings.update(rate);
     setFinancialSettings(updated);
     setFinancialSettingsError('');
+    return updated;
+  };
+
+  const handleSaveProduct = async (form) => {
+    const saved = await saveProduct(form);
+    if (saved) {
+      notifications.success(
+        `${form.name.trim()} was ${form.id ? 'updated' : 'added'} successfully.`,
+        form.id ? 'Product updated' : 'Product added',
+      );
+    }
+    return saved;
+  };
+
+  const handleSaveCategory = async () => {
+    const wasEditing = Boolean(categoryForm.id);
+    const name = categoryForm.name.trim();
+    const saved = await saveCategory();
+    if (saved) {
+      notifications.success(
+        `${name} was ${wasEditing ? 'updated' : 'added'} successfully.`,
+        wasEditing ? 'Category updated' : 'Category added',
+      );
+    }
+    return saved;
+  };
+
+  const handleToggleProductAvailability = async (productId) => {
+    const product = products.find((item) => Number(item.id) === Number(productId));
+    const updated = await toggleProductAvailability(productId);
+    if (updated && product) {
+      notifications.success(
+        `${product.name} is now ${product.available ? 'hidden from' : 'visible on'} the cashier menu.`,
+        product.available ? 'Product hidden' : 'Product available',
+      );
+    }
+    return updated;
+  };
+
+  const handleMoveProducts = async (productIds, categoryId) => {
+    const moved = await moveProductsToCategory(productIds, categoryId);
+    if (moved) {
+      const categoryName = categories.find((item) => Number(item.id) === Number(categoryId))?.name || 'the category';
+      notifications.success(
+        `${productIds.length} product${productIds.length === 1 ? '' : 's'} moved to ${categoryName}.`,
+        'Products moved',
+      );
+    }
+    return moved;
+  };
+
+  const handleSaveUser = async () => {
+    const wasEditing = Boolean(userForm.id);
+    const name = userForm.name.trim();
+    const saved = await saveUser();
+    if (saved) {
+      notifications.success(
+        `${name} was ${wasEditing ? 'updated' : 'added'} successfully.`,
+        wasEditing ? 'Employee updated' : 'Employee added',
+      );
+    }
+    return saved;
+  };
+
+  const handleToggleUserActive = async (userId) => {
+    const target = users.find((item) => Number(item.id) === Number(userId));
+    const updated = await toggleUserActive(userId);
+    if (updated && target) {
+      notifications.success(
+        `${target.name}'s account is now ${target.active ? 'disabled' : 'active'}.`,
+        target.active ? 'Employee disabled' : 'Employee enabled',
+      );
+    }
     return updated;
   };
 
@@ -136,17 +211,17 @@ export default function OwnerPortalPage() {
         setProductForm={setProductForm}
         userForm={userForm}
         setUserForm={setUserForm}
-        onSaveProduct={saveProduct}
+        onSaveProduct={handleSaveProduct}
         onEditProduct={editProduct}
-        onToggleProductAvailability={toggleProductAvailability}
+        onToggleProductAvailability={handleToggleProductAvailability}
         onDeleteProduct={deleteProduct}
-        onMoveProducts={moveProductsToCategory}
-        onSaveCategory={saveCategory}
+        onMoveProducts={handleMoveProducts}
+        onSaveCategory={handleSaveCategory}
         onEditCategory={editCategory}
         onDeleteCategory={deleteCategory}
-        onSaveUser={saveUser}
+        onSaveUser={handleSaveUser}
         onEditUser={editUser}
-        onToggleUserActive={toggleUserActive}
+        onToggleUserActive={handleToggleUserActive}
         onDeleteUser={deleteUser}
         onCancelProduct={cancelProductEdit}
         onCancelCategory={cancelCategoryEdit}

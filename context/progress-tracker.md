@@ -31,6 +31,7 @@ Update this file after every meaningful implementation change.
 - Phase UI-2: Cashier POS Flow Redesign — **COMPLETE** ✅
 - Phase UI-3: Owner/Manager Screens — **COMPLETE** ✅
 - Phase UI-4: Responsive & Polish — **COMPLETE** ✅
+- Phase UI-5: Consistent Action Feedback — **COMPLETE** ✅
 - Pagination & Performance Optimization — **COMPLETE**
 - KHQR Provider Transition — **SUSPENDED SAFELY** ✅
   - Cash remains the active checkout method.
@@ -1209,6 +1210,35 @@ Update this file after every meaningful implementation change.
     migrations, deterministic seed data, API health wait, Vite, and disabled
     KHQR/Telegram external workers. Its first GitHub run and addition as the
     sixth required branch check remain pending.
+- **Implemented shared action notifications and mutation feedback**:
+  - Added one application-wide, accessible top-center notification provider
+    with bounded messages, a maximum three-item queue, automatic expiry, and
+    manual dismiss.
+  - Added clear success feedback for catalog, employee, stall staffing,
+    terminal deregistration, Telegram cook access, and kitchen retry actions.
+  - Retained inline validation and payment/receipt feedback where it provides
+    better context and avoids duplicate notifications.
+  - Product and category saves now prevent repeated submission and wait for the
+    asynchronous result before closing. Category save failures remain visible
+    inside the editor rather than closing as if successful.
+  - The Staff Management employee directory now consumes only the space below
+    its tab controls, removing the small unnecessary page scroll while keeping
+    long staff lists internally scrollable.
+  - Desktop employee-row actions use a compact button size within a correctly
+    sized action column, removing horizontal overflow without clipping Delete
+    while retaining larger touch targets on mobile.
+  - Stall Management now exposes the existing soft-delete workflow through a
+    consistent destructive confirmation dialog. The dialog explains affected
+    staff and active devices, prevents duplicate submission, refreshes active
+    locations, and selects the next available stall after deletion.
+  - Category-to-product editing now clears conflicting product filters, opens
+    the exact pagination page, highlights and scrolls the selected product into
+    view, and reports its page. Existing products can also be deleted directly
+    from the editor; cancelling confirmation keeps the editor open.
+  - Delete confirmations no longer interpolate record names through an HTML
+    string; they now use the same native compact confirmation design as logout,
+    including matching typography, spacing, buttons, and a deletion busy state.
+  - Frontend lint, 19 unit tests, production build, and `git diff --check` pass.
 
 ## Next Up
 

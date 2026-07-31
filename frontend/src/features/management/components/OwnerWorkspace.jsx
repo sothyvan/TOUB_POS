@@ -1,12 +1,11 @@
 import { lazy, Suspense, useState } from 'react';
-import Swal from 'sweetalert2';
-import 'sweetalert2/dist/sweetalert2.min.css';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import Icon from '../../../components/ui/Icon';
 import LoadingState from '../../../components/ui/LoadingState';
 import OwnerSidebar from './OwnerSidebar';
 import OwnerHeader from './OwnerHeader';
 import ThemeToggle from '../../../shared/theme/ThemeToggle';
+import useNotifications from '../../../shared/notifications/useNotifications';
 
 const OwnerDashboard = lazy(() => import('./OwnerDashboard'));
 const MenuCatalog = lazy(() => import('../../catalog/components/MenuCatalog'));
@@ -14,19 +13,6 @@ const StallOwner = lazy(() => import('../../stalls/components/StallOwner'));
 const OrderHistory = lazy(() => import('../../reports/components/OrderHistory'));
 const UserOwner = lazy(() => import('../../staff/components/UserOwner'));
 const FinancialSettings = lazy(() => import('./FinancialSettings'));
-
-const notificationToast = Swal.mixin({
-  toast: true,
-  position: 'bottom-end',
-  showConfirmButton: false,
-  timer: 3000,
-  timerProgressBar: true,
-  background: 'var(--color-ui-elevated, #ffffff)',
-  color: 'var(--color-text-strong, #1b1917)',
-  customClass: {
-    popup: 'border border-brand-border font-sans shadow-[0_18px_48px_rgba(0,0,0,0.35)]',
-  },
-});
 
 const ownerTabIcons = {
   dashboard: 'dashboard',
@@ -106,65 +92,38 @@ export default function OwnerWorkspace({
 }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showMobileLogoutConfirm, setShowMobileLogoutConfirm] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const notifications = useNotifications();
   const mobileOwnerTabs = ownerTabOrder.filter((tab) => allowedOwnerTabs.includes(tab));
 
-  const handlePromptDelete = async (type, id) => {
+  const handlePromptDelete = (type, id, onDeleted) => {
     const name = 
       type === 'product' ? products.find((p) => p.id === id)?.name :
       type === 'category' ? categories.find((c) => c.id === id)?.name :
       type === 'user' ? users.find((u) => u.id === id)?.name : '';
 
     const label = type === 'product' ? 'product' : type === 'category' ? 'category' : 'user';
+    setPendingDelete({ type, id, name: name || `this ${label}`, label, onDeleted });
+  };
 
-    const result = await Swal.fire({
-      title: 'Are you sure?',
-      html: `You are about to delete the ${label} <strong style="color: var(--color-brand-action, #c9571d)">"${name}"</strong>.<br/><br/>This action cannot be undone.`,
-      icon: 'warning',
-      confirmButtonText: 'Delete',
-      showCancelButton: true,
-      reverseButtons: true,
-      confirmButtonColor: '#b53f3f', // matching state-danger
-      cancelButtonColor: '#827c74',  // matching text-muted
-      background: 'var(--color-ui-elevated, #ffffff)',
-      color: 'var(--color-text-strong, #1b1917)',
-      customClass: {
-        popup: 'rounded-lg shadow-[0_18px_48px_rgba(0,0,0,0.4)] border border-brand-border font-sans'
-      }
-    });
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete || isDeleting) return;
 
-    if (result.isConfirmed) {
-      try {
-        // Show loading state
-        Swal.fire({
-          title: 'Deleting...',
-          html: `Please wait while the ${label} is being deleted.`,
-          allowOutsideClick: false,
-          background: 'var(--color-ui-elevated, #ffffff)',
-          color: 'var(--color-text-strong, #1b1917)',
-          didOpen: () => {
-            Swal.showLoading();
-          }
-        });
+    const { type, id, label, onDeleted } = pendingDelete;
+    setIsDeleting(true);
+    try {
+      if (type === 'product') await onDeleteProduct(id);
+      else if (type === 'category') await onDeleteCategory(id);
+      else if (type === 'user') await onDeleteUser(id);
 
-        // Perform deletion
-        if (type === 'product') await onDeleteProduct(id);
-        else if (type === 'category') await onDeleteCategory(id);
-        else if (type === 'user') await onDeleteUser(id);
-
-        // Success notification
-        await notificationToast.fire({
-          title: 'Deleted!',
-          text: `The ${label} has been deleted successfully.`,
-          icon: 'success',
-        });
-      } catch (err) {
-        // Error notification
-        await notificationToast.fire({
-          title: 'Failed to delete!',
-          text: err.message || `An error occurred while deleting the ${label}.`,
-          icon: 'error',
-        });
-      }
+      onDeleted?.();
+      setPendingDelete(null);
+      notifications.success(`The ${label} was deleted successfully.`, 'Deleted');
+    } catch {
+      notifications.error(`The ${label} could not be deleted. Review the page message and try again.`);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -269,7 +228,7 @@ export default function OwnerWorkspace({
               onSaveProduct={onSaveProduct}
               onEditProduct={onEditProduct}
               onToggleProductAvailability={onToggleProductAvailability}
-              onDeleteProduct={(id) => handlePromptDelete('product', id)}
+              onDeleteProduct={(id, onDeleted) => handlePromptDelete('product', id, onDeleted)}
               onMoveProducts={onMoveProducts}
               onCancelProduct={onCancelProduct}
               categories={categories}
@@ -332,6 +291,23 @@ export default function OwnerWorkspace({
         </Suspense>
       </main>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(pendingDelete)}
+        size="compact"
+        title={`Delete ${pendingDelete?.label || 'item'}?`}
+        message={`You are about to delete "${pendingDelete?.name || ''}". This action cannot be undone.`}
+        icon={<Icon name="delete" className="mb-1 h-8 w-8 text-state-danger" strokeWidth={2} />}
+        cancelTone="secondary"
+        confirmTone="danger"
+        confirmLabel="Delete"
+        busyLabel="Deleting..."
+        isBusy={isDeleting}
+        onCancel={() => {
+          if (!isDeleting) setPendingDelete(null);
+        }}
+        onConfirm={handleConfirmDelete}
+      />
 
       <ConfirmDialog
         isOpen={showMobileLogoutConfirm}

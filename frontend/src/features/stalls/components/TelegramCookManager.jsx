@@ -6,6 +6,7 @@ import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import EmptyState from '../../../components/ui/EmptyState';
 import FormInput from '../../../components/ui/FormInput';
 import LoadingState from '../../../components/ui/LoadingState';
+import useNotifications from '../../../shared/notifications/useNotifications';
 
 const EMPTY_FORM = {
   displayName: '',
@@ -13,6 +14,7 @@ const EMPTY_FORM = {
 };
 
 export default function TelegramCookManager({ stall, onRefresh, canConnectGroup = false }) {
+  const notifications = useNotifications();
   const [cooks, setCooks] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(true);
@@ -121,6 +123,7 @@ export default function TelegramCookManager({ stall, onRefresh, canConnectGroup 
         ...current.filter((cook) => Number(cook.id) !== Number(saved.id)),
       ]);
       setForm(EMPTY_FORM);
+      notifications.success(`${saved.display_name} can now complete ${stall.name} tickets.`, 'Cook authorized');
     } catch (saveError) {
       setError(saveError.message || 'Unable to authorize this Telegram cook.');
     } finally {
@@ -141,6 +144,10 @@ export default function TelegramCookManager({ stall, onRefresh, canConnectGroup 
         Number(cook.id) === Number(revoked.id) ? revoked : cook
       )));
       setCookToRevoke(null);
+      notifications.success(
+        `${revoked.display_name || cookToRevoke.display_name} can no longer complete ${stall.name} tickets.`,
+        'Cook access revoked',
+      );
     } catch (revokeError) {
       setError(revokeError.message || 'Unable to revoke this Telegram cook.');
     } finally {
