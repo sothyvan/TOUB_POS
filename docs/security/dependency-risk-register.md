@@ -3,7 +3,9 @@
 Last reviewed: 2026-07-31
 
 This register covers production dependency advisories that cannot currently be
-removed safely. It does not replace recurring `npm audit --omit=dev` checks.
+removed safely. Pull-request CI runs `npm audit --omit=dev` through
+`scripts/ci/check-npm-audit.mjs`; only narrow, expiring exceptions in
+`scripts/ci/npm-audit-policy.json` may bypass the high/critical gate.
 
 ## Accepted Finding: Sequelize / UUID
 

@@ -32,6 +32,7 @@ implementation records.
 | Executable course SQL | [schema.sql](database/schema.sql) and [queries.sql](database/queries.sql) |
 | Entity relationship diagram | [ERD](database/erd.md) |
 | Local setup | [Getting Started](setup/getting-started.md) |
+| Pull-request quality gates | [CI Quality And Security Gates](setup/ci-quality-gates.md) |
 | Final-project report | [TouB POS Project Report](reports/TOUB_POS_Project_Report.md) |
 
 ## Source Of Truth
