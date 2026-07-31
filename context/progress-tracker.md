@@ -245,6 +245,24 @@ Update this file after every meaningful implementation change.
   - Frontend verification passes with 16 unit tests, zero lint errors, a
     production build with no chunk-size warning, and `git diff --check`.
 
+- **Improved Staff Management task flow and accessibility**:
+  - Moved Add Employee above the summary cards so the primary action is visible
+    immediately, and kept the four mobile metrics in a compact two-column grid.
+  - Replaced the misleading Active Now metric with Active Accounts, exposed
+    usernames in employee rows, and made inactive status wording explicit.
+  - Expanded employee search across name, username, and role; search now resets
+    pagination and the rendered page safely clamps after the result set shrinks.
+  - Replaced abbreviated, small row actions with clear Edit, Enable/Disable,
+    and Delete shared buttons with larger touch targets.
+  - Migrated the employee editor to `ModalShell` for dialog semantics, focus
+    trapping/restoration, Escape/backdrop handling, responsive scrolling, and
+    shared form actions. Added Owner browser-journey coverage for the visible
+    Add Employee action and accessible dialog name.
+  - Frontend lint, 16 unit tests, the production build, Playwright discovery of
+    all three browser journeys, and `git diff --check` pass. The authenticated
+    browser journey remains delegated to disposable CI because no local
+    browser/API/database environment was available.
+
 - **Safely suspended KHQR payment processing**:
   - Added explicit opt-in `KHQR_ENABLED` and `VITE_KHQR_ENABLED` feature flags, both defaulting to `false`.
   - Backend KHQR order creation and status checking return `503 KHQR_DISABLED` before database or provider work begins.
