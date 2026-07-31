@@ -11,6 +11,8 @@ export default function OrderPanel({
   cart,
   subtotal,
   total,
+  subtotalKhr,
+  totalKhr,
   isCartOpen,
   setIsCartOpen,
   clearCart,
@@ -98,6 +100,8 @@ export default function OrderPanel({
         <TotalsBreakdown
           subtotal={subtotal}
           total={total}
+          subtotalKhr={subtotalKhr}
+          totalKhr={totalKhr}
           variant="panel"
         />
 

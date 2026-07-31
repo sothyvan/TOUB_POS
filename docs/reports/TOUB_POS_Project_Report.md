@@ -231,8 +231,8 @@ The following functional requirements define what the Toub POS system must do. E
 
 | Item | Detail |
 |------|--------|
-| **Purpose** | Allow Owners/Managers to create and maintain a stall-specific product catalog with dual-currency pricing and product images. |
-| **Input** | Product name, category, USD price, KHR price, product image (uploaded via ImageKit), stall assignments, visibility flag. |
+| **Purpose** | Allow Owners/Managers to create and maintain a stall-specific product catalog with synchronized dual-currency pricing and product images. |
+| **Input** | Product name, category, either USD or KHR price (the other is generated from the saved rate), product image (uploaded via ImageKit), stall assignments, visibility flag. |
 | **Output** | Products visible to cashiers under the assigned stall's menu grid; stall-scoped filtering prevents other stalls' products from appearing. |
 
 ---
@@ -252,8 +252,8 @@ The following functional requirements define what the Toub POS system must do. E
 | Item | Detail |
 |------|--------|
 | **Purpose** | Allow a cashier (or Owner/Manager within the same business scope) to confirm a cash payment, recording the amount received and calculating the change due. |
-| **Input** | Order ID, `cash_received_usd` amount. |
-| **Output** | Order status updated to `paid`; `change_due_usd` calculated and stored; audit log entry created; Telegram kitchen ticket dispatched. |
+| **Input** | Order ID and at least one USD/KHR cash-received amount. |
+| **Output** | Mixed tender is validated using the Order's saved exchange rate; physical tender and both backend-calculated change equivalents are stored, the Order becomes `paid`, and audit/Telegram work is created. |
 
 ---
 
@@ -597,13 +597,13 @@ sequenceDiagram
   API-->>C: 201 Created { orderId, total_usd }
 
   Note over C: Cashier enters cash received in modal
-  C->>API: POST /api/orders/:id/confirm-cash { cash_received_usd }
-  API->>API: Validate cash_received_usd >= total_usd
-  API->>DB: UPDATE Order SET status=paid, cash_received_usd, change_due_usd, completed_at
+  C->>API: POST /api/orders/:id/confirm-cash { USD?, KHR? }
+  API->>API: Convert with saved rate and validate combined tender
+  API->>DB: UPDATE paid status, physical tender, both change equivalents, completed_at
   API->>DB: INSERT AuditLog (cash_payment_confirmed)
   DB-->>API: Updated order record
   API->>TG: sendMessage (kitchen ticket)
-  API-->>C: 200 OK { order, change_due_usd }
+  API-->>C: 200 OK { order, saved USD/KHR tender and change }
 
   Note over C: Receipt shown with change due amount
 ```
@@ -724,7 +724,11 @@ classDiagram
     -subtotal_usd : decimal
     -total_usd : decimal
     -cash_received_usd : decimal [nullable]
+    -cash_received_khr : int [nullable]
     -change_due_usd : decimal [nullable]
+    -change_due_khr : int [nullable]
+    -pricing_currency : enum
+    -exchange_rate_khr_per_usd : int
     -qr_payload : text [nullable]
     -qr_md5 : varchar [nullable]
     -payment_reference : varchar [UK, nullable]
@@ -810,7 +814,7 @@ classDiagram
 | **Category** | An owner-scoped menu grouping (e.g., "Beverages", "Main Dishes"). | `owner_id`, `name`, `tone` | `create()`, `update()`, `remove()` |
 | **Product** | Shared catalog item with name and image. No longer owner-scoped; pricing is fully per-stall. | `category_id`, `name`, `image_url` | `create()`, `update()`, `assignToStalls()`, `remove()` |
 | **StallProduct** | Junction that maps a `Product` to a `Stall` and stores the stall-specific USD/KHR price and visibility. | `price_usd`, `price_khr`, `is_visible` | `updatePrice()`, `setVisibility()` |
-| **Order** | The core transaction record. Stores payment method, status, trusted totals (subtotal/total), KHQR metadata, and cash fields. | `status`, `total_usd`, `qr_md5`, `cash_received_usd`, `change_due_usd` | `create()`, `confirmCash()`, `checkKhqrStatus()`, `retryTelegramDispatch()` |
+| **Order** | The core transaction record. Stores payment method, status, trusted USD/KHR totals, pricing currency, rate snapshot, KHQR metadata, and mixed-cash fields. | `status`, `total_usd`, `total_khr`, `pricing_currency`, `exchange_rate_khr_per_usd`, received/change fields | `create()`, `confirmCash()`, `checkKhqrStatus()`, `retryTelegramDispatch()` |
 | **OrderItem** | An immutable snapshot of a product at time of order, with per-line USD/KHR totals. Stores the product name and price as they were — not a live reference. | `name`, `price_usd`, `price_khr`, `line_total_usd`, `line_total_khr`, `quantity`, `notes` | `calculateLineTotal()` |
 | **AuditLog** | Immutable record of sensitive actions for accountability and debugging. | `actor_user_id`, `action`, `details` | `record()` |
 | **TelegramTicket** | Tracks the lifecycle of a kitchen order ticket sent to Telegram: `pending` → `sent` → `done`, with retry support. | `telegram_msg_id`, `telegram_chat_id`, `status`, `completed_at` | `dispatch()`, `markDone()`, `retry()` |

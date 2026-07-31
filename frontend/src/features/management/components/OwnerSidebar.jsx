@@ -10,6 +10,7 @@ const MAIN_MENU = [
   { id: 'stalls',      label: 'Stall Management', icon: 'location'   },
   { id: 'users',       label: 'Staff Management', icon: 'users'      },
   { id: 'orders',      label: 'Sales Reports',    icon: 'orders'     },
+  { id: 'settings',    label: 'Financial Settings', icon: 'settings' },
 ];
 
 /**

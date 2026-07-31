@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { money } from '../../../utils/format';
+import { khrMoney, money } from '../../../utils/format';
 import Badge from '../../../components/ui/Badge';
 import Icon from '../../../components/ui/Icon';
 import QuantityInput from './QuantityInput';
@@ -55,6 +55,7 @@ export default function ProductCard({
           <strong className="mt-1 block text-sm font-extrabold text-state-success">
             {money(product.price)}
           </strong>
+          <span className="block text-[11px] font-semibold text-text-muted">{khrMoney(product.priceKhr)}</span>
         </div>
 
         <div className="relative z-20 shrink-0">
@@ -137,9 +138,14 @@ export default function ProductCard({
         </div>
 
         <div className="flex items-center justify-between gap-2 mt-auto">
-          <strong className="text-brand-dark text-[15px] sm:text-[17px] font-extrabold leading-none">
-            {money(product.price)}
-          </strong>
+          <div className="flex min-w-0 flex-col items-start gap-1">
+            <strong className="text-brand-dark text-[15px] sm:text-[17px] font-extrabold leading-none">
+              {money(product.price)}
+            </strong>
+            <span className="text-xs font-semibold leading-none text-text-muted">
+              {khrMoney(product.priceKhr)}
+            </span>
+          </div>
 
           {cartItem ? (
             <QuantityInput

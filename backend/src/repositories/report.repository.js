@@ -16,6 +16,8 @@ import {
   formatUtcSqlDateTime,
 } from '../utils/report-range.util.js';
 
+const REPORTING_TOTAL_USD_SQL = "CASE WHEN o.pricing_currency = 'khr' THEN o.total_khr / o.exchange_rate_khr_per_usd ELSE o.total_usd END";
+
 function buildSqlReplacements(ownerId, filters, extras = {}) {
   return {
     ownerId,
@@ -53,11 +55,11 @@ export async function fetchSummary(ownerId, filters) {
     SELECT
       COUNT(o.id) AS totalOrders,
       SUM(CASE WHEN o.status = 'paid' THEN 1 ELSE 0 END) AS paidOrders,
-      COALESCE(SUM(CASE WHEN o.status = 'paid' THEN o.total_usd ELSE 0 END), 0) AS totalRevenue,
+      COALESCE(SUM(CASE WHEN o.status = 'paid' THEN ${REPORTING_TOTAL_USD_SQL} ELSE 0 END), 0) AS totalRevenue,
       SUM(CASE WHEN o.status = 'paid' AND o.payment_method = 'khqr' THEN 1 ELSE 0 END) AS cashCount,
-      COALESCE(SUM(CASE WHEN o.status = 'paid' AND o.payment_method = 'khqr' THEN o.total_usd ELSE 0 END), 0) AS khqrRevenue,
+      COALESCE(SUM(CASE WHEN o.status = 'paid' AND o.payment_method = 'khqr' THEN ${REPORTING_TOTAL_USD_SQL} ELSE 0 END), 0) AS khqrRevenue,
       SUM(CASE WHEN o.status = 'paid' AND o.payment_method != 'khqr' THEN 1 ELSE 0 END) AS cashPaidCount,
-      COALESCE(SUM(CASE WHEN o.status = 'paid' AND o.payment_method != 'khqr' THEN o.total_usd ELSE 0 END), 0) AS cashRevenue
+      COALESCE(SUM(CASE WHEN o.status = 'paid' AND o.payment_method != 'khqr' THEN ${REPORTING_TOTAL_USD_SQL} ELSE 0 END), 0) AS cashRevenue
     FROM orders o
     INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = :ownerId AND s.is_deleted = 0
     WHERE o.created_at BETWEEN :startDate AND :endDate
@@ -79,7 +81,7 @@ export function fetchStallBreakdown(ownerId, filters) {
         ELSE s.name
       END AS stallName,
       COUNT(o.id) AS orderCount,
-      COALESCE(SUM(o.total_usd), 0) AS revenue
+      COALESCE(SUM(${REPORTING_TOTAL_USD_SQL}), 0) AS revenue
     FROM orders o
     INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = :ownerId AND s.is_deleted = 0
     WHERE o.created_at BETWEEN :startDate AND :endDate
@@ -104,7 +106,7 @@ export function fetchCashierBreakdown(ownerId, filters) {
         ELSE s.name
       END AS stallName,
       COUNT(o.id) AS orderCount,
-      COALESCE(SUM(o.total_usd), 0) AS revenue
+      COALESCE(SUM(${REPORTING_TOTAL_USD_SQL}), 0) AS revenue
     FROM orders o
     INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = :ownerId AND s.is_deleted = 0
     LEFT JOIN users u ON u.id = o.cashier_id
@@ -125,7 +127,7 @@ export function fetchHourlyRevenue(ownerId, filters) {
     SELECT
       HOUR(CONVERT_TZ(o.created_at, '+00:00', :timezoneOffset)) AS hour,
       COUNT(o.id) AS orderCount,
-      COALESCE(SUM(o.total_usd), 0) AS revenue
+      COALESCE(SUM(${REPORTING_TOTAL_USD_SQL}), 0) AS revenue
     FROM orders o
     INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = :ownerId AND s.is_deleted = 0
     WHERE o.created_at BETWEEN :startDate AND :endDate
@@ -147,7 +149,7 @@ export function fetchDailyRevenue(ownerId, filters) {
     SELECT
       DATE_FORMAT(CONVERT_TZ(o.created_at, '+00:00', :timezoneOffset), '%Y-%m-%d') AS bucketDate,
       COUNT(o.id) AS orderCount,
-      COALESCE(SUM(o.total_usd), 0) AS revenue
+      COALESCE(SUM(${REPORTING_TOTAL_USD_SQL}), 0) AS revenue
     FROM orders o
     INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = :ownerId AND s.is_deleted = 0
     WHERE o.created_at BETWEEN :startDate AND :endDate
@@ -173,7 +175,7 @@ export function fetchWeeklyRevenue(ownerId, filters) {
         :localStartDate
       ) / 7) AS bucketIndex,
       COUNT(o.id) AS orderCount,
-      COALESCE(SUM(o.total_usd), 0) AS revenue
+      COALESCE(SUM(${REPORTING_TOTAL_USD_SQL}), 0) AS revenue
     FROM orders o
     INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = :ownerId AND s.is_deleted = 0
     WHERE o.created_at BETWEEN :startDate AND :endDate

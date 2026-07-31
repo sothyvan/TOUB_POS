@@ -97,12 +97,13 @@ export function useCart(categoryById, options = {}) {
 
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotalKhr = cart.reduce((sum, item) => sum + Number(item.priceKhr || 0) * item.quantity, 0);
   const total = calculateCurrentDisplayTotal(subtotal);
   const cartById = useMemo(() => new Map(cart.map((item) => [item.id, item])), [cart]);
 
   return {
     cart, cartById, itemCount,
-    subtotal, total,
+    subtotal, total, subtotalKhr, totalKhr: subtotalKhr,
     addToCart, updateQuantity, setCartItemQuantity, clearCart, removeItemFromCart,
   };
 }

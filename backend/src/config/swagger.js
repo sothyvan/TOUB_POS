@@ -449,13 +449,38 @@ export const swaggerDocument = {
                 }
             }
         },
+        '/api/financial-settings': {
+            get: {
+                summary: 'Get business financial settings',
+                description: 'Owner, Manager, or Cashier. Returns the current business KHR-per-USD rate used for new Order snapshots.'
+            },
+            put: {
+                summary: 'Update business exchange rate',
+                description: 'Owner only. Updates the audited business rate for new Orders; historical Order snapshots do not change.',
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                additionalProperties: false,
+                                required: ['exchange_rate_khr_per_usd'],
+                                properties: {
+                                    exchange_rate_khr_per_usd: { type: 'integer', minimum: 1000, maximum: 10000, multipleOf: 100, example: 4100 }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         '/api/orders/{id}/confirm-cash': {
             post: {
                 summary: 'Confirm cash payment',
                 description: [
                     'Allowed for the creating cashier, or an owner/manager within the same business owner scope.',
                     'Only cash orders in pending_payment status can be confirmed.',
-                    'Request includes cash_received_usd. Backend rejects underpayment, calculates change_due_usd, changes status to paid, sets completed_at, and writes a cash_payment_confirmed audit log.'
+                    'Request includes at least one of cash_received_usd or cash_received_khr. Backend evaluates mixed cash using the Order rate snapshot, calculates both USD and KHR change equivalents, changes status to paid, and writes a cash_payment_confirmed audit log.'
                 ].join(' '),
                 requestBody: {
                     required: true,
@@ -464,7 +489,10 @@ export const swaggerDocument = {
                             schema: {
                                 type: 'object',
                                 additionalProperties: false,
-                                required: ['cash_received_usd'],
+                                anyOf: [
+                                    { required: ['cash_received_usd'] },
+                                    { required: ['cash_received_khr'] }
+                                ],
                                 properties: {
                                     cash_received_usd: {
                                         type: 'number',
@@ -472,6 +500,11 @@ export const swaggerDocument = {
                                         maximum: 99999999.99,
                                         multipleOf: 0.01,
                                         example: 10.00
+                                    },
+                                    cash_received_khr: {
+                                        type: 'integer',
+                                        minimum: 1,
+                                        example: 20500
                                     }
                                 }
                             }

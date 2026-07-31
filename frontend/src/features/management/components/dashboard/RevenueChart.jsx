@@ -78,7 +78,7 @@ function buildHourlyData(orders) {
       const date = new Date(order.createdAt);
       const slot = slots[date.getHours()];
       if (slot) {
-        slot.revenue += Number(order.total || 0);
+        slot.revenue += Number(order.reportingTotal ?? order.total ?? 0);
         slot.orderCount += 1;
       }
     });

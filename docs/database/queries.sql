@@ -317,7 +317,11 @@ INSERT INTO orders (
   payment_method,
   status,
   subtotal_usd,
-  total_usd
+  total_usd,
+  subtotal_khr,
+  total_khr,
+  pricing_currency,
+  exchange_rate_khr_per_usd
 )
 VALUES (
   1,
@@ -327,7 +331,11 @@ VALUES (
   'cash',
   'pending_payment',
   15.75,
-  15.75
+  15.75,
+  63000,
+  63000,
+  'usd',
+  4100
 );
 
 -- Replay lookup for the same cashier and checkout attempt.
@@ -348,8 +356,10 @@ VALUES (2, 'order_created', 1, JSON_OBJECT('payment_method', 'cash', 'stall_id',
 -- Confirm a cash order after physical cash is received
 UPDATE orders
 SET status = 'paid',
-    cash_received_usd = 20.00,
-    change_due_usd = 4.25,
+    cash_received_usd = 5.00,
+    cash_received_khr = 44075,
+    change_due_khr = 0,
+    change_currency = 'khr',
     completed_at = NOW()
 WHERE id = 1
   AND payment_method = 'cash'
@@ -364,8 +374,10 @@ VALUES (
   JSON_OBJECT(
     'confirmed_by_role', 'cashier',
     'total_usd', 15.75,
-    'cash_received_usd', 20.00,
-    'change_due_usd', 4.25
+    'cash_received_usd', 5.00,
+    'cash_received_khr', 44075,
+    'change_currency', 'khr',
+    'change_due_khr', 0
   )
 );
 

@@ -32,18 +32,18 @@ sequenceDiagram
     API->>DB: Find cashier's assigned stall
     API->>DB: Load products and prices
     API->>API: Validate stall scope, visibility, quantity
-    API->>DB: INSERT order status = "pending_payment"
+    API->>DB: INSERT order with USD/KHR totals and exchange-rate snapshot
     API->>DB: INSERT order_items with name/price snapshots
     API->>AUD: INSERT order_created
     API-->>C: { order_id, status: "pending_payment", total_usd }
 
-    C->>C: Enter cash received amount and preview change
-    C->>API: POST /api/orders/:id/confirm-cash { cash_received_usd }
+    C->>C: Enter independent USD/KHR cash and preview both change equivalents
+    C->>API: POST /api/orders/:id/confirm-cash { cash_received_usd?, cash_received_khr? }
     API->>API: Check actor is creator cashier or same-business owner/manager
     API->>API: Check payment_method = "cash"
     API->>API: Check order is still pending_payment
-    API->>API: Reject underpayment and calculate change_due_usd
-    API->>DB: UPDATE orders SET status = "paid", cash_received_usd, change_due_usd, completed_at = NOW()
+    API->>API: Reject underpayment and calculate USD/KHR change equivalents
+    API->>DB: UPDATE orders SET status = "paid", received amounts, both change amounts, completed_at = NOW()
     API->>AUD: INSERT cash_payment_confirmed
     API-->>C: { order_id, status: "paid", cash_received_usd, change_due_usd, completed_at }
     C->>C: Show paid receipt
@@ -55,7 +55,9 @@ Important rules:
 - Cash orders start as `pending_payment`.
 - Only backend confirmation changes a cash order to `paid`.
 - Cash confirmation is allowed for the creating cashier, or an owner/manager in the same business owner scope.
-- Cashiers enter the cash received amount. The frontend can preview change, but the backend validates the amount and calculates the saved `change_due_usd`.
+- Cashiers may enter USD, KHR, or both. The frontend previews both change equivalents, while the backend validates the combined amount using the Order's snapshotted rate and saves the actual tender plus both change values.
+- Owners may update the business rate in Financial Settings. Only new Orders use the new rate; existing Orders and reports retain their sale-time rate.
+- USD is stored in integer cents during settlement calculations and KHR is stored as whole riel. Owner rates must be whole-hundred KHR values, allowing deterministic conversion; USD change is rounded half-up to cents and KHR change down to whole riel.
 - Order creation and cash confirmation write audit log rows.
 
 ---

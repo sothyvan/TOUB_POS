@@ -14,10 +14,15 @@ import TelegramCook from './telegram-cook.model.js';
 import TelegramGroupConnection from './telegram-group-connection.model.js';
 import RefreshSession from './refresh-session.model.js';
 import TelegramDispatchJob from './telegram-dispatch-job.model.js';
+import BusinessFinancialSetting from './business-financial-setting.model.js';
 
 // ── User ↔ Stall Ownership ──────────────────────────────────
 Stall.belongsTo(User, { as: 'Owner', foreignKey: 'owner_id', onDelete: 'SET NULL' });
 User.hasMany(Stall, { as: 'OwnedStalls', foreignKey: 'owner_id' });
+
+BusinessFinancialSetting.belongsTo(User, { as: 'Owner', foreignKey: 'owner_id', onDelete: 'CASCADE' });
+BusinessFinancialSetting.belongsTo(User, { as: 'UpdatedBy', foreignKey: 'updated_by_user_id', onDelete: 'SET NULL' });
+User.hasOne(BusinessFinancialSetting, { as: 'FinancialSetting', foreignKey: 'owner_id' });
 
 // ── User Subordination (Owner has Managers/Cashiers) ─────────
 User.belongsTo(User, { as: 'Owner', foreignKey: 'owner_id', onDelete: 'SET NULL' });
@@ -116,4 +121,5 @@ export {
   TelegramGroupConnection,
   RefreshSession,
   TelegramDispatchJob,
+  BusinessFinancialSetting,
 };

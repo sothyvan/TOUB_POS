@@ -15,6 +15,7 @@ export async function createOrder(req, res, next) {
       cashierId,
       items,
       paymentMethod,
+      req.body.pricingCurrency,
       idempotencyKey,
       req.user.stall_id,
     );
@@ -34,8 +35,7 @@ export async function createOrder(req, res, next) {
  */
 export async function confirmCashPayment(req, res, next) {
   try {
-    const cashReceivedUsd = req.body.cash_received_usd;
-    const order = await orderService.confirmCashPayment(req.params.id, req.user, cashReceivedUsd);
+    const order = await orderService.confirmCashPayment(req.params.id, req.user, req.body);
     res.json({ success: true, data: sanitizeOrderTelegramMetadata(order) });
   } catch (error) {
     next(error);

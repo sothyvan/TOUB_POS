@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { money } from '../../../utils/format';
+import { khrMoney, money } from '../../../utils/format';
 import Icon from '../../../components/ui/Icon';
 import Pagination from '../../../components/ui/Pagination';
 import ReceiptModal from '../../payments/components/ReceiptModal';
@@ -245,7 +245,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
   }, [filteredOrders]);
 
   const localTotalRevenue = useMemo(() => {
-    return paidFilteredOrders.reduce((sum, o) => sum + o.total, 0);
+    return paidFilteredOrders.reduce((sum, o) => sum + (o.reportingTotal ?? o.total), 0);
   }, [paidFilteredOrders]);
 
   const totalRevenue = report?.summary?.totalRevenue ?? localTotalRevenue;
@@ -279,7 +279,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
     return paidFilteredOrders.reduce((summary, order) => {
       const method = order.paymentMethod === 'KHQR' ? 'khqr' : 'cash';
       summary[method].count += 1;
-      summary[method].total += Number(order.total || 0);
+      summary[method].total += Number(order.reportingTotal ?? order.total ?? 0);
       return summary;
     }, {
       cash: { count: 0, total: 0 },
@@ -312,7 +312,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
         };
       }
       cashierData[name].ordersCount += 1;
-      cashierData[name].salesTotal += Number(order.total || 0);
+      cashierData[name].salesTotal += Number(order.reportingTotal ?? order.total ?? 0);
     });
 
     return Object.values(cashierData).map((c) => {
@@ -343,7 +343,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
         order.paymentMethod || '',
         order.status || '',
         getKitchenStatusConfig(order.kitchenStatus).label,
-        Number(order.total || 0).toFixed(2),
+        Number(order.reportingTotal ?? order.total ?? 0).toFixed(2),
       ]);
       const csv = [headers, ...rows]
         .map((row) => row.map(escapeCsv).join(','))
@@ -466,7 +466,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
               order.cashierName || '-',
               order.paymentMethod || '-',
               order.status || '-',
-              money(order.total || 0),
+              money(order.reportingTotal ?? order.total ?? 0),
             ])
           : [['No transactions in this range', '-', '-', '-', '-', '-', money(0)]],
         styles: tableStyles,
@@ -533,7 +533,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
       : filteredOrders.reduce((bucket, order) => {
           const hour = new Date(order.createdAt).getHours();
           if (Number.isInteger(hour) && hour >= 0 && hour < 24 && order.status === 'paid') {
-            bucket[hour] += Number(order.total || 0);
+            bucket[hour] += Number(order.reportingTotal ?? order.total ?? 0);
           }
           return bucket;
         }, Array(24).fill(0));
@@ -1106,7 +1106,7 @@ export default function OrderHistory({ orders: rawOrders = [], onRetryTelegramDi
                   </div>
 
                   <span className="flex-1 text-right text-[14px] font-extrabold text-state-success max-[900px]:text-left"><span className="hidden text-[10px] uppercase text-text-muted max-[900px]:block">Total</span>
-                    {money(order.total)}
+                    {order.pricingCurrency === 'khr' ? khrMoney(order.totalKhr) : money(order.total)}
                   </span>
 
                   <div className="flex-[1.3] flex justify-end gap-2 max-[900px]:justify-start">

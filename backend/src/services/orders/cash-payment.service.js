@@ -19,7 +19,47 @@ import {
   requestPaidOrderTelegramDispatch,
 } from './order-telegram.service.js';
 
-export async function confirmCashPayment(orderId, actor, cashReceivedUsd) {
+export function calculateMixedCashSettlement({
+  totalUsd,
+  totalKhr,
+  pricingCurrency,
+  exchangeRateKhrPerUsd,
+  cashReceivedUsd = null,
+  cashReceivedKhr = null,
+}) {
+  const rate = parsePositiveInteger(exchangeRateKhrPerUsd, 'exchange rate');
+  const totalUsdCents = parseUsdCents(totalUsd, 'order total');
+  const parsedTotalKhr = parsePositiveInteger(totalKhr, 'KHR order total');
+  const receivedUsdCents = cashReceivedUsd === null || cashReceivedUsd === undefined
+    ? 0
+    : parseUsdCents(cashReceivedUsd, 'cash_received_usd');
+  const receivedKhr = cashReceivedKhr === null || cashReceivedKhr === undefined
+    ? 0
+    : parsePositiveInteger(cashReceivedKhr, 'cash_received_khr');
+  if (receivedUsdCents === 0 && receivedKhr === 0) {
+    throw httpError('At least one received cash amount is required.');
+  }
+
+  const requiredKhrHundredths = pricingCurrency === 'khr'
+    ? parsedTotalKhr * 100
+    : totalUsdCents * rate;
+  const receivedKhrHundredths = (receivedUsdCents * rate) + (receivedKhr * 100);
+  if (receivedKhrHundredths < requiredKhrHundredths) {
+    throw httpError('Combined cash received must be greater than or equal to the order total.');
+  }
+
+  const changeKhrHundredths = receivedKhrHundredths - requiredKhrHundredths;
+  const changeUsdCents = Math.floor((changeKhrHundredths + (rate / 2)) / rate);
+  return {
+    cashReceivedUsd: receivedUsdCents ? centsToUsd(receivedUsdCents) : null,
+    cashReceivedKhr: receivedKhr || null,
+    changeCurrency: null,
+    changeDueUsd: centsToUsd(changeUsdCents),
+    changeDueKhr: Math.floor(changeKhrHundredths / 100),
+  };
+}
+
+export async function confirmCashPayment(orderId, actor, payment) {
   const parsedOrderId = parsePositiveInteger(orderId, 'order ID');
   const actorId = parsePositiveInteger(actor?.id, 'actor ID');
   const actorRole = String(actor?.role || '').toLowerCase();
@@ -52,16 +92,21 @@ export async function confirmCashPayment(orderId, actor, cashReceivedUsd) {
       throw httpError('Order is not pending payment.');
     }
 
-    const orderTotalCents = parseUsdCents(order.total_usd, 'order total');
-    const cashReceivedCents = parseUsdCents(cashReceivedUsd, 'cash_received_usd');
-    if (cashReceivedCents < orderTotalCents) {
-      throw httpError('Cash received must be greater than or equal to the order total.');
-    }
-    const changeDueCents = cashReceivedCents - orderTotalCents;
+    const settlement = calculateMixedCashSettlement({
+      totalUsd: order.total_usd,
+      totalKhr: order.total_khr,
+      pricingCurrency: order.pricing_currency,
+      exchangeRateKhrPerUsd: order.exchange_rate_khr_per_usd,
+      cashReceivedUsd: payment.cash_received_usd,
+      cashReceivedKhr: payment.cash_received_khr,
+    });
 
     order.status = 'paid';
-    order.cash_received_usd = centsToUsd(cashReceivedCents);
-    order.change_due_usd = centsToUsd(changeDueCents);
+    order.cash_received_usd = settlement.cashReceivedUsd;
+    order.cash_received_khr = settlement.cashReceivedKhr;
+    order.change_due_usd = settlement.changeDueUsd;
+    order.change_due_khr = settlement.changeDueKhr;
+    order.change_currency = settlement.changeCurrency;
     order.completed_at = new Date();
     await order.save({ transaction });
     confirmedOrderOwnerId = getOrderOwnerId(order);
@@ -75,8 +120,13 @@ export async function confirmCashPayment(orderId, actor, cashReceivedUsd) {
         cashier_id: order.cashier_id,
         stall_id: order.stall_id,
         total_usd: Number(order.total_usd),
-        cash_received_usd: Number(centsToUsd(cashReceivedCents)),
-        change_due_usd: Number(centsToUsd(changeDueCents)),
+        pricing_currency: order.pricing_currency,
+        exchange_rate_khr_per_usd: order.exchange_rate_khr_per_usd,
+        cash_received_usd: settlement.cashReceivedUsd === null ? null : Number(settlement.cashReceivedUsd),
+        cash_received_khr: settlement.cashReceivedKhr,
+        change_currency: settlement.changeCurrency,
+        change_due_usd: settlement.changeDueUsd === null ? null : Number(settlement.changeDueUsd),
+        change_due_khr: settlement.changeDueKhr,
         confirmed_by_role: actorRole,
       },
     }, { transaction });

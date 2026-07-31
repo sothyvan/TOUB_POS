@@ -19,6 +19,14 @@ erDiagram
         datetime updated_at
     }
 
+    business_financial_settings {
+        int owner_id PK,FK
+        int exchange_rate_khr_per_usd
+        int updated_by_user_id FK "nullable"
+        datetime created_at
+        datetime updated_at
+    }
+
     stalls {
         int id PK
         int owner_id FK "nullable"
@@ -128,8 +136,15 @@ erDiagram
         enum status "pending_payment, paid, cancelled"
         decimal subtotal_usd
         decimal total_usd
+        int subtotal_khr
+        int total_khr
+        enum pricing_currency "usd, khr"
+        int exchange_rate_khr_per_usd "sale snapshot"
         decimal cash_received_usd "nullable cash"
+        int cash_received_khr "nullable cash"
         decimal change_due_usd "nullable cash"
+        int change_due_khr "nullable cash"
+        enum change_currency "nullable usd, khr"
         text qr_payload "nullable KHQR"
         varchar qr_md5 "nullable KHQR"
         varchar payment_reference UK "nullable KHQR"
@@ -188,6 +203,7 @@ erDiagram
     }
 
     users ||--o{ stalls : "owns"
+    users ||--o| business_financial_settings : "owns currency policy"
     users ||--o{ categories : "manages"
     users ||--o{ stall_staff : "assigned to"
     stalls ||--o{ stall_staff : "has staff"
@@ -214,7 +230,7 @@ erDiagram
 ## Notes
 
 - `order_items.name`, `price_usd`, `price_khr`, `line_total_usd`, and `line_total_khr` are snapshots frozen at time of sale. They survive product edits or deletion.
-- `orders.cash_received_usd` and `orders.change_due_usd` are stored for cash orders after backend confirmation. The frontend may preview change, but the backend calculates the saved value.
+- Orders store independent USD/KHR received amounts and backend-calculated USD/KHR change equivalents using the Order's exchange-rate snapshot. `change_currency` remains nullable for compatibility with historical rows and is not selected for new cash payments.
 - `orders.idempotency_key` is unique per cashier. Exact checkout retries return the original order; reuse with different request data is rejected by comparing `idempotency_fingerprint`.
 - `stall_staff.user_id` is unique, so a cashier can have at most one current stall assignment. Assignment changes invalidate active cashier sessions.
 - `orders.qr_payload`, `qr_md5`, `payment_reference`, and `payment_expires_at` are populated for KHQR orders and remain `NULL` for cash orders.

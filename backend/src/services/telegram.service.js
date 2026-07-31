@@ -101,7 +101,9 @@ function formatOrderMessage(order) {
   const stallName = order.Stall?.name ?? `Stall #${order.stall_id}`;
   const cashierName = order.Cashier?.username ?? `Cashier #${order.cashier_id}`;
   const paymentLabel = order.payment_method?.toUpperCase() ?? 'N/A';
-  const totalUsd = Number(order.total_usd ?? 0).toFixed(2);
+  const totalLabel = order.pricing_currency === 'khr'
+    ? `${Number(order.total_khr ?? 0).toLocaleString('en-US')} ៛`
+    : `$${Number(order.total_usd ?? 0).toFixed(2)}`;
 
   // Build item lines, each with optional modifier note indented below
   const itemLines = (order.Items ?? []).map((item) => {
@@ -116,7 +118,7 @@ function formatOrderMessage(order) {
     '',
     itemLines.join('\n'),
     '',
-    `💵 <b>$${totalUsd}</b> | ${paymentLabel}`,
+    `💵 <b>${totalLabel}</b> | ${paymentLabel}`,
   ].join('\n');
 }
 

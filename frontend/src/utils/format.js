@@ -4,6 +4,12 @@ export function money(value) {
   return `$${num.toFixed(2)}`;
 }
 
+export function khrMoney(value) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return '0 ៛';
+  return `${Math.round(amount).toLocaleString()} ៛`;
+}
+
 function nameAcronym(name, maxLen) {
   if (!name) return '';
   return name

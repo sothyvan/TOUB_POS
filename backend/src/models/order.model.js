@@ -38,15 +38,54 @@ const Order = sequelize.define('Order', {
     allowNull: false,
     field: 'total_usd',
   },
+  subtotal_khr: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+    field: 'subtotal_khr',
+  },
+  total_khr: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+    field: 'total_khr',
+  },
+  pricing_currency: {
+    type: DataTypes.ENUM('usd', 'khr'),
+    allowNull: false,
+    defaultValue: 'usd',
+    field: 'pricing_currency',
+  },
+  exchange_rate_khr_per_usd: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 4100,
+    field: 'exchange_rate_khr_per_usd',
+  },
   cash_received_usd: {
     type: DataTypes.DECIMAL(10, 2),
     defaultValue: null,
     field: 'cash_received_usd',
   },
+  cash_received_khr: {
+    type: DataTypes.INTEGER,
+    defaultValue: null,
+    field: 'cash_received_khr',
+  },
   change_due_usd: {
     type: DataTypes.DECIMAL(10, 2),
     defaultValue: null,
     field: 'change_due_usd',
+  },
+  change_due_khr: {
+    type: DataTypes.INTEGER,
+    defaultValue: null,
+    field: 'change_due_khr',
+  },
+  change_currency: {
+    type: DataTypes.ENUM('usd', 'khr'),
+    defaultValue: null,
+    field: 'change_currency',
   },
   qr_payload: {
     type: DataTypes.TEXT,

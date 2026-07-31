@@ -138,7 +138,7 @@ export function useOrders(isOnline, cart, clearCart, currentUser, options = {}) 
   
   const todaysTotal = todaysOrders
     .filter((order) => order.status === 'paid')
-    .reduce((sum, o) => sum + (o.total || 0), 0);
+    .reduce((sum, o) => sum + (o.reportingTotal ?? o.total ?? 0), 0);
 
   const handleCheckout = async (method, options = {}) => {
     setCheckoutError(null);
@@ -216,7 +216,7 @@ export function useOrders(isOnline, cart, clearCart, currentUser, options = {}) 
         ? (
           createdOrder.status === 'paid'
             ? createdOrder
-            : await api.orders.confirmCash(createdOrder.id, options.cashReceivedUsd)
+            : await api.orders.confirmCash(createdOrder.id, options)
         )
         : createdOrder;
 

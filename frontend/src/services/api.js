@@ -62,6 +62,7 @@ function mapProductToFrontend(p) {
     name: p.name,
     code: p.name.substring(0, 3).toUpperCase(),
     price: primaryAssignment.price_usd ?? p.default_price_usd ?? p.price_usd ?? '',
+    priceKhr: primaryAssignment.price_khr ?? p.default_price_khr ?? p.price_khr ?? '',
     categoryId: p.category_id,
     stallId: primaryAssignment.stall_id ?? p.stall_id,
     stallIds: assignments.length > 0
@@ -142,6 +143,10 @@ function mapOrderToFrontend(o) {
   ).sort((a, b) => Number(b.id) - Number(a.id));
   const latestTelegramTicket = telegramTickets[0] || null;
   const kitchenStatus = o.kitchen_status || o.kitchenStatus || latestTelegramTicket?.status || (o.status === 'paid' ? 'not_sent' : 'not_ready');
+  const totalUsd = parseFloat(o.total_usd || 0);
+  const totalKhr = Number(o.total_khr || 0);
+  const pricingCurrency = String(o.pricing_currency || 'usd').toLowerCase();
+  const exchangeRateKhrPerUsd = Number(o.exchange_rate_khr_per_usd || 4100);
 
   return {
     id,
@@ -158,13 +163,25 @@ function mapOrderToFrontend(o) {
     paymentReference: o.payment_reference || o.paymentReference || null,
     paymentExpiresAt: o.payment_expires_at || o.paymentExpiresAt || null,
     subtotal: parseFloat(o.subtotal_usd || o.total_usd || 0),
-    total: parseFloat(o.total_usd || 0),
+    total: totalUsd,
+    subtotalKhr: Number(o.subtotal_khr || o.total_khr || 0),
+    totalKhr,
+    pricingCurrency,
+    exchangeRateKhrPerUsd,
+    reportingTotal: pricingCurrency === 'khr' ? totalKhr / exchangeRateKhrPerUsd : totalUsd,
     cashReceived: o.cash_received_usd === null || o.cash_received_usd === undefined
       ? null
       : parseFloat(o.cash_received_usd),
+    cashReceivedKhr: o.cash_received_khr === null || o.cash_received_khr === undefined
+      ? null
+      : Number(o.cash_received_khr),
     changeDue: o.change_due_usd === null || o.change_due_usd === undefined
       ? null
       : parseFloat(o.change_due_usd),
+    changeDueKhr: o.change_due_khr === null || o.change_due_khr === undefined
+      ? null
+      : Number(o.change_due_khr),
+    changeCurrency: o.change_currency ? String(o.change_currency).toLowerCase() : null,
     kitchenStatus,
     telegramTickets,
     latestTelegramTicket,
@@ -174,7 +191,9 @@ function mapOrderToFrontend(o) {
       name: i.name,
       quantity: i.quantity,
       price: parseFloat(i.price_usd || 0),
+      priceKhr: Number(i.price_khr || 0),
       lineTotal: parseFloat(i.line_total_usd || 0),
+      lineTotalKhr: Number(i.line_total_khr || 0),
       notes: i.notes || '',
     }))
   };
@@ -228,7 +247,7 @@ export const api = {
       const payload = {
         name: item.name,
         price_usd: Number(item.price),
-        price_khr: Number(item.price) * 4000,
+        price_khr: Number(item.priceKhr),
         category_id: item.categoryId,
         stall_ids: item.stallIds || [],
         image_url: item.image,
@@ -427,16 +446,38 @@ export const api = {
       });
       return mapOrderToFrontend(res.data);
     },
-    async confirmCash(orderId, cashReceivedUsd) {
+    async confirmCash(orderId, payment) {
       const res = await apiRequest(`/orders/${orderId}/confirm-cash`, {
         method: 'POST',
-        body: { cash_received_usd: cashReceivedUsd },
+        body: {
+          ...(Number(payment.cashReceivedUsd) > 0 ? { cash_received_usd: payment.cashReceivedUsd } : {}),
+          ...(Number(payment.cashReceivedKhr) > 0 ? { cash_received_khr: payment.cashReceivedKhr } : {}),
+        },
       });
       return mapOrderToFrontend(res.data);
     },
     async retryTelegram(orderId) {
       const res = await apiRequest(`/orders/${orderId}/retry-telegram`, { method: 'POST' });
       return mapOrderToFrontend(res.data);
+    },
+  },
+  financialSettings: {
+    async get() {
+      const res = await apiRequest('/financial-settings');
+      return {
+        exchangeRateKhrPerUsd: Number(res.data.exchange_rate_khr_per_usd),
+        updatedAt: res.data.updated_at || null,
+      };
+    },
+    async update(exchangeRateKhrPerUsd) {
+      const res = await apiRequest('/financial-settings', {
+        method: 'PUT',
+        body: { exchange_rate_khr_per_usd: Number(exchangeRateKhrPerUsd) },
+      });
+      return {
+        exchangeRateKhrPerUsd: Number(res.data.exchange_rate_khr_per_usd),
+        updatedAt: res.data.updated_at || null,
+      };
     },
   },
   reports: {
