@@ -11,7 +11,7 @@ import categoryRoutes from './routes/category.routes.js';
 import telegramRoutes from './routes/telegram.routes.js';
 import healthRoutes from './routes/health.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
-import { requestLogger } from './middleware/logger.middleware.js';
+import { requestContext, requestLogger } from './middleware/logger.middleware.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerDocument } from './config/swagger.js';
 import { getRateLimitConfiguration } from './config/rate-limit.config.js';
@@ -27,6 +27,7 @@ app.set('trust proxy', trustProxyHops);
 app.use(helmet({
   contentSecurityPolicy: false,
 }));
+app.use(requestContext);
 app.use(cors({
   credentials: true,
   origin(origin, callback) {
