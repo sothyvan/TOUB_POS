@@ -233,6 +233,18 @@ Update this file after every meaningful implementation change.
   - Recorded P2-10 as merged and removed stale current-phase and tech-debt
     statements that contradicted the implemented credential/validation model.
 
+- **Improved Stall Management action hierarchy**:
+  - Moved the desktop staff assignment drop zone and assigned-roster cards
+    above Registered Devices and Kitchen Telegram Access, keeping the employee
+    pool and its destination visible in the same initial viewport.
+  - Moved Add Location from the bottom of the scrolling location rail into its
+    header so the primary creation action is immediately visible.
+  - Preserved click-to-assign, the Manage Staff dialog, mobile empty-state
+    actions, device management, Telegram configuration, and all existing data
+    behavior.
+  - Frontend verification passes with 16 unit tests, zero lint errors, a
+    production build with no chunk-size warning, and `git diff --check`.
+
 - **Safely suspended KHQR payment processing**:
   - Added explicit opt-in `KHQR_ENABLED` and `VITE_KHQR_ENABLED` feature flags, both defaulting to `false`.
   - Backend KHQR order creation and status checking return `503 KHQR_DISABLED` before database or provider work begins.
