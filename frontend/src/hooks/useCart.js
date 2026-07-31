@@ -1,4 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  clearRecoveredCart,
+  createCashierRecoveryScope,
+  readRecoveredCart,
+  reconcileRecoveredCart,
+  writeRecoveredCart,
+} from '../utils/cartRecovery';
 
 const adjustQuantity = (current, id, getNewQty) =>
   current.reduce((acc, item) => {
@@ -16,9 +23,51 @@ const adjustQuantity = (current, id, getNewQty) =>
 /**
  * Manages cart state and all derived totals.
  * @param {Map} categoryById - used to look up category name when adding items.
+ * @param {Object} options
  */
-export function useCart(categoryById) {
+export function useCart(categoryById, options = {}) {
+  const { currentUser = null, products = [], productsLoading = false } = options;
   const [cart, setCart] = useState([]);
+  const [hydratedScopeKey, setHydratedScopeKey] = useState(null);
+  const recoveryScope = useMemo(
+    () => createCashierRecoveryScope(currentUser),
+    [currentUser],
+  );
+
+  useEffect(() => {
+    let timerId;
+
+    if (!recoveryScope) {
+      timerId = window.setTimeout(() => {
+        setCart([]);
+        setHydratedScopeKey(null);
+      }, 0);
+      return () => window.clearTimeout(timerId);
+    }
+    if (productsLoading || hydratedScopeKey === recoveryScope.key) return undefined;
+
+    const restored = reconcileRecoveredCart(
+      readRecoveredCart(recoveryScope),
+      products,
+      categoryById,
+    );
+    timerId = window.setTimeout(() => {
+      setCart(restored);
+      setHydratedScopeKey(recoveryScope.key);
+    }, 0);
+    return () => window.clearTimeout(timerId);
+  }, [
+    categoryById,
+    hydratedScopeKey,
+    products,
+    productsLoading,
+    recoveryScope,
+  ]);
+
+  useEffect(() => {
+    if (!recoveryScope || hydratedScopeKey !== recoveryScope.key) return;
+    writeRecoveredCart(recoveryScope, cart);
+  }, [cart, hydratedScopeKey, recoveryScope]);
 
   const addToCart = (product) => {
     const categoryName = categoryById.get(product.categoryId)?.name || 'Menu';
@@ -40,7 +89,10 @@ export function useCart(categoryById) {
   const removeItemFromCart = (productId) =>
     setCart((current) => current.filter((item) => item.id !== productId));
 
-  const clearCart = () => setCart([]);
+  const clearCart = () => {
+    clearRecoveredCart(recoveryScope);
+    setCart([]);
+  };
 
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);

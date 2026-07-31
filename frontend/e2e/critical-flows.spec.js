@@ -39,6 +39,8 @@ test('owner session restores after refresh and logout protects management routes
 });
 
 test('cashier registers a terminal, signs in by PIN, and completes a cash sale', async ({ page }) => {
+  test.setTimeout(90_000);
+
   await page.goto('/login?mode=cashier');
 
   await expect(page.getByRole('heading', { name: 'Register Device for Cashier' })).toBeVisible();
@@ -66,13 +68,49 @@ test('cashier registers a terminal, signs in by PIN, and completes a cash sale',
   await expect(addProductButton).toBeVisible();
   await addProductButton.click();
 
-  const cashButton = page.getByRole('button', { name: 'Cash', exact: true });
+  await page.reload();
+  let cashButton = page.getByRole('button', { name: 'Cash', exact: true });
+  await expect(cashButton).toBeEnabled();
+
+  await page.getByRole('button', { name: 'Profile actions', exact: true }).click();
+  await page.getByRole('button', { name: 'Logout', exact: true }).click();
+  const logoutDialog = page.getByRole('dialog');
+  await expect(
+    logoutDialog.getByRole('heading', { name: 'Are you sure you want to log out?' }),
+  ).toBeVisible();
+  await logoutDialog.getByRole('button', { name: 'Confirm', exact: true }).click();
+
+  await expect(page).toHaveURL(/\/login/);
+  await expect(page.getByRole('heading', { name: 'Select Your Profile' })).toBeVisible();
+  await page.getByRole('button', { name: new RegExp(CASHIER_USERNAME, 'i') }).click();
+  for (const digit of CASHIER_PIN) {
+    await page.getByRole('button', { name: digit, exact: true }).click();
+  }
+
+  await expect(page).toHaveURL(/\/cashier$/);
+  cashButton = page.getByRole('button', { name: 'Cash', exact: true });
   await expect(cashButton).toBeEnabled();
   await cashButton.click();
 
   const cashDialog = page.getByRole('dialog');
   await expect(cashDialog.getByRole('heading', { name: 'Cash received' })).toBeVisible();
+
+  await page.route('**/api/orders/*/confirm-cash', async (route) => {
+    const backendResponse = await route.fetch();
+    expect(backendResponse.ok()).toBeTruthy();
+    await route.fulfill({
+      status: 503,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        message: 'Simulated interrupted confirmation response.',
+      }),
+    });
+  });
   await cashDialog.getByRole('button', { name: 'Confirm paid', exact: true }).click();
+
+  await expect(cashDialog).toContainText('Simulated interrupted confirmation response.');
+  await page.unroute('**/api/orders/*/confirm-cash');
+  await page.reload();
 
   const receiptDialog = page.getByRole('dialog');
   await expect(receiptDialog.getByRole('heading', { name: 'Payment Confirmed' })).toBeVisible();

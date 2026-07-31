@@ -93,7 +93,7 @@ export default function CashierPage() {
   } = useBackendAvailability();
 
   const {
-    categories, categoryById, filteredProducts,
+    categories, products, categoryById, filteredProducts,
     selectedCategory, setSelectedCategory, searchQuery, setSearchQuery,
     loading: productsLoading,
     error: productsError,
@@ -102,7 +102,11 @@ export default function CashierPage() {
   const {
     cart, cartById, itemCount, subtotal, serviceFee, estimatedTax, total,
     addToCart, updateQuantity, setCartItemQuantity, clearCart,
-  } = useCart(categoryById);
+  } = useCart(categoryById, {
+    currentUser,
+    products,
+    productsLoading,
+  });
 
   const {
     orders,
@@ -112,6 +116,7 @@ export default function CashierPage() {
     error: ordersError,
     checkoutLoading,
     checkoutError,
+    recoveredCheckout,
   } =
     useOrders(isOnline, cart, clearCart, currentUser, {
       onConnectionFailure: markBackendUnavailable,
@@ -120,6 +125,7 @@ export default function CashierPage() {
   const [activeReceipt, setActiveReceipt] = useState(null);
   const [cashierNotice, setCashierNotice] = useState(null);
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState(null);
+  const [pendingCashOrder, setPendingCashOrder] = useState(null);
   const [pendingKhqrOrder, setPendingKhqrOrder] = useState(null);
   const [isKhqrConfirmOpen, setIsKhqrConfirmOpen] = useState(false);
   const [khqrPollingError, setKhqrPollingError] = useState(null);
@@ -138,6 +144,55 @@ export default function CashierPage() {
     pendingPaymentMethodRef.current = pendingPaymentMethod;
     pendingKhqrOrderIdRef.current = pendingKhqrOrder?.id ?? null;
   }, [pendingPaymentMethod, pendingKhqrOrder?.id]);
+
+  useEffect(() => {
+    if (!recoveredCheckout) return;
+
+    const timerId = window.setTimeout(() => {
+      const { state, order } = recoveredCheckout;
+      if (state === 'paid' && order) {
+        setActiveReceipt(order);
+        setCashierNotice({
+          variant: 'success',
+          title: 'Payment recovered',
+          message: `Order ${order.orderNo} was already paid. No duplicate order was created.`,
+        });
+        return;
+      }
+
+      if (state === 'pending' && order?.paymentMethod === 'KHQR' && KHQR_ENABLED) {
+        setPendingKhqrOrder(order);
+        setPendingPaymentMethod('KHQR');
+        setCashierNotice({
+          variant: 'info',
+          title: 'KHQR payment resumed',
+          message: `TouB POS restored ${order.orderNo} and will continue checking its payment status.`,
+        });
+        return;
+      }
+
+      if (state === 'pending' && order?.paymentMethod === 'CASH') {
+        setPendingCashOrder(order);
+        setPendingPaymentMethod('CASH');
+        setCashierNotice({
+          variant: 'info',
+          title: 'Cash checkout resumed',
+          message: `TouB POS restored ${order.orderNo}. Confirm the received cash to complete it.`,
+        });
+        return;
+      }
+
+      if (state === 'cancelled' || state === 'missing') {
+        setCashierNotice({
+          variant: 'warning',
+          title: 'Previous checkout closed',
+          message: 'The earlier pending order is no longer payable. Your available cart items were kept.',
+        });
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timerId);
+  }, [recoveredCheckout]);
 
   const refreshOrderSnapshot = useCallback(async (orderId) => {
     const parsedOrderId = Number(orderId);
@@ -200,6 +255,7 @@ export default function CashierPage() {
       return;
     }
 
+    setPendingCashOrder(null);
     setPendingPaymentMethod(method);
   };
 
@@ -220,6 +276,7 @@ export default function CashierPage() {
     const order = await handleCheckout(method, { cashReceivedUsd });
     if (order) {
       setPendingPaymentMethod(null);
+      setPendingCashOrder(null);
       setActiveReceipt(order);
       scheduleOrderSnapshotRefresh(order.id);
     }
@@ -440,7 +497,6 @@ export default function CashierPage() {
 
   // ── Logout ────────────────────────────────────────────────────────────────
   const handleLogout = () => {
-    clearCart();
     setIsCartOpen(false);
     logout();
   };
@@ -546,13 +602,16 @@ export default function CashierPage() {
       {pendingPaymentMethod === 'CASH' ? (
         <CashConfirmationModal
           isOpen
-          total={total}
+          total={pendingCashOrder?.total ?? total}
           isBusy={checkoutLoading}
           isOnline={isOnline}
           isCheckingBackend={isCheckingBackend}
           error={checkoutError}
           onCancel={() => {
-            if (!checkoutLoading) setPendingPaymentMethod(null);
+            if (!checkoutLoading) {
+              setPendingPaymentMethod(null);
+              setPendingCashOrder(null);
+            }
           }}
           onConfirm={handleConfirmPayment}
         />

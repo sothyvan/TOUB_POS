@@ -1054,8 +1054,26 @@ Update this file after every meaningful implementation change.
     required by branch protection.
   - P1-9 critical browser E2E coverage is implemented; verify its first GitHub
     run and add `Browser E2E` as the sixth required check.
-  - After P1-9 verification, the next repository priority is P1-10 cart and
-    in-progress checkout recovery.
+  - P1-10 versioned cart and in-progress checkout recovery is implemented on
+    `p1-10-checkout-recovery`. Cart records are cashier/device scoped, expire
+    after 12 hours, and restore only product IDs, quantities, and notes before
+    reconciling against the backend catalog.
+  - Pending checkout records now survive tab/browser refresh, retain the
+    idempotency key and backend order ID, and reconcile paid, cancelled, or
+    still-pending orders after authentication. Ordinary logout preserves
+    recoverable work; remote device revocation clears it.
+  - Browser E2E coverage now exercises cart recovery after refresh and logout,
+    plus recovery after the backend confirms cash but the frontend loses the
+    response. Frontend lint/build pass; the full E2E run is delegated to the
+    disposable CI environment because no local API was running.
+  - The first P1-10 Browser E2E runs exposed test-harness issues rather than
+    application failures. The recovery scenario now uses a deterministic
+    simulated `503` only after the real backend cash confirmation succeeds,
+    instead of aborting the browser connection. Its cashier logout step now
+    opens the Profile actions menu and confirms the actual dialog before
+    re-authenticating, with a scoped 90-second budget for the expanded journey.
+  - The next repository priority is P1-11 consistent request validation limits
+    and schemas after P1-10 passes its pull-request checks.
   - Follow the audit's phased P0/P1 plan only after team review and approval.
 
 - Post-Phase 6 Operations & Security Hardening.
