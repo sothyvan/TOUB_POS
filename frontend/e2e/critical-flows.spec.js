@@ -5,6 +5,40 @@ const OWNER_PASSWORD = process.env.E2E_OWNER_PASSWORD || 'owner123';
 const CASHIER_USERNAME = process.env.E2E_CASHIER_USERNAME || 'cashier_dara';
 const CASHIER_PIN = process.env.E2E_CASHIER_PIN || '1111';
 
+test('render failure shows safe recovery and preserves checkout recovery data', async ({ page }) => {
+  const cartKey = 'toub-cart:999:888';
+  const pendingKey = 'toub-pending-checkout:999:888';
+  const cartValue = JSON.stringify({ version: 1, items: [{ productId: 42, quantity: 2 }] });
+  const pendingValue = JSON.stringify({ version: 1, orderId: 123 });
+
+  await page.addInitScript(({ savedCartKey, savedCartValue, savedPendingKey, savedPendingValue }) => {
+    globalThis.localStorage.setItem(savedCartKey, savedCartValue);
+    globalThis.localStorage.setItem(savedPendingKey, savedPendingValue);
+  }, {
+    savedCartKey: cartKey,
+    savedCartValue: cartValue,
+    savedPendingKey: pendingKey,
+    savedPendingValue: pendingValue,
+  });
+
+  await page.goto('/?force-render-error=true');
+
+  await expect(page.getByRole('heading', { name: 'TouB POS needs to recover' })).toBeVisible();
+  await expect(page.getByText(/^Reference: ERR-/)).toBeVisible();
+  await expect(page.getByText('Synthetic render failure for boundary verification')).toHaveCount(0);
+  await expect.poll(() => page.evaluate(
+    ({ savedCartKey }) => globalThis.localStorage.getItem(savedCartKey),
+    { savedCartKey: cartKey },
+  )).toBe(cartValue);
+  await expect.poll(() => page.evaluate(
+    ({ savedPendingKey }) => globalThis.localStorage.getItem(savedPendingKey),
+    { savedPendingKey: pendingKey },
+  )).toBe(pendingValue);
+
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect(page.getByRole('heading', { name: /Fast, stall-scoped POS with/i })).toBeVisible();
+});
+
 async function loginAsOwner(page) {
   await page.getByLabel('Username').fill(OWNER_USERNAME);
   await page.getByLabel('Password').fill(OWNER_PASSWORD);

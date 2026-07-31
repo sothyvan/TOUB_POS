@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 const frontendUrl = process.env.E2E_BASE_URL || 'http://127.0.0.1:4173';
 const apiUrl = process.env.E2E_API_BASE_URL || 'http://127.0.0.1:3000/api';
+const frontendPort = new URL(frontendUrl).port || '4173';
 
 export default defineConfig({
   testDir: './e2e',
@@ -24,7 +25,7 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
   webServer: {
-    command: 'npm run dev -- --host 127.0.0.1 --port 4173',
+    command: `npm run dev -- --host 127.0.0.1 --port ${frontendPort}`,
     url: frontendUrl,
     reuseExistingServer: !process.env.CI,
     env: {
