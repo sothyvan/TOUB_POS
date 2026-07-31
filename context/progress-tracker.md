@@ -1014,8 +1014,13 @@ Update this file after every meaningful implementation change.
   - KHQR/background payment checks and Telegram dispatch are disabled so the
     integration job cannot contact external providers.
   - Backend logs are uploaded for seven days only after a failed integration
-    run. The first GitHub run and addition of this fifth required check to
-    branch protection remain pending.
+    run.
+  - The first GitHub run exposed a managed-schema drift: the Product model and
+    repositories use `products.is_active` and `products.is_deleted`, but the
+    baseline migration did not create them. Added forward migration
+    `202607310003-add-products-lifecycle-columns.js` and synchronized the
+    canonical SQL schema. The integration rerun and addition of this fifth
+    required check to branch protection remain pending.
 
 ## Next Up
 
