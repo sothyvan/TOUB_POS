@@ -192,14 +192,14 @@ These controls should be preserved during remediation.
 - **Estimated size:** M
 - **Dependencies:** GitHub permissions; test database strategy; vulnerability exception policy.
 
-#### P1-9. Highest-risk workflows lack automated end-to-end and failure-path coverage - Critical integration and browser journeys implemented; CI verification pending
+#### P1-9. Highest-risk workflows lack automated end-to-end and failure-path coverage - Critical integration and browser journeys implemented and required in CI
 
 - **Severity:** P1
 - **Category:** Testing
 - **Business impact:** Checkout retries, payment partial failures, tenant isolation, role boundaries, device reassignment, browser refresh, and kitchen delivery can regress undetected.
 - **Progress:** CI now provisions disposable MySQL 8.4, applies migrations, seeds deterministic data, starts the API with external payment and Telegram workers disabled, and runs the existing auth-refresh, credential-policy, and order-flow live suites. These suites cover role and credential boundaries, refresh rotation/reuse, checkout totals and idempotency, cash confirmation, product/stall isolation, device reassignment, histories, and Telegram outbox creation.
-- **Browser progress:** Playwright now covers management login, refresh-session restoration, role and logout guards, terminal registration, Cashier PIN login, stall-scoped product selection, backend cash checkout, paid receipt, and order-history visibility. CI runs Chromium against separate disposable MySQL/API/frontend instances with external KHQR and Telegram workers disabled.
-- **Remaining work:** Verify the first browser CI run and require it through branch protection. Forced database/provider timeout recovery, responsive browser journeys, and deeper management permission scenarios remain valuable follow-up coverage.
+- **Browser progress:** Playwright now covers management login, refresh-session restoration, role and logout guards, terminal registration, Cashier PIN login, stall-scoped product selection, backend cash checkout, paid receipt, and order-history visibility. CI runs Chromium against separate disposable MySQL/API/frontend instances with external KHQR and Telegram workers disabled, and the Browser E2E check is required on `main`.
+- **Remaining work:** Forced database/provider timeout recovery, responsive browser journeys, and deeper management permission scenarios remain valuable follow-up coverage.
 - **Acceptance criteria:** CI runs deterministic integration and E2E suites with forced timeout/retry/concurrency cases; failures demonstrate that money and scope invariants are asserted.
 - **Estimated size:** XL
 - **Dependencies:** Migration baseline; test fixtures; CI service containers; P0 API contracts.
@@ -413,11 +413,12 @@ RPO and 4-hour RTO on 2026-07-31.
 - **Severity:** P2
 - **Category:** Performance
 - **Business impact:** Management screens load more slowly on mobile or weak networks, increasing time-to-interactive.
-- **Evidence:** `npm run build` warns that `OwnerPortalPage` is 575.34 kB minified (157.73 kB gzip), above Vite's 500 kB chunk warning.
+- **Original evidence:** `npm run build` warned that `OwnerPortalPage` was 575.34 kB minified (157.73 kB gzip), above Vite's 500 kB chunk warning.
 - **Recommended remediation:** Profile first, then route/lazy-load heavy reports, PDF/export libraries, and chart modules. Preserve cashier startup priority.
 - **Acceptance criteria:** No unexplained chunk warning; measured management route load improves on a throttled mobile profile with no functional regression.
 - **Estimated size:** M
 - **Dependencies:** Bundle analyzer and performance budget.
+- **Implementation status:** Implemented locally for review. Build-manifest analysis measured the merged P2-8 baseline Owner Portal entry at 578.77 kB (158.83 kB gzip). Dashboard, catalog, Stall, report, staff, and financial-settings tabs now load through separate React lazy boundaries with a shared loading state. The Owner Portal entry is 96.94 kB (26.88 kB gzip), an 83% minified reduction; the largest tab chunk is the Recharts-backed dashboard at 357.95 kB (104.29 kB gzip), and the production build has no chunk-size warning. A tested Vite plugin fails builds above a 150 KiB Owner Portal entry budget or 450 KiB tab budget. Authenticated tab navigation and a throttled deployment measurement remain review/deployment verification steps.
 
 #### P2-10. Dependency installation is not clean
 
@@ -554,7 +555,7 @@ The live tests were not run during this audit because they require a running bac
 - [x] Use verified MySQL TLS with provider CA.
 - [ ] Verify and document least-privilege production DB credentials.
 - [ ] Store secrets in the hosting secret manager; rotate before launch.
-- [ ] Define liveness/readiness checks and graceful shutdown.
+- [x] Define liveness/readiness checks and graceful shutdown. Production host probe and termination settings still require verification.
 - [ ] Decide single-instance versus multi-instance Socket.IO/worker architecture.
 - [ ] Configure centralized redacted logs, metrics, alerts, and correlation IDs.
 
@@ -564,25 +565,25 @@ The live tests were not run during this audit because they require a running bac
 - [x] Define RPO, RTO, retention, access, and deletion policy.
 - [ ] Run and record a full restore drill.
 - [ ] Test migration failure and rollback/restore.
-- [ ] Create deterministic synthetic demo/seed data.
+- [x] Create deterministic synthetic demo/seed data.
 - [ ] Define order correction, reconciliation, and audit procedures.
 
 ### Application
 
-- [ ] Validate every mutation with shared schemas and business limits.
+- [x] Validate every mutation with shared schemas and business limits.
 - [x] Implement current-user/session invalidation.
 - [x] Implement checkout idempotency and pending-payment recovery.
 - [x] Make offline messaging truthful by enforcing online-only checkout.
 - [x] Make Telegram dispatch durable and observable.
-- [ ] Add error boundaries and safe production error responses.
+- [x] Add error boundaries and safe production error responses.
 - [ ] Confirm KHQR flags remain disabled in all production environments.
 
 ### Verification
 
-- [ ] Run clean `npm ci` in both apps.
-- [ ] Run backend lint with zero errors and an agreed warning policy.
+- [x] Run clean `npm ci` in both apps through required CI jobs.
+- [x] Run backend lint with zero errors and an agreed warning policy.
 - [x] Run backend unit, integration, and live tests on a disposable database.
-- [ ] Run frontend lint, unit tests, build, and E2E tests.
+- [x] Run frontend lint, unit tests, build, and required Browser E2E checks.
 - [ ] Run dependency, secret, and license scans.
 - [ ] Run concurrency, load, accessibility, browser, and low-network tests.
 - [ ] Execute a complete production-like cash-to-kitchen-to-report scenario.
@@ -673,7 +674,8 @@ Deploy production observability, encrypted backups, restore drills, runbooks, in
 | Frontend verification after P1-8 | Lint and production build passed; existing 575.79 kB Owner Portal chunk warning remains |
 | P1-8 GitHub enforcement | First pull-request workflow passed all four checks; teammate review and required checks are enforced on `main` |
 | P1-9 backend integration CI | First run caught missing `products.is_active`/`products.is_deleted`; migration `202607310003` fixed the drift, the rerun passed, and the check is required on `main` |
-| P1-9 browser E2E | Playwright configuration, two critical browser journeys, and isolated CI job added; lint/build and test discovery pass locally, first full GitHub run pending |
+| P1-9 browser E2E | Playwright critical journeys and isolated CI job are implemented; Browser E2E passes and is a required `main` branch check |
+| Frontend verification after P2-9 | 16 unit tests and lint passed; production build passed without a chunk warning. Owner Portal entry fell from 578.77 kB to 96.94 kB and build-time budgets cover the entry and lazy tab chunks |
 
 The P1-8 live npm audit request could not be run in this local environment
 because external dependency metadata egress was not approved. GitHub CI will run
