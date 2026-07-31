@@ -1262,6 +1262,13 @@ Update this file after every meaningful implementation change.
     Owner/Manager, ImageKit-upload, and Socket.IO flows in disposable browser CI,
     then configure production docs credentials only if production Swagger is
     intentionally required.
+  - P2-8 frontend render recovery is implemented for review. A root boundary
+    outside all providers shows a safe retry/reload screen with an `ERR-...`
+    reference, retains cart and pending-checkout recovery records, and emits
+    only sanitized route/component metadata. Thirteen frontend unit tests and
+    the focused forced-render Playwright scenario pass locally. Connecting the
+    structured browser event to the selected production monitoring destination
+    remains a deployment follow-up.
   - Follow the audit's phased P0/P1 plan only after team review and approval.
 
 - Post-Phase 6 Operations & Security Hardening.

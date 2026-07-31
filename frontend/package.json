@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "test": "node --test tests/csp.unit.test.js tests/financial-policy.unit.test.js",
+    "test": "node --test tests/csp.unit.test.js tests/error-boundary.unit.test.js tests/financial-policy.unit.test.js",
     "preview": "vite preview",
     "test:e2e": "playwright test"
   },

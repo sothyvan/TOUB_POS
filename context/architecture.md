@@ -18,6 +18,7 @@
 ## System Boundaries
 
 - `frontend/src/app/` — Application routing and route-protection composition.
+- `frontend/src/app/AppErrorBoundary.jsx` — Root render/lifecycle recovery boundary outside application providers. It presents a safe retry/reload screen and emits only sanitized correlation metadata.
 - `frontend/src/features/` — Feature-owned UI grouped by business capability: authentication, cashier sales, catalog, management shell, payments, reports, staff, and stalls.
 - `frontend/src/shared/layout/` — Cross-feature page shells and top-level layout components.
 - `frontend/src/shared/theme/` — Persistent light/dark theme state and the shared theme toggle.
@@ -136,6 +137,7 @@
 8. Order item modifiers/notes must be stored as a snapshot at time of order — not linked to a live config.
 9. For the current release, the trusted final order total equals the backend-calculated item subtotal. The frontend must not invent service fees or taxes. Any future charge requires an approved backend-owned policy covering rates, rounding, exemptions, snapshots, receipts, and reports.
 10. Product USD/KHR prices are synchronized in the management UI using the Owner's saved rate; editing either field regenerates the other. Every Order stores trusted USD and whole-riel KHR totals and the Owner's business exchange rate at creation time. New cashier Orders use USD as the canonical settlement value while showing both totals. Cash confirmation may accept independent USD and KHR amounts, but conversion, underpayment checks, and both equivalent change amounts are backend-owned. Historical orders retain their original pricing-currency and rate snapshots; changing the current setting never rewrites them.
+11. Unhandled React render and lifecycle failures must reach the root error boundary. Its fallback must not clear browser recovery records or display the thrown message/stack, and diagnostics must contain only a generated correlation ID, sanitized pathname, and component names. Event-handler and asynchronous failures remain the responsibility of their normal request/workflow error handling because React error boundaries do not catch them.
 
 ## Frontend State Management
 

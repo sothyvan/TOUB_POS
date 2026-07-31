@@ -401,11 +401,12 @@ RPO and 4-hour RTO on 2026-07-31.
 - **Severity:** P2
 - **Category:** Reliability / UX
 - **Business impact:** An unexpected render error can blank the active POS screen with no recovery instruction.
-- **Evidence:** Repository search found no React `ErrorBoundary`, `componentDidCatch`, or `getDerivedStateFromError` implementation under `frontend/src`.
+- **Original evidence:** Repository search found no React `ErrorBoundary`, `componentDidCatch`, or `getDerivedStateFromError` implementation under `frontend/src`.
 - **Recommended remediation:** Add route-level/top-level boundaries with a safe retry/reload path and error reporting that excludes tokens and customer data.
 - **Acceptance criteria:** A forced render exception shows a usable fallback, preserves recoverable checkout state, and reports a correlation identifier.
 - **Estimated size:** S
 - **Dependencies:** Logging/monitoring destination; cart recovery.
+- **Implementation status:** Implemented for review. `AppErrorBoundary` wraps the theme, auth, router, and lazy routes; its fallback offers retry/reload, preserves local recovery records, and shows a generated `ERR-...` reference. Structured browser diagnostics contain only the event name, correlation ID, sanitized pathname, and sanitized component names. Unit coverage verifies redaction and logger failure safety, while a development-only Playwright probe verifies the fallback, preserved cart/pending-checkout values, hidden raw error text, and retry recovery. Production ingestion/search for the structured browser event remains a deployment follow-up once the monitoring destination is selected.
 
 #### P2-9. Frontend production bundle has a large owner portal chunk
 
