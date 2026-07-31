@@ -122,13 +122,26 @@ export async function deleteStallById(id, { transaction, revokedByUserId = null 
   return affectedRows > 0;
 }
 
+async function lockStaffUser(userId, transaction) {
+  const user = await User.findByPk(userId, {
+    attributes: ['id'],
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+  });
+  if (!user) {
+    throw new Error('Cannot change a Stall assignment for a missing user.');
+  }
+}
+
 /**
  * Assign a staff member to a stall.
- * Ensures the staff member is only assigned to one stall.
+ * Locks the stable User row before reading the optional assignment so concurrent
+ * first assignments and reassignments for the same Cashier are serialized.
  */
 export async function assignStaffToStall(stallId, userId, { audit } = {}) {
   const transaction = await sequelize.transaction();
   try {
+    await lockStaffUser(userId, transaction);
     const existing = await StallStaff.findOne({
       where: { user_id: userId },
       transaction,
@@ -168,6 +181,7 @@ export async function assignStaffToStall(stallId, userId, { audit } = {}) {
 export async function removeStaffFromStall(stallId, userId, { audit } = {}) {
   const transaction = await sequelize.transaction();
   try {
+    await lockStaffUser(userId, transaction);
     const assignment = await StallStaff.findOne({
       where: { stall_id: stallId, user_id: userId },
       transaction,

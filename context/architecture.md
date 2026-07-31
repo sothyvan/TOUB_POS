@@ -130,7 +130,7 @@
 4. WebSocket payment notifications must only be pushed to the socket registered by the cashier who initiated that specific QR session. No broadcast.
 5. A terminal may only load menu items and staff rosters scoped to its registered stall. Multiple devices may belong to one stall, and revoking one must not affect another.
    - Every cashier request and socket connection must prove that the current `stall_staff` assignment, JWT `stall_id`, and registered device `stall_id` are identical.
-   - A cashier has at most one `stall_staff` row. Moving or removing that assignment invalidates all active sessions for that cashier without deregistering the physical terminals.
+   - A cashier has at most one `stall_staff` row, enforced by a unique database index. Moving or removing an assignment locks the stable User row and performs assignment, refresh-session revocation, and administrative auditing in one transaction before invalidating live sessions; physical terminals remain registered.
 6. Telegram ticket completion requires an exact ticket/chat/message match and an active stall-scoped `telegram_cooks` identity. Cooks remain outside web RBAC.
 7. Telegram group routing may only be connected through a short-lived, one-time, hashed setup token created by the same-business Owner. Managers may manage cook identities but cannot reroute the kitchen destination. Client-submitted `telegram_chat_id` values are not trusted.
 8. Order item modifiers/notes must be stored as a snapshot at time of order — not linked to a live config.

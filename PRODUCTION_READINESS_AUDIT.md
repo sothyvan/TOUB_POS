@@ -327,6 +327,16 @@ migration and live integration checks passed.
 
 #### P2-4. Staff reassignment is a non-transactional destroy-then-create operation
 
+**Implementation status (2026-07-31): Implemented locally.** Earlier stall-session
+hardening had already made replacement transactional, added `UNIQUE(user_id)` to
+the model/clean schema, and moved refresh-session revocation plus P2-3 auditing
+into the same transaction. P2-4 now also locks the stable User row before reading
+the optional assignment, serializing concurrent first assignments, reassignments,
+and removals. A forward migration verifies enrolled databases, fails safely when
+legacy duplicates exist, and adds the uniqueness index only when absent. All 66
+backend unit tests and capped lint pass; disposable-MySQL rollback and
+concurrency verification remains required before merge.
+
 - **Severity:** P2
 - **Category:** Concurrency / data integrity
 - **Business impact:** A failure or race after removal can leave a cashier unassigned or produce a stale assignment result.
