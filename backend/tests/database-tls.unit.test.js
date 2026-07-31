@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import path from 'node:path';
 import { getDatabaseTlsOptions } from '../src/config/database-tls.js';
 
 const TEST_CA = [
@@ -52,12 +53,13 @@ test('inline database CA enables strict certificate verification', () => {
 
 test('database CA path is resolved and read without weakening verification', () => {
   let requestedPath;
+  const deploymentDirectory = path.resolve('deployment', 'backend');
   const options = getDatabaseTlsOptions({
     env: {
       NODE_ENV: 'production',
       DB_SSL_CA_PATH: './certs/provider-ca.pem',
     },
-    cwd: 'C:\\deployment\\backend',
+    cwd: deploymentDirectory,
     readFile: (filePath, encoding) => {
       requestedPath = filePath;
       assert.equal(encoding, 'utf8');
@@ -65,7 +67,10 @@ test('database CA path is resolved and read without weakening verification', () 
     },
   });
 
-  assert.equal(requestedPath, 'C:\\deployment\\backend\\certs\\provider-ca.pem');
+  assert.equal(
+    requestedPath,
+    path.resolve(deploymentDirectory, 'certs', 'provider-ca.pem'),
+  );
   assert.equal(options.rejectUnauthorized, true);
   assert.equal(options.ca, TEST_CA);
 });

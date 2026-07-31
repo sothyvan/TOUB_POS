@@ -1002,6 +1002,9 @@ Update this file after every meaningful implementation change.
     bounded and visible.
   - The first GitHub workflow run and required branch-protection checks must be
     enabled/verified after push by a repository administrator.
+  - The first GitHub run exposed a Windows-only database TLS test-path
+    assertion. The test now uses Node's platform-aware path resolver so the
+    same CA behavior is verified on Windows development and Linux CI runners.
 
 ## Next Up
 
