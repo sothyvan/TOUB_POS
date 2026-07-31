@@ -12,7 +12,7 @@ A lightweight Point-of-Sale system for small merchant teams operating across mul
 | Backend | Node.js + Express | REST API, JWT auth, RBAC, order/payment business rules |
 | Database | MySQL + Sequelize | Users, stalls, products, orders, order items, audit logs |
 | Auth | Short-lived JWT + rotating refresh session | Access JWT in memory; refresh token in Secure HttpOnly cookie |
-| Security | Helmet + rate limiting | Security headers and login/PIN abuse protection |
+| Security | Helmet + Redis-backed rate limiting | Security headers and shared login/PIN abuse protection |
 
 ```text
 TOUB_POS/

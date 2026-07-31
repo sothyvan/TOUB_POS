@@ -1,4 +1,9 @@
 import { getDatabaseTlsOptions } from './database-tls.js';
+import {
+  parseRateLimitRedisPrefix,
+  parseRateLimitRedisUrl,
+  parseTrustProxyHops,
+} from './rate-limit.config.js';
 
 const DEFAULT_DEV_PLATFORM_ADMIN = {
   username: 'platform_admin',
@@ -141,6 +146,18 @@ export function validateEnvironment() {
 
   if (isProduction) {
     requireEnv('FRONTEND_ORIGIN', errors);
+  }
+
+  for (const validateRateLimitSetting of [
+    () => parseTrustProxyHops(process.env.TRUST_PROXY_HOPS, { required: isProduction }),
+    () => parseRateLimitRedisUrl(process.env.RATE_LIMIT_REDIS_URL, { required: isProduction }),
+    () => parseRateLimitRedisPrefix(process.env.RATE_LIMIT_REDIS_PREFIX, process.env.NODE_ENV),
+  ]) {
+    try {
+      validateRateLimitSetting();
+    } catch (error) {
+      errors.push(error.message);
+    }
   }
 
   try {

@@ -13,6 +13,7 @@
 | Real-Time    | WebSocket (ws / socket.io) | Cashier-specific payment confirmation push     |
 | Kitchen Bot  | Telegram Bot API        | Order relay and cook acknowledgement system       |
 | Product Media | ImageKit              | Browser-direct product photo uploads and delivery |
+| Abuse Controls | Redis/Valkey + express-rate-limit | Shared production authentication counters |
 
 ## System Boundaries
 
@@ -66,6 +67,7 @@
 - **MySQL Database**: Stores all relational data including Users, Stalls, Staff assignments, Orders, Order Items (with modifiers), and Payment Confirmations.
 - **Schema lifecycle**: Ordered Umzug migrations are the only schema-change path. Production startup is read-only and fails when migrations are pending; deployment runs `npm run db:migrate` before starting the API. Development startup and seed commands apply pending migrations without using `sequelize.sync()`.
 - **Database transport**: Production MySQL connections require the hosting provider CA through `DB_SSL_CA_PATH` or `DB_SSL_CA`. Sequelize and raw MySQL connections use `rejectUnauthorized: true`; missing, unreadable, or invalid CA configuration fails startup/migration rather than disabling certificate or hostname verification.
+- **Authentication rate-limit store**: Development may use process-local counters. Production requires a Redis-compatible shared store so every API instance observes the same broad-IP and IP/account counters. Account subjects are SHA-256 hashed in store keys, Redis failures fail closed, and startup verifies the store before accepting traffic.
 - **Telegram dispatch outbox**: `telegram_dispatch_jobs` stores one durable job per paid Order. The payment transaction and enqueue either commit together or roll back together; a database-locking worker performs the external Telegram call afterward.
 - **ImageKit**: Stores product photo binary assets. The backend issues short-lived browser-upload authentication parameters to Owner/Manager users only, while MySQL stores only the delivered asset URL in `products.image_url`.
 - **Browser auth storage**: Short-lived access JWTs and the public user session
@@ -97,7 +99,7 @@
 - Refresh and logout use double-submit CSRF protection. Production cookies are
   Secure; `AUTH_COOKIE_SAME_SITE` must match the chosen same-site or cross-site
   deployment topology.
-- Owner/Manager username-password login and Cashier PIN login are separate, rate-limited flows.
+- Owner/Manager username-password login and Cashier PIN login are separate, rate-limited flows. Express resolves client IPs through an explicit `TRUST_PROXY_HOPS` value; production does not use permissive boolean proxy trust.
 - The system uses Role-Based Access Control (RBAC).
 - The active roles are `platform_admin`, `owner`, `manager`, and `cashier`.
 - `platform_admin` is a temporary TouB POS team bootstrap role that can create business Owner accounts only. It is API-only for now and does not access the owner/manager portal.

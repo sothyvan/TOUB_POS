@@ -243,11 +243,13 @@ These controls should be preserved during remediation.
 #### P1-12. Authentication rate limiting is process-local and proxy handling is undefined
 
 - **Severity:** P1
+- **Status:** Implemented on 2026-07-31; final closure requires verifying `TRUST_PROXY_HOPS` through the selected production provider's real proxy path.
 - **Category:** Authentication / deployment
 - **Business impact:** Multiple instances allow attempts to bypass per-process limits. Behind a proxy, incorrect client IP handling can rate-limit all users together or fail to identify attackers correctly.
 - **Evidence:** Rate limiters use the default in-memory store in `backend/src/middleware/rate-limit.middleware.js:8-23`. No `app.set('trust proxy', ...)` appears in `backend/src/app.js`.
 - **Recommended remediation:** Configure the exact trusted proxy hop count and use a shared production rate-limit store. Add account-aware controls and monitoring without enabling username enumeration.
 - **Acceptance criteria:** Tests through the real proxy show distinct client limits, multiple app instances share counters, and clean `429` responses remain stable.
+- **Implementation:** Production now requires an exact `TRUST_PROXY_HOPS` value and a Redis-compatible `RATE_LIMIT_REDIS_URL`. Startup connects and pings the shared store before listening; store failures fail closed. Broad IP and hashed IP/account keys use isolated namespaces. Disposable CI starts MySQL plus Redis and verifies that separate Express instances share counters, distinct forwarded clients remain independent, and the API returns the stable `429 RATE_LIMITED` contract without recording usernames or PIN identities in Redis keys or logs.
 - **Estimated size:** M
 - **Dependencies:** Deployment topology; Redis or equivalent shared store.
 

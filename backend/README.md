@@ -79,6 +79,9 @@ Do not run this seeder against production or any live merchant database.
 | `JWT_ACCESS_EXPIRES_IN` | Short-lived access JWT duration | `15m` |
 | `REFRESH_SESSION_EXPIRES_HOURS` | Absolute rotating refresh-session lifetime | `8` |
 | `AUTH_COOKIE_SAME_SITE` | Cookie cross-site policy (`lax` locally; usually `none` for separate HTTPS production origins) | `lax` |
+| `TRUST_PROXY_HOPS` | Exact reverse-proxy hop count used to resolve the real client IP; required in production | `1` |
+| `RATE_LIMIT_REDIS_URL` | Shared Redis/Valkey connection used for production authentication counters; required in production | `rediss://user:password@host:6379` |
+| `RATE_LIMIT_REDIS_PREFIX` | Environment-specific key namespace when Redis is shared | `toub-pos:production` |
 | `PLATFORM_ADMIN_USERNAME` | Development bootstrap platform admin username | `platform_admin` |
 | `PLATFORM_ADMIN_PASSWORD` | Development bootstrap platform admin password | `platform123` |
 | `PLATFORM_ADMIN_ROLE` | Development bootstrap role; must be `platform_admin` | `platform_admin` |
@@ -166,7 +169,8 @@ Security notes:
 - Short-lived access JWTs remain only in frontend memory.
 - Rotating refresh tokens are Secure/HttpOnly in production and stored as SHA-256 hashes in MySQL.
 - Refresh and logout require a matching CSRF cookie and `X-CSRF-Token` header.
-- Login and PIN endpoints are rate-limited.
+- Login, PIN, refresh, and broad authentication traffic are rate-limited. Production instances share counters through Redis; account subjects are SHA-256 hashed in Redis keys.
+- Production startup fails when Redis is unavailable or the exact reverse-proxy hop count is not configured. Store failures fail closed instead of silently bypassing limits.
 - Helmet security headers are enabled.
 
 Apply all pending schema changes before starting a production deployment:
@@ -182,6 +186,13 @@ deployment secret manager as `DB_SSL_CA`. TouB POS sets
 `rejectUnauthorized: true`, so a missing CA, wrong CA, or hostname mismatch
 causes the connection to fail instead of silently weakening TLS. Local MySQL
 does not require these variables unless you choose to enable verified TLS.
+
+Production authentication rate limiting also requires a Redis-compatible
+service. Set `RATE_LIMIT_REDIS_URL` from the deployment secret manager and set
+`TRUST_PROXY_HOPS` to the exact hop count documented by the hosting provider.
+Do not guess this value: too few hops groups users under the proxy IP, while too
+many hops can trust a client-supplied address. Local development defaults to
+zero trusted proxies and process-local counters when no Redis URL is supplied.
 
 ---
 
