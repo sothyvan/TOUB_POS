@@ -876,7 +876,14 @@ is eight hours, including Cashier device-bound sessions.
 ### 11.6 HTTP And Origin Security
 
 - Helmet is enabled.
-- Content Security Policy is currently disabled to preserve local Swagger.
+- API responses use a deny-by-default Helmet Content Security Policy.
+- The Vite build injects an enforcing frontend policy whose `connect-src` is
+  derived from `VITE_API_BASE_URL` and permits the matching Socket.IO origin plus
+  the fixed ImageKit upload origin. Scripts remain self-only; existing React and
+  SweetAlert styles require a style-only inline allowance.
+- Swagger is development-only by default. Production omits `/api/docs` unless
+  it is explicitly enabled with separate Basic Auth credentials and its own
+  isolated documentation CSP.
 - Production CORS requires `FRONTEND_ORIGIN`.
 - Development allows local frontend ports.
 - Socket.IO applies equivalent origin rules.

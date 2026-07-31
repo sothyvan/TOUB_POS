@@ -301,6 +301,7 @@ These controls should be preserved during remediation.
 - **Evidence:** `backend/src/app.js:19-22` sets `contentSecurityPolicy: false`; Swagger is mounted unconditionally at `:47`.
 - **Recommended remediation:** Define a tested CSP for frontend assets and ImageKit, then gate or intentionally publish production API docs with a documented policy.
 - **Acceptance criteria:** CSP report/enforce mode passes core flows without unsafe broad exceptions; production docs exposure is an explicit deployment choice.
+- **Implementation:** Added an enforcing frontend-document CSP generated during Vite build from `VITE_API_BASE_URL`. Scripts remain self-only; connections are limited to self, the configured API/Socket.IO origin, and ImageKit's fixed upload endpoint, with development-only localhost allowances. Existing inline React/SweetAlert presentation requires style-only allowances, while historical owner-managed product URLs require HTTPS image loading. Express now applies an explicit deny-by-default API CSP. Swagger remains available by default in development, is absent by default in production, and production enablement fails closed unless separate Basic Auth credentials are configured; enabled Swagger receives an isolated documentation policy. Backend and frontend policy tests plus build-output verification cover the contract.
 - **Estimated size:** M
 - **Dependencies:** Asset/domain inventory; hosting headers.
 

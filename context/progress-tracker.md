@@ -105,6 +105,27 @@ Update this file after every meaningful implementation change.
   - Added five database-free regression tests. All 50 backend unit tests pass;
     backend lint passes with zero errors and 61 existing warnings.
 
+- **Implemented production audit P2-2 CSP and API documentation protection**:
+  - Added an enforcing Vite-generated frontend CSP derived from the configured
+    API origin, covering API/Socket.IO connections and ImageKit browser uploads
+    without permitting inline or third-party scripts.
+  - Kept inline allowances limited to styles because existing React components
+    and SweetAlert use style attributes/elements; HTTPS product images remain
+    allowed for the existing owner-managed URL and deterministic seed workflow.
+  - Replaced the disabled Express CSP with an explicit deny-by-default API
+    policy and a separate Swagger-only policy.
+  - Swagger remains convenient in development but is absent by default in
+    production. Explicit production enablement requires separate Basic Auth
+    credentials and fails startup validation when they are missing.
+  - Added four backend and four frontend policy tests and wired the frontend
+    security suite into CI. All 54 backend tests and four frontend policy tests
+    pass; backend lint has zero errors/61 existing warnings, and frontend
+    lint/build pass with the existing Owner Portal chunk warning.
+  - Browser verification of the built landing and management-login routes found
+    no CSP errors; the generated policy was present and the only console message
+    was an unrelated password-autocomplete suggestion. Full authenticated,
+    ImageKit-upload, and Socket.IO browser E2E remains delegated to disposable CI.
+
 - **Safely suspended KHQR payment processing**:
   - Added explicit opt-in `KHQR_ENABLED` and `VITE_KHQR_ENABLED` feature flags, both defaulting to `false`.
   - Backend KHQR order creation and status checking return `503 KHQR_DISABLED` before database or provider work begins.
@@ -1143,6 +1164,11 @@ Update this file after every meaningful implementation change.
     implemented with focused regression coverage. Run the complete backend
     lint/unit suite after restoring dependencies, then verify ingestion/search
     against the selected production logging destination.
+  - P2-2 enforcing frontend/API CSP and production Swagger protection is
+    implemented and locally verified. Confirm the authenticated Cashier,
+    Owner/Manager, ImageKit-upload, and Socket.IO flows in disposable browser CI,
+    then configure production docs credentials only if production Swagger is
+    intentionally required.
   - Follow the audit's phased P0/P1 plan only after team review and approval.
 
 - Post-Phase 6 Operations & Security Hardening.

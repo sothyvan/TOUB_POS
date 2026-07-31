@@ -16,16 +16,25 @@ import swaggerUi from 'swagger-ui-express';
 import { swaggerDocument } from './config/swagger.js';
 import { getRateLimitConfiguration } from './config/rate-limit.config.js';
 import { rejectRequestsWhileDraining } from './services/application-lifecycle.service.js';
+import {
+  getApiContentSecurityPolicy,
+  getApiDocsConfiguration,
+  getSwaggerContentSecurityPolicy,
+} from './config/security.config.js';
+import { requireApiDocsAuthentication } from './middleware/api-docs.middleware.js';
 
 const app = express();
 const { trustProxyHops } = getRateLimitConfiguration();
+const apiDocsConfiguration = getApiDocsConfiguration();
 
 // Trust only the configured number of reverse-proxy hops when resolving req.ip.
 app.set('trust proxy', trustProxyHops);
 
 // ── Global Middleware ─────────────────────────────────────
 app.use(helmet({
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    directives: getApiContentSecurityPolicy(),
+  },
 }));
 app.use(requestContext);
 app.use(cors({
@@ -53,7 +62,15 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(requestLogger);
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+if (apiDocsConfiguration.enabled) {
+  app.use(
+    '/api/docs',
+    requireApiDocsAuthentication(apiDocsConfiguration),
+    helmet.contentSecurityPolicy({ directives: getSwaggerContentSecurityPolicy() }),
+    swaggerUi.serve,
+    swaggerUi.setup(swaggerDocument),
+  );
+}
 app.use('/api/health', healthRoutes);
 app.use(rejectRequestsWhileDraining);
 

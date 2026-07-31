@@ -61,6 +61,8 @@ cp backend/.env.example backend/.env
 | `JWT_ACCESS_EXPIRES_IN` | `15m`          | In-memory access JWT lifetime |
 | `REFRESH_SESSION_EXPIRES_HOURS` | `8`    | Absolute refresh-session lifetime |
 | `AUTH_COOKIE_SAME_SITE` | `lax`           | Development cookie policy |
+| `API_DOCS_ENABLED` | `true` | Development Swagger toggle; production defaults to disabled |
+| `API_DOCS_USERNAME` | secret manager value | Required with a separate password only when production Swagger is explicitly enabled |
 | `PLATFORM_ADMIN_USERNAME` | `platform_admin` | Local bootstrap username |
 | `PLATFORM_ADMIN_PASSWORD` | `platform123` | Local bootstrap password |
 | `PLATFORM_ADMIN_ROLE` | `platform_admin` | Local bootstrap role |
@@ -72,6 +74,11 @@ different sites and will not send the development `SameSite=Lax` refresh cookie.
 For production, download the MySQL CA from the hosting provider and configure
 exactly one of `DB_SSL_CA_PATH` or `DB_SSL_CA`. The API and migration command
 verify the database certificate and hostname; an invalid CA fails closed.
+
+Set the production frontend `VITE_API_BASE_URL` to its real HTTPS API URL before
+building so the generated CSP permits only that API and matching Socket.IO
+origin. Keep `API_DOCS_ENABLED=false` unless production Swagger is explicitly
+required; when enabled, configure separate documentation credentials.
 
 ---
 
