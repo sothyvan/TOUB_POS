@@ -56,6 +56,12 @@ async function verifyOwnerLazyTabs(page) {
 
   await page.getByRole('button', { name: 'Staff Management', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Staff List', exact: true })).toBeVisible();
+  const addEmployeeButton = page.getByRole('button', { name: 'Add Employee', exact: true });
+  await expect(addEmployeeButton).toBeVisible();
+  await addEmployeeButton.click();
+  const staffDialog = page.getByRole('dialog', { name: 'Add Employee' });
+  await expect(staffDialog).toBeVisible();
+  await staffDialog.getByRole('button', { name: 'Close dialog' }).click();
 
   await page.getByRole('button', { name: 'Sales Reports', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Export CSV', exact: true })).toBeVisible();
