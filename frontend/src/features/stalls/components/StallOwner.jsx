@@ -635,19 +635,29 @@ export default function StallOwner({ users = [], currentUser }) {
         </Alert>
       )}
       <div className="flex flex-col bg-white rounded-2xl shrink-0 w-full xl:w-[280px] xl:min-w-[240px] max-h-[300px] xl:max-h-none xl:h-auto xl:overflow-hidden">
-        <div className="flex flex-col gap-1 px-5 pt-5 pb-3.5 border-b border-[#f3f4f6]">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: '#eef2ff' }}>
-              <Icon name="location" className="w-3.5 h-3.5" style={{ color: '#3b82f6' }} strokeWidth={2} />
+        <div className="flex flex-col gap-3 px-5 pt-5 pb-3.5 border-b border-[#f3f4f6]">
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: '#eef2ff' }}>
+                <Icon name="location" className="w-3.5 h-3.5" style={{ color: '#3b82f6' }} strokeWidth={2} />
+              </div>
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
+                Active Locations
+              </span>
+              {loading && <span className="text-xs text-[#6b7280] animate-pulse">...</span>}
             </div>
-            <span style={{ fontSize: 14, fontWeight: 700, color: '#111827', fontFamily: 'Inter, sans-serif' }}>
-              Active Locations
-            </span>
-            {loading && <span className="text-xs text-[#6b7280] animate-pulse ml-2">...</span>}
+            <p style={{ fontSize: 12, color: '#9ca3af', fontFamily: 'Inter, sans-serif', margin: '4px 0 0', paddingLeft: 36 }}>
+              {stalls.length} stalls configured
+            </p>
           </div>
-          <p style={{ fontSize: 12, color: '#9ca3af', fontFamily: 'Inter, sans-serif', margin: 0, paddingLeft: 36 }}>
-            {stalls.length} stalls configured
-          </p>
+          <Button
+            fullWidth
+            iconName="plus"
+            size="sm"
+            onClick={() => setShowAddModal(true)}
+          >
+            Add Location
+          </Button>
         </div>
 
         <div className="flex-1 overflow-y-auto">
@@ -680,14 +690,6 @@ export default function StallOwner({ users = [], currentUser }) {
               </button>
             );
           })}
-        </div>
-
-        <div className="px-4 py-3.5 bg-[#fafafa] border-t border-[#f3f4f6]">
-          <button type="button" onClick={() => setShowAddModal(true)}
-            className="w-full flex h-10 items-center justify-center gap-2 rounded-lg border-0 bg-brand-action cursor-pointer hover:bg-brand-action-hover active:scale-[0.98]">
-            <Icon name="plus" className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#ffffff', fontFamily: 'Inter, sans-serif' }}>Add Location</span>
-          </button>
         </div>
       </div>
 
@@ -729,6 +731,32 @@ export default function StallOwner({ users = [], currentUser }) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+          {selectedStall && (
+            <DropZone onDrop={(userId) => handleAssign(Number(userId))} isDragOver={isDropZoneOver} setIsDragOver={setIsDropZoneOver} />
+          )}
+
+          {assignedUsers.length > 0 && (
+            <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))' }}>
+              {assignedUsers.map((user, idx) => (
+                <RosterCard key={user.id} user={user} idx={idx} onUnassign={handleUnassign} />
+              ))}
+            </div>
+          )}
+
+          {selectedStall && assignedUsers.length === 0 && (
+            <EmptyState
+              className="xl:hidden"
+              iconName="users"
+              title="No cashiers assigned"
+              message="Use Manage Staff to add a cashier to this stall."
+              action={(
+                <Button size="sm" iconName="userPlus" onClick={() => setIsManageStaffOpen(true)}>
+                  Manage Staff
+                </Button>
+              )}
+            />
+          )}
+
           <section className="rounded-lg border border-ui-border bg-ui-surface p-4">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div>
@@ -791,32 +819,6 @@ export default function StallOwner({ users = [], currentUser }) {
               canConnectGroup={roleToApiRole(currentUser?.role) === 'owner'}
             />
           ) : null}
-
-          {assignedUsers.length > 0 && (
-            <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))' }}>
-              {assignedUsers.map((user, idx) => (
-                <RosterCard key={user.id} user={user} idx={idx} onUnassign={handleUnassign} />
-              ))}
-            </div>
-          )}
-
-          {selectedStall && assignedUsers.length === 0 && (
-            <EmptyState
-              className="xl:hidden"
-              iconName="users"
-              title="No cashiers assigned"
-              message="Use Manage Staff to add a cashier to this stall."
-              action={(
-                <Button size="sm" iconName="userPlus" onClick={() => setIsManageStaffOpen(true)}>
-                  Manage Staff
-                </Button>
-              )}
-            />
-          )}
-
-          {selectedStall && (
-            <DropZone onDrop={(userId) => handleAssign(Number(userId))} isDragOver={isDropZoneOver} setIsDragOver={setIsDropZoneOver} />
-          )}
         </div>
       </div>
 
