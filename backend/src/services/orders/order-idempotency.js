@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { httpError } from '../../utils/http-error.util.js';
 import { parsePositiveInteger } from './order-access.js';
+import { LIMITS } from '../../validation/request-validation.js';
 
 const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9._:-]{16,64}$/;
 
@@ -22,7 +23,11 @@ export function buildOrderFingerprint(paymentMethod, items, normalizeNotes) {
       item.product_id ?? item.productId ?? item.id,
       'product_id',
     ),
-    quantity: parsePositiveInteger(item.quantity, 'quantity'),
+    quantity: parsePositiveInteger(
+      item.quantity,
+      'quantity',
+      { max: LIMITS.ORDER_ITEM_QUANTITY },
+    ),
     notes: normalizeNotes(item.notes),
   }));
 

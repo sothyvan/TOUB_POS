@@ -9,13 +9,19 @@ import {
   getAllOrders,
   retryTelegramDispatch,
 } from '../controllers/order.controller.js';
+import { validateBody } from '../validation/request-validation.js';
+import {
+  confirmCashBody,
+  createOrderBody,
+  emptyBody,
+} from '../validation/mutation-schemas.js';
 
 const router = Router();
 
 router.use(authenticate);
 
 // POST   /api/orders       — cashier creates a new order / QR session
-router.post('/', authorize('cashier'), createOrder);
+router.post('/', authorize('cashier'), validateBody(createOrderBody), createOrder);
 
 // GET    /api/orders/mine  — cashier fetches their own orders
 router.get('/mine', authorize('cashier'), getMyOrders);
@@ -24,13 +30,28 @@ router.get('/mine', authorize('cashier'), getMyOrders);
 router.get('/:id', authorize(['owner', 'manager', 'cashier']), getOrder);
 
 // POST   /api/orders/:id/check-khqr-status — check KHQR payment status through backend provider mode
-router.post('/:id/check-khqr-status', authorize(['owner', 'manager', 'cashier']), checkKhqrPaymentStatus);
+router.post(
+  '/:id/check-khqr-status',
+  authorize(['owner', 'manager', 'cashier']),
+  validateBody(emptyBody),
+  checkKhqrPaymentStatus,
+);
 
 // POST   /api/orders/:id/confirm-cash — confirm physical cash received
-router.post('/:id/confirm-cash', authorize(['owner', 'manager', 'cashier']), confirmCashPayment);
+router.post(
+  '/:id/confirm-cash',
+  authorize(['owner', 'manager', 'cashier']),
+  validateBody(confirmCashBody),
+  confirmCashPayment,
+);
 
 // POST   /api/orders/:id/retry-telegram — owner/manager or creating cashier retries failed kitchen ticket delivery
-router.post('/:id/retry-telegram', authorize(['owner', 'manager', 'cashier']), retryTelegramDispatch);
+router.post(
+  '/:id/retry-telegram',
+  authorize(['owner', 'manager', 'cashier']),
+  validateBody(emptyBody),
+  retryTelegramDispatch,
+);
 
 // GET    /api/orders       — owner/manager fetches all orders
 router.get('/', authorize(['owner', 'manager']), getAllOrders);

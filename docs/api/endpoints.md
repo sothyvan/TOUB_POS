@@ -759,10 +759,23 @@ All errors follow:
 ```json
 {
   "success": false,
-  "code": 400,
+  "code": "VALIDATION_ERROR",
   "message": "Human-readable description"
 }
 ```
+
+`code` is present when an error has a stable machine-readable identifier.
+
+### Mutation Validation Policy
+
+- JSON mutation bodies reject unknown fields with `400 VALIDATION_ERROR`.
+- Strings are trimmed and bounded to the matching database column length.
+- IDs and quantities must be positive integers. Order quantities are limited to 100 per item and orders to 100 submitted line items.
+- USD values accept at most two decimal places. Product USD prices are limited to `999999.99`; request/order/cash totals are limited to `99999999.99`.
+- KHR amounts are positive integers limited to `2147483647`.
+- Boolean fields must be JSON booleans, not strings such as `"true"`.
+- Commands that do not require a request body reject submitted fields.
+- Malformed or oversized application input is rejected before a database or external provider call.
 
 | Code | Meaning              |
 |------|----------------------|
