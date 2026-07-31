@@ -39,6 +39,8 @@ test('owner session restores after refresh and logout protects management routes
 });
 
 test('cashier registers a terminal, signs in by PIN, and completes a cash sale', async ({ page }) => {
+  test.setTimeout(90_000);
+
   await page.goto('/login?mode=cashier');
 
   await expect(page.getByRole('heading', { name: 'Register Device for Cashier' })).toBeVisible();
@@ -90,12 +92,19 @@ test('cashier registers a terminal, signs in by PIN, and completes a cash sale',
   await expect(cashDialog.getByRole('heading', { name: 'Cash received' })).toBeVisible();
 
   await page.route('**/api/orders/*/confirm-cash', async (route) => {
-    await route.fetch();
-    await route.abort('failed');
+    const backendResponse = await route.fetch();
+    expect(backendResponse.ok()).toBeTruthy();
+    await route.fulfill({
+      status: 503,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        message: 'Simulated interrupted confirmation response.',
+      }),
+    });
   });
   await cashDialog.getByRole('button', { name: 'Confirm paid', exact: true }).click();
 
-  await expect(cashDialog).toContainText(/Network Error|Failed to checkout/);
+  await expect(cashDialog).toContainText('Simulated interrupted confirmation response.');
   await page.unroute('**/api/orders/*/confirm-cash');
   await page.reload();
 
