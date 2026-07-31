@@ -39,9 +39,6 @@ function sendAuthSession(res, session) {
 export async function login(req, res, next) {
   try {
     const { username, password } = req.body;
-    if (!username || !password) {
-      return res.status(400).json({ success: false, message: 'username and password are required.' });
-    }
     const data = await loginUser(username, password);
     return sendAuthSession(res, data);
   } catch (err) {
@@ -53,9 +50,6 @@ export async function loginPin(req, res, next) {
   try {
     const { userId, pin } = req.body;
     const deviceToken = getDeviceToken(req);
-    if (!userId || !pin) {
-      return res.status(400).json({ success: false, message: 'userId and pin are required.' });
-    }
     if (!deviceToken) {
       return res.status(401).json({ success: false, code: 'DEVICE_REQUIRED', message: 'A registered terminal is required for PIN login.' });
     }

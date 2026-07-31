@@ -60,13 +60,21 @@ export async function findUserWithPinById(id) {
 /**
  * Insert a new user. Role-specific credentials must already be hashed or null.
  */
-export async function insertUser({ username, password_hash, pin_hash, role, owner_id = null }) {
+export async function insertUser({
+  username,
+  password_hash,
+  pin_hash,
+  role,
+  owner_id = null,
+  is_active = true,
+}) {
   const user = await User.create({
     username,
     password: password_hash,
     pin: pin_hash,
     role,
     owner_id,
+    is_active,
   });
   return user.id;
 }

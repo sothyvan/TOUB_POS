@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../middleware/auth.middleware.js';
 import { getUsers, createUser, updateUser, deleteUser, getAssignedStall } from '../controllers/user.controller.js';
+import { validateBody } from '../validation/request-validation.js';
+import { createUserBody, emptyBody, updateUserBody } from '../validation/mutation-schemas.js';
 
 const router = Router();
 
@@ -15,12 +17,12 @@ router.use(authenticate, authorize(['platform_admin', 'owner', 'manager']));
 router.get('/', getUsers);
 
 // POST   /api/users      — Create a new user account
-router.post('/', createUser);
+router.post('/', validateBody(createUserBody), createUser);
 
 // PUT    /api/users/:id  — Update a user account
-router.put('/:id', updateUser);
+router.put('/:id', validateBody(updateUserBody), updateUser);
 
 // DELETE /api/users/:id  — Delete a user account
-router.delete('/:id', deleteUser);
+router.delete('/:id', validateBody(emptyBody), deleteUser);
 
 export default router;
