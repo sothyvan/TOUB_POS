@@ -4,6 +4,8 @@ import { revokeUserRefreshSessions } from '../repositories/refresh-session.repos
 import { hashPin } from '../utils/pin.util.js';
 import { httpError } from '../utils/http-error.util.js';
 import { emitUserSessionInvalidated } from './websocket.service.js';
+import { sequelize } from '../models/index.js';
+import { AUDIT_ACTIONS, writeAdministrativeAudit } from './audit.service.js';
 
 const CUSTOMER_ROLES = ['owner', 'manager', 'cashier'];
 const PASSWORD_ROLES = ['platform_admin', 'owner', 'manager'];
@@ -145,7 +147,7 @@ export async function listUsers(actor, query = {}) {
   };
 }
 
-export async function createUser(actor, payload) {
+export async function createUser(actor, payload, requestId) {
   const username = String(payload.username || '').trim();
   const role = normalizeRole(payload.role);
   if (!username || !payload.role) {
@@ -162,17 +164,25 @@ export async function createUser(actor, payload) {
   }
 
   const credentials = await buildCreateCredentials(role, payload.password, payload.pin);
+  return sequelize.transaction(async (transaction) => {
   const userId = await userRepository.insertUser({
     username,
     ...credentials,
     role,
     owner_id: ownerScopeForActor(actor),
     is_active: payload.is_active ?? true,
+  }, { transaction });
+  const ownerId = role === 'owner' ? userId : ownerScopeForActor(actor);
+  await writeAdministrativeAudit({
+    actor, ownerId, action: AUDIT_ACTIONS.USER_CREATED, targetType: 'user',
+    targetId: userId, requestId,
+    after: { username, role, is_active: payload.is_active ?? true }, transaction,
   });
   return { id: userId, username, role };
+  });
 }
 
-export async function updateUser(actor, userId, payload) {
+export async function updateUser(actor, userId, payload, requestId) {
   if (normalizeRole(actor?.role) === 'platform_admin') {
     throw httpError(rolePermissionMessage(actor?.role), 403);
   }
@@ -207,30 +217,48 @@ export async function updateUser(actor, userId, payload) {
     payload.pin,
   );
 
+  await sequelize.transaction(async (transaction) => {
   const success = await userRepository.updateUserById(
     userId,
     updateData,
-    { invalidateSession: true },
+    { invalidateSession: true, transaction },
   );
   if (!success) {
     throw httpError('User not found or no changes made.', 404);
   }
-  await revokeUserRefreshSessions(userId);
+  await revokeUserRefreshSessions(userId, { transaction });
+  await writeAdministrativeAudit({
+    actor, action: AUDIT_ACTIONS.USER_UPDATED, targetType: 'user', targetId: userId, requestId,
+    before: { username: existingUser.username, role: existingRole, is_active: Boolean(existingUser.is_active) },
+    after: {
+      username: updateData.username ?? existingUser.username,
+      role: targetRole,
+      is_active: updateData.is_active ?? Boolean(existingUser.is_active),
+      credentials_changed: hasCredentialValue(payload.password) || hasCredentialValue(payload.pin),
+    }, transaction,
+  });
+  });
   emitUserSessionInvalidated(userId, {
     message: 'Your account details, credentials, or permissions changed. Please sign in again.',
   });
 }
 
-export async function deleteUser(actor, userId) {
+export async function deleteUser(actor, userId, requestId) {
   if (normalizeRole(actor?.role) === 'platform_admin') {
     throw httpError(rolePermissionMessage(actor?.role), 403);
   }
-  await requireManageableUser(actor, userId);
-  const success = await userRepository.deleteUserById(userId);
+  const existingUser = await requireManageableUser(actor, userId);
+  await sequelize.transaction(async (transaction) => {
+  const success = await userRepository.deleteUserById(userId, { transaction });
   if (!success) {
     throw httpError('User not found.', 404);
   }
-  await revokeUserRefreshSessions(userId);
+  await revokeUserRefreshSessions(userId, { transaction });
+  await writeAdministrativeAudit({
+    actor, action: AUDIT_ACTIONS.USER_DELETED, targetType: 'user', targetId: userId, requestId,
+    before: { username: existingUser.username, role: existingUser.role, is_active: Boolean(existingUser.is_active) }, transaction,
+  });
+  });
   emitUserSessionInvalidated(userId, {
     message: 'Your account was deleted. Contact the business owner if this was unexpected.',
   });

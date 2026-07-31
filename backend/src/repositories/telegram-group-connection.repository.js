@@ -10,6 +10,7 @@ export async function replacePendingConnection({
   createdByUserId,
   tokenHash,
   expiresAt,
+  audit,
 }) {
   return sequelize.transaction(async (transaction) => {
     await TelegramGroupConnection.destroy({
@@ -20,12 +21,16 @@ export async function replacePendingConnection({
       transaction,
     });
 
-    return TelegramGroupConnection.create({
+    const connection = await TelegramGroupConnection.create({
       stall_id: stallId,
       created_by_user_id: createdByUserId,
       token_hash: tokenHash,
       expires_at: expiresAt,
     }, { transaction });
+    if (audit) {
+      await audit({ transaction, connection });
+    }
+    return connection;
   });
 }
 
@@ -34,6 +39,7 @@ export async function consumeConnection({
   chatId,
   chatTitle,
   telegramUserId,
+  audit,
 }) {
   return sequelize.transaction(async (transaction) => {
     const connection = await TelegramGroupConnection.findOne({
@@ -100,6 +106,10 @@ export async function consumeConnection({
       connected_chat_title: chatTitle,
       connected_by_telegram_user_id: String(telegramUserId),
     }, { transaction });
+
+    if (audit) {
+      await audit({ transaction, connection, stall });
+    }
 
     return {
       outcome: 'connected',

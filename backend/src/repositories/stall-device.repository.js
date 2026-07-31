@@ -26,13 +26,13 @@ const deviceIncludes = [
   },
 ];
 
-export function createStallDevice({ stallId, name, token, registeredByUserId = null }) {
+export function createStallDevice({ stallId, name, token, registeredByUserId = null }, options = {}) {
   return StallDevice.create({
     stall_id: stallId,
     name,
     token_hash: hashDeviceToken(token),
     registered_by_user_id: registeredByUserId,
-  });
+  }, options);
 }
 
 export function findDeviceByToken(token, { activeOnly = true } = {}) {
@@ -49,13 +49,15 @@ export function findDeviceByToken(token, { activeOnly = true } = {}) {
   });
 }
 
-export function findDeviceById(id, { activeOnly = false } = {}) {
+export function findDeviceById(id, { activeOnly = false, transaction, lock } = {}) {
   return StallDevice.findOne({
     where: {
       id,
       ...(activeOnly ? { is_active: true } : {}),
     },
     include: deviceIncludes,
+    transaction,
+    ...(lock ? { lock } : {}),
   });
 }
 
@@ -82,24 +84,24 @@ export async function markDeviceSeen(deviceId, cashierId = null) {
   return affectedRows > 0;
 }
 
-export async function revokeDevice(deviceId, revokedByUserId) {
+export async function revokeDevice(deviceId, revokedByUserId, options = {}) {
   const [affectedRows] = await StallDevice.update({
     is_active: false,
     revoked_at: new Date(),
     revoked_by_user_id: revokedByUserId,
   }, {
-    where: { id: deviceId, is_active: true },
+    where: { id: deviceId, is_active: true }, ...options,
   });
   return affectedRows > 0;
 }
 
-export async function revokeDevicesByStallId(stallId, revokedByUserId = null) {
+export async function revokeDevicesByStallId(stallId, revokedByUserId = null, options = {}) {
   const [affectedRows] = await StallDevice.update({
     is_active: false,
     revoked_at: new Date(),
     revoked_by_user_id: revokedByUserId,
   }, {
-    where: { stall_id: stallId, is_active: true },
+    where: { stall_id: stallId, is_active: true }, ...options,
   });
   return affectedRows;
 }

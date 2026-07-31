@@ -135,6 +135,7 @@ async function confirmKhqrOrder(order, providerResult, checkContext) {
 
       await AuditLog.create({
         actor_user_id: checkContext.actorUserId,
+        owner_id: getOrderOwnerId(order),
         action: 'khqr_payment_confirmed',
         order_id: lockedOrder.id,
         details: {

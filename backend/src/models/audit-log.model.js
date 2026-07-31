@@ -13,13 +13,33 @@ const AuditLog = sequelize.define('AuditLog', {
     field: 'actor_user_id',
   },
   action: {
-    type: DataTypes.ENUM('order_created', 'cash_payment_confirmed', 'khqr_payment_confirmed', 'order_cancelled'),
+    type: DataTypes.STRING(100),
     allowNull: false,
+  },
+  owner_id: {
+    type: DataTypes.INTEGER,
+    defaultValue: null,
+    field: 'owner_id',
   },
   order_id: {
     type: DataTypes.INTEGER,
     defaultValue: null,
     field: 'order_id',
+  },
+  target_type: {
+    type: DataTypes.STRING(50),
+    defaultValue: null,
+    field: 'target_type',
+  },
+  target_id: {
+    type: DataTypes.STRING(64),
+    defaultValue: null,
+    field: 'target_id',
+  },
+  request_id: {
+    type: DataTypes.STRING(128),
+    defaultValue: null,
+    field: 'request_id',
   },
   details: {
     type: DataTypes.JSON,
@@ -39,6 +59,9 @@ const AuditLog = sequelize.define('AuditLog', {
     { fields: ['order_id'] },
     { fields: ['action'] },
     { fields: ['created_at'] },
+    { name: 'idx_audit_logs_owner_created', fields: ['owner_id', 'created_at'] },
+    { name: 'idx_audit_logs_target', fields: ['target_type', 'target_id'] },
+    { name: 'idx_audit_logs_request_id', fields: ['request_id'] },
   ],
 });
 

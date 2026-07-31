@@ -81,35 +81,35 @@ export async function findAllStallsByOwnerId(ownerId, queryOptions = {}) {
 /**
  * Find a stall by ID.
  */
-export async function findStallById(id) {
-  return Stall.findOne({ where: { id, is_deleted: false } });
+export async function findStallById(id, options = {}) {
+  return Stall.findOne({ where: { id, is_deleted: false }, ...options });
 }
 
 /**
  * Create a new stall.
  */
-export async function insertStall(data) {
-  return Stall.create(data);
+export async function insertStall(data, options = {}) {
+  return Stall.create(data, options);
 }
 
 /**
  * Update a stall by ID.
  */
-export async function updateStallById(id, data) {
-  const [affectedRows] = await Stall.update(data, { where: { id } });
+export async function updateStallById(id, data, options = {}) {
+  const [affectedRows] = await Stall.update(data, { where: { id }, ...options });
   return affectedRows > 0;
 }
 
 /**
  * Delete a stall by ID.
  */
-export async function deleteStallById(id) {
-  const stall = await Stall.findByPk(id);
+export async function deleteStallById(id, { transaction, revokedByUserId = null } = {}) {
+  const stall = await Stall.findByPk(id, { transaction });
   if (!stall) {
     return false;
   }
 
-  await revokeDevicesByStallId(id);
+  await revokeDevicesByStallId(id, revokedByUserId, { transaction });
   const [affectedRows] = await Stall.update(
     { 
       is_deleted: true, 
@@ -117,7 +117,7 @@ export async function deleteStallById(id) {
       device_token: null,
       name: `${stall.name}_deleted_${Date.now()}`
     },
-    { where: { id } }
+    { where: { id }, transaction }
   );
   return affectedRows > 0;
 }
@@ -126,7 +126,7 @@ export async function deleteStallById(id) {
  * Assign a staff member to a stall.
  * Ensures the staff member is only assigned to one stall.
  */
-export async function assignStaffToStall(stallId, userId) {
+export async function assignStaffToStall(stallId, userId, { audit } = {}) {
   const transaction = await sequelize.transaction();
   try {
     const existing = await StallStaff.findOne({
@@ -151,6 +151,9 @@ export async function assignStaffToStall(stallId, userId) {
       { stall_id: stallId, user_id: userId },
       { transaction },
     );
+    if (audit) {
+      await audit({ transaction, previousStallId, assignment });
+    }
     await transaction.commit();
     return { assignment, changed: true, previousStallId };
   } catch (error) {
@@ -162,7 +165,7 @@ export async function assignStaffToStall(stallId, userId) {
 /**
  * Remove a staff member from a stall.
  */
-export async function removeStaffFromStall(stallId, userId) {
+export async function removeStaffFromStall(stallId, userId, { audit } = {}) {
   const transaction = await sequelize.transaction();
   try {
     const assignment = await StallStaff.findOne({
@@ -175,6 +178,9 @@ export async function removeStaffFromStall(stallId, userId) {
       return false;
     }
     await assignment.destroy({ transaction });
+    if (audit) {
+      await audit({ transaction, assignment });
+    }
     await transaction.commit();
     return true;
   } catch (error) {

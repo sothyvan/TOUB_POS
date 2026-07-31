@@ -126,6 +126,23 @@ Update this file after every meaningful implementation change.
     was an unrelated password-autocomplete suggestion. Full authenticated,
     ImageKit-upload, and Socket.IO browser E2E remains delegated to disposable CI.
 
+- **Implemented production audit P2-3 administrative audit trail**:
+  - Expanded `audit_logs` through a managed migration with Owner scope, generic
+    stable actions, target type/ID, request correlation, and investigation indexes.
+  - Added a fixed 20-event administrative catalog covering Product, Category,
+    User, Stall, staff assignment, terminal, Telegram Cook, and kitchen-group
+    mutations; existing payment events now also populate Owner scope.
+  - Privileged business mutations and their audit inserts share the same MySQL
+    transaction so neither can commit alone.
+  - Audit details contain bounded safe before/after summaries and recursively
+    exclude credentials, authorization/session data, tokens, raw device tokens,
+    and complete Telegram identifiers.
+  - Documented read-only operational access, append-only correction, encrypted
+    exports, and a minimum 365-day retention policy with no automatic purge.
+  - Added seven database-free policy/migration tests. All 61 backend unit tests and quiet
+    backend lint pass; disposable-MySQL migration and live mutation verification
+    remain the final pre-merge checks.
+
 - **Safely suspended KHQR payment processing**:
   - Added explicit opt-in `KHQR_ENABLED` and `VITE_KHQR_ENABLED` feature flags, both defaulting to `false`.
   - Backend KHQR order creation and status checking return `503 KHQR_DISABLED` before database or provider work begins.

@@ -4,6 +4,7 @@ import * as connectionRepository from '../repositories/telegram-group-connection
 import { httpError } from '../utils/http-error.util.js';
 import { getBotIdentity, sendNotification } from './telegram.service.js';
 import { emitManagementTelegramGroupUpdated } from './websocket.service.js';
+import { AUDIT_ACTIONS, writeAdministrativeAudit } from './audit.service.js';
 
 const DEFAULT_EXPIRY_MINUTES = 10;
 const START_COMMAND_PATTERN = /^\/start(?:@[A-Za-z0-9_]+)?\s+([A-Za-z0-9_-]{16,64})\s*$/;
@@ -49,7 +50,7 @@ async function requireOwnedStall(rawStallId, actor) {
   return stall;
 }
 
-export async function createTelegramGroupConnectionLink(actor, rawStallId) {
+export async function createTelegramGroupConnectionLink(actor, rawStallId, requestId) {
   const stall = await requireOwnedStall(rawStallId, actor);
   if (!process.env.TELEGRAM_BOT_TOKEN) {
     throw httpError('Telegram bot is not configured.', 503);
@@ -72,6 +73,11 @@ export async function createTelegramGroupConnectionLink(actor, rawStallId) {
     createdByUserId: actor.id,
     tokenHash: hashToken(rawToken),
     expiresAt,
+    audit: ({ transaction, connection }) => writeAdministrativeAudit({
+      actor, ownerId: stall.owner_id, action: AUDIT_ACTIONS.TELEGRAM_GROUP_LINK_CREATED,
+      targetType: 'telegram_group_connection', targetId: connection.id, requestId,
+      after: { stall_id: stall.id, expires_at: expiresAt }, transaction,
+    }),
   });
 
   const connectUrl = new URL(`https://t.me/${botIdentity.username}`);
@@ -102,7 +108,7 @@ function parseConnectionMessage(update) {
   };
 }
 
-export async function processTelegramGroupConnection(update, dependencyOverrides = {}) {
+export async function processTelegramGroupConnection(update, dependencyOverrides = {}, requestId) {
   const connectionMessage = parseConnectionMessage(update);
   if (!connectionMessage) {
     return false;
@@ -137,6 +143,13 @@ export async function processTelegramGroupConnection(update, dependencyOverrides
     chatId,
     chatTitle,
     telegramUserId,
+    audit: ({ transaction, connection, stall }) => writeAdministrativeAudit({
+      actor: { id: connection.created_by_user_id, owner_id: stall.owner_id },
+      ownerId: stall.owner_id,
+      action: AUDIT_ACTIONS.TELEGRAM_GROUP_CONNECTED,
+      targetType: 'stall', targetId: stall.id, requestId,
+      after: { telegram_connected: true, telegram_chat_title: chatTitle }, transaction,
+    }),
   });
 
   if (result.outcome === 'connected') {

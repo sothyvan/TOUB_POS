@@ -28,6 +28,7 @@ implementation records.
 | Authentication behavior | [Authentication Flow](api/auth-flow.md) |
 | Dependency security exceptions | [Dependency Risk Register](security/dependency-risk-register.md) |
 | Database backup security | [Database Backup Security And P1-13 Response](security/database-backup-security.md) |
+| Administrative audit access and retention | [Administrative Audit Log Policy](security/audit-log-policy.md) |
 | Current payment behavior | [Payment Flow](design/payment-flow.md) |
 | Database design | [Database Schema Document](database/toub-pos-database-schema.md) |
 | Executable course SQL | [schema.sql](database/schema.sql) and [queries.sql](database/queries.sql) |

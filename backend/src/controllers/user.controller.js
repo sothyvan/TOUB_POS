@@ -11,7 +11,7 @@ export async function getUsers(req, res, next) {
 
 export async function createUser(req, res, next) {
   try {
-    const user = await userService.createUser(req.user, req.body);
+    const user = await userService.createUser(req.user, req.body, req.requestId);
     res.status(201).json({ success: true, data: user });
   } catch (error) {
     next(error);
@@ -20,7 +20,7 @@ export async function createUser(req, res, next) {
 
 export async function updateUser(req, res, next) {
   try {
-    await userService.updateUser(req.user, req.params.id, req.body);
+    await userService.updateUser(req.user, req.params.id, req.body, req.requestId);
     res.json({ success: true, message: 'User updated successfully.' });
   } catch (error) {
     next(error);
@@ -29,7 +29,7 @@ export async function updateUser(req, res, next) {
 
 export async function deleteUser(req, res, next) {
   try {
-    await userService.deleteUser(req.user, req.params.id);
+    await userService.deleteUser(req.user, req.params.id, req.requestId);
     res.json({ success: true, message: 'User deleted successfully.' });
   } catch (error) {
     next(error);

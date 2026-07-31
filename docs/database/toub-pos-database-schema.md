@@ -405,20 +405,29 @@ Deleting an Order cascades to its items. Deleting a Product sets `product_id` to
 | --- | --- | --- | --- | --- |
 | `id` | `INT` | Auto increment | PK | Audit record identifier |
 | `actor_user_id` | `INT` | Nullable | FK → `users.id` | Acting web user |
-| `action` | `ENUM` | Required | Indexed | Audit action |
+| `owner_id` | `INT` | Nullable for legacy rows | Indexed with time | Customer-business scope |
+| `action` | `VARCHAR(100)` | Required | Indexed | Stable catalog action |
 | `order_id` | `INT` | Nullable | FK → `orders.id` | Related Order |
+| `target_type` | `VARCHAR(50)` | Nullable | Indexed with target ID | Administrative target kind |
+| `target_id` | `VARCHAR(64)` | Nullable | Indexed with target type | Administrative target identifier |
+| `request_id` | `VARCHAR(128)` | Nullable | Indexed | HTTP correlation identifier |
 | `details` | `JSON` | Nullable |  | Action-specific evidence |
 | `created_at` | `DATETIME` | Required/current time | Indexed | Event time |
 
-Current action values:
+Transaction action values retain `order_created`, `cash_payment_confirmed`,
+`khqr_payment_confirmed`, and the reserved `order_cancelled`. Administrative
+actions use the fixed catalog in `backend/src/services/audit.service.js` for:
 
-- `order_created`.
-- `cash_payment_confirmed`.
-- `khqr_payment_confirmed` for retained history.
-- `order_cancelled` reserved for a future workflow.
+- Product and Category create/update/delete.
+- User create/update/delete and Stall create/update/delete.
+- Cashier assignment/unassignment and terminal registration/revocation.
+- Telegram Cook authorization/revocation and kitchen-group setup.
 
 Deleting the referenced User or Order sets its foreign key to `NULL`, preserving
-the audit row.
+the audit row. Privileged mutations write their business change and audit event
+in the same transaction. Audit details use safe summaries and remove credentials,
+tokens, sessions, raw device identifiers, and raw Telegram identifiers. See
+`docs/security/audit-log-policy.md` for access and retention rules.
 
 ## 10. Telegram Kitchen Tables
 
@@ -581,7 +590,7 @@ application-enforced rule even when foreign keys remain valid.
 | `orders` | (`stall_id`, `created_at`) | Management Order history/report scope |
 | `orders` | (`cashier_id`, `created_at`) | Cashier's own Order history |
 | `orders` | `status` | Paid/pending operational queries |
-| `audit_logs` | Actor, Order, action, created time | Audit filtering |
+| `audit_logs` | Actor, Order, action, owner/time, target, request ID | Tenant-scoped investigation and correlation |
 | `telegram_cooks` | Unique (`stall_id`, `telegram_user_id`) | Callback authorization |
 | `telegram_cooks` | (`stall_id`, `is_active`) | Active Cook list |
 | `telegram_group_connections` | Unique `token_hash` | One-time setup lookup |

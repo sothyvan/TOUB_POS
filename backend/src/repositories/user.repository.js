@@ -67,7 +67,7 @@ export async function insertUser({
   role,
   owner_id = null,
   is_active = true,
-}) {
+}, options = {}) {
   const user = await User.create({
     username,
     password: password_hash,
@@ -75,7 +75,7 @@ export async function insertUser({
     role,
     owner_id,
     is_active,
-  });
+  }, options);
   return user.id;
 }
 
@@ -133,7 +133,7 @@ export async function findOwnerUsers(queryOptions = {}) {
 /**
  * Update user by ID.
  */
-export async function updateUserById(id, data, { invalidateSession = false } = {}) {
+export async function updateUserById(id, data, { invalidateSession = false, transaction } = {}) {
   const updateData = { ...data };
   if (Object.prototype.hasOwnProperty.call(data, 'password_hash')) {
     updateData.password = data.password_hash;
@@ -142,15 +142,15 @@ export async function updateUserById(id, data, { invalidateSession = false } = {
   if (invalidateSession) {
     updateData.session_version = sequelize.literal('session_version + 1');
   }
-  const [affectedRows] = await User.update(updateData, { where: { id } });
+  const [affectedRows] = await User.update(updateData, { where: { id }, transaction });
   return affectedRows > 0;
 }
 
 /**
  * Delete user by ID.
  */
-export async function deleteUserById(id) {
-  const user = await User.findByPk(id);
+export async function deleteUserById(id, { transaction } = {}) {
+  const user = await User.findByPk(id, { transaction });
   if (!user) {
     return false;
   }
@@ -164,7 +164,7 @@ export async function deleteUserById(id) {
       username: deletedUsername,
       session_version: sequelize.literal('session_version + 1'),
     },
-    { where: { id } }
+    { where: { id }, transaction }
   );
   return affectedRows > 0;
 }
