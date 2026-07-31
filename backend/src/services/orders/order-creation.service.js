@@ -22,6 +22,7 @@ import {
   buildOrderFingerprint,
   normalizeIdempotencyKey,
 } from './order-idempotency.js';
+import { LIMITS } from '../../validation/request-validation.js';
 
 const ALLOWED_PAYMENT_METHODS = new Set(['cash', 'khqr']);
 const FORBIDDEN_ITEM_FIELDS = [
@@ -114,6 +115,9 @@ export async function createOrder(
 ) {
   if (!Array.isArray(items) || items.length === 0) {
     throw httpError('Order must contain items.');
+  }
+  if (items.length > LIMITS.ORDER_ITEMS) {
+    throw httpError(`Order must contain ${LIMITS.ORDER_ITEMS} items or fewer.`);
   }
 
   const normalizedPaymentMethod = normalizePaymentMethod(paymentMethod);
@@ -215,6 +219,9 @@ export async function createOrder(
       const lineTotalKhr = priceKhr * quantity;
       totalUsd += lineTotalUsd;
       totalKhr += lineTotalKhr;
+      if (totalUsd > LIMITS.USD_AMOUNT || totalKhr > LIMITS.KHR_AMOUNT) {
+        throw httpError('Order total exceeds the supported amount.');
+      }
       orderItems.push({
         product_id: product.id,
         name: product.name,

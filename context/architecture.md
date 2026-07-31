@@ -26,6 +26,7 @@
 - `frontend/e2e/` — Playwright browser journeys for critical role, session, terminal, checkout, receipt, and route-protection behavior. CI runs these serially against disposable MySQL/API/frontend instances.
 - `backend/src/routes/` — API route definitions and endpoint mapping.
 - `backend/src/controllers/` — Thin request handling and response formatting. Controllers delegate validation, authorization decisions, and workflow coordination to services.
+- `backend/src/validation/` — Shared HTTP mutation schemas, normalization helpers, storage-aware limits, and the consistent `VALIDATION_ERROR` contract.
 - `backend/src/services/` — Core business logic for auth, users, products, categories, stalls/devices, orders, reports, Telegram callbacks, WebSocket sessions, and external providers.
 - `backend/src/repositories/` — Database queries and data access logic.
 - `backend/src/services/telegram.service.js` — Low-level Telegram Bot API integration and outbound kitchen ticket dispatch.
@@ -52,9 +53,10 @@
 
 ### Backend Dependency Direction
 
-- Routes compose authentication/authorization middleware and controllers.
-- Controllers translate HTTP input/output only and call services; they do not import Sequelize models or repositories directly.
-- Services own validation, RBAC/owner-scope decisions, external-provider coordination, and multi-step workflows.
+- Routes compose authentication/authorization middleware, request schemas, and controllers.
+- Request schemas reject unknown fields and normalize bounded HTTP input before controllers run. Provider-owned callback envelopes may use dedicated validation because their shape is controlled externally.
+- Controllers translate validated HTTP input/output only and call services; they do not import Sequelize models or repositories directly.
+- Services own business validation, RBAC/owner-scope decisions, external-provider coordination, and multi-step workflows.
 - Large service domains may expose a stable facade while delegating to focused modules; consumers should import the facade unless they are part of the same domain.
 - Repositories own Sequelize queries and persistence details and do not import controllers or services.
 - Models define tables and associations and remain independent of HTTP concerns.

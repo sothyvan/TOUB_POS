@@ -167,6 +167,7 @@ export async function createUser(actor, payload) {
     ...credentials,
     role,
     owner_id: ownerScopeForActor(actor),
+    is_active: payload.is_active ?? true,
   });
   return { id: userId, username, role };
 }

@@ -9,15 +9,18 @@ import { httpError } from '../../utils/http-error.util.js';
 
 const MANAGEMENT_ORDER_ROLES = new Set(['owner', 'manager']);
 
-export function parsePositiveInteger(value, fieldName) {
+export function parsePositiveInteger(value, fieldName, { max } = {}) {
   const number = Number(value);
-  if (!Number.isInteger(number) || number <= 0) {
+  if (!Number.isSafeInteger(number) || number <= 0) {
     throw httpError(`${fieldName} must be a positive integer.`);
+  }
+  if (max !== undefined && number > max) {
+    throw httpError(`${fieldName} must be ${max} or less.`);
   }
   return number;
 }
 
-export function parseUsdCents(value, fieldName) {
+export function parseUsdCents(value, fieldName, { max = 99999999.99 } = {}) {
   const text = String(value ?? '').trim();
   if (!/^\d+(\.\d{1,2})?$/.test(text)) {
     throw httpError(`${fieldName} must be a positive USD amount with up to 2 decimals.`);
@@ -26,6 +29,9 @@ export function parseUsdCents(value, fieldName) {
   const number = Number(text);
   if (!Number.isFinite(number) || number <= 0) {
     throw httpError(`${fieldName} must be greater than 0.`);
+  }
+  if (number > max) {
+    throw httpError(`${fieldName} must be ${max} or less.`);
   }
   return Math.round(number * 100);
 }
