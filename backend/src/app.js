@@ -13,8 +13,13 @@ import { errorHandler } from './middleware/error.middleware.js';
 import { requestLogger } from './middleware/logger.middleware.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerDocument } from './config/swagger.js';
+import { getRateLimitConfiguration } from './config/rate-limit.config.js';
 
 const app = express();
+const { trustProxyHops } = getRateLimitConfiguration();
+
+// Trust only the configured number of reverse-proxy hops when resolving req.ip.
+app.set('trust proxy', trustProxyHops);
 
 // ── Global Middleware ─────────────────────────────────────
 app.use(helmet({
