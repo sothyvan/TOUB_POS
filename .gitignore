@@ -38,3 +38,5 @@ Thumbs.db
 # Local browser verification artifacts
 .playwright-cli/
 output/playwright/
+frontend/playwright-report/
+frontend/test-results/

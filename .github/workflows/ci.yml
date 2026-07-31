@@ -242,3 +242,110 @@ jobs:
           name: backend-integration-log
           path: ${{ runner.temp }}/toub-backend.log
           retention-days: 7
+
+  browser-e2e:
+    name: Browser E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      NODE_ENV: development
+      PORT: 3000
+      FRONTEND_ORIGIN: http://127.0.0.1:4173
+      JWT_SECRET: ci-only-jwt-secret
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: ci-root-password
+      DB_NAME: toub_pos_browser_e2e
+      PLATFORM_ADMIN_USERNAME: platform_admin
+      PLATFORM_ADMIN_PASSWORD: ci-platform-password
+      PLATFORM_ADMIN_ROLE: platform_admin
+      KHQR_ENABLED: "false"
+      KHQR_BACKGROUND_CHECK_ENABLED: "false"
+      TELEGRAM_DISPATCH_WORKER_ENABLED: "false"
+      E2E_BASE_URL: http://127.0.0.1:4173
+      E2E_API_BASE_URL: http://127.0.0.1:3000/api
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root-password
+          MYSQL_DATABASE: toub_pos_browser_e2e
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci-root-password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install locked backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Install locked frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Chromium
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Apply migrations and seed browser fixtures
+        working-directory: backend
+        run: |
+          npm run db:migrate
+          npm run seed
+
+      - name: Start backend API
+        working-directory: backend
+        run: |
+          node src/server.js > "$RUNNER_TEMP/toub-e2e-backend.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/toub-e2e-backend.pid"
+
+      - name: Wait for backend health
+        run: |
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:3000/api/health > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/toub-e2e-backend.log"
+          exit 1
+
+      - name: Run browser end-to-end tests
+        working-directory: frontend
+        run: npm run test:e2e
+
+      - name: Stop backend API
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/toub-e2e-backend.pid" ]; then
+            kill "$(cat "$RUNNER_TEMP/toub-e2e-backend.pid")" || true
+          fi
+
+      - name: Upload browser diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-e2e-diagnostics
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+            ${{ runner.temp }}/toub-e2e-backend.log
+          if-no-files-found: ignore
+          retention-days: 7
