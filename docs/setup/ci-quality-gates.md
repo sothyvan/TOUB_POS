@@ -12,6 +12,7 @@ installation through `npm ci`.
 | `Backend quality` | Backend lint errors, warning-count increases, unit-test failures, and unapproved high/critical production dependency findings |
 | `Frontend quality` | Frontend lint/build failures and unapproved high/critical production dependency findings |
 | `Clean database migration` | Migrations that cannot build a clean MySQL 8.4 database or leave migration status inconsistent |
+| `Backend integration` | Failures in live authentication, credential-policy, role/stall isolation, checkout, idempotency, payment, and order-history behavior |
 
 The backend currently has 65 known lint warnings. CI uses
 `--max-warnings 65`, so existing warnings remain visible and any increase fails
@@ -43,6 +44,7 @@ open **Settings > Branches > Branch protection rules** (or Rulesets), protect
 - `Backend quality`
 - `Frontend quality`
 - `Clean database migration`
+- `Backend integration`
 
 Apply the same rule to `development` if direct pushes should also be blocked.
 Do not allow required checks to be skipped for normal team merges.
@@ -75,3 +77,19 @@ node scripts/ci/check-npm-audit.mjs frontend
 
 The clean-migration job uses an isolated MySQL service in GitHub Actions and
 never connects to Aiven or uses production credentials.
+
+The backend-integration job also uses an isolated MySQL 8.4 service. It applies
+the migrations, loads deterministic demo fixtures, starts the API with
+KHQR/background payment checks and Telegram dispatch disabled, and runs
+`npm run test:live`. A redacted backend log is retained for seven days only
+when the job fails.
+
+The live suite is intentionally not part of the local-equivalent commands
+above because it mutates its configured database. To run it locally, use a
+disposable MySQL database, start the backend against that database, and then
+run:
+
+```bash
+cd backend
+npm run test:live
+```
