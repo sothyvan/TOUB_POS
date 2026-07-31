@@ -23,6 +23,7 @@
 - `frontend/src/components/ui/` — Reusable, domain-neutral UI primitives such as buttons, forms, dialogs, badges, pagination, and loading states.
 - `frontend/src/pages/` — Remaining route-level Cashier and Owner/Manager orchestration pages. The login route is owned by `features/auth/pages/`.
 - `frontend/src/hooks/`, `services/`, and `utils/` — Shared state/data hooks, Axios/Socket.IO clients, and domain-neutral helpers used across features.
+- `frontend/e2e/` — Playwright browser journeys for critical role, session, terminal, checkout, receipt, and route-protection behavior. CI runs these serially against disposable MySQL/API/frontend instances.
 - `backend/src/routes/` — API route definitions and endpoint mapping.
 - `backend/src/controllers/` — Thin request handling and response formatting. Controllers delegate validation, authorization decisions, and workflow coordination to services.
 - `backend/src/services/` — Core business logic for auth, users, products, categories, stalls/devices, orders, reports, Telegram callbacks, WebSocket sessions, and external providers.
@@ -40,6 +41,7 @@
 - `backend/src/database/` — Ordered Umzug migrations, the immutable current-schema baseline, and the `schema_migrations` ledger integration.
 - `backend/src/scripts/dev/` — Manually invoked development operations such as the Ngrok/Telegram webhook tunnel.
 - `backend/tests/` — Node test-runner coverage. Unit tests are database-free; `*.live.test.js` suites require the local API/MySQL and own cleanup of temporary records.
+- Browser E2E fixtures come from the deterministic backend seed and must never target a shared development, staging, or production database.
 
 ### Frontend Dependency Direction
 
