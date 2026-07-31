@@ -164,6 +164,24 @@ Update this file after every meaningful implementation change.
     pass and capped backend lint remains at the 61 pre-existing warnings; live
     CI verification remains pending.
 
+- **Implemented production audit P2-5 financial-policy alignment**:
+  - Formally set the current-release policy to item-subtotal-only: no automatic
+    service fee or tax is added, and the trusted final total equals the
+    backend-calculated item subtotal.
+  - Added a small shared frontend policy module and regression tests so cart
+    previews remain aligned with backend totals.
+  - Removed obsolete zero-value fee/tax fields and props from API mapping,
+    cashier checkout, totals breakdowns, and receipts instead of implying that
+    unsupported charges are calculated.
+  - Updated product scope, architecture, checkout, database, frontend, report,
+    and readiness-audit documentation. Any future fee or tax now explicitly
+    requires approved legal/accounting rules and backend-owned calculation,
+    snapshots, receipts, reports, and tests.
+  - Local verification passes: 6 frontend unit tests, frontend lint/build, 66
+    backend unit tests, capped backend lint with the 61 pre-existing warnings,
+    and `git diff --check`. The existing frontend large-chunk build warning is
+    unrelated to P2-5.
+
 - **Safely suspended KHQR payment processing**:
   - Added explicit opt-in `KHQR_ENABLED` and `VITE_KHQR_ENABLED` feature flags, both defaulting to `false`.
   - Backend KHQR order creation and status checking return `503 KHQR_DISABLED` before database or provider work begins.
@@ -764,7 +782,7 @@ Update this file after every meaningful implementation change.
   - Redesigned back-office product cards and creation form to include image URL input and render list thumbnails in `ProductAdmin.jsx`.
   - Overhauled cashier screen with responsive horizontal scroll categories, square card-based product layouts, and a sticky mobile "Review Order" checkout bar in `CashierScreen.jsx`.
   - Redesigned `OrderPanel.jsx` to match the exact high-fidelity white sidebar layout in the screenshot (including the top "Clear All" button, promo dashed button, dynamic green/black quantity selector circles, and SVG icons for payment options).
-  - Adjusted `useCart.js` to calculate **Service Fee (3%)** and **Estimated Tax (8%)** and pass `estimatedTax` down the order workflow.
+  - Historical prototype note (superseded by P2-5): `useCart.js` briefly calculated a 3% service fee and 8% estimated tax before the backend integration and approved financial-policy review.
   - Locked `PageShell.jsx` to a fixed `100svh overflow-hidden` to prevent page scrolling and ensure all headers remain statically visible.
   - Swapped out browser-native payment `alert()` calls for a beautiful custom receipt modal overlay showing the order list, totals breakdown, and order metadata in `CashierPage.jsx`.
   - Added golden-yellow (`#ebc02b`) Cash confirmation dialog ("Did you received the cash?") and KHQR poster scan dialog ("Scan QR Code to Pay!") with vector buttons, dynamic QR API generation, and automatic scan success transition in `CashierPage.jsx`.
@@ -832,7 +850,7 @@ Update this file after every meaningful implementation change.
   - Refactored `AdminWorkspace.jsx` desktop and mobile nav menus to use a shared `navButtonClass(isActive)` layout helper.
   - Extracted dynamic factory `createCrudResource` in `api.js` (`src/services/api.js`) to deduplicate CRUD operations across products, categories, and users resources.
   - Extracted shared reducer helper `adjustQuantity` in `useCart.js` to deduplicate cart quantity modification logic.
-  - Centralized `SERVICE_RATE` (0.03) and `TAX_RATE` (0.08) in `seedData.js` and imported them in `useCart.js`.
+  - Historical prototype note (superseded by P2-5): fixed fee/tax constants were centralized before unsupported automatic charges were removed from the current product scope.
   - Deduplicated `initials` and `suggestedCode` in `format.js` using a shared `nameAcronym` helper.
   - Extracted higher-order wrapper `withCartSync` in `CashierPage.jsx` to deduplicate cart synchronization handlers.
 - **Refactored codebase for maintainability and DRY principles based on architectural audit**:

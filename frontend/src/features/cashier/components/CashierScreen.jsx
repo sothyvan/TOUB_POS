@@ -80,8 +80,6 @@ export default function CashierScreen({
   setIsCartOpen,
   itemCount,
   subtotal,
-  serviceFee,
-  estimatedTax,
   total,
   clearCart,
   handleCheckout,
@@ -502,8 +500,6 @@ export default function CashierScreen({
         <OrderPanel
           cart={cart}
           subtotal={subtotal}
-          serviceFee={serviceFee}
-          estimatedTax={estimatedTax}
           total={total}
           isCartOpen={isCartOpen}
           setIsCartOpen={setIsCartOpen}

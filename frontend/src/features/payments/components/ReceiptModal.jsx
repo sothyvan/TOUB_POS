@@ -59,8 +59,6 @@ export default function ReceiptModal({ activeReceipt, onClose }) {
           {/* Totals Breakdown */}
           <TotalsBreakdown
             subtotal={activeReceipt.subtotal}
-            serviceFee={activeReceipt.serviceFee}
-            estimatedTax={activeReceipt.estimatedTax}
             total={activeReceipt.total}
             variant="receipt"
           />

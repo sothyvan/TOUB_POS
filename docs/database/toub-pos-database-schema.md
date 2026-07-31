@@ -345,6 +345,11 @@ sellable at any Stall.
 
 **Purpose:** Stores one backend-owned checkout and payment state.
 
+**Current financial policy:** `total_usd` equals `subtotal_usd`, which is the
+sum of trusted item snapshots. No automatic service fee or tax is applied or
+stored in the current release. A future charge policy requires an approved
+schema and calculation change rather than a frontend-only adjustment.
+
 | Column | Type | Null/default | Key | Meaning |
 | --- | --- | --- | --- | --- |
 | `id` | `INT` | Auto increment | PK | Order identifier |

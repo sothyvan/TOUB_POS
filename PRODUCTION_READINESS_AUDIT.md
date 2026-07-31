@@ -348,10 +348,18 @@ concurrency verification remains required before merge.
 
 #### P2-5. Financial policy is inconsistent with documented scope
 
+**Status (P2-5 implementation): Resolved for the current release.** Product
+scope now explicitly applies no automatic service fee or tax. The frontend
+shows only the item subtotal/final total, the backend remains the source of
+trusted prices and totals, and regression tests protect the subtotal-only
+display policy. Adding charges in a future release still requires approved
+legal/accounting and product rules plus backend, schema, receipt, reporting,
+and test changes.
+
 - **Severity:** P2
 - **Category:** Product completeness / finance
 - **Business impact:** Receipts and reports may not match the intended pricing policy. Tax/fee obligations cannot be inferred safely.
-- **Evidence:** `context/project-overview.md:95` lists a 3% service fee and 8% estimated tax. `frontend/src/hooks/useCart.js:46-49` sets both to zero, and backend order creation stores subtotal equal to total at `backend/src/services/orders/order-creation.service.js:181-186`.
+- **Original evidence:** The project scope advertised fixed 3%/8% charges while the frontend used zero-value placeholders and backend order creation stored subtotal equal to total. P2-5 removed that contradiction and documented the implemented subtotal-only policy.
 - **Recommended remediation:** Product/finance stakeholders must either remove these charges from the approved scope or define backend-owned rates, inclusivity, rounding, exemptions, display, snapshots, and reporting.
 - **Acceptance criteria:** One approved policy is reflected consistently in backend calculations, receipt snapshots, reports, tests, and documentation.
 - **Estimated size:** L if implemented; S if formally removed from scope
@@ -522,7 +530,7 @@ The live tests were not run during this audit because they require a running bac
 
 - [x] Resolve P0-1 checkout idempotency with automated concurrent replay tests.
 - [x] Resolve P0-2 cashier device/assignment stall consistency with automated regression tests.
-- [ ] Approve the remaining production product scope, especially refunds/voids, cash reconciliation, taxes/fees, inventory, and currencies.
+- [ ] Approve the remaining production product scope, especially refunds/voids, cash reconciliation, inventory, and currencies. Current-release taxes/fees are resolved as disabled; future charges require a new approved policy.
 - [x] Remove applicable high/critical production dependency findings and formally record non-applicable scanner findings.
 - [x] Establish clean, versioned database migrations and a tested baseline.
 - [ ] Remove/rotate any potentially real data or credentials from Git history.
@@ -676,7 +684,7 @@ was verified locally with deterministic fixtures.
 
 - Current-release checkout is approved as online-only; true offline order synchronization remains future scope.
 - What are the approved refund, void, correction, and cash reconciliation workflows?
-- Are service fee and tax actually required? If so, what legal calculation and rounding rules apply?
+- Current release: no automatic service fee or tax. Reopen legal calculation, rounding, display, snapshot, and reporting requirements before introducing either charge.
 - Which currencies can be tendered, and how is the KHR rate set and snapshotted?
 - Is inventory management promised or explicitly out of scope?
 

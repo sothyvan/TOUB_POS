@@ -6,6 +6,7 @@ import {
   reconcileRecoveredCart,
   writeRecoveredCart,
 } from '../utils/cartRecovery';
+import { calculateCurrentDisplayTotal } from '../../config/financial-policy';
 
 const adjustQuantity = (current, id, getNewQty) =>
   current.reduce((acc, item) => {
@@ -96,14 +97,12 @@ export function useCart(categoryById, options = {}) {
 
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const serviceFee = 0;
-  const estimatedTax = 0;
-  const total = subtotal;
+  const total = calculateCurrentDisplayTotal(subtotal);
   const cartById = useMemo(() => new Map(cart.map((item) => [item.id, item])), [cart]);
 
   return {
     cart, cartById, itemCount,
-    subtotal, serviceFee, estimatedTax, total,
+    subtotal, total,
     addToCart, updateQuantity, setCartItemQuantity, clearCart, removeItemFromCart,
   };
 }

@@ -134,6 +134,7 @@
 6. Telegram ticket completion requires an exact ticket/chat/message match and an active stall-scoped `telegram_cooks` identity. Cooks remain outside web RBAC.
 7. Telegram group routing may only be connected through a short-lived, one-time, hashed setup token created by the same-business Owner. Managers may manage cook identities but cannot reroute the kitchen destination. Client-submitted `telegram_chat_id` values are not trusted.
 8. Order item modifiers/notes must be stored as a snapshot at time of order — not linked to a live config.
+9. For the current release, the trusted final order total equals the backend-calculated item subtotal. The frontend must not invent service fees or taxes. Any future charge requires an approved backend-owned policy covering rates, rounding, exemptions, snapshots, receipts, and reports.
 
 ## Frontend State Management
 
