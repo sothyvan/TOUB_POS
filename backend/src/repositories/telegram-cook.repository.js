@@ -10,8 +10,8 @@ export function findCooksByStallId(stallId) {
   });
 }
 
-export function findCookById(cookId) {
-  return TelegramCook.findByPk(cookId);
+export function findCookById(cookId, options = {}) {
+  return TelegramCook.findByPk(cookId, options);
 }
 
 export function findActiveCook(stallId, telegramUserId) {
@@ -24,12 +24,12 @@ export function findActiveCook(stallId, telegramUserId) {
   });
 }
 
-export async function upsertCook({ stallId, telegramUserId, displayName }) {
+export async function upsertCook({ stallId, telegramUserId, displayName }, options = {}) {
   const [cook, created] = await TelegramCook.findOrCreate({
     where: {
       stall_id: stallId,
       telegram_user_id: String(telegramUserId),
-    },
+    }, ...options,
     defaults: {
       display_name: displayName,
       is_active: true,
@@ -40,15 +40,15 @@ export async function upsertCook({ stallId, telegramUserId, displayName }) {
     cook.display_name = displayName;
     cook.is_active = true;
     cook.updated_at = new Date();
-    await cook.save();
+    await cook.save(options);
   }
 
   return cook;
 }
 
-export async function deactivateCook(cook) {
+export async function deactivateCook(cook, options = {}) {
   cook.is_active = false;
   cook.updated_at = new Date();
-  await cook.save();
+  await cook.save(options);
   return cook;
 }

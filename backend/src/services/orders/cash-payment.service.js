@@ -68,6 +68,7 @@ export async function confirmCashPayment(orderId, actor, cashReceivedUsd) {
 
     await AuditLog.create({
       actor_user_id: actorId,
+      owner_id: confirmedOrderOwnerId,
       action: 'cash_payment_confirmed',
       order_id: order.id,
       details: {

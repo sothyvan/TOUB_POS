@@ -131,10 +131,11 @@ export async function findAllProductsForStall(stallId, assignmentWhereClause = {
 /**
  * Find a single product by ID.
  */
-export function findProductById(id) {
+export function findProductById(id, options = {}) {
   return Product.findOne({
     where: { id, is_deleted: false },
     include: buildProductIncludes(),
+    ...options,
   });
 }
 
@@ -163,8 +164,8 @@ export function findStallProduct(productId, stallId, options = {}) {
 /**
  * Create a new product and assign it to stalls.
  */
-export async function insertProduct(productData, assignmentData, stallIds = []) {
-  const product = await sequelize.transaction(async (transaction) => {
+export async function insertProduct(productData, assignmentData, stallIds = [], options = {}) {
+  const createProduct = async (transaction) => {
     const createdProduct = await Product.create(productData, { transaction });
 
     if (stallIds.length > 0) {
@@ -175,16 +176,19 @@ export async function insertProduct(productData, assignmentData, stallIds = []) 
     }
 
     return createdProduct;
-  });
+  };
+  const product = options.transaction
+    ? await createProduct(options.transaction)
+    : await sequelize.transaction(createProduct);
 
-  return findProductById(product.id);
+  return findProductById(product.id, options);
 }
 
 /**
  * Update an existing product and its stall assignments.
  */
-export function updateProductById(id, productData, assignmentData) {
-  return sequelize.transaction(async (transaction) => {
+export function updateProductById(id, productData, assignmentData, options = {}) {
+  const updateProduct = async (transaction) => {
     const product = await Product.findByPk(id, { transaction });
     if (!product) {
       return false;
@@ -242,14 +246,17 @@ export function updateProductById(id, productData, assignmentData) {
     }
 
     return true;
-  });
+  };
+  return options.transaction
+    ? updateProduct(options.transaction)
+    : sequelize.transaction(updateProduct);
 }
 
 /**
  * Delete a product by ID.
  */
-export async function deleteProductById(id) {
-  const product = await Product.findByPk(id);
+export async function deleteProductById(id, options = {}) {
+  const product = await Product.findByPk(id, options);
   if (!product) {
     return false;
   }
@@ -260,7 +267,7 @@ export async function deleteProductById(id) {
       is_active: false,
       name: `${product.name}_deleted_${Date.now()}`
     },
-    { where: { id } }
+    { where: { id }, ...options }
   );
   return affectedRows > 0;
 }

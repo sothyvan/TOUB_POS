@@ -307,6 +307,15 @@ These controls should be preserved during remediation.
 
 #### P2-3. Audit trail covers payments but not administrative changes
 
+**Implementation status (2026-07-31): Implemented locally.** A managed forward
+migration expands `audit_logs` with Owner scope, target, and request correlation;
+the fixed administrative event catalog covers catalog, identity, Stall, staff,
+terminal, Cook, and Telegram-group mutations. Each business mutation and audit
+insert shares a transaction, and bounded metadata sanitization excludes secrets
+and raw protected identifiers. Access and minimum retention are documented in
+`docs/security/audit-log-policy.md`; the pull request's disposable-MySQL
+migration and live integration checks passed.
+
 - **Severity:** P2
 - **Category:** Auditability
 - **Business impact:** Operators cannot reliably answer who changed a product price, reassigned a cashier, revoked a device, changed a kitchen group, or deleted a user/stall.

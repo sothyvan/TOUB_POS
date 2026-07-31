@@ -1,7 +1,8 @@
-import { Stall } from '../models/index.js';
+import { sequelize, Stall } from '../models/index.js';
 import * as telegramCookRepository from '../repositories/telegram-cook.repository.js';
 import { httpError } from '../utils/http-error.util.js';
 import { maskTelegramUserId } from '../utils/telegram-identifier.util.js';
+import { AUDIT_ACTIONS, writeAdministrativeAudit } from './audit.service.js';
 
 function resolveOwnerId(actor) {
   return actor.role === 'owner' ? actor.id : actor.owner_id;
@@ -67,22 +68,45 @@ export async function listTelegramCooks(actor, rawStallId) {
   return cooks.map(mapCook);
 }
 
-export async function authorizeTelegramCook(actor, rawStallId, payload) {
+export async function authorizeTelegramCook(actor, rawStallId, payload, requestId) {
   const stall = await requireOwnedStall(rawStallId, actor);
-  const cook = await telegramCookRepository.upsertCook({
+  const cook = await sequelize.transaction(async (transaction) => {
+  const saved = await telegramCookRepository.upsertCook({
     stallId: stall.id,
     telegramUserId: normalizeTelegramUserId(payload?.telegram_user_id),
     displayName: normalizeDisplayName(payload?.display_name),
+  }, { transaction });
+  await writeAdministrativeAudit({
+    actor, ownerId: stall.owner_id, action: AUDIT_ACTIONS.TELEGRAM_COOK_AUTHORIZED,
+    targetType: 'telegram_cook', targetId: saved.id, requestId,
+    after: { stall_id: stall.id, display_name: saved.display_name, is_active: true }, transaction,
+  });
+  return saved;
   });
   return mapCook(cook);
 }
 
-export async function revokeTelegramCook(actor, rawStallId, rawCookId) {
+export async function revokeTelegramCook(actor, rawStallId, rawCookId, requestId) {
   const stall = await requireOwnedStall(rawStallId, actor);
   const cookId = parsePositiveInteger(rawCookId, 'cook ID');
   const cook = await telegramCookRepository.findCookById(cookId);
   if (!cook || Number(cook.stall_id) !== Number(stall.id)) {
     throw httpError('Telegram cook identity not found for this stall.', 404);
   }
-  return mapCook(await telegramCookRepository.deactivateCook(cook));
+  const before = {
+    stall_id: stall.id,
+    display_name: cook.display_name,
+    is_active: Boolean(cook.is_active),
+  };
+  const updated = await sequelize.transaction(async (transaction) => {
+    const saved = await telegramCookRepository.deactivateCook(cook, { transaction });
+    await writeAdministrativeAudit({
+      actor, ownerId: stall.owner_id, action: AUDIT_ACTIONS.TELEGRAM_COOK_REVOKED,
+      targetType: 'telegram_cook', targetId: saved.id, requestId,
+      before,
+      after: { stall_id: stall.id, display_name: cook.display_name, is_active: false }, transaction,
+    });
+    return saved;
+  });
+  return mapCook(updated);
 }

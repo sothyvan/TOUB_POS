@@ -778,7 +778,7 @@ There is no separate Business/Tenant table.
 | Identity | `users` | Role, Owner scope, and role-appropriate credential |
 | Operations | `stalls`, `stall_staff`, `stall_devices` | Locations, Cashier assignment, registered terminals |
 | Catalog | `categories`, `products`, `stall_products` | Shared catalog and per-Stall selling configuration |
-| Sales | `orders`, `order_items`, `audit_logs` | Transaction, immutable item snapshot, sensitive action history |
+| Sales and audit | `orders`, `order_items`, `audit_logs` | Transaction, immutable item snapshot, and tenant-scoped payment/administrative action history |
 | Kitchen | `telegram_dispatch_jobs`, `telegram_tickets`, `telegram_cooks`, `telegram_group_connections` | Durable dispatch, delivery state, authorization, and secure group setup |
 
 ### 10.3 Key Data Rules
@@ -1064,7 +1064,7 @@ A scaled deployment would likely add:
 - Migration verification in CI against a disposable MySQL database.
 - Dedicated Business/Tenant entity.
 - Central observability and alerting.
-- Structured audit/event retention.
+- Central operator UI/export for the implemented structured audit trail; storage retention is governed by `docs/security/audit-log-policy.md`.
 
 ## 16. Environment And Operations
 

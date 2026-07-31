@@ -265,6 +265,7 @@ export async function createOrder(
 
     await AuditLog.create({
       actor_user_id: parsedCashierId,
+      owner_id: stall.owner_id,
       action: 'order_created',
       order_id: order.id,
       details: {

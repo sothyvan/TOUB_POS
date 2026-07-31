@@ -20,29 +20,29 @@ export async function findAllCategories(whereClause = {}, queryOptions = {}) {
 /**
  * Find a category by ID.
  */
-export function findCategoryById(id) {
-  return Category.findByPk(id);
+export function findCategoryById(id, options = {}) {
+  return Category.findByPk(id, options);
 }
 
 /**
  * Create a new category.
  */
-export function insertCategory(data) {
-  return Category.create(data);
+export function insertCategory(data, options = {}) {
+  return Category.create(data, options);
 }
 
 /**
  * Update a category by ID.
  */
-export async function updateCategoryById(id, data) {
-  const [affectedRows] = await Category.update(data, { where: { id } });
+export async function updateCategoryById(id, data, options = {}) {
+  const [affectedRows] = await Category.update(data, { where: { id }, ...options });
   return affectedRows > 0;
 }
 
 /**
  * Delete a category by ID.
  */
-export async function deleteCategoryById(id) {
-  const affectedRows = await Category.destroy({ where: { id } });
+export async function deleteCategoryById(id, options = {}) {
+  const affectedRows = await Category.destroy({ where: { id }, ...options });
   return affectedRows > 0;
 }

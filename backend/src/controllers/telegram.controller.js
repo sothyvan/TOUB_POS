@@ -24,7 +24,7 @@ export async function handleCallback(req, res) {
   }
 
   try {
-    const handledConnection = await processTelegramGroupConnection(req.body);
+    const handledConnection = await processTelegramGroupConnection(req.body, {}, req.requestId);
     if (!handledConnection) {
       await processTelegramCallback(req.body);
     }

@@ -20,7 +20,7 @@ export function getImageKitAuth(_req, res, next) {
 
 export async function createProduct(req, res, next) {
   try {
-    const product = await productService.createProduct(req.user, req.body);
+    const product = await productService.createProduct(req.user, req.body, req.requestId);
     res.status(201).json({ success: true, data: product });
   } catch (error) {
     next(error);
@@ -29,7 +29,7 @@ export async function createProduct(req, res, next) {
 
 export async function updateProduct(req, res, next) {
   try {
-    await productService.updateProduct(req.user, req.params.id, req.body);
+    await productService.updateProduct(req.user, req.params.id, req.body, req.requestId);
     res.json({ success: true, message: 'Product updated successfully.' });
   } catch (error) {
     next(error);
@@ -38,7 +38,7 @@ export async function updateProduct(req, res, next) {
 
 export async function deleteProduct(req, res, next) {
   try {
-    await productService.deleteProduct(req.user, req.params.id);
+    await productService.deleteProduct(req.user, req.params.id, req.requestId);
     res.json({ success: true, message: 'Product deleted successfully.' });
   } catch (error) {
     next(error);

@@ -229,14 +229,21 @@ CREATE TABLE order_items (
 CREATE TABLE audit_logs (
   id            INT AUTO_INCREMENT PRIMARY KEY,
   actor_user_id INT DEFAULT NULL,
-  action        ENUM('order_created', 'cash_payment_confirmed', 'khqr_payment_confirmed', 'order_cancelled') NOT NULL,
+  owner_id      INT DEFAULT NULL,
+  action        VARCHAR(100) NOT NULL,
   order_id      INT DEFAULT NULL,
+  target_type   VARCHAR(50) DEFAULT NULL,
+  target_id     VARCHAR(64) DEFAULT NULL,
+  request_id    VARCHAR(128) DEFAULT NULL,
   details       JSON DEFAULT NULL,
   created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY idx_audit_logs_actor_user_id (actor_user_id),
   KEY idx_audit_logs_order_id (order_id),
   KEY idx_audit_logs_action (action),
   KEY idx_audit_logs_created_at (created_at),
+  KEY idx_audit_logs_owner_created (owner_id, created_at),
+  KEY idx_audit_logs_target (target_type, target_id),
+  KEY idx_audit_logs_request_id (request_id),
   FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE SET NULL,
   FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL
 );

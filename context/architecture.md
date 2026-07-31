@@ -235,7 +235,7 @@
 - **StallProduct**: Junction that maps a `Product` to a `Stall` and stores that stall's `price_usd`, `price_khr`, and visibility.
 - **Order**: A transaction. Belongs to a `User` (cashier) and a `Stall`. Has payment method, status, totals, KHQR metadata when relevant, and cash received/change fields when cash is confirmed.
 - **OrderItem**: Links `Order` to `Product`. Stores quantity, price snapshot, and **`notes`** (modifiers like "no ice").
-- **AuditLog**: Records sensitive POS actions such as order creation and cash payment confirmation, including the actor, action, order, details, and timestamp.
+- **AuditLog**: Append-only, tenant-scoped history for payment and privileged administrative actions. It stores the actor, stable action, Owner scope, target, request correlation, safe before/after summary, and timestamp; the business mutation and audit insert share one transaction.
 - **TelegramTicket**: Tracks Telegram kitchen dispatch state for an order, including Telegram message/chat IDs, send status, and cook completion timestamp.
 - **TelegramDispatchJob**: Durable one-per-Order kitchen delivery instruction with claim lock, attempt count, retry time, and bounded failure detail.
 - **TelegramCook**: Stall-scoped Telegram-only identity allowed to complete kitchen tickets. It has no password, PIN, JWT, or management UI access beyond its Telegram callback permission.

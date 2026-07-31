@@ -3,6 +3,8 @@ import * as stallRepository from '../repositories/stall.repository.js';
 import * as categoryRepository from '../repositories/category.repository.js';
 import * as imagekitService from './imagekit.service.js';
 import { httpError } from '../utils/http-error.util.js';
+import { sequelize } from '../models/index.js';
+import { AUDIT_ACTIONS, writeAdministrativeAudit } from './audit.service.js';
 
 const MAX_IMAGE_URL_LENGTH = 500;
 
@@ -103,7 +105,7 @@ export function getImageKitAuth() {
   return imagekitService.getUploadAuthenticationParameters();
 }
 
-export async function createProduct(actor, payload) {
+export async function createProduct(actor, payload, requestId) {
   const {
     name,
     price_usd,
@@ -134,22 +136,37 @@ export async function createProduct(actor, payload) {
   await validateStalls(stallIds, ownerId);
   await validateCategory(parsedCategoryId, ownerId);
 
-  return productRepository.insertProduct({
-    name,
-    category_id: parsedCategoryId,
-    image_url: imageUrl,
-    default_price_usd: parsedPriceUsd,
-    default_price_khr: parsedPriceKhr,
-  }, {
-    price_usd: parsedPriceUsd,
-    price_khr: parsedPriceKhr,
-    is_visible: is_visible ?? true,
-  }, stallIds);
+  return sequelize.transaction(async (transaction) => {
+    const product = await productRepository.insertProduct({
+      name,
+      category_id: parsedCategoryId,
+      image_url: imageUrl,
+      default_price_usd: parsedPriceUsd,
+      default_price_khr: parsedPriceKhr,
+    }, {
+      price_usd: parsedPriceUsd,
+      price_khr: parsedPriceKhr,
+      is_visible: is_visible ?? true,
+    }, stallIds, { transaction });
+    await writeAdministrativeAudit({
+      actor, ownerId, action: AUDIT_ACTIONS.PRODUCT_CREATED, targetType: 'product',
+      targetId: product.id, requestId,
+      after: { name, category_id: parsedCategoryId, price_usd: parsedPriceUsd, price_khr: parsedPriceKhr, stall_ids: stallIds, is_visible: is_visible ?? true },
+      transaction,
+    });
+    return product;
+  });
 }
 
-export async function updateProduct(actor, productId, payload) {
+export async function updateProduct(actor, productId, payload, requestId) {
   const ownerId = resolveOwnerId(actor);
   await requireOwnedProduct(productId, ownerId);
+
+  return sequelize.transaction(async (transaction) => {
+  const existing = await productRepository.findProductById(productId, { transaction, lock: transaction.LOCK.UPDATE });
+  if (!existing) {
+    throw httpError('Product not found.', 404);
+  }
 
   const updateData = {};
   const assignmentData = {};
@@ -199,16 +216,51 @@ export async function updateProduct(actor, productId, payload) {
     productId,
     updateData,
     hasAssignmentChanges ? assignmentData : undefined,
+    { transaction },
   );
   if (!success) {
     throw httpError('Product not found or no changes made.', 404);
   }
+  const currentAssignments = existing.ProductStalls || [];
+  await writeAdministrativeAudit({
+    actor, ownerId, action: AUDIT_ACTIONS.PRODUCT_UPDATED, targetType: 'product',
+    targetId: productId, requestId,
+    before: {
+      name: existing.name, category_id: existing.category_id,
+      price_usd: existing.default_price_usd, price_khr: existing.default_price_khr,
+      image_configured: Boolean(existing.image_url),
+      stall_ids: currentAssignments.map((item) => Number(item.stall_id)),
+    },
+    after: {
+      name: updateData.name ?? existing.name,
+      category_id: updateData.category_id ?? existing.category_id,
+      price_usd: updateData.default_price_usd ?? existing.default_price_usd,
+      price_khr: updateData.default_price_khr ?? existing.default_price_khr,
+      image_configured: updateData.image_url !== undefined ? Boolean(updateData.image_url) : Boolean(existing.image_url),
+      stall_ids: stallIds ?? currentAssignments.map((item) => Number(item.stall_id)),
+      ...(payload.is_visible !== undefined ? { is_visible: payload.is_visible } : {}),
+    }, transaction,
+  });
+  });
 }
 
-export async function deleteProduct(actor, productId) {
-  await requireOwnedProduct(productId, resolveOwnerId(actor));
-  const success = await productRepository.deleteProductById(productId);
+export async function deleteProduct(actor, productId, requestId) {
+  const ownerId = resolveOwnerId(actor);
+  await requireOwnedProduct(productId, ownerId);
+  return sequelize.transaction(async (transaction) => {
+  const product = await productRepository.findProductById(productId, { transaction, lock: transaction.LOCK.UPDATE });
+  if (!product) {
+    throw httpError('Product not found.', 404);
+  }
+  const success = await productRepository.deleteProductById(productId, { transaction });
   if (!success) {
     throw httpError('Product not found.', 404);
   }
+  await writeAdministrativeAudit({
+    actor, ownerId, action: AUDIT_ACTIONS.PRODUCT_DELETED, targetType: 'product',
+    targetId: productId, requestId,
+    before: { name: product.name, category_id: product.category_id, price_usd: product.default_price_usd, price_khr: product.default_price_khr },
+    transaction,
+  });
+  });
 }
