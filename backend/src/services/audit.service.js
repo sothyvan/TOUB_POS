@@ -74,7 +74,7 @@ export function resolveAuditOwnerId(actor, explicitOwnerId) {
     : Number(actor.owner_id);
 }
 
-export async function writeAdministrativeAudit({
+export function writeAdministrativeAudit({
   actor,
   ownerId,
   action,

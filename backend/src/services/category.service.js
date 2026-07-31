@@ -44,7 +44,7 @@ export function createCategory(actor, payload, requestId) {
   });
 }
 
-export async function updateCategory(actor, categoryId, payload, requestId) {
+export function updateCategory(actor, categoryId, payload, requestId) {
   const ownerId = resolveOwnerId(actor);
   return sequelize.transaction(async (transaction) => {
     const category = await requireOwnedCategory(categoryId, ownerId, {
@@ -76,7 +76,7 @@ export async function updateCategory(actor, categoryId, payload, requestId) {
   });
 }
 
-export async function deleteCategory(actor, categoryId, requestId) {
+export function deleteCategory(actor, categoryId, requestId) {
   const ownerId = resolveOwnerId(actor);
   return sequelize.transaction(async (transaction) => {
     const category = await requireOwnedCategory(categoryId, ownerId, {

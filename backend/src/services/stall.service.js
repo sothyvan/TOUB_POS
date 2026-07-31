@@ -91,7 +91,7 @@ export async function createStall(actor, payload, requestId) {
   return sanitizeStallForManagement(stall);
 }
 
-export async function updateStall(actor, stallId, payload, requestId) {
+export function updateStall(actor, stallId, payload, requestId) {
   const ownerId = resolveOwnerId(actor);
   return sequelize.transaction(async (transaction) => {
   const stall = await requireOwnedStall(stallId, ownerId, { transaction, lock: transaction.LOCK.UPDATE });
@@ -111,7 +111,7 @@ export async function updateStall(actor, stallId, payload, requestId) {
   });
 }
 
-export async function deleteStall(actor, stallId, requestId) {
+export function deleteStall(actor, stallId, requestId) {
   const ownerId = resolveOwnerId(actor);
   return sequelize.transaction(async (transaction) => {
     const stall = await requireOwnedStall(stallId, ownerId, { transaction, lock: transaction.LOCK.UPDATE });

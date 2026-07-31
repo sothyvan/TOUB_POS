@@ -139,9 +139,13 @@ Update this file after every meaningful implementation change.
     and complete Telegram identifiers.
   - Documented read-only operational access, append-only correction, encrypted
     exports, and a minimum 365-day retention policy with no automatic purge.
-  - Added seven database-free policy/migration tests. All 61 backend unit tests and quiet
-    backend lint pass; disposable-MySQL migration and live mutation verification
-    remain the final pre-merge checks.
+  - Added seven database-free policy/migration tests. All 61 backend unit tests
+    pass, and the pull request's disposable-MySQL migration and live mutation
+    verification checks passed.
+  - The first pull-request backend-quality run exposed 13 P2-3-only lint warnings,
+    taking the repository above its bounded 64-warning CI allowance. Removed the
+    unnecessary async declarations and test warning without changing behavior;
+    the exact capped CI lint command now passes with the 61 pre-existing warnings.
 
 - **Safely suspended KHQR payment processing**:
   - Added explicit opt-in `KHQR_ENABLED` and `VITE_KHQR_ENABLED` feature flags, both defaulting to `false`.

@@ -313,8 +313,8 @@ the fixed administrative event catalog covers catalog, identity, Stall, staff,
 terminal, Cook, and Telegram-group mutations. Each business mutation and audit
 insert shares a transaction, and bounded metadata sanitization excludes secrets
 and raw protected identifiers. Access and minimum retention are documented in
-`docs/security/audit-log-policy.md`; disposable-MySQL migration/live verification
-remains required before merge.
+`docs/security/audit-log-policy.md`; the pull request's disposable-MySQL
+migration and live integration checks passed.
 
 - **Severity:** P2
 - **Category:** Auditability

@@ -32,13 +32,12 @@ function expectStatus(result, expected) {
 test('privileged category mutations create correlated tenant-scoped audit events', async (t) => {
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const requestIds = [`audit-create-${suffix}`, `audit-update-${suffix}`, `audit-delete-${suffix}`];
-  let categoryId;
-  let token;
+  const state = { categoryId: null, token: null };
 
   t.after(async () => {
-    if (categoryId && token) {
-      await request(`/categories/${categoryId}`, {
-        method: 'DELETE', token, requestId: `audit-cleanup-${suffix}`,
+    if (state.categoryId && state.token) {
+      await request(`/categories/${state.categoryId}`, {
+        method: 'DELETE', token: state.token, requestId: `audit-cleanup-${suffix}`,
       }).catch(() => null);
     }
     await AuditLog.destroy({ where: { request_id: [...requestIds, `audit-cleanup-${suffix}`] } });
@@ -50,28 +49,28 @@ test('privileged category mutations create correlated tenant-scoped audit events
     body: { username: OWNER_USERNAME, password: OWNER_PASSWORD },
   });
   expectStatus(login, 200);
-  token = login.payload?.data?.token;
+  state.token = login.payload?.data?.token;
   const ownerId = login.payload?.data?.user?.id;
-  assert.ok(token);
+  assert.ok(state.token);
   assert.ok(ownerId);
 
   const created = await request('/categories', {
-    method: 'POST', token, requestId: requestIds[0], body: { name: `Audit ${suffix}`, tone: 'gold' },
+    method: 'POST', token: state.token, requestId: requestIds[0], body: { name: `Audit ${suffix}`, tone: 'gold' },
   });
   expectStatus(created, 201);
-  categoryId = created.payload?.data?.id;
-  assert.ok(categoryId);
+  state.categoryId = created.payload?.data?.id;
+  assert.ok(state.categoryId);
 
-  const updated = await request(`/categories/${categoryId}`, {
-    method: 'PUT', token, requestId: requestIds[1], body: { tone: 'green' },
+  const updated = await request(`/categories/${state.categoryId}`, {
+    method: 'PUT', token: state.token, requestId: requestIds[1], body: { tone: 'green' },
   });
   expectStatus(updated, 200);
 
-  const deleted = await request(`/categories/${categoryId}`, {
-    method: 'DELETE', token, requestId: requestIds[2], body: {},
+  const deleted = await request(`/categories/${state.categoryId}`, {
+    method: 'DELETE', token: state.token, requestId: requestIds[2], body: {},
   });
   expectStatus(deleted, 200);
-  categoryId = null;
+  state.categoryId = null;
 
   const logs = await AuditLog.findAll({
     where: { request_id: requestIds },
@@ -90,4 +89,3 @@ test('privileged category mutations create correlated tenant-scoped audit events
     assert.doesNotMatch(JSON.stringify(log.details), /password|pin|token|authorization/i);
   }
 });
-

@@ -61,9 +61,9 @@ test('administrative audit writer persists only scoped sanitized fields', async 
     after: { username: 'cashier-a', pin: '1234' },
     transaction,
     auditModel: {
-      create: async (values, options) => {
+      create: (values, options) => {
         captured = { values, options };
-        return values;
+        return Promise.resolve(values);
       },
     },
   });
@@ -75,9 +75,9 @@ test('administrative audit writer persists only scoped sanitized fields', async 
   assert.equal(captured.options.transaction, transaction);
 });
 
-test('administrative audit writer rejects unscoped or unknown events', async () => {
-  await assert.rejects(
-    writeAdministrativeAudit({
+test('administrative audit writer rejects unscoped or unknown events', () => {
+  assert.throws(
+    () => writeAdministrativeAudit({
       actor: { id: 1, role: 'platform_admin' },
       action: AUDIT_ACTIONS.USER_CREATED,
       targetType: 'user',
@@ -85,8 +85,8 @@ test('administrative audit writer rejects unscoped or unknown events', async () 
     }),
     /requires an owner scope/,
   );
-  await assert.rejects(
-    writeAdministrativeAudit({
+  assert.throws(
+    () => writeAdministrativeAudit({
       actor: { id: 4, role: 'owner' },
       action: 'arbitrary.action',
       targetType: 'user',
@@ -99,14 +99,14 @@ test('administrative audit writer rejects unscoped or unknown events', async () 
 test('audit migration expands legacy rows and adds investigation indexes', async () => {
   const calls = [];
   const queryInterface = {
-    describeTable: async () => ({ id: {}, action: {} }),
-    changeColumn: async (...args) => calls.push(['changeColumn', ...args]),
-    addColumn: async (...args) => calls.push(['addColumn', ...args]),
-    showIndex: async () => [],
-    addIndex: async (...args) => calls.push(['addIndex', ...args]),
+    describeTable: () => Promise.resolve({ id: {}, action: {} }),
+    changeColumn: (...args) => calls.push(['changeColumn', ...args]),
+    addColumn: (...args) => calls.push(['addColumn', ...args]),
+    showIndex: () => Promise.resolve([]),
+    addIndex: (...args) => calls.push(['addIndex', ...args]),
   };
   const sequelize = {
-    query: async (sql) => calls.push(['query', sql]),
+    query: (sql) => calls.push(['query', sql]),
   };
 
   await expandAuditLogs({ context: { queryInterface, sequelize } });
