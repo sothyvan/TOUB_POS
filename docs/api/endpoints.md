@@ -19,7 +19,7 @@ Auth/security notes:
 - Platform Admin/Owner/Manager use username + password.
 - Cashier uses PIN login.
 - Cashier PINs are bcrypt-hashed.
-- Login and PIN endpoints are rate-limited and may return `429`.
+- Login, PIN, and refresh endpoints are rate-limited and may return `429 RATE_LIMITED`. Production API instances share counters through Redis and use the configured trusted-proxy hop count to identify clients.
 - Bakong Open API tokens are backend-only. The frontend calls TouB POS endpoints and never calls Bakong directly.
 
 ---

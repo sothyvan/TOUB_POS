@@ -23,6 +23,9 @@ async function startServer() {
     const { initializeWebSocketServer } = await import(
       './services/websocket.service.js'
     );
+    const { initializeRateLimitStore } = await import(
+      './services/rate-limit-store.service.js'
+    );
 
     console.log('[server] Initializing database...');
     // Ensure database exists (Only locally, cloud providers provision the DB for you)
@@ -42,6 +45,11 @@ async function startServer() {
       const appliedMigrations = await migrateDatabase();
       console.log(`[server] Applied ${appliedMigrations.length} pending database migration(s).`);
     }
+
+    const rateLimitStore = await initializeRateLimitStore();
+    process.stdout.write(
+      `[server] Authentication rate-limit store ready (${rateLimitStore.shared ? 'shared Redis' : 'process-local development'}).\n`,
+    );
 
     const { default: app } = await import('./app.js');
     const { User } = await import('./models/index.js');

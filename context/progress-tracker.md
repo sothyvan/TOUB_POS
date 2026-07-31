@@ -1084,8 +1084,22 @@ Update this file after every meaningful implementation change.
     staff/device/cook, order, cash-confirmation, and bodyless command schemas.
     Telegram callbacks retain dedicated validation for their provider-owned
     update envelope.
-  - The next repository priority is P1-12 proxy-aware, shared production rate
-    limiting after P1-11 passes its pull-request checks.
+  - P1-12 proxy-aware shared authentication rate limiting is implemented on
+    `p1-12-production-rate-limiting`. Production now requires an exact
+    `TRUST_PROXY_HOPS` value and Redis-compatible shared counter store, while
+    local development may retain zero-proxy process-local counters.
+  - Backend startup connects to and pings Redis before listening. Runtime store
+    failures fail closed; limiter events omit credentials and account names,
+    while account subjects are SHA-256 hashed in Redis keys.
+  - Added unit coverage for deployment configuration and disposable Redis live
+    coverage proving counters are shared across two Express instances, distinct
+    forwarded clients remain separate, and auth limits return the stable
+    `429 RATE_LIMITED` response. The backend integration CI job now provisions
+    Redis alongside MySQL.
+  - Final P1-12 closure requires setting and verifying the exact hop count
+    through the selected production hosting provider's real proxy path.
+  - The next repository priority is P1-13 removal and rotation review for the
+    tracked SQL dump after P1-12 passes its pull-request checks.
   - Follow the audit's phased P0/P1 plan only after team review and approval.
 
 - Post-Phase 6 Operations & Security Hardening.

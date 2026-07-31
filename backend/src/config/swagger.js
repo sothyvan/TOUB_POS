@@ -61,7 +61,7 @@ export const swaggerDocument = {
             'Protected routes require a short-lived in-memory Authorization: Bearer <token>.',
             'Session restoration uses a rotating HttpOnly refresh cookie plus X-CSRF-Token.',
             'Protected requests verify the JWT session_version against the current active user. User changes may return 401 SESSION_INVALIDATED.',
-            'Rate-limited auth endpoints may return 429.',
+            'Rate-limited auth endpoints may return 429 RATE_LIMITED. Production instances share Redis counters and use an explicit trusted-proxy hop count.',
             'Bakong Open API tokens are backend-only; the frontend never calls Bakong directly.'
         ].join(' ')
     },
