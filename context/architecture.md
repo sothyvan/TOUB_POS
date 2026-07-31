@@ -73,10 +73,14 @@
   separately and sent as `X-CSRF-Token`; it must match both the API cookie and
   stored hash on refresh/logout. This supports separate frontend/API domains.
 - **localStorage (Frontend)**: Limited to the raw per-device registration token,
-  registration metadata, theme, and other non-auth preferences. The raw device
+  registration metadata, theme, non-auth preferences, and versioned cashier
+  recovery records containing product IDs, quantities, notes, and checkout
+  identifiers. Recovery records are scoped by cashier and registered device,
+  expire after 12 hours, and never supply trusted product prices or payment
+  status. The raw device
   token is never stored in MySQL; the database stores its SHA-256 hash. Device
-  data is cleared on remote revocation, while normal cashier logout preserves
-  terminal registration.
+  data and recovery records are cleared on remote revocation, while normal
+  cashier logout preserves terminal registration and recoverable work.
 
 ## Auth and Access Model
 
@@ -128,7 +132,17 @@
 
 - **UI State**: Handled locally within components using `useState` and `useEffect` (e.g., active modals, UI toggles).
 - **Global/Server State**: Abstracted into custom hooks (e.g., `useProducts`, `useOrders`) which interface with the central Axios-backed API service.
-- **Cart Management**: Cart state is managed globally or passed down from a parent POS container to ensure synchronization between the product grid and the order panel.
+- **Cart Management**: `useCart` owns the active cart for the cashier workspace.
+  It persists only product IDs, quantities, and notes in a versioned,
+  cashier/device-scoped 12-hour recovery record. After authentication and
+  catalog loading, persisted items are reconciled against current backend
+  products; missing or hidden products are dropped, and current backend names,
+  prices, images, and categories replace stale display data.
+- **Checkout Recovery**: A pending checkout stores its signature, payment
+  method, idempotency key, and backend order ID in the same scoped recovery
+  boundary. `useOrders` checks a known order ID after session restoration,
+  resumes pending Cash/KHQR UI, opens an already-paid receipt, and reuses the
+  idempotency key when the create response was interrupted.
 - **Backend Availability**: Cashier checkout is online-only. The cashier page probes the public API health endpoint, reacts to browser connectivity events, and disables every payment action while the API is unreachable. The cart remains editable and is not cleared by connection failures.
 - **Authentication State**: Owned by `features/auth/`, including context, storage keys, login UI, and the login route page.
 - **Theme State**: Owned by `shared/theme/`; the selected light/dark mode is persisted in browser storage and consumed through `useTheme`.
