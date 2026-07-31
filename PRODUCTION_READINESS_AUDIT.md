@@ -425,11 +425,12 @@ RPO and 4-hour RTO on 2026-07-31.
 - **Severity:** P2
 - **Category:** Maintainability
 - **Business impact:** Local and CI environments may differ, obscuring dependency drift.
-- **Evidence:** Frontend `npm ls --depth=0` reported multiple extraneous WASM/runtime packages and `tslib`.
+- **Original evidence:** Frontend `npm ls --depth=0` reported multiple extraneous WASM/runtime packages and `tslib`.
 - **Recommended remediation:** Reproduce from a clean checkout with `npm ci`, determine why extraneous modules exist, and keep only lockfile-declared packages.
 - **Acceptance criteria:** Clean `npm ci` followed by `npm ls --depth=0` exits without extraneous/missing dependencies.
 - **Estimated size:** S
 - **Dependencies:** None.
+- **Implementation status:** Implemented locally for review. A clean Windows install reproduced six orphaned packages from `@tailwindcss/oxide-wasm32-wasi`: npm skips the incompatible optional `wasm32` parent but hoists its bundled runtime chain, causing `npm ls` to label the files extraneous. npm 10.9.3 and 11.6.2 behaved identically, and Tailwind 4.3.1 retains the same package structure. TouB now declares the six already-locked versions as exact build-only development dependencies, documenting npm's installed layout without changing application imports or broadly upgrading dependencies. `npm run deps:check` executes `npm ls --depth=0` and is enforced immediately after `npm ci` by Frontend quality CI.
 
 #### P2-11. Documentation contains stale production and payment claims
 
@@ -676,6 +677,7 @@ Deploy production observability, encrypted backups, restore drills, runbooks, in
 | P1-9 backend integration CI | First run caught missing `products.is_active`/`products.is_deleted`; migration `202607310003` fixed the drift, the rerun passed, and the check is required on `main` |
 | P1-9 browser E2E | Playwright critical journeys and isolated CI job are implemented; Browser E2E passes and is a required `main` branch check |
 | Frontend verification after P2-9 | 16 unit tests and lint passed; production build passed without a chunk warning. Owner Portal entry fell from 578.77 kB to 96.94 kB and build-time budgets cover the entry and lazy tab chunks |
+| Frontend clean install after P2-10 | Passed: fresh `npm ci` installed 257 packages and `npm run deps:check` exited successfully with no extraneous, missing, or invalid dependencies; the audit policy reports no unapproved high/critical production findings |
 
 The P1-8 live npm audit request could not be run in this local environment
 because external dependency metadata egress was not approved. GitHub CI will run

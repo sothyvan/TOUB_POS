@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "deps:check": "npm ls --depth=0",
     "lint": "eslint .",
     "test": "node --test tests/bundle-budget.unit.test.js tests/csp.unit.test.js tests/error-boundary.unit.test.js tests/financial-policy.unit.test.js",
     "preview": "vite preview",
@@ -28,8 +29,13 @@
     "tailwindcss": "^4.3.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.55.0",
+    "@emnapi/core": "1.10.0",
+    "@emnapi/runtime": "1.10.0",
+    "@emnapi/wasi-threads": "1.2.1",
     "@eslint/js": "^10.0.1",
+    "@napi-rs/wasm-runtime": "1.1.4",
+    "@playwright/test": "^1.55.0",
+    "@tybys/wasm-util": "0.10.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
@@ -37,6 +43,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
+    "tslib": "2.8.1",
     "vite": "^8.0.12"
   }
 }

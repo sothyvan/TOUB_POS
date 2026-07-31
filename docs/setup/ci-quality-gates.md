@@ -10,7 +10,7 @@ installation through `npm ci`.
 | --- | --- |
 | `CI policy` | Broken dependency-audit exceptions, tracked database dumps, unapproved SQL paths, or unsafe backup regressions |
 | `Backend quality` | Backend lint errors, warning-count increases, unit-test failures, and unapproved high/critical production dependency findings |
-| `Frontend quality` | Frontend lint/build failures and unapproved high/critical production dependency findings |
+| `Frontend quality` | Extraneous/missing frontend dependencies, frontend lint/test/build failures, and unapproved high/critical production dependency findings |
 | `Clean database migration` | Migrations that cannot build a clean MySQL 8.4 database or leave migration status inconsistent |
 | `Backend integration` | Failures in live authentication, credential-policy, role/stall isolation, checkout, idempotency, payment, order history, dependency-aware readiness, or graceful shutdown |
 | `Browser E2E` | Regressions in management authentication/session restoration, terminal registration, Cashier PIN login, cash checkout, receipts, and browser route guards |
@@ -63,6 +63,8 @@ npm test
 
 cd ../frontend
 npm ci
+npm run deps:check
+npm test
 npm run lint
 npm run build
 
