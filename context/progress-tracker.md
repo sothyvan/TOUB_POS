@@ -1066,11 +1066,12 @@ Update this file after every meaningful implementation change.
     plus recovery after the backend confirms cash but the frontend loses the
     response. Frontend lint/build pass; the full E2E run is delegated to the
     disposable CI environment because no local API was running.
-  - The first P1-10 Browser E2E run exceeded the original 60-second test budget.
-    The recovery scenario now uses a deterministic simulated `503` only after
-    the real backend cash confirmation succeeds, instead of aborting the browser
-    connection, and has a scoped 90-second budget for its expanded
-    register/login/refresh/logout/recovery journey.
+  - The first P1-10 Browser E2E runs exposed test-harness issues rather than
+    application failures. The recovery scenario now uses a deterministic
+    simulated `503` only after the real backend cash confirmation succeeds,
+    instead of aborting the browser connection. Its cashier logout step now
+    opens the Profile actions menu and confirms the actual dialog before
+    re-authenticating, with a scoped 90-second budget for the expanded journey.
   - The next repository priority is P1-11 consistent request validation limits
     and schemas after P1-10 passes its pull-request checks.
   - Follow the audit's phased P0/P1 plan only after team review and approval.
