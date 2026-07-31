@@ -72,9 +72,13 @@ test('cashier registers a terminal, signs in by PIN, and completes a cash sale',
   let cashButton = page.getByRole('button', { name: 'Cash', exact: true });
   await expect(cashButton).toBeEnabled();
 
+  await page.getByRole('button', { name: 'Profile actions', exact: true }).click();
   await page.getByRole('button', { name: 'Logout', exact: true }).click();
   const logoutDialog = page.getByRole('dialog');
-  await logoutDialog.getByRole('button', { name: 'Log out', exact: true }).click();
+  await expect(
+    logoutDialog.getByRole('heading', { name: 'Are you sure you want to log out?' }),
+  ).toBeVisible();
+  await logoutDialog.getByRole('button', { name: 'Confirm', exact: true }).click();
 
   await expect(page).toHaveURL(/\/login/);
   await expect(page.getByRole('heading', { name: 'Select Your Profile' })).toBeVisible();
