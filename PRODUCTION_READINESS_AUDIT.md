@@ -270,10 +270,12 @@ These controls should be preserved during remediation.
 
 - **Severity:** P1
 - **Category:** Operations / availability
+- **Status:** Implemented on 2026-07-31; final closure requires the first disposable CI run to pass its real MySQL-loss and SIGTERM assertions, plus matching production host probe/termination settings.
 - **Business impact:** A load balancer can send traffic to an instance whose database is unavailable. Deploy termination can interrupt requests or payment/order work.
 - **Evidence:** `/api/health` always returns a static success response in `backend/src/app.js:60-62`. `backend/src/server.js:44-49` starts the HTTP server but registers no `SIGTERM`/`SIGINT` drain and database close sequence.
 - **Recommended remediation:** Separate liveness from readiness; readiness should verify critical database connectivity with a tight timeout. Add graceful server/socket shutdown and stop accepting new work before closing DB connections.
 - **Acceptance criteria:** Database loss makes readiness fail while liveness remains meaningful; termination drains in-flight requests within the configured grace period.
+- **Implementation:** Added separate `/api/health/live` and `/api/health/ready` contracts while preserving `/api/health` as the dependency-aware compatibility endpoint used by the frontend and CI. Readiness stays closed during startup/drain, probes MySQL with a bounded timeout, returns sanitized `503` state on failure, and disables caching. SIGTERM/SIGINT now mark the process draining, reject new business requests, stop and await background workers, close Socket.IO and HTTP traffic, close the shared Redis limiter client, then close Sequelize within a validated grace period. Repeated signals share one shutdown promise and timeout forces remaining HTTP connections closed. Unit coverage exercises database failure/timeout, draining, cleanup ordering/idempotency/failure continuation, and forced timeout. Disposable integration CI now stops MySQL to require readiness `503` with liveness `200`, then requires a `shutdown_completed` event after SIGTERM.
 - **Estimated size:** M
 - **Dependencies:** Hosting health-check contract; deployment timeout.
 

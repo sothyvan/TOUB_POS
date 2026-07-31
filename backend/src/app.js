@@ -9,11 +9,13 @@ import reportRoutes from './routes/report.routes.js';
 import stallRoutes from './routes/stall.routes.js';
 import categoryRoutes from './routes/category.routes.js';
 import telegramRoutes from './routes/telegram.routes.js';
+import healthRoutes from './routes/health.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { requestLogger } from './middleware/logger.middleware.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerDocument } from './config/swagger.js';
 import { getRateLimitConfiguration } from './config/rate-limit.config.js';
+import { rejectRequestsWhileDraining } from './services/application-lifecycle.service.js';
 
 const app = express();
 const { trustProxyHops } = getRateLimitConfiguration();
@@ -51,6 +53,8 @@ app.use(cors({
 app.use(express.json());
 app.use(requestLogger);
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+app.use('/api/health', healthRoutes);
+app.use(rejectRequestsWhileDraining);
 
 // ── Routes ────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
@@ -61,11 +65,6 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/stalls', stallRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/telegram', telegramRoutes);
-
-// ── Health Check ──────────────────────────────────────────
-app.get('/api/health', (_req, res) => {
-  res.json({ success: true, message: 'Toub POS API is healthy.' });
-});
 
 // ── Global Error Handler (must be last) ──────────────────
 app.use(errorHandler);
