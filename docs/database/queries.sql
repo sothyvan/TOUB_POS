@@ -662,6 +662,13 @@ ALTER TABLE products
   ADD COLUMN default_price_usd DECIMAL(10, 2) NULL AFTER image_url,
   ADD COLUMN default_price_khr INT NULL AFTER default_price_usd;
 
+-- Managed migration 202607310003 adds the lifecycle columns used by the
+-- Product Sequelize model and repositories. Reference SQL only; deploy through
+-- `npm run db:migrate` so already-upgraded databases are handled safely.
+ALTER TABLE products
+  ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT FALSE;
+
 UPDATE products p
 SET
   default_price_usd = (

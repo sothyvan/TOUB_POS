@@ -159,6 +159,8 @@ CREATE TABLE products (
   image_url   VARCHAR(500) DEFAULT NULL,
   default_price_usd DECIMAL(10, 2) DEFAULT NULL,       -- retained when no stall is assigned
   default_price_khr INT DEFAULT NULL,                  -- copied into new stall assignments
+  is_active   BOOLEAN NOT NULL DEFAULT TRUE,
+  is_deleted  BOOLEAN NOT NULL DEFAULT FALSE,
   created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT
