@@ -72,6 +72,8 @@ Do not run this seeder against production or any live merchant database.
 | `DB_USER` | MySQL user | `root` |
 | `DB_PASSWORD` | MySQL password, if required by local DB | `your_password` |
 | `DB_NAME` | MySQL database name | `toub_pos` |
+| `DB_SSL_CA_PATH` | Production provider CA file path, resolved from the backend working directory; use this or `DB_SSL_CA` | `./certs/provider-ca.pem` |
+| `DB_SSL_CA` | Production provider CA as inline PEM; literal `\n` separators are supported; use this or `DB_SSL_CA_PATH` | `-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----` |
 | `ALLOW_MIGRATION_ROLLBACK` | One-command safety gate for a reviewed migration rollback; leave `false` normally | `false` |
 | `JWT_SECRET` | Secret key for signing JWTs | `a_long_random_string` |
 | `JWT_ACCESS_EXPIRES_IN` | Short-lived access JWT duration | `15m` |
@@ -172,6 +174,14 @@ Apply all pending schema changes before starting a production deployment:
 ```bash
 npm run db:migrate
 ```
+
+Production startup and migration commands require exactly one trusted database
+CA source. Download the CA certificate from the database provider, mount it
+outside version control, and set `DB_SSL_CA_PATH`; or store the PEM value in the
+deployment secret manager as `DB_SSL_CA`. TouB POS sets
+`rejectUnauthorized: true`, so a missing CA, wrong CA, or hostname mismatch
+causes the connection to fail instead of silently weakening TLS. Local MySQL
+does not require these variables unless you choose to enable verified TLS.
 
 ---
 

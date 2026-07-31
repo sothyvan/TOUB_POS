@@ -1,3 +1,5 @@
+import { getDatabaseTlsOptions } from './database-tls.js';
+
 const DEFAULT_DEV_PLATFORM_ADMIN = {
   username: 'platform_admin',
   password: 'platform123',
@@ -139,6 +141,12 @@ export function validateEnvironment() {
 
   if (isProduction) {
     requireEnv('FRONTEND_ORIGIN', errors);
+  }
+
+  try {
+    getDatabaseTlsOptions();
+  } catch (error) {
+    errors.push(error.message);
   }
 
   if (!isProduction) {

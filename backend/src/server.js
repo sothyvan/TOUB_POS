@@ -2,13 +2,6 @@ import 'dotenv/config';
 import { createServer } from 'node:http';
 import bcrypt from 'bcryptjs';
 import { getPlatformAdminSeedConfig, validateEnvironment } from './config/env.js';
-import {
-  assertDatabaseMigrationsCurrent,
-  migrateDatabase,
-} from './database/migrator.js';
-import { startKhqrBackgroundChecker } from './startup/khqr-background-checker.js';
-import { startTelegramDispatchWorker } from './services/telegram-dispatch-worker.service.js';
-import { initializeWebSocketServer } from './services/websocket.service.js';
 
 const PORT = process.env.PORT || 3000;
 
@@ -17,6 +10,19 @@ async function startServer() {
     validateEnvironment();
 
     const { default: sequelize, ensureDatabaseExists } = await import('./config/db.js');
+    const {
+      assertDatabaseMigrationsCurrent,
+      migrateDatabase,
+    } = await import('./database/migrator.js');
+    const { startKhqrBackgroundChecker } = await import(
+      './startup/khqr-background-checker.js'
+    );
+    const { startTelegramDispatchWorker } = await import(
+      './services/telegram-dispatch-worker.service.js'
+    );
+    const { initializeWebSocketServer } = await import(
+      './services/websocket.service.js'
+    );
 
     console.log('[server] Initializing database...');
     // Ensure database exists (Only locally, cloud providers provision the DB for you)
