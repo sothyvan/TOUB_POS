@@ -147,6 +147,23 @@ Update this file after every meaningful implementation change.
     unnecessary async declarations and test warning without changing behavior;
     the exact capped CI lint command now passes with the 61 pre-existing warnings.
 
+- **Implemented production audit P2-4 staff reassignment integrity**:
+  - Confirmed earlier stall-session work already made reassignment atomic and
+    clean schemas already enforce one `stall_staff` row per Cashier.
+  - Added a stable User-row lock before assignment reads, so concurrent first
+    assignments, reassignments, and removals for one Cashier serialize even when
+    no assignment row exists yet.
+  - Refresh-session revocation and the P2-3 staff audit event remain inside the
+    same assignment transaction; live WebSocket invalidation happens only after
+    commit.
+  - Added a forward migration that verifies enrolled databases, refuses to
+    delete ambiguous duplicate rows, preserves equivalent unique indexes, and
+    adds `UNIQUE(user_id)` only when missing.
+  - Added five database-free migration tests plus a disposable-MySQL live test
+    for forced rollback and competing assignments. All 66 backend unit tests
+    pass and capped backend lint remains at the 61 pre-existing warnings; live
+    CI verification remains pending.
+
 - **Safely suspended KHQR payment processing**:
   - Added explicit opt-in `KHQR_ENABLED` and `VITE_KHQR_ENABLED` feature flags, both defaulting to `false`.
   - Backend KHQR order creation and status checking return `503 KHQR_DISABLED` before database or provider work begins.

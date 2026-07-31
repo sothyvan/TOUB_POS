@@ -272,11 +272,12 @@ in MySQL. Device revocation changes state rather than deleting the row.
 
 **Constraints**
 
-- Unique pair: (`stall_id`, `user_id`).
+- Unique `user_id`: each Cashier can have at most one Stall assignment.
 - Deleting either referenced row cascades to the assignment.
 - Service logic permits Cashier assignments only.
-- The product rule says a Cashier belongs to one Stall, but the database does
-  not currently declare `UNIQUE(user_id)`. This rule is application-enforced.
+- Assignment and removal lock the stable User row, then change the optional
+  assignment inside one transaction. This serializes concurrent first
+  assignments as well as reassignments.
 
 ## 8. Catalog Tables
 

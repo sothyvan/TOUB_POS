@@ -290,7 +290,9 @@ device token must accompany it.
 1. Owner/Manager selects a Stall and Cashier.
 2. Backend validates both IDs and same Owner scope.
 3. Backend verifies target role is Cashier.
-4. Backend creates or changes the `stall_staff` assignment.
+4. Backend locks the Cashier's User row and creates or changes the single
+   `stall_staff` assignment in the same transaction as session revocation and
+   administrative auditing.
 5. UI reloads Stalls/rosters from the backend.
 
 **Exceptions**
