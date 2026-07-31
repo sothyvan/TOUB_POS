@@ -209,8 +209,20 @@ These controls should be preserved during remediation.
 - **Severity:** P1
 - **Category:** POS reliability
 - **Business impact:** A busy cashier can lose the cart or be unsure whether a payment completed, leading to re-entry and duplicate-sale risk.
-- **Evidence:** Cart state starts as `useState([])` in `frontend/src/hooks/useCart.js:21`; no `sessionStorage` recovery exists. `context/architecture.md:201` documents the intended recovery but it is not implemented.
+- **Original evidence:** Cart state started as memory-only state in
+  `frontend/src/hooks/useCart.js`, while pending checkout recovery was limited
+  to one browser tab through `sessionStorage`.
 - **Recommended remediation:** Persist a versioned cart and pending checkout state locally, restore after authentication, reconcile pending order IDs against the backend, and expire stale carts safely.
+- **Progress:** Implemented versioned 12-hour cart and pending-checkout recovery
+  scoped by cashier and registered device. Restored cart items are reconciled
+  against the current backend catalog, while trusted prices and payment status
+  remain backend-owned. Known pending order IDs are fetched after session
+  restoration; pending payments resume, paid responses recover the receipt,
+  and interrupted creates retain their idempotency key. Device revocation
+  clears terminal recovery records.
+- **Verification:** Frontend lint and production build pass. The Browser E2E
+  flow now covers cart restoration across refresh/logout and a dropped cash
+  confirmation response followed by paid-order recovery on reload.
 - **Acceptance criteria:** Refresh and forced logout during cart entry restore the cart; refresh after order creation resumes/reconciles the same order rather than creating another.
 - **Estimated size:** M
 - **Dependencies:** P0-1 idempotency and recovery contract.

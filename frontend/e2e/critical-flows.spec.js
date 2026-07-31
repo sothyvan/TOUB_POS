@@ -66,13 +66,38 @@ test('cashier registers a terminal, signs in by PIN, and completes a cash sale',
   await expect(addProductButton).toBeVisible();
   await addProductButton.click();
 
-  const cashButton = page.getByRole('button', { name: 'Cash', exact: true });
+  await page.reload();
+  let cashButton = page.getByRole('button', { name: 'Cash', exact: true });
+  await expect(cashButton).toBeEnabled();
+
+  await page.getByRole('button', { name: 'Logout', exact: true }).click();
+  const logoutDialog = page.getByRole('dialog');
+  await logoutDialog.getByRole('button', { name: 'Log out', exact: true }).click();
+
+  await expect(page).toHaveURL(/\/login/);
+  await expect(page.getByRole('heading', { name: 'Select Your Profile' })).toBeVisible();
+  await page.getByRole('button', { name: new RegExp(CASHIER_USERNAME, 'i') }).click();
+  for (const digit of CASHIER_PIN) {
+    await page.getByRole('button', { name: digit, exact: true }).click();
+  }
+
+  await expect(page).toHaveURL(/\/cashier$/);
+  cashButton = page.getByRole('button', { name: 'Cash', exact: true });
   await expect(cashButton).toBeEnabled();
   await cashButton.click();
 
   const cashDialog = page.getByRole('dialog');
   await expect(cashDialog.getByRole('heading', { name: 'Cash received' })).toBeVisible();
+
+  await page.route('**/api/orders/*/confirm-cash', async (route) => {
+    await route.fetch();
+    await route.abort('failed');
+  });
   await cashDialog.getByRole('button', { name: 'Confirm paid', exact: true }).click();
+
+  await expect(cashDialog).toContainText(/Network Error|Failed to checkout/);
+  await page.unroute('**/api/orders/*/confirm-cash');
+  await page.reload();
 
   const receiptDialog = page.getByRole('dialog');
   await expect(receiptDialog.getByRole('heading', { name: 'Payment Confirmed' })).toBeVisible();

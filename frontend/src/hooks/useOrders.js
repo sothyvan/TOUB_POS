@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { KHQR_ENABLED } from '../config/features';
 import { api } from '../services/api';
 import {
@@ -8,6 +8,7 @@ import {
   readPendingCheckout,
   writePendingCheckout,
 } from '../utils/pendingCheckout';
+import { createCashierRecoveryScope } from '../utils/cartRecovery';
 import { useAutoRefresh } from './useAutoRefresh';
 
 /**
@@ -25,7 +26,17 @@ export function useOrders(isOnline, cart, clearCart, currentUser, options = {}) 
   const [error, setError] = useState(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState(null);
+  const [recoveredCheckout, setRecoveredCheckout] = useState(null);
   const pendingCheckoutRef = useRef(null);
+  const clearCartRef = useRef(clearCart);
+  const recoveryScope = useMemo(
+    () => createCashierRecoveryScope(currentUser),
+    [currentUser],
+  );
+
+  useEffect(() => {
+    clearCartRef.current = clearCart;
+  }, [clearCart]);
 
   const fetchOrders = useCallback(async (showSpinner = true) => {
     if (!currentUser) {
@@ -59,6 +70,60 @@ export function useOrders(isOnline, cart, clearCart, currentUser, options = {}) 
     return () => window.clearTimeout(timerId);
   }, [fetchOrders]);
 
+  useEffect(() => {
+    let active = true;
+
+    if (!recoveryScope) {
+      pendingCheckoutRef.current = null;
+      return () => {
+        active = false;
+      };
+    }
+
+    const pendingCheckout = readPendingCheckout(recoveryScope);
+    pendingCheckoutRef.current = pendingCheckout;
+    if (!pendingCheckout?.orderId) {
+      return () => {
+        active = false;
+      };
+    }
+
+    api.orders.getById(pendingCheckout.orderId)
+      .then(async (order) => {
+        if (!active) return;
+
+        if (order.status === 'paid') {
+          pendingCheckoutRef.current = null;
+          clearPendingCheckout(recoveryScope);
+          clearCartRef.current();
+          setRecoveredCheckout({ state: 'paid', order });
+          await fetchOrders(false);
+          return;
+        }
+
+        if (order.status === 'cancelled') {
+          pendingCheckoutRef.current = null;
+          clearPendingCheckout(recoveryScope);
+          setRecoveredCheckout({ state: 'cancelled', order });
+          return;
+        }
+
+        setRecoveredCheckout({ state: 'pending', order });
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (err.status === 404) {
+          pendingCheckoutRef.current = null;
+          clearPendingCheckout(recoveryScope);
+          setRecoveredCheckout({ state: 'missing', order: null });
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [fetchOrders, recoveryScope]);
+
   useAutoRefresh(() => fetchOrders(false), {
     enabled: Boolean(currentUser),
     intervalMs: currentUser?.role === 'cashier' ? 15000 : 20000,
@@ -77,8 +142,17 @@ export function useOrders(isOnline, cart, clearCart, currentUser, options = {}) 
 
   const handleCheckout = async (method, options = {}) => {
     setCheckoutError(null);
+    setRecoveredCheckout(null);
 
-    if (!cart.length) {
+    const normalizedMethod = String(method || '').toUpperCase();
+    const storedPendingCheckout = pendingCheckoutRef.current
+      || readPendingCheckout(recoveryScope);
+    const canResumeCreatedOrder = Boolean(
+      storedPendingCheckout?.orderId
+      && storedPendingCheckout?.paymentMethod === normalizedMethod,
+    );
+
+    if (!cart.length && !canResumeCreatedOrder) {
       setCheckoutError('Add at least one item before checkout.');
       return null;
     }
@@ -88,7 +162,6 @@ export function useOrders(isOnline, cart, clearCart, currentUser, options = {}) 
       );
       return null;
     }
-    const normalizedMethod = String(method || '').toUpperCase();
     if (normalizedMethod === 'KHQR' && !KHQR_ENABLED) {
       setCheckoutError('KHQR payments are temporarily unavailable. Please use cash.');
       return null;
@@ -102,23 +175,29 @@ export function useOrders(isOnline, cart, clearCart, currentUser, options = {}) 
         ...(notes ? { notes } : {}),
       })),
     };
-    const userId = currentUser?.id;
-    const signature = createCheckoutSignature(orderPayload);
-    let pendingCheckout = pendingCheckoutRef.current || readPendingCheckout(userId);
+    const userId = recoveryScope?.userId;
+    const signature = cart.length
+      ? createCheckoutSignature(orderPayload)
+      : storedPendingCheckout.signature;
+    let pendingCheckout = storedPendingCheckout;
     if (
       !pendingCheckout
       || pendingCheckout.userId !== userId
-      || pendingCheckout.signature !== signature
+      || (
+        pendingCheckout.signature !== signature
+        && !canResumeCreatedOrder
+      )
     ) {
       pendingCheckout = {
         userId,
+        paymentMethod: normalizedMethod,
         signature,
         idempotencyKey: createIdempotencyKey(),
         orderId: null,
       };
     }
     pendingCheckoutRef.current = pendingCheckout;
-    writePendingCheckout(userId, pendingCheckout);
+    writePendingCheckout(recoveryScope, pendingCheckout);
 
     try {
       setCheckoutLoading(true);
@@ -130,7 +209,7 @@ export function useOrders(isOnline, cart, clearCart, currentUser, options = {}) 
       if (!pendingCheckout.orderId) {
         pendingCheckout = { ...pendingCheckout, orderId: createdOrder.id };
         pendingCheckoutRef.current = pendingCheckout;
-        writePendingCheckout(userId, pendingCheckout);
+        writePendingCheckout(recoveryScope, pendingCheckout);
       }
 
       const finalOrder = normalizedMethod === 'CASH'
@@ -143,7 +222,7 @@ export function useOrders(isOnline, cart, clearCart, currentUser, options = {}) 
 
       await fetchOrders(false);
       pendingCheckoutRef.current = null;
-      clearPendingCheckout(userId);
+      clearPendingCheckout(recoveryScope);
       clearCart();
       return finalOrder;
     } catch(err) {
@@ -168,5 +247,6 @@ export function useOrders(isOnline, cart, clearCart, currentUser, options = {}) 
     error,
     checkoutLoading,
     checkoutError,
+    recoveredCheckout,
   };
 }
