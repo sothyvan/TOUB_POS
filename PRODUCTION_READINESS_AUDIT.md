@@ -169,25 +169,26 @@ These controls should be preserved during remediation.
 - **Estimated size:** M
 - **Dependencies:** Payment-provider decision; dependency compatibility testing.
 
-#### P1-7. Database TLS disables certificate verification - Implemented; deployment verification pending
+#### P1-7. Database TLS disables certificate verification - Resolved
 
 - **Severity:** P1
 - **Category:** Infrastructure security
 - **Business impact:** An attacker able to intercept database traffic could impersonate the database endpoint despite TLS being enabled.
 - **Former evidence:** `backend/src/config/db.js` previously set `rejectUnauthorized: false`.
 - **Resolution:** Added a shared database TLS resolver used by Sequelize and raw MySQL connections. Production requires exactly one provider CA source through `DB_SSL_CA_PATH` or `DB_SSL_CA`, enables `rejectUnauthorized: true`, and fails environment validation for missing, unreadable, ambiguous, or malformed CA configuration. The production migration command enforces the same contract.
-- **Remaining deployment check:** Install the real hosting-provider CA, verify a production-mode connection succeeds, then verify a wrong CA and hostname fail. No provider CA is stored in this repository.
+- **Verification:** The team installed the Aiven provider CA and verified the production-mode connection plus fail-closed behavior. The provider CA remains outside version control.
 - **Acceptance criteria:** Production connects with `rejectUnauthorized: true` and the configured CA; a wrong CA or hostname fails.
 - **Estimated size:** S
 - **Dependencies:** Hosting provider CA and TLS documentation.
 
-#### P1-8. No CI quality or security gate exists
+#### P1-8. No CI quality or security gate exists - Implemented; branch protection pending
 
 - **Severity:** P1
 - **Category:** Release engineering
 - **Business impact:** Broken builds, lint regressions, failing tests, vulnerable dependencies, or migration mistakes can reach the deployment branch without automated rejection.
-- **Evidence:** `.github/workflows/` contains only `db-backup.yml` and `keep-aiven-alive.yml`. Quality commands exist in package files but are not run by CI.
-- **Recommended remediation:** Add pull-request CI with deterministic install, backend lint/tests, frontend lint/build, dependency audit policy, and later migration/integration/E2E jobs.
+- **Former evidence:** `.github/workflows/` previously contained only scheduled backup/keep-alive jobs.
+- **Resolution:** Added `.github/workflows/ci.yml` for pull requests and pushes to `main`/`development`. It uses locked installs, backend lint with a fixed warning ceiling, backend unit tests, frontend lint/build, expiring dependency-audit exceptions, policy self-tests, and a clean MySQL 8.4 migration job.
+- **Remaining repository-admin check:** After push, verify the first workflow run and configure GitHub branch protection/rulesets to require all four CI job checks before merge.
 - **Acceptance criteria:** A PR cannot merge when any required quality job fails; branch protection requires the checks.
 - **Estimated size:** M
 - **Dependencies:** GitHub permissions; test database strategy; vulnerability exception policy.
@@ -484,7 +485,8 @@ The live tests were not run during this audit because they require a running bac
 - [x] Remove applicable high/critical production dependency findings and formally record non-applicable scanner findings.
 - [x] Establish clean, versioned database migrations and a tested baseline.
 - [ ] Remove/rotate any potentially real data or credentials from Git history.
-- [ ] Build required CI and protected-branch checks.
+- [x] Build pull-request CI quality, dependency-security, and clean-migration checks.
+- [ ] Require the CI checks through GitHub branch protection/rulesets.
 
 ### Infrastructure
 
@@ -606,8 +608,15 @@ Deploy production observability, encrypted backups, restore drills, runbooks, in
 | Frontend dependency remediation after P1-6 | Router 7.18.2, PostCSS 8.5.25, and DOMPurify 3.4.12 installed; only the documented non-applicable RSC-action Router advisory remains |
 | Backend verification after P1-6 | Lint passed with 0 errors and 65 existing warnings; 19 unit tests passed |
 | Frontend verification after P1-6 | Lint and production build passed; existing 575.79 kB Owner Portal chunk warning remains |
+| P1-7 provider TLS verification | Passed by the team with the Aiven CA; production connection succeeds and fail-closed behavior is verified |
+| P1-8 audit-policy self-tests | Passed: 5 tests cover the accepted Router finding, new findings, unrelated Router findings, expiry, and registry errors |
+| Backend verification after P1-8 | Lint passed at the 65-warning ceiling; all 25 unit tests passed |
+| Frontend verification after P1-8 | Lint and production build passed; existing 575.79 kB Owner Portal chunk warning remains |
 
-The first sandboxed npm audit attempts could not reach the registry. They were repeated with approved network access and produced the vulnerability results above.
+The P1-8 live npm audit request could not be run in this local environment
+because external dependency metadata egress was not approved. GitHub CI will run
+the policy against npm's advisory service after push. The policy parser itself
+was verified locally with deterministic fixtures.
 
 ## 11. Areas Inspected
 

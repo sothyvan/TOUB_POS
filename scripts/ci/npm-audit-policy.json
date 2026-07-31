@@ -1,0 +1,25 @@
+{
+  "backend": {
+    "minimumSeverity": "high",
+    "exceptions": []
+  },
+  "frontend": {
+    "minimumSeverity": "high",
+    "exceptions": [
+      {
+        "name": "react-router",
+        "severity": "high",
+        "expiresOn": "2026-08-31",
+        "advisoryTitlePattern": "(?=.*react router)(?=.*csrf)(?=.*action)"
+      },
+      {
+        "name": "react-router-dom",
+        "severity": "high",
+        "expiresOn": "2026-08-31",
+        "allowedViaPackages": [
+          "react-router"
+        ]
+      }
+    ]
+  }
+}

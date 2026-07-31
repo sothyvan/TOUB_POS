@@ -987,8 +987,21 @@ Update this file after every meaningful implementation change.
     strict verification options.
   - Backend lint passes with zero errors and 65 existing warnings; all 25
     backend unit tests pass.
-  - Live provider verification remains a deployment task because the real
-    provider CA is intentionally not stored in the repository.
+  - The team installed the Aiven provider CA and verified the production
+    connection and fail-closed behavior. The CA remains outside Git.
+- **Implemented production audit P1-8 pull-request CI gates**:
+  - Added GitHub Actions checks for deterministic backend/frontend installs,
+    backend lint/unit tests, frontend lint/build, and a clean MySQL 8.4
+    migration/status run.
+  - Added a high/critical production dependency gate with a narrow, expiring
+    exception for the documented React Router RSC Action finding.
+  - Added five database-free policy tests proving new, unrelated, expired, and
+    registry-error findings fail the gate.
+  - Local policy tests, backend lint/tests, and frontend lint/build pass. The
+    existing 65 backend warnings and 575.79 kB Owner Portal chunk warning remain
+    bounded and visible.
+  - The first GitHub workflow run and required branch-protection checks must be
+    enabled/verified after push by a repository administrator.
 
 ## Next Up
 
@@ -1002,10 +1015,11 @@ Update this file after every meaningful implementation change.
   - P1-5 managed production migrations, rollback controls, and restore drill are implemented and verified.
   - P1-6 applicable production dependency vulnerabilities are remediated; bounded scanner exceptions are documented and time-limited.
   - Current production recommendation remains No-Go until the remaining P1 security, reliability, dependency, CI, and operational controls are fixed and verified.
-  - P1-7 verified database TLS is implemented in code. Before deployment,
-    install the provider CA and prove correct-CA success plus wrong-CA/hostname
-    failure against the production-like database.
-  - Next repository priority: P1-8 pull-request CI quality and security gates.
+  - P1-7 verified database TLS is implemented and provider-verified.
+  - P1-8 CI gates are implemented. After push, verify the workflow and require
+    its four checks through branch protection.
+  - Next repository priority: P1-9 deterministic integration and browser E2E
+    coverage for highest-risk workflows.
   - Follow the audit's phased P0/P1 plan only after team review and approval.
 
 - Post-Phase 6 Operations & Security Hardening.
