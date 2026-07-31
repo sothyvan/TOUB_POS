@@ -170,6 +170,10 @@ jobs:
       KHQR_ENABLED: "false"
       KHQR_BACKGROUND_CHECK_ENABLED: "false"
       TELEGRAM_DISPATCH_WORKER_ENABLED: "false"
+      TRUST_PROXY_HOPS: 1
+      RATE_LIMIT_REDIS_URL: redis://127.0.0.1:6379
+      RATE_LIMIT_REDIS_PREFIX: toub-pos:ci-integration
+      TEST_RATE_LIMIT_REDIS_URL: redis://127.0.0.1:6379
     services:
       mysql:
         image: mysql:8.4
@@ -180,6 +184,15 @@ jobs:
           - 3306:3306
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci-root-password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=10
