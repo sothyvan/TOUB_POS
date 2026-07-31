@@ -68,7 +68,7 @@ jobs:
         run: npm ci
 
       - name: Lint backend
-        run: npm run lint -- --max-warnings 65
+        run: npm run lint -- --max-warnings 64
 
       - name: Run backend unit tests
         run: npm test
@@ -246,15 +246,50 @@ jobs:
           cat "$RUNNER_TEMP/toub-backend.log"
           exit 1
 
+      - name: Verify liveness and readiness contracts
+        run: |
+          live_response="$(curl --fail --silent http://127.0.0.1:3000/api/health/live)"
+          ready_response="$(curl --fail --silent http://127.0.0.1:3000/api/health/ready)"
+          node -e "const value=JSON.parse(process.argv[1]); if(value.status !== 'alive') process.exit(1)" "$live_response"
+          node -e "const value=JSON.parse(process.argv[1]); if(value.status !== 'ready' || value.checks?.database !== 'available') process.exit(1)" "$ready_response"
+
       - name: Run backend live integration tests
         working-directory: backend
         run: npm run test:live
+
+      - name: Verify database loss affects readiness only
+        run: |
+          mysql_container="$(docker ps --filter 'ancestor=mysql:8.4' --format '{{.ID}}' | head -n 1)"
+          test -n "$mysql_container"
+          docker stop "$mysql_container"
+          for attempt in {1..10}; do
+            ready_status="$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:3000/api/health/ready)"
+            if [ "$ready_status" = "503" ]; then
+              break
+            fi
+            sleep 1
+          done
+          test "$ready_status" = "503"
+          live_response="$(curl --fail --silent http://127.0.0.1:3000/api/health/live)"
+          node -e "const value=JSON.parse(process.argv[1]); if(value.status !== 'alive') process.exit(1)" "$live_response"
 
       - name: Stop backend API
         if: always()
         run: |
           if [ -f "$RUNNER_TEMP/toub-backend.pid" ]; then
-            kill "$(cat "$RUNNER_TEMP/toub-backend.pid")" || true
+            backend_pid="$(cat "$RUNNER_TEMP/toub-backend.pid")"
+            if kill -0 "$backend_pid" 2>/dev/null; then
+              kill "$backend_pid"
+              for attempt in {1..30}; do
+                if ! kill -0 "$backend_pid" 2>/dev/null; then
+                  grep --quiet '"event":"shutdown_completed"' "$RUNNER_TEMP/toub-backend.log"
+                  exit 0
+                fi
+                sleep 1
+              done
+              cat "$RUNNER_TEMP/toub-backend.log"
+              exit 1
+            fi
           fi
 
       - name: Upload backend log on failure
@@ -357,7 +392,19 @@ jobs:
         if: always()
         run: |
           if [ -f "$RUNNER_TEMP/toub-e2e-backend.pid" ]; then
-            kill "$(cat "$RUNNER_TEMP/toub-e2e-backend.pid")" || true
+            backend_pid="$(cat "$RUNNER_TEMP/toub-e2e-backend.pid")"
+            if kill -0 "$backend_pid" 2>/dev/null; then
+              kill "$backend_pid"
+              for attempt in {1..30}; do
+                if ! kill -0 "$backend_pid" 2>/dev/null; then
+                  grep --quiet '"event":"shutdown_completed"' "$RUNNER_TEMP/toub-e2e-backend.log"
+                  exit 0
+                fi
+                sleep 1
+              done
+              cat "$RUNNER_TEMP/toub-e2e-backend.log"
+              exit 1
+            fi
           fi
 
       - name: Upload browser diagnostics on failure

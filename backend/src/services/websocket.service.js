@@ -490,3 +490,17 @@ export function getWebSocketConnectionStats() {
     socketCount,
   };
 }
+
+export async function closeWebSocketServer() {
+  const server = ioServer;
+  ioServer = null;
+
+  if (server) {
+    await new Promise((resolve) => server.close(resolve));
+  }
+
+  userSockets.clear();
+  cashierSockets.clear();
+  managementSockets.clear();
+  deviceSockets.clear();
+}

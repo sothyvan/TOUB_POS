@@ -86,10 +86,33 @@ export const swaggerDocument = {
     paths: {
         '/api/health': {
             get: {
-                summary: 'Server health check',
+                summary: 'Compatibility readiness check',
+                description: 'Returns 200 only after startup completes and MySQL responds within the configured readiness timeout. Returns 503 while starting, draining, or database-unavailable.',
                 security: [],
                 responses: {
-                    200: { description: 'API is healthy' }
+                    200: { description: 'API is ready for business traffic' },
+                    503: { description: 'API is not ready for business traffic' }
+                }
+            }
+        },
+        '/api/health/live': {
+            get: {
+                summary: 'Process liveness check',
+                description: 'Reports whether the Node process can answer HTTP. It does not test MySQL and must not be used to route business traffic.',
+                security: [],
+                responses: {
+                    200: { description: 'Node process is alive' }
+                }
+            }
+        },
+        '/api/health/ready': {
+            get: {
+                summary: 'Dependency-aware readiness check',
+                description: 'Returns 200 only after startup completes and MySQL responds within the configured readiness timeout. Database error details are not returned.',
+                security: [],
+                responses: {
+                    200: { description: 'API is ready for business traffic' },
+                    503: { description: 'API is starting, draining, or MySQL is unavailable' }
                 }
             }
         },
