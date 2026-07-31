@@ -50,6 +50,7 @@
 ### Frontend Dependency Direction
 
 - Route entry points in `app/` compose pages and providers; they do not contain business logic.
+- Owner/Manager feature tabs are lazy-loaded at their existing feature boundaries. The shared management shell remains immediate, while dashboard, catalog, stalls, staff, reports, and financial settings load only when selected. Production builds enforce separate size budgets for the Owner Portal entry and tab chunks.
 - Feature components may import shared UI, hooks, services, utilities, and components from another feature only when the workflow genuinely crosses feature boundaries, such as reports opening the shared payment receipt.
 - Shared layout and theme modules must remain domain-neutral and must not import cashier, catalog, staff, stall, or report business components.
 - Feature files should not be moved back into the flat `components/` directory. New feature-specific UI belongs under the corresponding `features/<feature>/components/` folder.

@@ -1,17 +1,19 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
-import OwnerDashboard from './OwnerDashboard';
-import MenuCatalog from '../../catalog/components/MenuCatalog';
-import StallOwner from '../../stalls/components/StallOwner';
-import OrderHistory from '../../reports/components/OrderHistory';
-import UserOwner from '../../staff/components/UserOwner';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import Icon from '../../../components/ui/Icon';
+import LoadingState from '../../../components/ui/LoadingState';
 import OwnerSidebar from './OwnerSidebar';
 import OwnerHeader from './OwnerHeader';
 import ThemeToggle from '../../../shared/theme/ThemeToggle';
-import FinancialSettings from './FinancialSettings';
+
+const OwnerDashboard = lazy(() => import('./OwnerDashboard'));
+const MenuCatalog = lazy(() => import('../../catalog/components/MenuCatalog'));
+const StallOwner = lazy(() => import('../../stalls/components/StallOwner'));
+const OrderHistory = lazy(() => import('../../reports/components/OrderHistory'));
+const UserOwner = lazy(() => import('../../staff/components/UserOwner'));
+const FinancialSettings = lazy(() => import('./FinancialSettings'));
 
 const notificationToast = Swal.mixin({
   toast: true,
@@ -248,6 +250,14 @@ export default function OwnerWorkspace({
 
         <main className="flex-1 p-[clamp(18px,2.4vw,30px)] overflow-y-auto max-[768px]:p-4 flex flex-col gap-6">
         {/* Tab Subcomponents */}
+        <Suspense
+          fallback={(
+            <LoadingState
+              className="min-h-64 rounded-lg border border-ui-border bg-ui-surface"
+              label="Loading management workspace..."
+            />
+          )}
+        >
         <div className="flex-1">
           {visibleOwnerTab === 'dashboard' && <OwnerDashboard orders={orders} />}
 
@@ -319,6 +329,7 @@ export default function OwnerWorkspace({
             />
           )}
         </div>
+        </Suspense>
       </main>
       </div>
 

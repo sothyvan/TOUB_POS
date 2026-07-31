@@ -47,6 +47,26 @@ async function loginAsOwner(page) {
   await expect(page.getByRole('heading', { name: 'Business Overview' })).toBeVisible();
 }
 
+async function verifyOwnerLazyTabs(page) {
+  await page.getByRole('button', { name: 'Menu & Catalog', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Add New Product', exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Stall Management', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Add Location', exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Staff Management', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Staff List', exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Sales Reports', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Export CSV', exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Financial Settings', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Currency and cash settlement' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Business Overview' })).toBeVisible();
+}
+
 test('owner session restores after refresh and logout protects management routes', async ({ page }) => {
   await page.goto('/owner-portal');
 
@@ -54,6 +74,7 @@ test('owner session restores after refresh and logout protects management routes
   await expect(page.getByRole('heading', { name: 'Management Portal Login' })).toBeVisible();
 
   await loginAsOwner(page);
+  await verifyOwnerLazyTabs(page);
 
   await page.reload();
   await expect(page).toHaveURL(/\/owner-portal$/);

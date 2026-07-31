@@ -1182,8 +1182,8 @@ Update this file after every meaningful implementation change.
   - P1-8 CI gates and branch protection are implemented and verified.
   - P1-9 disposable backend integration CI is implemented, passing, and
     required by branch protection.
-  - P1-9 critical browser E2E coverage is implemented; verify its first GitHub
-    run and add `Browser E2E` as the sixth required check.
+  - P1-9 critical browser E2E coverage is implemented, passing, and required by
+    `main` branch protection.
   - P1-10 versioned cart and in-progress checkout recovery is implemented on
     `p1-10-checkout-recovery`. Cart records are cashier/device scoped, expire
     after 12 hours, and restore only product IDs, quantities, and notes before
@@ -1262,13 +1262,19 @@ Update this file after every meaningful implementation change.
     Owner/Manager, ImageKit-upload, and Socket.IO flows in disposable browser CI,
     then configure production docs credentials only if production Swagger is
     intentionally required.
-  - P2-8 frontend render recovery is implemented for review. A root boundary
+  - P2-8 frontend render recovery is merged. A root boundary
     outside all providers shows a safe retry/reload screen with an `ERR-...`
     reference, retains cart and pending-checkout recovery records, and emits
-    only sanitized route/component metadata. Thirteen frontend unit tests and
-    the focused forced-render Playwright scenario pass locally. Connecting the
-    structured browser event to the selected production monitoring destination
-    remains a deployment follow-up.
+    only sanitized route/component metadata. The focused forced-render
+    Playwright scenario passes and the event is ready for production monitoring
+    integration.
+  - P2-9 Owner Portal code splitting is implemented for review. Build-manifest
+    measurement reduced the route entry from 578.77 kB (158.83 kB gzip) to
+    96.94 kB (26.88 kB gzip), while dashboard, catalog, Stall, reports, staff,
+    and financial settings now load as separate tab chunks. The largest tab is
+    the 357.95 kB Recharts dashboard, so the production build no longer emits a
+    chunk warning. A tested build plugin enforces 150 KiB entry and 450 KiB tab
+    budgets; 16 frontend unit tests, lint, and the production build pass.
   - Follow the audit's phased P0/P1 plan only after team review and approval.
 
 - Post-Phase 6 Operations & Security Hardening.

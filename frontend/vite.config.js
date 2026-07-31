@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { frontendBundleBudgetPlugin } from './config/bundle-budget.js';
 import { frontendCspPlugin } from './config/csp.js';
 
 // https://vite.dev/config/
@@ -11,6 +12,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       frontendCspPlugin({ apiBaseUrl, isDevelopment: mode === 'development' }),
+      frontendBundleBudgetPlugin(),
       react(),
       tailwindcss(),
     ],
