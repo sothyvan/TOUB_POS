@@ -192,13 +192,14 @@ These controls should be preserved during remediation.
 - **Estimated size:** M
 - **Dependencies:** GitHub permissions; test database strategy; vulnerability exception policy.
 
-#### P1-9. Highest-risk workflows lack automated end-to-end and failure-path coverage - Backend integration implemented; browser E2E pending
+#### P1-9. Highest-risk workflows lack automated end-to-end and failure-path coverage - Critical integration and browser journeys implemented; CI verification pending
 
 - **Severity:** P1
 - **Category:** Testing
 - **Business impact:** Checkout retries, payment partial failures, tenant isolation, role boundaries, device reassignment, browser refresh, and kitchen delivery can regress undetected.
 - **Progress:** CI now provisions disposable MySQL 8.4, applies migrations, seeds deterministic data, starts the API with external payment and Telegram workers disabled, and runs the existing auth-refresh, credential-policy, and order-flow live suites. These suites cover role and credential boundaries, refresh rotation/reuse, checkout totals and idempotency, cash confirmation, product/stall isolation, device reassignment, histories, and Telegram outbox creation.
-- **Remaining work:** `frontend/package.json` still has no automated UI test script and no browser test suite is committed. Add deterministic browser coverage for login/session refresh, cashier checkout recovery, management role boundaries, and critical responsive workflows, then add forced provider/database timeout and recovery cases where practical.
+- **Browser progress:** Playwright now covers management login, refresh-session restoration, role and logout guards, terminal registration, Cashier PIN login, stall-scoped product selection, backend cash checkout, paid receipt, and order-history visibility. CI runs Chromium against separate disposable MySQL/API/frontend instances with external KHQR and Telegram workers disabled.
+- **Remaining work:** Verify the first browser CI run and require it through branch protection. Forced database/provider timeout recovery, responsive browser journeys, and deeper management permission scenarios remain valuable follow-up coverage.
 - **Acceptance criteria:** CI runs deterministic integration and E2E suites with forced timeout/retry/concurrency cases; failures demonstrate that money and scope invariants are asserted.
 - **Estimated size:** XL
 - **Dependencies:** Migration baseline; test fixtures; CI service containers; P0 API contracts.
@@ -612,7 +613,8 @@ Deploy production observability, encrypted backups, restore drills, runbooks, in
 | Backend verification after P1-8 | Lint passed at the 65-warning ceiling; all 25 unit tests passed |
 | Frontend verification after P1-8 | Lint and production build passed; existing 575.79 kB Owner Portal chunk warning remains |
 | P1-8 GitHub enforcement | First pull-request workflow passed all four checks; teammate review and required checks are enforced on `main` |
-| P1-9 backend integration CI | First run correctly caught missing `products.is_active`/`products.is_deleted` migration columns during deterministic seeding; forward migration `202607310003` added and rerun pending |
+| P1-9 backend integration CI | First run caught missing `products.is_active`/`products.is_deleted`; migration `202607310003` fixed the drift, the rerun passed, and the check is required on `main` |
+| P1-9 browser E2E | Playwright configuration, two critical browser journeys, and isolated CI job added; lint/build and test discovery pass locally, first full GitHub run pending |
 
 The P1-8 live npm audit request could not be run in this local environment
 because external dependency metadata egress was not approved. GitHub CI will run

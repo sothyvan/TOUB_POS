@@ -13,6 +13,7 @@ installation through `npm ci`.
 | `Frontend quality` | Frontend lint/build failures and unapproved high/critical production dependency findings |
 | `Clean database migration` | Migrations that cannot build a clean MySQL 8.4 database or leave migration status inconsistent |
 | `Backend integration` | Failures in live authentication, credential-policy, role/stall isolation, checkout, idempotency, payment, and order-history behavior |
+| `Browser E2E` | Regressions in management authentication/session restoration, terminal registration, Cashier PIN login, cash checkout, receipts, and browser route guards |
 
 The backend currently has 65 known lint warnings. CI uses
 `--max-warnings 65`, so existing warnings remain visible and any increase fails
@@ -45,6 +46,7 @@ open **Settings > Branches > Branch protection rules** (or Rulesets), protect
 - `Frontend quality`
 - `Clean database migration`
 - `Backend integration`
+- `Browser E2E`
 
 Apply the same rule to `development` if direct pushes should also be blocked.
 Do not allow required checks to be skipped for normal team merges.
@@ -92,4 +94,18 @@ run:
 ```bash
 cd backend
 npm run test:live
+```
+
+The browser suite uses Playwright Chromium and a separate disposable database
+in CI. It starts the Vite frontend against the isolated API and keeps KHQR and
+Telegram delivery disabled. Failed runs retain screenshots, traces, videos,
+the HTML report, and the backend log for seven days.
+
+Local browser execution must also target a disposable seeded database. With
+that backend already running on port 3000:
+
+```bash
+cd frontend
+npx playwright install chromium
+npm run test:e2e
 ```
