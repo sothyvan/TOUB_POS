@@ -181,25 +181,24 @@ These controls should be preserved during remediation.
 - **Estimated size:** S
 - **Dependencies:** Hosting provider CA and TLS documentation.
 
-#### P1-8. No CI quality or security gate exists - Implemented; branch protection pending
+#### P1-8. No CI quality or security gate exists - Resolved
 
 - **Severity:** P1
 - **Category:** Release engineering
 - **Business impact:** Broken builds, lint regressions, failing tests, vulnerable dependencies, or migration mistakes can reach the deployment branch without automated rejection.
 - **Former evidence:** `.github/workflows/` previously contained only scheduled backup/keep-alive jobs.
-- **Resolution:** Added `.github/workflows/ci.yml` for pull requests and pushes to `main`/`development`. It uses locked installs, backend lint with a fixed warning ceiling, backend unit tests, frontend lint/build, expiring dependency-audit exceptions, policy self-tests, and a clean MySQL 8.4 migration job.
-- **Remaining repository-admin check:** After push, verify the first workflow run and configure GitHub branch protection/rulesets to require all four CI job checks before merge.
+- **Resolution:** Added `.github/workflows/ci.yml` for pull requests and pushes to `main`/`development`. It uses locked installs, backend lint with a fixed warning ceiling, backend unit tests, frontend lint/build, expiring dependency-audit exceptions, policy self-tests, and a clean MySQL 8.4 migration job. The first pull-request run passed and `main` branch protection requires the checks and teammate review.
 - **Acceptance criteria:** A PR cannot merge when any required quality job fails; branch protection requires the checks.
 - **Estimated size:** M
 - **Dependencies:** GitHub permissions; test database strategy; vulnerability exception policy.
 
-#### P1-9. Highest-risk workflows lack automated end-to-end and failure-path coverage
+#### P1-9. Highest-risk workflows lack automated end-to-end and failure-path coverage - Backend integration implemented; browser E2E pending
 
 - **Severity:** P1
 - **Category:** Testing
 - **Business impact:** Checkout retries, payment partial failures, tenant isolation, role boundaries, device reassignment, browser refresh, and kitchen delivery can regress undetected.
-- **Evidence:** Backend default tests cover 14 focused database-free cases. Live tests are separate opt-in scripts in `backend/package.json:17-19`. `frontend/package.json:7-10` has no test script. No browser test suite is committed.
-- **Recommended remediation:** Build an isolated disposable MySQL integration environment and automate auth/RBAC, checkout idempotency, payment locking, owner isolation, device reassignment, Telegram outbox, and core browser journeys.
+- **Progress:** CI now provisions disposable MySQL 8.4, applies migrations, seeds deterministic data, starts the API with external payment and Telegram workers disabled, and runs the existing auth-refresh, credential-policy, and order-flow live suites. These suites cover role and credential boundaries, refresh rotation/reuse, checkout totals and idempotency, cash confirmation, product/stall isolation, device reassignment, histories, and Telegram outbox creation.
+- **Remaining work:** `frontend/package.json` still has no automated UI test script and no browser test suite is committed. Add deterministic browser coverage for login/session refresh, cashier checkout recovery, management role boundaries, and critical responsive workflows, then add forced provider/database timeout and recovery cases where practical.
 - **Acceptance criteria:** CI runs deterministic integration and E2E suites with forced timeout/retry/concurrency cases; failures demonstrate that money and scope invariants are asserted.
 - **Estimated size:** XL
 - **Dependencies:** Migration baseline; test fixtures; CI service containers; P0 API contracts.
@@ -486,7 +485,7 @@ The live tests were not run during this audit because they require a running bac
 - [x] Establish clean, versioned database migrations and a tested baseline.
 - [ ] Remove/rotate any potentially real data or credentials from Git history.
 - [x] Build pull-request CI quality, dependency-security, and clean-migration checks.
-- [ ] Require the CI checks through GitHub branch protection/rulesets.
+- [x] Require the initial CI checks through GitHub branch protection/rulesets.
 
 ### Infrastructure
 
@@ -522,7 +521,7 @@ The live tests were not run during this audit because they require a running bac
 
 - [ ] Run clean `npm ci` in both apps.
 - [ ] Run backend lint with zero errors and an agreed warning policy.
-- [ ] Run backend unit, integration, and live tests on a disposable database.
+- [x] Run backend unit, integration, and live tests on a disposable database.
 - [ ] Run frontend lint, unit tests, build, and E2E tests.
 - [ ] Run dependency, secret, and license scans.
 - [ ] Run concurrency, load, accessibility, browser, and low-network tests.
@@ -563,7 +562,7 @@ Deploy production observability, encrypted backups, restore drills, runbooks, in
    rotating HttpOnly refresh sessions, CSRF protection, and reuse detection are
    implemented and live/browser-tested.
 8. **Completed:** Paid-order Telegram dispatch uses a transactional outbox, locked worker claims, bounded retry, restart recovery, and existing role-scoped manual retry visibility.
-9. Add CI with clean installs, lint, tests, build, audit policy, and disposable MySQL integration tests.
+9. **Completed:** Add CI with clean installs, lint, tests, build, audit policy, and disposable MySQL integration tests.
 10. Define and test production operations: verified DB TLS, readiness, graceful shutdown, logging/alerts, encrypted backups, and restore.
 
 ## 10. Commands and Results
@@ -612,6 +611,8 @@ Deploy production observability, encrypted backups, restore drills, runbooks, in
 | P1-8 audit-policy self-tests | Passed: 5 tests cover the accepted Router finding, new findings, unrelated Router findings, expiry, and registry errors |
 | Backend verification after P1-8 | Lint passed at the 65-warning ceiling; all 25 unit tests passed |
 | Frontend verification after P1-8 | Lint and production build passed; existing 575.79 kB Owner Portal chunk warning remains |
+| P1-8 GitHub enforcement | First pull-request workflow passed all four checks; teammate review and required checks are enforced on `main` |
+| P1-9 backend integration CI | First run correctly caught missing `products.is_active`/`products.is_deleted` migration columns during deterministic seeding; forward migration `202607310003` added and rerun pending |
 
 The P1-8 live npm audit request could not be run in this local environment
 because external dependency metadata egress was not approved. GitHub CI will run

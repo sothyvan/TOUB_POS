@@ -147,3 +147,98 @@ jobs:
       - name: Verify migration status
         working-directory: backend
         run: npm run db:migrate:status
+
+  backend-integration:
+    name: Backend integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_ENV: development
+      PORT: 3000
+      FRONTEND_ORIGIN: http://localhost:5173
+      JWT_SECRET: ci-only-jwt-secret
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: ci-root-password
+      DB_NAME: toub_pos_integration
+      PLATFORM_ADMIN_USERNAME: platform_admin
+      PLATFORM_ADMIN_PASSWORD: ci-platform-password
+      PLATFORM_ADMIN_ROLE: platform_admin
+      TEST_PLATFORM_ADMIN_USERNAME: platform_admin
+      TEST_PLATFORM_ADMIN_PASSWORD: ci-platform-password
+      KHQR_ENABLED: "false"
+      KHQR_BACKGROUND_CHECK_ENABLED: "false"
+      TELEGRAM_DISPATCH_WORKER_ENABLED: "false"
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root-password
+          MYSQL_DATABASE: toub_pos_integration
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci-root-password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install locked backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Apply all migrations
+        working-directory: backend
+        run: npm run db:migrate
+
+      - name: Seed deterministic integration data
+        working-directory: backend
+        run: npm run seed
+
+      - name: Start backend API
+        working-directory: backend
+        run: |
+          node src/server.js > "$RUNNER_TEMP/toub-backend.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/toub-backend.pid"
+
+      - name: Wait for backend health
+        run: |
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:3000/api/health > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/toub-backend.log"
+          exit 1
+
+      - name: Run backend live integration tests
+        working-directory: backend
+        run: npm run test:live
+
+      - name: Stop backend API
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/toub-backend.pid" ]; then
+            kill "$(cat "$RUNNER_TEMP/toub-backend.pid")" || true
+          fi
+
+      - name: Upload backend log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-integration-log
+          path: ${{ runner.temp }}/toub-backend.log
+          retention-days: 7

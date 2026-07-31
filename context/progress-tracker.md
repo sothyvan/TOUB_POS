@@ -1000,11 +1000,27 @@ Update this file after every meaningful implementation change.
   - Local policy tests, backend lint/tests, and frontend lint/build pass. The
     existing 65 backend warnings and 575.79 kB Owner Portal chunk warning remain
     bounded and visible.
-  - The first GitHub workflow run and required branch-protection checks must be
-    enabled/verified after push by a repository administrator.
+  - The first pull-request workflow passed all four checks, and `main` branch
+    protection now requires the checks and teammate review.
   - The first GitHub run exposed a Windows-only database TLS test-path
     assertion. The test now uses Node's platform-aware path resolver so the
     same CA behavior is verified on Windows development and Linux CI runners.
+- **Started production audit P1-9 automated integration coverage**:
+  - Added a separate `Backend integration` GitHub Actions job backed by a
+    disposable MySQL 8.4 service and CI-only credentials.
+  - The job applies all migrations, loads deterministic fixtures, starts the
+    API, waits for `/api/health`, and runs the existing auth-refresh,
+    credential-model, and order-flow live suites.
+  - KHQR/background payment checks and Telegram dispatch are disabled so the
+    integration job cannot contact external providers.
+  - Backend logs are uploaded for seven days only after a failed integration
+    run.
+  - The first GitHub run exposed a managed-schema drift: the Product model and
+    repositories use `products.is_active` and `products.is_deleted`, but the
+    baseline migration did not create them. Added forward migration
+    `202607310003-add-products-lifecycle-columns.js` and synchronized the
+    canonical SQL schema. The integration rerun and addition of this fifth
+    required check to branch protection remain pending.
 
 ## Next Up
 
@@ -1019,10 +1035,11 @@ Update this file after every meaningful implementation change.
   - P1-6 applicable production dependency vulnerabilities are remediated; bounded scanner exceptions are documented and time-limited.
   - Current production recommendation remains No-Go until the remaining P1 security, reliability, dependency, CI, and operational controls are fixed and verified.
   - P1-7 verified database TLS is implemented and provider-verified.
-  - P1-8 CI gates are implemented. After push, verify the workflow and require
-    its four checks through branch protection.
-  - Next repository priority: P1-9 deterministic integration and browser E2E
-    coverage for highest-risk workflows.
+  - P1-8 CI gates and branch protection are implemented and verified.
+  - P1-9 disposable backend integration CI is implemented; verify its first
+    GitHub run and add `Backend integration` as a fifth required check.
+  - Next repository priority: P1-9 deterministic browser E2E coverage for
+    highest-risk workflows.
   - Follow the audit's phased P0/P1 plan only after team review and approval.
 
 - Post-Phase 6 Operations & Security Hardening.
