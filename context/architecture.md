@@ -15,6 +15,28 @@
 | Product Media | ImageKit              | Browser-direct product photo uploads and delivery |
 | Abuse Controls | Redis/Valkey + express-rate-limit | Shared production authentication counters |
 
+### Approved First Deployment Baseline
+
+- Render is the approved first application host. The repository-root
+  `render.yaml` defines a global static frontend, one Starter Node web service
+  in Singapore for Express/Socket.IO/the Telegram dispatch worker, and one
+  private Starter Render Key Value instance for shared authentication limits.
+- MySQL remains on Aiven and must use the verified provider CA. Render receives
+  database and integration secrets only through its environment configuration;
+  no production secret is stored in the Blueprint or frontend build variables.
+- The API runs managed migrations as a Render pre-deploy command, starts only
+  when the migration ledger and dependencies are ready, and exposes
+  `/api/health/ready` as the platform health check. Render's 20-second shutdown
+  allowance exceeds TouB's 15-second internal drain budget.
+- Keep one API instance for the first deployment. Horizontal scaling remains
+  blocked until Socket.IO connection coordination is shared and verified. The
+  Telegram outbox is already durable in MySQL and may safely resume in the
+  single API process after restart.
+- This is a deployment configuration baseline, not evidence of a successful
+  deployment. Exact URLs, CORS/cookie behavior, proxy hops, Aiven TLS, service
+  logs, alerts, and the cash-to-kitchen-to-report journey require live
+  verification before launch.
+
 ## System Boundaries
 
 - `frontend/src/app/` — Application routing and route-protection composition.

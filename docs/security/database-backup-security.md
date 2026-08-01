@@ -49,6 +49,27 @@ Deleting the file in a new commit does not erase it from older commits. A
 repository administrator must coordinate a history rewrite after all affected
 credentials and device registrations are revoked.
 
+### Current remote verification (2026-08-01)
+
+A fresh mirror clone of `origin` confirmed that the sensitive path is absent
+from every normal remote branch and tag. Do not repeat the all-branch/tag
+force-push below against the current repository state.
+
+The blob remains reachable only through GitHub-managed pull-request refs for
+pull requests 1 through 8. Those refs cannot be removed by force-pushing the
+normal repository branches. A repository administrator must follow GitHub's
+sensitive-data removal process and ask GitHub Support to remove the affected
+cached pull-request views and references. After GitHub confirms removal, create
+another fresh mirror clone and require this command to produce no output:
+
+```bash
+git rev-list --objects --all | grep toubpos_db_backup_2026-07-13_23-10-21.sql
+```
+
+The original rewrite procedure is retained below as the recovery record. It
+must only be used if a future verification finds the path in a normal branch or
+tag again.
+
 1. Pause merges and notify every teammate.
 2. Remove any plaintext `db-backup-*` artifacts from previous GitHub Actions
    runs and restrict Actions access to trusted repository members.
@@ -144,9 +165,13 @@ re-encrypt old artifacts.
 - [x] Automated backup output encrypted without retained plaintext.
 - [x] Encrypted artifacts include a SHA-256 checksum.
 - [x] Scheduled workflow contains an isolated restore and migration-status drill.
-- [ ] Previous plaintext GitHub Actions backup artifacts deleted.
+- [x] No active plaintext GitHub Actions backup artifacts remain. A public API
+  inventory on 2026-08-01 found only three active `db-backup-*` artifacts, and
+  each run's workflow uploaded encrypted `.sql.gpg` output.
 - [ ] Affected user credentials, sessions, and device registrations reviewed and rotated.
-- [ ] Shared Git history rewritten and verified from a fresh clone.
+- [x] Normal remote branches and tags rewritten and verified from a fresh mirror clone.
+- [ ] GitHub-managed pull-request refs 1 through 8 and cached views removed through
+  GitHub's sensitive-data removal process, then verified from another fresh mirror.
 - [ ] All teammates re-cloned after the rewrite.
 - [ ] Updated encrypted backup workflow completed its first successful restore drill.
 - [x] Business RPO of 24 hours and RTO of 4 hours approved and recorded.

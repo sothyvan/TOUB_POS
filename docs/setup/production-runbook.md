@@ -36,6 +36,11 @@ merchant launch; complete the open release gates in
 Before release, confirm the pull request has passed every required check listed
 in [CI Quality And Security Gates](ci-quality-gates.md).
 
+The approved first-host implementation is documented in
+[Deploy TouB POS On Render](render-deployment.md). The provider guide supplies
+concrete Blueprint settings; this runbook remains authoritative for security,
+release, smoke-test, rollback, and go-live decisions.
+
 ## 3. Production Configuration
 
 Start from `backend/.env.example` and `frontend/.env.example`, but provide real
