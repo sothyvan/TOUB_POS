@@ -1,0 +1,113 @@
+services:
+  - type: keyvalue
+    name: toub-pos-rate-limit
+    plan: starter
+    region: singapore
+    ipAllowList: []
+    maxmemoryPolicy: noeviction
+
+  - type: web
+    name: toub-pos-api
+    runtime: node
+    plan: starter
+    region: singapore
+    branch: main
+    rootDir: backend
+    buildCommand: npm ci
+    preDeployCommand: npm run db:migrate
+    startCommand: npm start
+    healthCheckPath: /api/health/ready
+    maxShutdownDelaySeconds: 20
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: FRONTEND_ORIGIN
+        sync: false
+      - key: REPORT_TIMEZONE_OFFSET
+        value: "+07:00"
+      - key: READINESS_DATABASE_TIMEOUT_MS
+        value: "2000"
+      - key: SHUTDOWN_GRACE_PERIOD_MS
+        value: "15000"
+      - key: API_DOCS_ENABLED
+        value: "false"
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_PASSWORD_REQUIRED
+        value: "true"
+      - key: DB_NAME
+        sync: false
+      - key: DB_SSL_CA
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_EXPIRES_IN
+        value: 15m
+      - key: REFRESH_SESSION_EXPIRES_HOURS
+        value: "8"
+      - key: AUTH_COOKIE_SAME_SITE
+        value: none
+      - key: TRUST_PROXY_HOPS
+        sync: false
+      - key: RATE_LIMIT_REDIS_URL
+        fromService:
+          type: keyvalue
+          name: toub-pos-rate-limit
+          property: connectionString
+      - key: RATE_LIMIT_REDIS_PREFIX
+        value: toub-pos:production
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_WEBHOOK_SECRET
+        sync: false
+      - key: TELEGRAM_GROUP_CONNECTION_EXPIRY_MINUTES
+        value: "10"
+      - key: TELEGRAM_DISPATCH_WORKER_ENABLED
+        value: "true"
+      - key: TELEGRAM_DISPATCH_INTERVAL_MS
+        value: "2000"
+      - key: TELEGRAM_DISPATCH_BATCH_SIZE
+        value: "10"
+      - key: TELEGRAM_DISPATCH_MAX_ATTEMPTS
+        value: "5"
+      - key: TELEGRAM_DISPATCH_RETRY_BASE_MS
+        value: "5000"
+      - key: TELEGRAM_DISPATCH_LOCK_TIMEOUT_MS
+        value: "60000"
+      - key: TELEGRAM_API_TIMEOUT_MS
+        value: "10000"
+      - key: IMAGEKIT_PUBLIC_KEY
+        sync: false
+      - key: IMAGEKIT_PRIVATE_KEY
+        sync: false
+      - key: IMAGEKIT_URL_ENDPOINT
+        sync: false
+      - key: KHQR_ENABLED
+        value: "false"
+      - key: KHQR_BACKGROUND_CHECK_ENABLED
+        value: "false"
+
+  - type: web
+    name: toub-pos-web
+    runtime: static
+    branch: main
+    rootDir: frontend
+    buildCommand: npm ci && npm run deps:check && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false
+      - key: VITE_KHQR_ENABLED
+        value: "false"
+      - key: VITE_SHOW_DEMO_CREDENTIALS
+        value: "false"
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

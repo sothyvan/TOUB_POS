@@ -1240,6 +1240,33 @@ Update this file after every meaningful implementation change.
     including matching typography, spacing, buttons, and a deletion busy state.
   - Frontend lint, 19 unit tests, production build, and `git diff --check` pass.
 
+- **Implemented the approved first Render deployment foundation**:
+  - Added a repository-root Render Blueprint for a global Vite static site, one
+    Starter Node API service, and one private Starter Key Value instance. The
+    stateful services use Singapore, while Aiven remains the verified-TLS MySQL
+    provider.
+  - The API uses locked installs, managed pre-deploy migrations,
+    `/api/health/ready`, and a 20-second platform shutdown allowance around the
+    existing 15-second drain. The initial single-instance topology preserves
+    the current Socket.IO invariant while the durable Telegram outbox continues
+    in the API process.
+  - Secrets and provider/account values are prompted through Render, the JWT
+    signing secret is generated, the private Redis connection is injected from
+    Render Key Value, production API docs stay disabled, and both KHQR flags
+    remain false.
+  - Added a beginner-oriented Render deployment guide covering the two-pass URL
+    setup, Aiven TLS, cookie/CORS behavior, smoke tests, monitoring limits, and
+    rollback. The canonical runbook and documentation index link to it.
+  - Added two database-free Blueprint policy tests. YAML lint, repository-data
+    policy, backend lint at the 61 pre-existing warnings, all 73 backend unit
+    tests, frontend dependency-tree validation, frontend lint, all 19 frontend
+    unit tests, production build, CI policy self-tests, and `git diff --check`
+    pass.
+  - Live Render creation remains pending. Exact service URLs, trusted proxy
+    hops, environment secrets, Aiven connectivity, health/log notifications,
+    and the production-like cash-to-kitchen-to-report smoke test must be
+    verified in Render before this deployment gate is closed.
+
 ## Next Up
 
 - Production-readiness remediation:
@@ -1311,9 +1338,11 @@ Update this file after every meaningful implementation change.
     passphrase secret, and expire uploaded artifacts after 14 days. Policy and
     backup regression tests verify path blocking and plaintext cleanup.
   - The team reports completing P1-13 backup-secret, artifact, access-rotation,
-    and restore actions. Local verification still finds the removed dump in
-    `origin/main` history and several remote feature refs, so the coordinated
-    all-ref history rewrite and fresh-clone verification remain open.
+    and restore actions. A fresh 2026-08-01 mirror verification confirms the
+    removed dump is absent from normal remote branches and tags, so another
+    force-push is not required. The blob remains reachable through
+    GitHub-managed pull-request refs 1 through 8; GitHub sensitive-data removal
+    and a final fresh-mirror verification remain open.
   - P1-14 readiness/liveness separation and graceful shutdown is implemented on
     `p1-14-readiness-graceful-shutdown`. `/api/health/live` is process-only;
     `/api/health/ready` and compatibility `/api/health` require ready lifecycle

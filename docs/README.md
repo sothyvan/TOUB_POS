@@ -37,6 +37,7 @@ implementation records.
 | Entity relationship diagram | [ERD](database/erd.md) |
 | Local setup | [Getting Started](setup/getting-started.md) |
 | Production deployment and operations | [Production Runbook](setup/production-runbook.md) |
+| First Render deployment | [Deploy TouB POS On Render](setup/render-deployment.md) |
 | Pull-request quality gates | [CI Quality And Security Gates](setup/ci-quality-gates.md) |
 
 ## Source Of Truth
