@@ -258,6 +258,70 @@ All routes require authentication.
 | GET    | `/orders/mine`   | ✅   | Cashier | Fetch own orders               |
 | GET    | `/orders`        | ✅   | Owner / Manager | Fetch all orders               |
 
+## Operations — `/api/operations`
+
+All routes require authentication and are limited to Owners and Managers.
+
+| Method | Path | Auth | Role | Description |
+|--------|------|------|------|-------------|
+| GET | `/operations/telegram` | ✅ | Owner / Manager | Fetch the tenant-scoped Telegram kitchen-delivery health snapshot |
+
+### GET `/operations/telegram`
+
+Returns current actionable durable-job counts, successful-send counts and
+delivery latency from the configured recent window, and at most 20 safe
+actionable order references. Bounding historical successful sends keeps the
+polling query stable as order history grows. Managers are scoped to their Owner
+automatically. An optional positive integer `stall_id` narrows the snapshot to
+one non-deleted Stall owned by the same business; a foreign or deleted Stall
+returns `404`.
+
+The response deliberately excludes Telegram chat IDs, bot tokens, worker lock
+identities, raw provider responses, and raw failure messages. Only terminal
+`failed` jobs are marked `can_retry`; retries still use the existing
+`POST /orders/:id/retry-telegram` authorization and state checks.
+
+```json
+{
+  "success": true,
+  "data": {
+    "generated_at": "2026-08-05T12:00:00.000Z",
+    "scope": { "stall_id": null },
+    "health": "warning",
+    "status_counts": {
+      "pending": 1,
+      "processing": 0,
+      "retry": 1,
+      "failed": 0,
+      "sent": 20,
+      "total": 22
+    },
+    "alerts": {
+      "stale_pending": 0,
+      "stale_processing": 0,
+      "failed": 0,
+      "retrying": 1
+    },
+    "latency": {
+      "sample_count": 20,
+      "average_ms": 850,
+      "p95_ms": 1500,
+      "max_ms": 1800,
+      "target_ms": 2000
+    },
+    "actionable_jobs": []
+  }
+}
+```
+
+**Errors**
+
+| Code | Reason |
+|------|--------|
+| 400 | `stall_id` is not a positive integer |
+| 403 | Actor is not an Owner or Manager, or Manager owner scope is unavailable |
+| 404 | Requested Stall is not active in the authenticated business |
+
 ### POST `/orders`
 
 **Required header**

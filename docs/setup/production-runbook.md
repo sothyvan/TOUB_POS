@@ -140,6 +140,16 @@ Run this against production-like synthetic data before real use:
 - Alert on readiness failures, repeated `5xx`/`429` responses, Redis or MySQL
   connection failures, graceful-shutdown failures, and Telegram jobs reaching
   terminal failure.
+- Owners and Managers can inspect the tenant-scoped Kitchen delivery health
+  panel. It polls `GET /api/operations/telegram` every 30 seconds and refreshes
+  after management socket events. The API exposes safe failure categories and
+  bounded order references; it never exposes raw provider errors, worker lock
+  identities, Telegram chat IDs, or tokens.
+- Configure `TELEGRAM_MONITOR_PENDING_STALE_MS` and
+  `TELEGRAM_MONITOR_PROCESSING_STALE_MS` for the expected dispatch cadence, and
+  `TELEGRAM_MONITOR_LATENCY_WINDOW_HOURS` for the dashboard window. Defaults are
+  60 seconds, 60 seconds, and 24 hours. The in-product panel is operational
+  visibility, not a replacement for externally routed production alerts.
 - Keep the documented 24-hour recovery-point objective (RPO) and four-hour
   recovery-time objective (RTO), and retain evidence from scheduled restore
   drills.

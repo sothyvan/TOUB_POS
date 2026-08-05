@@ -490,4 +490,10 @@ export const api = {
       };
     },
   },
+  operations: {
+    async getTelegram(filters = {}) {
+      const res = await apiRequest(`/operations/telegram${buildQueryString(filters)}`);
+      return res.data;
+    },
+  },
 };

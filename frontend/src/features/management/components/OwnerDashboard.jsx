@@ -5,6 +5,7 @@ import Icon from '../../../components/ui/Icon';
 import { money } from '../../../utils/format';
 import { useSalesReport } from '../../../hooks/useSalesReport';
 import DateRangeDialog from '../../reports/components/DateRangeDialog';
+import TelegramOperationsPanel from './dashboard/TelegramOperationsPanel';
 
 function localDateValue(date = new Date()) {
   const year = date.getFullYear();
@@ -23,7 +24,7 @@ function isToday(dateValue) {
   return !Number.isNaN(date.getTime()) && date.toDateString() === new Date().toDateString();
 }
 
-export default function OwnerDashboard({ orders = [] }) {
+export default function OwnerDashboard({ orders = [], onRetryTelegramDispatch }) {
   const today = localDateValue();
   const [revenueRange, setRevenueRange] = useState('today');
   const [customDateRange, setCustomDateRange] = useState({ startDate: today, endDate: today });
@@ -148,6 +149,8 @@ export default function OwnerDashboard({ orders = [] }) {
           }
         />
       </div>
+
+      <TelegramOperationsPanel onRetryTelegramDispatch={onRetryTelegramDispatch} />
 
       <RevenueChart
         trendData={currentReport?.trend?.points || []}
