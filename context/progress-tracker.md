@@ -24,6 +24,7 @@ Update this file after every meaningful implementation change.
   - Owner/Manager Operations Watch for KHQR and Telegram ticket issues — **COMPLETE** ✅
   - Tenant-scoped Telegram outbox metrics, latency, and safe alerts — **COMPLETE** ✅
   - Order-to-kitchen stage latency diagnostics — **COMPLETE** ✅
+  - Non-blocking cash checkout order refresh — **COMPLETE** ✅
   - Safe KHQR close and resume flow — **COMPLETE** ✅
   - KHQR pre-checkout confirmation — **COMPLETE** ✅
   - Backend-backed UI auto-refresh fallback — **COMPLETE** ✅
@@ -123,6 +124,18 @@ Update this file after every meaningful implementation change.
     non-sensitive timing key that remains numeric after global log redaction,
     and worker pickup age is derived from due/claim timestamps captured before
     outcome persistence mutates the dispatch job.
+- Non-Blocking Cash Checkout Order Refresh — **COMPLETE** ✅
+  - A successful backend cash confirmation now updates the matching frontend
+    order snapshot immutably, clears checkout recovery state and the cart, and
+    returns the confirmed receipt without waiting for the full order-history request.
+  - The full order refresh still runs immediately in the background. A snapshot
+    started before payment confirmation is prevented from overwriting the local
+    paid state, and an unexpected refresh failure is reported separately without
+    changing the successful checkout result.
+  - Backend payment confirmation, trusted settlement values, idempotency, audit
+    logging, and durable Telegram dispatch behavior are unchanged.
+  - Added focused unit regressions for immutable replacement/insertion,
+    non-blocking completion, guarded refresh errors, and stale-snapshot rejection.
 - Telegram Cook Authorization Hardening — **COMPLETE** ✅
   - Added stall-scoped Telegram-only cook identities without adding a web-app cook role.
   - Owner/Manager can authorize, reactivate, list, and revoke individual cook identities from Stall Management.

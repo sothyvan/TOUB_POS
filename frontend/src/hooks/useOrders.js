@@ -9,6 +9,10 @@ import {
   writePendingCheckout,
 } from '../utils/pendingCheckout';
 import { createCashierRecoveryScope } from '../utils/cartRecovery';
+import {
+  applyOrderSnapshotIfCurrent,
+  completeCheckoutWithoutBlocking,
+} from '../utils/checkoutCompletion';
 import { useAutoRefresh } from './useAutoRefresh';
 
 /**
@@ -29,6 +33,7 @@ export function useOrders(isOnline, cart, clearCart, currentUser, options = {}) 
   const [recoveredCheckout, setRecoveredCheckout] = useState(null);
   const pendingCheckoutRef = useRef(null);
   const clearCartRef = useRef(clearCart);
+  const orderSnapshotGenerationRef = useRef(0);
   const recoveryScope = useMemo(
     () => createCashierRecoveryScope(currentUser),
     [currentUser],
@@ -46,10 +51,16 @@ export function useOrders(isOnline, cart, clearCart, currentUser, options = {}) 
     }
 
     try {
+      const requestGeneration = orderSnapshotGenerationRef.current;
       if (showSpinner) setLoading(true);
       setError(null);
       const data = await api.orders.getAll(currentUser?.role);
-      setOrders(data);
+      applyOrderSnapshotIfCurrent({
+        requestGeneration,
+        currentGeneration: orderSnapshotGenerationRef.current,
+        orders: data,
+        applySnapshot: setOrders,
+      });
       return data;
     } catch (err) {
       if (err.status === 0) {
@@ -220,11 +231,24 @@ export function useOrders(isOnline, cart, clearCart, currentUser, options = {}) 
         )
         : createdOrder;
 
-      await fetchOrders(false);
-      pendingCheckoutRef.current = null;
-      clearPendingCheckout(recoveryScope);
-      clearCart();
-      return finalOrder;
+      orderSnapshotGenerationRef.current += 1;
+
+      return completeCheckoutWithoutBlocking({
+        finalOrder,
+        updateOrders: setOrders,
+        clearPendingCheckout: () => {
+          pendingCheckoutRef.current = null;
+          clearPendingCheckout(recoveryScope);
+        },
+        clearCart,
+        refreshOrders: () => fetchOrders(false),
+        onRefreshError: (refreshError) => {
+          if (refreshError?.status === 0) {
+            onConnectionFailure?.();
+          }
+          setError(refreshError?.message || 'Failed to refresh orders.');
+        },
+      });
     } catch(err) {
       if (err.status === 0) {
         onConnectionFailure?.();
