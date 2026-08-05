@@ -15,6 +15,22 @@ export function enqueueTelegramDispatch(orderId, { transaction } = {}) {
   });
 }
 
+export function enqueuePaidTransitionTelegramDispatch(orderId, {
+  transaction,
+  dispatchJobModel = TelegramDispatchJob,
+  now = () => new Date(),
+} = {}) {
+  return dispatchJobModel.bulkCreate([{
+    order_id: orderId,
+    status: 'pending',
+    attempt_count: 0,
+    next_attempt_at: now(),
+  }], {
+    transaction,
+    updateOnDuplicate: ['order_id'],
+  });
+}
+
 export function findTelegramDispatchJobByOrderId(orderId, { transaction } = {}) {
   return TelegramDispatchJob.findOne({
     where: { order_id: orderId },
