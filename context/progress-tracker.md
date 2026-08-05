@@ -25,6 +25,7 @@ Update this file after every meaningful implementation change.
   - Tenant-scoped Telegram outbox metrics, latency, and safe alerts — **COMPLETE** ✅
   - Order-to-kitchen stage latency diagnostics — **COMPLETE** ✅
   - Non-blocking cash checkout order refresh — **COMPLETE** ✅
+  - Single-round-trip paid-order outbox enqueue — **COMPLETE** ✅
   - Safe KHQR close and resume flow — **COMPLETE** ✅
   - KHQR pre-checkout confirmation — **COMPLETE** ✅
   - Backend-backed UI auto-refresh fallback — **COMPLETE** ✅
@@ -136,6 +137,16 @@ Update this file after every meaningful implementation change.
     logging, and durable Telegram dispatch behavior are unchanged.
   - Added focused unit regressions for immutable replacement/insertion,
     non-blocking completion, guarded refresh errors, and stale-snapshot rejection.
+- Single-Round-Trip Paid-Order Outbox Enqueue — **COMPLETE** ✅
+  - Fresh cash and retained KHQR payment transitions now enqueue their durable
+    Telegram dispatch job with one duplicate-safe insert instead of Sequelize's
+    multi-round-trip `findOrCreate` path.
+  - Duplicate handling updates only `order_id` to its existing value, so an
+    already processing, retrying, failed, or sent job cannot be reset or reopened.
+  - Payment state, audit insertion, and outbox enqueue remain in the same database
+    transaction, and the worker is still notified only after commit.
+  - Added unit regressions for single-call query options, no-reset behavior, and
+    propagation of insert failures so the payment transaction can roll back.
 - Telegram Cook Authorization Hardening — **COMPLETE** ✅
   - Added stall-scoped Telegram-only cook identities without adding a web-app cook role.
   - Owner/Manager can authorize, reactivate, list, and revoke individual cook identities from Stall Management.

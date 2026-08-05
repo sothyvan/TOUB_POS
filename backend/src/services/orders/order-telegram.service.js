@@ -1,5 +1,6 @@
 import { Order, TelegramTicket } from '../../models/index.js';
 import {
+  enqueuePaidTransitionTelegramDispatch,
   enqueueTelegramDispatch,
   requeueTelegramDispatchJob,
 } from '../../repositories/telegram-dispatch-job.repository.js';
@@ -13,7 +14,7 @@ import {
 } from './order-access.js';
 
 export function enqueuePaidOrderTelegramDispatch(orderId, transaction) {
-  return enqueueTelegramDispatch(orderId, { transaction });
+  return enqueuePaidTransitionTelegramDispatch(orderId, { transaction });
 }
 
 export function requestPaidOrderTelegramDispatch() {
