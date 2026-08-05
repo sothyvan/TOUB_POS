@@ -244,6 +244,7 @@ destination.
 | `location` | `VARCHAR(150)` | Nullable |  | Physical location label |
 | `device_token` | `VARCHAR(255)` | Nullable | Unique | Deprecated migration source |
 | `telegram_chat_id` | `BIGINT` | Nullable |  | Full backend-only kitchen group ID |
+| `active_telegram_chat_id` | `BIGINT` generated | Nullable | Unique | Mirrors `telegram_chat_id` for non-deleted Stalls and becomes `NULL` after soft deletion |
 | `telegram_chat_title` | `VARCHAR(255)` | Nullable |  | Safe group display title |
 | `telegram_connected_at` | `DATETIME` | Nullable |  | Last successful guided connection |
 | `is_active` | `BOOLEAN` | Required; `TRUE` |  | Operational availability |
@@ -255,6 +256,9 @@ destination.
 Active terminal tokens are represented by `stall_devices`.
 
 **Deletion:** Stall deletion is soft deletion in application repositories.
+The generated `active_telegram_chat_id` column and its unique index guarantee
+that a full Telegram chat ID can route to at most one non-deleted Stall while
+allowing a deleted Stall's former chat ID to be reused.
 
 ### 7.2 `stall_devices`
 
@@ -627,6 +631,7 @@ application-enforced rule even when foreign keys remain valid.
 | `telegram_cooks` | (`stall_id`, `is_active`) | Active Cook list |
 | `telegram_group_connections` | Unique `token_hash` | One-time setup lookup |
 | `telegram_group_connections` | (`stall_id`, `expires_at`) | Pending/expired setup lookup |
+| `stalls` | Unique generated `active_telegram_chat_id` | One non-deleted Stall per Telegram kitchen group |
 | `telegram_tickets` | Order, chat, status | Dispatch and completion lookup |
 | `telegram_tickets` | Unique (`telegram_chat_id`, `telegram_msg_id`) | Exact callback context |
 | `telegram_dispatch_jobs` | Unique `order_id` | One durable delivery instruction per Order |

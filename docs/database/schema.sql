@@ -49,9 +49,13 @@ CREATE TABLE stalls (
   telegram_connected_at DATETIME DEFAULT NULL,         -- most recent guided group connection
   is_active       BOOLEAN NOT NULL DEFAULT TRUE,
   is_deleted      BOOLEAN NOT NULL DEFAULT FALSE,
+  active_telegram_chat_id BIGINT GENERATED ALWAYS AS (
+    CASE WHEN is_deleted = 0 THEN telegram_chat_id ELSE NULL END
+  ) STORED,                                           -- uniqueness projection for non-deleted stalls
   created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_stalls_device_token (device_token),
+  UNIQUE KEY uq_stalls_active_telegram_chat_id (active_telegram_chat_id),
   FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL
 );
 

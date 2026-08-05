@@ -1,7 +1,9 @@
 # Entity Relationship Diagram
 
-This ERD is generated from the active Sequelize models in `backend/src/models/`
-and the canonical MySQL schema in `docs/database/schema.sql`.
+This ERD documents the active Sequelize models in `backend/src/models/` plus
+managed database-only structures from the canonical MySQL schema in
+`docs/database/schema.sql`. Generated columns are intentionally database-owned
+because application writes must not target them.
 
 ```mermaid
 erDiagram
@@ -34,6 +36,7 @@ erDiagram
         varchar location "nullable"
         varchar device_token UK "deprecated migration-only"
         bigint telegram_chat_id "nullable"
+        bigint active_telegram_chat_id UK "generated for non-deleted stalls"
         varchar telegram_chat_title "nullable"
         datetime telegram_connected_at "nullable"
         datetime created_at
@@ -247,6 +250,7 @@ erDiagram
 - `telegram_tickets.status` tracks the kitchen ticket progress independently from the order payment status.
 - `telegram_tickets.telegram_msg_id` stores the Telegram message ID so the bot can edit the existing message when the cook taps "Done".
 - `telegram_tickets` enforces a unique `(telegram_chat_id, telegram_msg_id)` pair.
+- `stalls.active_telegram_chat_id` is generated from `telegram_chat_id` only for non-deleted Stalls, enforcing one live routing destination while allowing reuse after soft deletion.
 - `telegram_cooks` is a stall-scoped allowlist of Telegram identities. Cooks are not web users and never receive JWT credentials.
 - `telegram_group_connections` stores only SHA-256 hashes of short-lived, one-time Telegram `startgroup` setup tokens. Consuming a valid token binds the selected Telegram group to its stall.
 - `telegram_tickets.completed_by_telegram_user_id` and `completed_by_name` preserve who completed a kitchen ticket.
