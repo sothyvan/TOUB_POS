@@ -30,6 +30,10 @@ const Stall = sequelize.define('Stall', {
     defaultValue: null,
     field: 'telegram_chat_id',
   },
+  // The managed schema also has a read-only generated
+  // `active_telegram_chat_id` projection with a unique index. It is omitted
+  // from writable Sequelize attributes so inserts/updates cannot target a
+  // MySQL-generated column.
   telegram_chat_title: {
     type: DataTypes.STRING(255),
     defaultValue: null,

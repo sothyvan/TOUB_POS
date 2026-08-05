@@ -75,6 +75,18 @@ Update this file after every meaningful implementation change.
     transactional rollback, masked audit details, and removal of the broad
     low-level update. All 85 backend unit tests pass; capped backend lint passes
     with 58 warnings.
+- Telegram Chat Routing Database Uniqueness — **COMPLETE** ✅
+  - Added a managed MySQL migration that projects each non-deleted Stall's
+    `telegram_chat_id` into a generated column protected by a unique index.
+    Concurrent writers can no longer assign one kitchen group to two live
+    Stall records, while soft-deleted routing history remains reusable.
+  - The migration stops with an operator-facing error when existing duplicate
+    routing is found; it never selects a winner or rewrites a destination.
+  - Added migration unit coverage plus a disposable-MySQL concurrency and
+    soft-delete-reuse regression wired into `npm run test:live`. All 90 backend
+    unit tests pass; capped backend lint passes with 58 existing warnings. The
+    live constraint test awaits disposable MySQL CI because Docker is not
+    installed in the local workspace.
 - Telegram Cook Authorization Hardening — **COMPLETE** ✅
   - Added stall-scoped Telegram-only cook identities without adding a web-app cook role.
   - Owner/Manager can authorize, reactivate, list, and revoke individual cook identities from Stall Management.

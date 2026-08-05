@@ -161,10 +161,16 @@
    - The only automatic routing change is a Telegram-authenticated
      `migrate_to_chat_id` response for the exact currently connected Stall.
      A dedicated transactional service must lock that Stall, verify its old
-     chat ID, reject a destination used by another active Stall, update only
+     chat ID, reject a destination used by another non-deleted Stall, update only
      that Stall and its pending/sent tickets, and write a system audit event
      with masked old/new identifiers. Low-level API helpers and frontend input
      may not update routing directly.
+   - MySQL must enforce that a Telegram chat ID belongs to at most one
+     non-deleted Stall. A generated column maps deleted Stalls to `NULL` and
+     non-deleted Stalls to their `telegram_chat_id`; a unique index on that
+     generated value closes concurrency races while allowing a deleted Stall's
+     former chat ID to be reused. Managed migration must stop on pre-existing
+     duplicates instead of choosing a Stall or rewriting routing automatically.
 8. Order item modifiers/notes must be stored as a snapshot at time of order — not linked to a live config.
 9. For the current release, the trusted final order total equals the backend-calculated item subtotal. The frontend must not invent service fees or taxes. Any future charge requires an approved backend-owned policy covering rates, rounding, exemptions, snapshots, receipts, and reports.
 10. Product USD/KHR prices are synchronized in the management UI using the Owner's saved rate; editing either field regenerates the other. Every Order stores trusted USD and whole-riel KHR totals and the Owner's business exchange rate at creation time. New cashier Orders use USD as the canonical settlement value while showing both totals. Cash confirmation may accept independent USD and KHR amounts, but conversion, underpayment checks, and both equivalent change amounts are backend-owned. Historical orders retain their original pricing-currency and rate snapshots; changing the current setting never rewrites them.
