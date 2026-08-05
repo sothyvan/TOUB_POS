@@ -63,6 +63,31 @@ test('Telegram startgroup message consumes a hashed token and connects the selec
   assert.match(harness.messages[0].message, /connected to/);
 });
 
+test('Telegram group connection messages escape untrusted group and stall labels', async () => {
+  const harness = buildHarness({
+    outcome: 'connected',
+    stall: {
+      id: 5,
+      owner_id: 1,
+      name: 'Stall <A> & Co',
+    },
+  });
+  const update = buildUpdate({
+    chat: {
+      id: -100500,
+      title: 'Kitchen <Main> & Team',
+      type: 'supergroup',
+    },
+  });
+
+  await processTelegramGroupConnection(update, harness.dependencies);
+
+  assert.match(harness.messages[0].message, /<b>Kitchen &lt;Main&gt; &amp; Team<\/b>/);
+  assert.match(harness.messages[0].message, /<b>Stall &lt;A&gt; &amp; Co<\/b>/);
+  assert.doesNotMatch(harness.messages[0].message, /Kitchen <Main> & Team/);
+  assert.doesNotMatch(harness.messages[0].message, /Stall <A> & Co/);
+});
+
 test('Telegram group connection rejects use in a private chat before consuming the token', async () => {
   const harness = buildHarness({ outcome: 'connected' });
   const update = buildUpdate({

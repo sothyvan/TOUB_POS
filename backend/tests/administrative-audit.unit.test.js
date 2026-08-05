@@ -10,7 +10,7 @@ import { up as expandAuditLogs } from '../src/database/migrations/202607310004-e
 
 test('administrative audit catalog uses unique stable action names', () => {
   const actions = Object.values(AUDIT_ACTIONS);
-  assert.equal(actions.length, 21);
+  assert.equal(actions.length, 22);
   assert.equal(new Set(actions).size, actions.length);
   assert.ok(actions.every((action) => /^[a-z_]+\.[a-z_]+$/.test(action)));
 });

@@ -1,5 +1,14 @@
-import { TelegramTicket, Order, OrderItem, Stall, User } from '../models/index.js';
+import {
+  sequelize,
+  TelegramTicket,
+  Order,
+  OrderItem,
+  Stall,
+  User,
+} from '../models/index.js';
 import * as telegramCookRepository from '../repositories/telegram-cook.repository.js';
+import { escapeTelegramHtml } from '../utils/telegram-html.util.js';
+import { writeStructuredLog } from '../utils/logger.util.js';
 import {
   editMessageDone,
   answerCallbackQuery,
@@ -27,6 +36,10 @@ function findOrder(orderId) {
   });
 }
 
+export function formatUpgradeCompletionNotification(order, completedByName) {
+  return `⚠️ <b>Order #${order.id}</b> was marked as done by <b>${escapeTelegramHtml(completedByName)}</b>.\n<i>(Note: Original message was in the old group chat before it was upgraded).</i>`;
+}
+
 async function handleEditFailure(error, order, completedByName) {
   const message = String(error.message || '');
   if (!message.includes('CHAT_WRITE_FORBIDDEN') && !message.includes('group chat was upgraded')) {
@@ -39,36 +52,144 @@ async function handleEditFailure(error, order, completedByName) {
     return;
   }
 
-  const notification = `⚠️ <b>Order #${order.id}</b> was marked as done by <b>${completedByName}</b>.\n<i>(Note: Original message was in the old group chat before it was upgraded).</i>`;
-  await sendNotification(freshStall.telegram_chat_id, notification).catch((notifyError) => {
+  const notification = formatUpgradeCompletionNotification(order, completedByName);
+  await sendNotification(
+    freshStall.telegram_chat_id,
+    notification,
+    { stallId: freshStall.id },
+  ).catch((notifyError) => {
     console.error('[Telegram] Failed to send upgrade notification message:', notifyError.message);
   });
 }
 
-async function markTicketDone(ticket, order, cook, callbackQueryId, chatId, messageId) {
+function findTicketForUpdate(ticket, order, chatId, messageId, transaction) {
+  return TelegramTicket.findOne({
+    where: {
+      id: ticket.id,
+      order_id: order.id,
+      telegram_chat_id: String(chatId),
+      telegram_msg_id: String(messageId),
+    },
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+  });
+}
+
+export function completeTelegramTicketAtomically(
+  ticket,
+  order,
+  cook,
+  chatId,
+  messageId,
+  dependencyOverrides = {},
+) {
+  const dependencies = {
+    runInTransaction: (work) => sequelize.transaction(work),
+    findTicketForUpdate,
+    ...dependencyOverrides,
+  };
+
+  return dependencies.runInTransaction(async (transaction) => {
+    const currentTicket = await dependencies.findTicketForUpdate(
+      ticket,
+      order,
+      chatId,
+      messageId,
+      transaction,
+    );
+    if (!currentTicket) {
+      return { outcome: 'missing' };
+    }
+    if (currentTicket.status === 'done') {
+      return { outcome: 'already_done', ticket: currentTicket };
+    }
+    if (currentTicket.status !== 'sent') {
+      return { outcome: 'not_ready', ticket: currentTicket };
+    }
+
+    currentTicket.status = 'done';
+    currentTicket.completed_at = new Date();
+    currentTicket.completed_by_telegram_user_id = String(cook.telegram_user_id);
+    currentTicket.completed_by_name = cook.display_name;
+    await currentTicket.save({ transaction });
+
+    return { outcome: 'completed', ticket: currentTicket };
+  });
+}
+
+export async function markTicketDone(
+  ticket,
+  order,
+  cook,
+  callbackQueryId,
+  chatId,
+  messageId,
+  dependencyOverrides = {},
+) {
+  const dependencies = {
+    completeAtomically: completeTelegramTicketAtomically,
+    atomicDependencies: {},
+    editDone: editMessageDone,
+    handleEditFailure,
+    emitUpdate: emitKitchenTicketUpdated,
+    answerQuery: answerCallbackQuery,
+    logError: (details) => writeStructuredLog(
+      'error',
+      'telegram_ticket_edit_failed_after_completion',
+      details,
+    ),
+    logInfo: (details) => writeStructuredLog('info', 'telegram_ticket_completed', details),
+    ...dependencyOverrides,
+  };
+  const completion = await dependencies.completeAtomically(
+    ticket,
+    order,
+    cook,
+    chatId,
+    messageId,
+    dependencies.atomicDependencies,
+  );
+  if (completion.outcome !== 'completed') {
+    return completion;
+  }
+  const completedTicket = completion.ticket;
+
+  let telegramUpdate = 'updated';
   try {
-    await editMessageDone(chatId, messageId, order, cook.display_name);
+    await dependencies.editDone(chatId, messageId, order, cook.display_name);
   } catch (error) {
-    await handleEditFailure(error, order, cook.display_name);
+    try {
+      await dependencies.handleEditFailure(error, order, cook.display_name);
+      telegramUpdate = 'notified';
+    } catch (notificationError) {
+      telegramUpdate = 'failed';
+      dependencies.logError({
+        order_id: order.id,
+        ticket_id: completedTicket.id,
+        error: notificationError,
+      });
+    }
   }
 
-  ticket.status = 'done';
-  ticket.completed_at = new Date();
-  ticket.completed_by_telegram_user_id = String(cook.telegram_user_id);
-  ticket.completed_by_name = cook.display_name;
-  await ticket.save();
-
-  emitKitchenTicketUpdated({
+  dependencies.emitUpdate({
     cashierId: order.cashier_id,
     ownerId: order.Stall?.owner_id,
     orderId: order.id,
-    ticketId: ticket.id,
-    status: ticket.status,
-    completedAt: ticket.completed_at,
+    ticketId: completedTicket.id,
+    status: completedTicket.status,
+    completedAt: completedTicket.completed_at,
   });
 
-  await answerCallbackQuery(callbackQueryId, '✅ Order marked as done!').catch(() => {});
-  console.log(`[Telegram] Order #${order.id} marked as done by cook.`);
+  const answerText = telegramUpdate === 'failed'
+    ? '✅ Order recorded as done, but the Telegram ticket could not be updated.'
+    : '✅ Order marked as done!';
+  await dependencies.answerQuery(callbackQueryId, answerText).catch(() => {});
+  dependencies.logInfo({
+    order_id: order.id,
+    ticket_id: completedTicket.id,
+    telegram_update: telegramUpdate,
+  });
+  return { ...completion, telegramUpdate };
 }
 
 export async function processTelegramCallback(update, dependencyOverrides = {}) {
@@ -156,7 +277,7 @@ export async function processTelegramCallback(update, dependencyOverrides = {}) 
       return;
     }
 
-    await dependencies.completeTicket(
+    const completion = await dependencies.completeTicket(
       ticket,
       order,
       cook,
@@ -164,6 +285,13 @@ export async function processTelegramCallback(update, dependencyOverrides = {}) 
       chatId,
       messageId,
     );
+    if (completion?.outcome === 'already_done') {
+      await safeAnswer(callbackQueryId, 'Already marked as done!');
+    } else if (completion?.outcome === 'not_ready') {
+      await safeAnswer(callbackQueryId, 'This kitchen ticket is not ready to complete.');
+    } else if (completion?.outcome === 'missing') {
+      await safeAnswer(callbackQueryId, 'Ticket not found.');
+    }
   } catch (error) {
     console.error(`[Telegram] Error handling done callback for order #${orderId}:`, error.message);
     await safeAnswer(callbackQueryId, 'Something went wrong.');

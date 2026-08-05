@@ -158,6 +158,13 @@
    - A cashier has at most one `stall_staff` row, enforced by a unique database index. Moving or removing an assignment locks the stable User row and performs assignment, refresh-session revocation, and administrative auditing in one transaction before invalidating live sessions; physical terminals remain registered.
 6. Telegram ticket completion requires an exact ticket/chat/message match and an active stall-scoped `telegram_cooks` identity. Cooks remain outside web RBAC.
 7. Telegram group routing may only be connected through a short-lived, one-time, hashed setup token created by the same-business Owner. Managers may manage cook identities but cannot reroute the kitchen destination. Client-submitted `telegram_chat_id` values are not trusted.
+   - The only automatic routing change is a Telegram-authenticated
+     `migrate_to_chat_id` response for the exact currently connected Stall.
+     A dedicated transactional service must lock that Stall, verify its old
+     chat ID, reject a destination used by another active Stall, update only
+     that Stall and its pending/sent tickets, and write a system audit event
+     with masked old/new identifiers. Low-level API helpers and frontend input
+     may not update routing directly.
 8. Order item modifiers/notes must be stored as a snapshot at time of order — not linked to a live config.
 9. For the current release, the trusted final order total equals the backend-calculated item subtotal. The frontend must not invent service fees or taxes. Any future charge requires an approved backend-owned policy covering rates, rounding, exemptions, snapshots, receipts, and reports.
 10. Product USD/KHR prices are synchronized in the management UI using the Owner's saved rate; editing either field regenerates the other. Every Order stores trusted USD and whole-riel KHR totals and the Owner's business exchange rate at creation time. New cashier Orders use USD as the canonical settlement value while showing both totals. Cash confirmation may accept independent USD and KHR amounts, but conversion, underpayment checks, and both equivalent change amounts are backend-owned. Historical orders retain their original pricing-currency and rate snapshots; changing the current setting never rewrites them.
