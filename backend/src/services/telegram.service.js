@@ -1,6 +1,12 @@
 import fetch from 'node-fetch';
 import { TelegramTicket, Stall } from '../models/index.js';
 import { escapeTelegramHtml } from '../utils/telegram-html.util.js';
+import {
+  buildWorkflowTimingEvent,
+  calculateAgeMilliseconds,
+  createWorkflowTimer,
+  writeWorkflowTimingEvent,
+} from '../utils/workflow-timing.util.js';
 import { migrateTelegramChatRouting } from './telegram-chat-migration.service.js';
 import { emitKitchenTicketUpdated } from './websocket.service.js';
 
@@ -8,6 +14,29 @@ const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_API_BASE = `https://api.telegram.org/bot${BOT_TOKEN}`;
 const DEFAULT_TELEGRAM_TIMEOUT_MS = 10000;
 let cachedBotIdentity = null;
+
+export function buildTelegramTicketDispatchTiming({
+  order,
+  ticket,
+  outcome,
+  timerSnapshot,
+}) {
+  const sentAge = outcome === 'sent'
+    ? calculateAgeMilliseconds(
+      order?.completed_at ?? order?.completedAt,
+      ticket?.sent_at ?? ticket?.sentAt,
+    )
+    : { value: null, clockAnomaly: false };
+  return buildWorkflowTimingEvent({
+    workflow: 'telegram_ticket_dispatch',
+    outcome,
+    orderId: order?.id,
+    durationMs: timerSnapshot?.duration_ms,
+    timingsMs: timerSnapshot?.timings_ms,
+    agesMs: sentAge.value === null ? {} : { paid_to_sent: sentAge.value },
+    clockAnomaly: Boolean(timerSnapshot?.clock_anomaly || sentAge.clockAnomaly),
+  });
+}
 
 // ── Telegram API Helpers ──────────────────────────────────
 
@@ -253,10 +282,12 @@ export async function sendNotification(chatId, text, options = {}) {
  * database failures may throw to the outbox worker, never to payment confirmation.
  */
 export async function dispatchToTelegram(order, options = {}) {
+  const timer = createWorkflowTimer();
   const existingTicket = await TelegramTicket.findOne({
     where: { order_id: order.id },
     order: [['id', 'DESC']],
   });
+  timer.mark('existing_ticket_lookup');
 
   if (existingTicket && !options.forceRetry) {
     console.warn(`[Telegram] Order #${order.id} already has ticket #${existingTicket.id} (${existingTicket.status}) — skipping dispatch.`);
@@ -275,6 +306,7 @@ export async function dispatchToTelegram(order, options = {}) {
 
   // Read the kitchen chat ID from the authoritative stall record.
   const stall = await Stall.findByPk(order.stall_id);
+  timer.mark('stall_lookup');
   const chatId = stall?.telegram_chat_id ?? order.Stall?.telegram_chat_id;
   const ownerId = stall?.owner_id ?? order.Stall?.owner_id;
 
@@ -289,9 +321,16 @@ export async function dispatchToTelegram(order, options = {}) {
     telegram_chat_id: chatId,
     status: 'pending',
   });
+  timer.mark('pending_ticket_insert');
 
   try {
-    const { msgId, chatId: returnedChatId } = await sendOrderTicket(chatId, order);
+    let telegramResult;
+    try {
+      telegramResult = await sendOrderTicket(chatId, order);
+    } finally {
+      timer.mark('telegram_api');
+    }
+    const { msgId, chatId: returnedChatId } = telegramResult;
 
     // A different returned ID was already migrated through the scoped service.
     if (String(returnedChatId) !== String(chatId)) {
@@ -300,6 +339,7 @@ export async function dispatchToTelegram(order, options = {}) {
 
     // Refresh the stall to fetch the latest chat ID in case of migration
     const freshStall = await Stall.findByPk(order.stall_id);
+    timer.mark('final_stall_reload');
     const finalChatId = freshStall?.telegram_chat_id || returnedChatId;
 
     // Update ticket with the sent message ID, final chat ID, and mark as sent
@@ -308,6 +348,7 @@ export async function dispatchToTelegram(order, options = {}) {
     ticket.status = 'sent';
     ticket.sent_at = new Date();
     await ticket.save();
+    timer.mark('sent_ticket_save');
     emitKitchenTicketUpdated({
       cashierId: order.cashier_id,
       ownerId,
@@ -318,10 +359,19 @@ export async function dispatchToTelegram(order, options = {}) {
     });
 
     console.log(`[Telegram] Order #${order.id} dispatched → chat ${finalChatId}, msg ${msgId}`);
+    writeWorkflowTimingEvent(
+      buildTelegramTicketDispatchTiming({
+        order,
+        ticket,
+        outcome: 'sent',
+        timerSnapshot: timer.snapshot(),
+      }),
+    );
   } catch (error) {
     // Mark the ticket as failed for observability, but do not rethrow
     ticket.status = 'failed';
     await ticket.save();
+    timer.mark('sent_ticket_save');
     emitKitchenTicketUpdated({
       cashierId: order.cashier_id,
       ownerId,
@@ -331,6 +381,14 @@ export async function dispatchToTelegram(order, options = {}) {
       completedAt: ticket.completed_at,
     });
     console.error(`[Telegram] Failed to dispatch order #${order.id}:`, error.message);
+    writeWorkflowTimingEvent(
+      buildTelegramTicketDispatchTiming({
+        order,
+        ticket,
+        outcome: 'failed',
+        timerSnapshot: timer.snapshot(),
+      }),
+    );
     ticket.dispatchError = error;
   }
 

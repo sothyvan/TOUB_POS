@@ -4,6 +4,12 @@ import {
   Order,
 } from '../../models/index.js';
 import { httpError } from '../../utils/http-error.util.js';
+import {
+  buildWorkflowTimingEvent,
+  calculateAgeMilliseconds,
+  createWorkflowTimer,
+  writeWorkflowTimingEvent,
+} from '../../utils/workflow-timing.util.js';
 import { emitManagementOrderUpdated } from '../websocket.service.js';
 import {
   buildOrderAccessInclude,
@@ -59,13 +65,32 @@ export function calculateMixedCashSettlement({
   };
 }
 
-export async function confirmCashPayment(orderId, actor, payment) {
+export function buildCashConfirmationTiming({ order, requestId, timerSnapshot }) {
+  const paidAge = calculateAgeMilliseconds(
+    order?.created_at ?? order?.createdAt,
+    order?.completed_at ?? order?.completedAt,
+  );
+  return buildWorkflowTimingEvent({
+    workflow: 'cash_confirmation',
+    outcome: 'succeeded',
+    requestId,
+    orderId: order?.id,
+    durationMs: timerSnapshot?.duration_ms,
+    timingsMs: timerSnapshot?.timings_ms,
+    agesMs: paidAge.value === null ? {} : { order_created_to_paid: paidAge.value },
+    clockAnomaly: Boolean(timerSnapshot?.clock_anomaly || paidAge.clockAnomaly),
+  });
+}
+
+export async function confirmCashPayment(orderId, actor, payment, context = {}) {
+  const timer = createWorkflowTimer();
   const parsedOrderId = parsePositiveInteger(orderId, 'order ID');
   const actorId = parsePositiveInteger(actor?.id, 'actor ID');
   const actorRole = String(actor?.role || '').toLowerCase();
   let confirmedOrderId;
   let confirmedOrderOwnerId;
   const transaction = await sequelize.transaction();
+  timer.mark('transaction_open');
 
   try {
     const order = await Order.findByPk(parsedOrderId, {
@@ -73,6 +98,7 @@ export async function confirmCashPayment(orderId, actor, payment) {
       transaction,
       lock: true,
     });
+    timer.mark('order_lock_read');
     if (!order) {
       throw httpError('Order not found.', 404);
     }
@@ -100,6 +126,7 @@ export async function confirmCashPayment(orderId, actor, payment) {
       cashReceivedUsd: payment.cash_received_usd,
       cashReceivedKhr: payment.cash_received_khr,
     });
+    timer.mark('settlement');
 
     order.status = 'paid';
     order.cash_received_usd = settlement.cashReceivedUsd;
@@ -109,6 +136,7 @@ export async function confirmCashPayment(orderId, actor, payment) {
     order.change_currency = settlement.changeCurrency;
     order.completed_at = new Date();
     await order.save({ transaction });
+    timer.mark('order_save');
     confirmedOrderOwnerId = getOrderOwnerId(order);
 
     await AuditLog.create({
@@ -130,16 +158,20 @@ export async function confirmCashPayment(orderId, actor, payment) {
         confirmed_by_role: actorRole,
       },
     }, { transaction });
+    timer.mark('audit_insert');
 
     await enqueuePaidOrderTelegramDispatch(order.id, transaction);
+    timer.mark('outbox_enqueue');
     confirmedOrderId = order.id;
     await transaction.commit();
+    timer.mark('transaction_commit');
   } catch (error) {
     await transaction.rollback();
     throw error;
   }
 
   const confirmedOrder = await getOrderById(confirmedOrderId);
+  timer.mark('order_reload');
   emitManagementOrderUpdated({
     ownerId: confirmedOrderOwnerId,
     orderId: confirmedOrder.id,
@@ -148,5 +180,13 @@ export async function confirmCashPayment(orderId, actor, payment) {
     changeType: 'paid',
   });
   requestPaidOrderTelegramDispatch();
+  timer.mark('post_commit_notify');
+  writeWorkflowTimingEvent(
+    buildCashConfirmationTiming({
+      order: confirmedOrder,
+      requestId: context.requestId,
+      timerSnapshot: timer.snapshot(),
+    }),
+  );
   return confirmedOrder;
 }

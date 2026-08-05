@@ -23,6 +23,7 @@ Update this file after every meaningful implementation change.
 - Post-Phase 6 Operations & Security Hardening — **IN PROGRESS**
   - Owner/Manager Operations Watch for KHQR and Telegram ticket issues — **COMPLETE** ✅
   - Tenant-scoped Telegram outbox metrics, latency, and safe alerts — **COMPLETE** ✅
+  - Order-to-kitchen stage latency diagnostics — **COMPLETE** ✅
   - Safe KHQR close and resume flow — **COMPLETE** ✅
   - KHQR pre-checkout confirmation — **COMPLETE** ✅
   - Backend-backed UI auto-refresh fallback — **COMPLETE** ✅
@@ -104,6 +105,24 @@ Update this file after every meaningful implementation change.
     All 96 backend and 26 frontend unit tests, both linters, the frontend
     production build, and `git diff --check` pass. Backend lint retains 58
     pre-existing warnings. The live test awaits disposable MySQL CI.
+- Order-To-Kitchen Latency Diagnostics — **COMPLETE** ✅
+  - Added a schema-free, versioned `order_kitchen_latency` structured event for
+    successful cash confirmation, outbox worker pickup/processing, Telegram
+    provider delivery, and the asynchronous Telegram Done workflow.
+  - Stage timings use a monotonic clock. Cross-record ages reuse existing
+    Order, dispatch-job, and Ticket timestamps; invalid or negative ages are
+    omitted and marked with `clock_anomaly=true`.
+  - A strict allowlist prevents payment values, order contents, people/Stall
+    identities, Telegram identifiers, provider payloads, credentials, and raw
+    errors from entering these performance records.
+  - Added unit regressions for timing normalization, clock anomalies, field
+    minimization, workflow correlation, queue pickup delay, provider timing,
+    and asynchronous Done timing. No schema, API response, worker cadence,
+    retry, transaction, or frontend behavior changed.
+  - Live sampling corrected two telemetry edge cases: cook access now uses a
+    non-sensitive timing key that remains numeric after global log redaction,
+    and worker pickup age is derived from due/claim timestamps captured before
+    outcome persistence mutates the dispatch job.
 - Telegram Cook Authorization Hardening — **COMPLETE** ✅
   - Added stall-scoped Telegram-only cook identities without adding a web-app cook role.
   - Owner/Manager can authorize, reactivate, list, and revoke individual cook identities from Stall Management.
