@@ -150,6 +150,23 @@ Run this against production-like synthetic data before real use:
   `TELEGRAM_MONITOR_LATENCY_WINDOW_HOURS` for the dashboard window. Defaults are
   60 seconds, 60 seconds, and 24 hours. The in-product panel is operational
   visibility, not a replacement for externally routed production alerts.
+- Search structured logs for `event=order_kitchen_latency` and group by
+  `workflow`, `outcome`, and internal `order_id`. The version-1 workflows are
+  `cash_confirmation`, `kitchen_dispatch_worker`,
+  `telegram_ticket_dispatch`, and `telegram_done`.
+  - High cash database/commit stages point to MySQL latency or contention.
+  - High `job_due_to_claim` with low processing time points to worker scheduling.
+  - High `telegram_api` or `telegram_edit` points to Telegram/network latency.
+  - High Done lookup/atomic stages point to the database path.
+  - `ticket_sent_to_done` is kitchen handling time, not server processing time.
+- Compare cash timing events with the existing `http_request_completed` record.
+  The Telegram webhook returns `200` before authenticated Done processing, so
+  its HTTP duration does not represent the cook-visible completion time; use
+  the `telegram_done` workflow event instead. `clock_anomaly=true` means an age
+  was invalid or negative and must not be used for performance conclusions.
+- Latency records intentionally exclude payment amounts, order contents,
+  people/Stall identities, Telegram identifiers, provider bodies, credentials,
+  and raw errors. Keep log access restricted even with this minimization.
 - Keep the documented 24-hour recovery-point objective (RPO) and four-hour
   recovery-time objective (RTO), and retain evidence from scheduled restore
   drills.

@@ -295,6 +295,13 @@
 
 - **Backend**: Every request receives a validated or server-generated correlation ID in `X-Request-ID`. The global Express error handler preserves intentional public application errors, but maps unexpected server failures to `{ success: false, code: "INTERNAL_SERVER_ERROR", message: "Internal server error.", request_id: "..." }` without exposing ORM, provider, configuration, or stack details.
 - **Diagnostics**: Request completion and failure events are emitted as one-line JSON records with the same correlation ID. Nested credentials, authorization/cookie/CSRF/session values, PINs, tokens, and secrets are recursively redacted; unexpected error name, internal code, message, and stack remain server-side for diagnosis.
+- **Order-to-kitchen latency diagnostics**: Successful cash confirmation,
+  Telegram worker, ticket dispatch, and asynchronous Done processing emit the
+  shared `order_kitchen_latency` structured event. The schema is versioned and
+  allowlists only request/order correlation, attempt/outcome, monotonic stage
+  durations, and derived ages from existing Order/Ticket timestamps. It must
+  never include payment values, order contents, people or Stall identities,
+  Telegram identifiers, provider payloads, credentials, or raw errors.
 - **Frontend**: The `services/api.js` layer intercepts failing requests and surfaces them to the UI via toast notifications or inline error states, preventing silent failures.
 
 ## Runtime Health And Shutdown

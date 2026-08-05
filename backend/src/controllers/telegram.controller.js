@@ -26,7 +26,7 @@ export async function handleCallback(req, res) {
   try {
     const handledConnection = await processTelegramGroupConnection(req.body, {}, req.requestId);
     if (!handledConnection) {
-      await processTelegramCallback(req.body);
+      await processTelegramCallback(req.body, { requestId: req.requestId });
     }
   } catch (error) {
     console.error('[Telegram] Failed to process authenticated update:', error.message);

@@ -95,19 +95,21 @@ test('Telegram Done callback rejects a Telegram user not authorized for the stal
 });
 
 test('Telegram Done callback accepts an active cook assigned to the ticket stall', async () => {
-  const harness = buildDependencies();
+  const harness = buildDependencies({ requestId: 'telegram-request-42' });
 
   await processTelegramCallback(buildUpdate(), harness.dependencies);
 
   assert.equal(harness.answers.length, 0);
   assert.equal(harness.completions.length, 1);
-  const [ticket, order, cook, callbackId, chatId, messageId] = harness.completions[0];
+  const [ticket, order, cook, callbackId, chatId, messageId, timingContext] = harness.completions[0];
   assert.equal(ticket.id, 9);
   assert.equal(order.id, 42);
   assert.equal(cook.display_name, 'Kitchen Dara');
   assert.equal(callbackId, 'callback-1');
   assert.equal(chatId, -100500);
   assert.equal(messageId, 700);
+  assert.equal(timingContext.requestId, 'telegram-request-42');
+  assert.equal(typeof timingContext.workflowTimer.mark, 'function');
 });
 
 test('Telegram Done callback rejects unpaid orders before completion', async () => {
@@ -183,6 +185,7 @@ test('concurrent Telegram Done completions edit and attribute a sent ticket once
     emitUpdate: () => {},
     answerQuery: () => Promise.resolve(),
     logInfo: () => {},
+    recordTiming: () => {},
   };
   const order = {
     id: 42,
@@ -259,6 +262,7 @@ test('a post-commit Telegram edit failure keeps the authoritative completion', a
       },
       logError: () => {},
       logInfo: () => {},
+      recordTiming: () => {},
     },
   );
 
@@ -268,4 +272,55 @@ test('a post-commit Telegram edit failure keeps the authoritative completion', a
   assert.equal(ticket.completed_by_telegram_user_id, '111');
   assert.match(answers[0], /recorded as done/i);
   assert.match(answers[0], /could not be updated/i);
+});
+
+test('Done completion records asynchronous database, Telegram, and callback timings', async () => {
+  const ticket = {
+    id: 15,
+    order_id: 51,
+    telegram_chat_id: '-100500',
+    telegram_msg_id: '701',
+    status: 'sent',
+    sent_at: new Date('2026-08-05T12:00:00.000Z'),
+    save: () => Promise.resolve(),
+  };
+  const readings = [0, 12, 172, 173, 218];
+  let timingEvent;
+
+  await markTicketDone(
+    ticket,
+    { id: 51, stall_id: 5, cashier_id: 9, Stall: { owner_id: 1 } },
+    { telegram_user_id: '111', display_name: 'First Cook' },
+    'callback-secret-id',
+    -100500,
+    701,
+    {
+      requestId: 'telegram-request-51',
+      now: () => readings.shift(),
+      atomicDependencies: {
+        runInTransaction: (work) => work({ LOCK: { UPDATE: 'UPDATE' } }),
+        findTicketForUpdate: () => Promise.resolve(ticket),
+        completedAt: () => new Date('2026-08-05T12:03:00.000Z'),
+      },
+      editDone: () => Promise.resolve(),
+      emitUpdate: () => {},
+      answerQuery: () => Promise.resolve(),
+      logInfo: () => {},
+      recordTiming: (details) => {
+        timingEvent = details;
+      },
+    },
+  );
+
+  assert.equal(timingEvent.workflow, 'telegram_done');
+  assert.equal(timingEvent.requestId, 'telegram-request-51');
+  assert.equal(timingEvent.orderId, 51);
+  assert.equal(timingEvent.durationMs, 218);
+  assert.deepEqual(timingEvent.timingsMs, {
+    atomic_completion: 12,
+    telegram_edit: 160,
+    websocket_emit: 1,
+    callback_answer: 45,
+  });
+  assert.deepEqual(timingEvent.agesMs, { ticket_sent_to_done: 180000 });
 });

@@ -7,6 +7,12 @@ import {
 import { getOrderById } from './orders/order-access.js';
 import { dispatchToTelegram } from './telegram.service.js';
 import { emitKitchenTicketUpdated } from './websocket.service.js';
+import {
+  buildWorkflowTimingEvent,
+  calculateAgeMilliseconds,
+  createWorkflowTimer,
+  writeWorkflowTimingEvent,
+} from '../utils/workflow-timing.util.js';
 
 const DEFAULT_INTERVAL_MS = 2000;
 const DEFAULT_BATCH_SIZE = 10;
@@ -45,6 +51,29 @@ function normalizeErrorMessage(error) {
 export function calculateTelegramRetryDelayMs(attemptCount, baseDelayMs = DEFAULT_RETRY_BASE_MS) {
   const normalizedAttempt = Math.max(1, Number(attemptCount) || 1);
   return Math.min(baseDelayMs * (2 ** (normalizedAttempt - 1)), MAX_RETRY_DELAY_MS);
+}
+
+export function buildTelegramDispatchWorkerTiming({
+  job,
+  dueAt,
+  claimedAt,
+  outcome,
+  timerSnapshot,
+}) {
+  const pickupAge = calculateAgeMilliseconds(
+    dueAt ?? job?.next_attempt_at,
+    claimedAt ?? job?.last_attempt_at,
+  );
+  return buildWorkflowTimingEvent({
+    workflow: 'kitchen_dispatch_worker',
+    outcome,
+    orderId: job?.order_id,
+    attemptCount: job?.attempt_count,
+    durationMs: timerSnapshot?.duration_ms,
+    timingsMs: timerSnapshot?.timings_ms,
+    agesMs: pickupAge.value === null ? {} : { job_due_to_claim: pickupAge.value },
+    clockAnomaly: Boolean(timerSnapshot?.clock_anomaly || pickupAge.clockAnomaly),
+  });
 }
 
 async function markJobSent(job) {
@@ -160,21 +189,45 @@ export async function runTelegramDispatchWorkerOnce() {
 
   try {
     for (let index = 0; index < batchSize; index += 1) {
+      const timer = createWorkflowTimer();
       const job = await claimNextTelegramDispatchJob({
         workerId,
         lockTimeoutMs,
       });
+      timer.mark('claim');
       if (!job) {
         break;
       }
+      const pickupTiming = {
+        dueAt: job.next_attempt_at,
+        claimedAt: job.last_attempt_at,
+      };
 
       stats.claimed += 1;
       try {
         const outcome = await processClaimedJob(job);
+        timer.mark('job_processing');
         stats[outcome] += 1;
+        writeWorkflowTimingEvent(
+          buildTelegramDispatchWorkerTiming({
+            job,
+            ...pickupTiming,
+            outcome,
+            timerSnapshot: timer.snapshot(),
+          }),
+        );
       } catch (error) {
         const outcome = await markJobFailed(job, error);
+        timer.mark('job_processing');
         stats[outcome] += 1;
+        writeWorkflowTimingEvent(
+          buildTelegramDispatchWorkerTiming({
+            job,
+            ...pickupTiming,
+            outcome,
+            timerSnapshot: timer.snapshot(),
+          }),
+        );
         console.error(
           `[telegram-dispatch-worker] Job #${job.id} for order #${job.order_id} failed:`,
           normalizeErrorMessage(error),

@@ -35,7 +35,12 @@ export async function createOrder(req, res, next) {
  */
 export async function confirmCashPayment(req, res, next) {
   try {
-    const order = await orderService.confirmCashPayment(req.params.id, req.user, req.body);
+    const order = await orderService.confirmCashPayment(
+      req.params.id,
+      req.user,
+      req.body,
+      { requestId: req.requestId },
+    );
     res.json({ success: true, data: sanitizeOrderTelegramMetadata(order) });
   } catch (error) {
     next(error);

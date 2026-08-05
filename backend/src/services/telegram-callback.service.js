@@ -10,6 +10,11 @@ import * as telegramCookRepository from '../repositories/telegram-cook.repositor
 import { escapeTelegramHtml } from '../utils/telegram-html.util.js';
 import { writeStructuredLog } from '../utils/logger.util.js';
 import {
+  calculateAgeMilliseconds,
+  createWorkflowTimer,
+  recordWorkflowTiming,
+} from '../utils/workflow-timing.util.js';
+import {
   editMessageDone,
   answerCallbackQuery,
   sendNotification,
@@ -86,6 +91,7 @@ export function completeTelegramTicketAtomically(
   const dependencies = {
     runInTransaction: (work) => sequelize.transaction(work),
     findTicketForUpdate,
+    completedAt: () => new Date(),
     ...dependencyOverrides,
   };
 
@@ -108,7 +114,7 @@ export function completeTelegramTicketAtomically(
     }
 
     currentTicket.status = 'done';
-    currentTicket.completed_at = new Date();
+    currentTicket.completed_at = dependencies.completedAt();
     currentTicket.completed_by_telegram_user_id = String(cook.telegram_user_id);
     currentTicket.completed_by_name = cook.display_name;
     await currentTicket.save({ transaction });
@@ -139,8 +145,13 @@ export async function markTicketDone(
       details,
     ),
     logInfo: (details) => writeStructuredLog('info', 'telegram_ticket_completed', details),
+    recordTiming: (details) => recordWorkflowTiming(details),
+    now: undefined,
     ...dependencyOverrides,
   };
+  const timer = dependencies.workflowTimer || createWorkflowTimer(
+    dependencies.now ? { now: dependencies.now } : undefined,
+  );
   const completion = await dependencies.completeAtomically(
     ticket,
     order,
@@ -149,6 +160,7 @@ export async function markTicketDone(
     messageId,
     dependencies.atomicDependencies,
   );
+  timer.mark('atomic_completion');
   if (completion.outcome !== 'completed') {
     return completion;
   }
@@ -170,6 +182,7 @@ export async function markTicketDone(
       });
     }
   }
+  timer.mark('telegram_edit');
 
   dependencies.emitUpdate({
     cashierId: order.cashier_id,
@@ -179,11 +192,31 @@ export async function markTicketDone(
     status: completedTicket.status,
     completedAt: completedTicket.completed_at,
   });
+  timer.mark('websocket_emit');
 
   const answerText = telegramUpdate === 'failed'
     ? '✅ Order recorded as done, but the Telegram ticket could not be updated.'
     : '✅ Order marked as done!';
   await dependencies.answerQuery(callbackQueryId, answerText).catch(() => {});
+  timer.mark('callback_answer');
+  const completionAge = calculateAgeMilliseconds(
+    completedTicket.sent_at ?? ticket.sent_at,
+    completedTicket.completed_at,
+  );
+  const timerSnapshot = timer.snapshot();
+  dependencies.recordTiming({
+    workflow: 'telegram_done',
+    outcome: 'completed',
+    requestId: dependencies.requestId,
+    orderId: order.id,
+    durationMs: timerSnapshot.duration_ms,
+    timingsMs: timerSnapshot.timings_ms,
+    agesMs: completionAge.value === null
+      ? {}
+      : { ticket_sent_to_done: completionAge.value },
+    clockAnomaly: Boolean(timerSnapshot.clock_anomaly || completionAge.clockAnomaly),
+    telegramUpdate,
+  });
   dependencies.logInfo({
     order_id: order.id,
     ticket_id: completedTicket.id,
@@ -226,6 +259,7 @@ export async function processTelegramCallback(update, dependencyOverrides = {}) 
   }
 
   const orderId = Number.parseInt(doneMatch[1], 10);
+  const workflowTimer = createWorkflowTimer();
   try {
     if (!chatId || !messageId || !telegramUserId) {
       await safeAnswer(callbackQueryId, 'Invalid Telegram callback identity.');
@@ -233,6 +267,7 @@ export async function processTelegramCallback(update, dependencyOverrides = {}) 
     }
 
     const ticket = await dependencies.findTicket(orderId, chatId, messageId);
+    workflowTimer.mark('ticket_lookup');
     if (
       !ticket
       || Number(ticket.order_id) !== orderId
@@ -244,6 +279,7 @@ export async function processTelegramCallback(update, dependencyOverrides = {}) 
     }
 
     const order = await dependencies.findOrder(orderId);
+    workflowTimer.mark('order_lookup');
     if (!order) {
       await safeAnswer(callbackQueryId, 'Order not found.');
       return;
@@ -260,6 +296,7 @@ export async function processTelegramCallback(update, dependencyOverrides = {}) 
     }
 
     const cook = await dependencies.findActiveCook(order.stall_id, telegramUserId);
+    workflowTimer.mark('cook_access_check');
     if (!cook) {
       await safeAnswer(
         callbackQueryId,
@@ -284,6 +321,7 @@ export async function processTelegramCallback(update, dependencyOverrides = {}) 
       callbackQueryId,
       chatId,
       messageId,
+      { requestId: dependencies.requestId, workflowTimer },
     );
     if (completion?.outcome === 'already_done') {
       await safeAnswer(callbackQueryId, 'Already marked as done!');
