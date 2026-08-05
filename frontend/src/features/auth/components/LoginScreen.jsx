@@ -74,6 +74,7 @@ export default function LoginScreen({
       <form className="flex flex-col gap-5" onSubmit={handleSubmitManagement}>
         <FormInput
           label="Username"
+          autoComplete="username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           placeholder="Enter username"
@@ -82,13 +83,14 @@ export default function LoginScreen({
         <FormInput
           label="Password"
           type="password"
+          autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Enter password"
           required
         />
 
-        {loginError && <p className="m-0 text-red-500 text-xs font-semibold">{loginError}</p>}
+        {loginError && <p role="alert" className="m-0 text-red-500 text-xs font-semibold">{loginError}</p>}
 
         <button
           type="submit"
@@ -210,10 +212,16 @@ export default function LoginScreen({
             <p className="m-0 text-[#776f63] text-[11px] font-extrabold uppercase tracking-widest mb-3">
               Enter your 4-digit PIN
             </p>
-            <div className="flex justify-center gap-3.5">
+            <div
+              className="flex justify-center gap-3.5"
+              role="status"
+              aria-live="polite"
+              aria-label={`${typedPin.length} of 4 PIN digits entered`}
+            >
               {[0, 1, 2, 3].map((idx) => (
                 <span
                   key={idx}
+                  aria-hidden="true"
                   className={`w-3 h-3 rounded-full border border-gray-300 transition-all duration-150 ${
                     typedPin.length > idx ? 'bg-brand-action border-brand-action scale-110 shadow-sm' : 'bg-gray-100'
                   }`}
@@ -223,7 +231,7 @@ export default function LoginScreen({
           </div>
 
           {loginError && (
-            <p className="m-0 text-red-500 text-xs font-semibold text-center animate-bounce">{loginError}</p>
+            <p role="alert" className="m-0 text-red-500 text-xs font-semibold text-center animate-bounce">{loginError}</p>
           )}
 
           {/* Keypad Matrix layout */}
@@ -280,6 +288,7 @@ export default function LoginScreen({
       <form className="flex flex-col gap-5" onSubmit={handleSubmitManagement}>
         <FormInput
           label="Username"
+          autoComplete="username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           placeholder="Enter username"
@@ -288,13 +297,14 @@ export default function LoginScreen({
         <FormInput
           label="Password"
           type="password"
+          autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Enter password"
           required
         />
 
-        {loginError && <p className="m-0 text-red-500 text-xs font-semibold">{loginError}</p>}
+        {loginError && <p role="alert" className="m-0 text-red-500 text-xs font-semibold">{loginError}</p>}
 
         <button
           type="submit"
@@ -373,7 +383,7 @@ export default function LoginScreen({
           helperText="Use a name that helps management identify this physical device."
         />
 
-        {loginError && <p className="m-0 text-red-500 text-xs font-semibold">{loginError}</p>}
+        {loginError && <p role="alert" className="m-0 text-red-500 text-xs font-semibold">{loginError}</p>}
 
         <button
           type="submit"

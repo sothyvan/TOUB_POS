@@ -1,4 +1,5 @@
 import Topbar from './Topbar';
+import SkipLink from '../../components/ui/SkipLink';
 
 export default function PageShell({
   children,
@@ -13,6 +14,7 @@ export default function PageShell({
     <div
       className="h-svh max-h-svh flex flex-col bg-brand-bg text-brand-text overflow-hidden"
     >
+      <SkipLink />
       {/* Global topbar — cashier only. Owner has its own header inside OwnerWorkspace */}
       {isCashier && (
         <Topbar

@@ -51,6 +51,14 @@ The Tailwind v4 theme in `frontend/src/index.css` defines app-specific tokens fo
 - **QR Modal**: Large, centered overlay with backdrop blur. Must feature clear visual states (e.g., "Waiting for payment" in yellow, "Payment Received" in green).
 - **Transient Notifications**: SweetAlert success/error notifications appear as bottom-right toasts and close after 3 seconds. Confirmations and blocking progress dialogs remain centered and require explicit completion.
 
+## Accessibility Baseline
+
+- Public and authenticated page shells provide a first-focusable “Skip to main content” link targeting one `main-content` landmark.
+- Buttons, links, inputs, selects, textareas, and custom keyboard controls retain a visible `focus-visible` outline or an equivalent component focus ring.
+- Icon-only controls require an accessible name. Form controls require a visible or programmatically associated label, and authentication fields include appropriate autocomplete hints.
+- Login errors use an alert announcement, while Cashier PIN progress is exposed as a polite status without revealing the entered digits.
+- This baseline does not replace a full axe, screen-reader, contrast, touch-target, responsive, or supported-browser audit; those remain production verification work.
+
 ### Global Layout Grids & Sizing Scale
 
 - **Base Grid:** Strict 8px spatial grid system (`8px`, `16px`, `24px`, `32px`, `48px`). All margins, paddings, and structural spacing values must align to this increments.

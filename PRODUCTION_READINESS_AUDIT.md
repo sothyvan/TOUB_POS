@@ -163,7 +163,7 @@ These controls should be preserved during remediation.
 - **Severity:** P1
 - **Category:** Supply-chain security
 - **Business impact:** Published vulnerabilities remain in production dependency trees. The disabled KHQR library brings an obsolete Axios version with high-severity advisories.
-- **Resolution:** Removed `bakong-khqr` and its obsolete Axios tree; startup now rejects KHQR enablement until a new provider adapter is installed. Updated `body-parser` to 1.20.6, React Router DOM/Router to 7.18.2, PostCSS to 8.5.25, and DOMPurify to 3.4.12.
+- **Resolution:** Removed `bakong-khqr` and its obsolete Axios tree; startup now rejects KHQR enablement until a new provider adapter is installed. Updated `body-parser` to 1.20.6, React Router DOM/Router to 7.18.2, PostCSS to 8.5.25, and DOMPurify to 3.4.12. After high-severity advisories newly surfaced by the registry audit on 2026-08-05 and failed both quality jobs, refreshed the already-compatible lockfile ranges to `socket.io-parser@4.2.7` in both applications and backend `ip-address@10.4.0`.
 - **Residual scan:** Backend production audit reports two moderate entries for one Sequelize/UUID dependency chain and no high/critical findings. Frontend reports one high React Router advisory twice (direct wrapper and transitive package). The Router finding is non-applicable to TouB's client-only `BrowserRouter` SPA because no RSC, SSR, data-router action, loader, or server-action boundary exists.
 - **Risk decisions:** `docs/security/dependency-risk-register.md` records owners, call-path evidence, rationale, controls, review deadlines, and exit conditions. npm's proposed Sequelize downgrade and Router downgrade/forced version mismatch were rejected as higher-risk changes.
 - **Acceptance criteria:** Production audit has no unresolved high/critical findings; any accepted lower finding has owner, rationale, exposure analysis, and expiry date; regression tests pass.
@@ -490,6 +490,14 @@ RPO and 4-hour RTO on 2026-07-31.
 - **Evidence:** Shared modals include good focus behavior, but no automated accessibility or performance checks exist.
 - **Recommended remediation:** Add axe-based E2E checks, keyboard/touch test cases, Lighthouse budgets, and supported viewport/device definitions.
 - **Acceptance criteria:** CI enforces agreed thresholds on critical routes.
+- **Implementation baseline (2026-08-01):** Added a shared keyboard skip link,
+  correctly scoped main landmarks, global visible focus treatment, login
+  alert/PIN-status semantics, missing form/control names, and four source-policy
+  regression tests. A live Chromium check verifies the landing-page keyboard
+  and landmark behavior. This reduces confirmed accessibility defects but does
+  not close P3-3 because axe-based critical-route CI, agreed thresholds,
+  contrast/screen-reader/touch review, supported-device coverage, and Lighthouse
+  budgets are not yet implemented.
 - **Estimated size:** M
 - **Dependencies:** E2E framework.
 

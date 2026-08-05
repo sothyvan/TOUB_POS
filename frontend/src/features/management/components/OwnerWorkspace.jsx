@@ -207,7 +207,7 @@ export default function OwnerWorkspace({
           <OwnerHeader activeTab={visibleOwnerTab} />
         </div>
 
-        <main className="flex-1 p-[clamp(18px,2.4vw,30px)] overflow-y-auto max-[768px]:p-4 flex flex-col gap-6">
+        <main id="main-content" tabIndex={-1} className="flex-1 p-[clamp(18px,2.4vw,30px)] overflow-y-auto max-[768px]:p-4 flex flex-col gap-6">
         {/* Tab Subcomponents */}
         <Suspense
           fallback={(

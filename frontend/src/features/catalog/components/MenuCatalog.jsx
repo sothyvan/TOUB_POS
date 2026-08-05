@@ -252,6 +252,7 @@ function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsE
           </p>
         </div>
         <button type="button" onClick={onCancel} disabled={isSaving || isUploading}
+          aria-label="Close product editor"
           className="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-100 border-0"
           style={{ background: '#fafafa' }}>
           <Icon name="close" className="w-3.5 h-3.5 text-[#6b7280]" strokeWidth={2} />
@@ -336,6 +337,7 @@ function EditorPanel({ form, setForm, categories, stalls, stallsLoading, stallsE
               </p>
             )}
             <FormInput
+              label="Image URL"
               value={form.image || ''}
               onChange={e => {
                 setUploadError('');

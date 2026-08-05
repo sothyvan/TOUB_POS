@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Logo from '../components/ui/Logo';
 import Icon from '../components/ui/Icon';
 import Button from '../components/ui/Button';
+import SkipLink from '../components/ui/SkipLink';
 import ThemeToggle from '../shared/theme/ThemeToggle';
 
 const features = [
@@ -89,7 +90,8 @@ export default function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <main className="tech-grid min-h-svh bg-ui-bg text-brand-text">
+    <div className="tech-grid min-h-svh bg-ui-bg text-brand-text">
+      <SkipLink />
       {/* Navigation bar */}
       <header className="sticky top-0 z-50 border-b border-brand-border bg-ui-bg/85 backdrop-blur-md">
         <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-6">
@@ -122,6 +124,7 @@ export default function LandingPage() {
               onClick={() => setMenuOpen((open) => !open)}
               aria-label="Toggle navigation menu"
               aria-expanded={menuOpen}
+              aria-controls="landing-mobile-navigation"
               className="grid h-10 w-10 place-items-center rounded-md border border-brand-border bg-ui-surface text-text-soft transition-colors hover:border-brand-action/50 hover:bg-ui-muted hover:text-brand-action cursor-pointer md:hidden"
             >
               <Icon name={menuOpen ? 'close' : 'menu'} className="h-5 w-5" strokeWidth={2} />
@@ -130,7 +133,7 @@ export default function LandingPage() {
         </nav>
 
         {menuOpen && (
-          <div className="animate-in slide-in-from-top-2 fade-in border-t border-brand-border bg-ui-bg/95 duration-200 md:hidden">
+          <div id="landing-mobile-navigation" className="animate-in slide-in-from-top-2 fade-in border-t border-brand-border bg-ui-bg/95 duration-200 md:hidden">
             <div className="mx-auto flex max-w-6xl flex-col gap-1 px-6 py-4">
               <a
                 href="#features"
@@ -171,6 +174,8 @@ export default function LandingPage() {
           </div>
         )}
       </header>
+
+      <main id="main-content" tabIndex={-1}>
 
       {/* Hero */}
       <section className="mx-auto flex max-w-6xl flex-col items-center gap-8 px-6 pb-16 pt-12 text-center md:pt-20">
@@ -241,6 +246,7 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+      </main>
 
       {/* Footer */}
       <footer className="border-t border-brand-border bg-ui-elevated ">
@@ -252,6 +258,6 @@ export default function LandingPage() {
           <span>Internal POS tool — access by invitation only.</span>
         </div>
       </footer>
-    </main>
+    </div>
   );
 }

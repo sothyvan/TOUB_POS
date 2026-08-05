@@ -1267,6 +1267,40 @@ Update this file after every meaningful implementation change.
     and the production-like cash-to-kitchen-to-report smoke test must be
     verified in Render before this deployment gate is closed.
 
+- **Implemented the first production accessibility baseline**:
+  - Audited the public landing and management-login accessibility trees in a
+    real Chromium session and reviewed shared layouts, authentication controls,
+    and catalog editor controls for keyboard and accessible-name gaps.
+  - Added one reusable first-focusable skip link to public and authenticated
+    shells, one correctly scoped `main-content` landmark per rendered shell,
+    and a global visible keyboard-focus rule.
+  - Added alert semantics for login failures, non-secret live PIN progress,
+    username/password autocomplete hints, an accessible product-editor close
+    name, and a visible Image URL label.
+  - Added four dependency-free policy tests for focus visibility, skip-link and
+    landmark contracts, authentication announcements, and catalog control
+    names. Frontend lint, all 23 unit tests, and the production build pass.
+  - Live Chromium verification confirms the skip link receives first focus,
+    Enter moves focus to `main-content`, and the landing page contains one main
+    landmark with its header and footer outside it.
+  - P3-3 remains open: TouB still needs axe-based critical-route CI, agreed
+    violation thresholds, contrast and screen-reader review, supported
+    browser/device coverage, touch-target checks, and Lighthouse budgets.
+
+- **Resolved accessibility-branch dependency audit failures**:
+  - GitHub's Backend quality and Frontend quality jobs reached their final
+    production-audit step successfully, then failed on high-severity advisories
+    newly surfaced by the registry audit on 2026-08-05 and unrelated to the
+    accessibility implementation.
+  - Refreshed the existing compatible transitive ranges to
+    `socket.io-parser@4.2.7` in both lockfiles and `ip-address@10.4.0` in the
+    backend lockfile. No direct dependency, API, or runtime feature contract
+    changed.
+  - The exact backend and frontend audit-policy commands now pass. Clean locked
+    installs, capped backend lint with the 61 pre-existing warnings, all 73
+    backend unit tests, frontend dependency-tree validation, frontend lint, all
+    23 frontend unit tests, the production build, and `git diff --check` pass.
+
 ## Next Up
 
 - Production-readiness remediation:
