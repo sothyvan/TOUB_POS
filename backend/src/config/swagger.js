@@ -547,6 +547,28 @@ export const swaggerDocument = {
                 }
             }
         },
+        '/api/operations/telegram': {
+            get: {
+                summary: 'Get Telegram kitchen delivery health',
+                description: 'Owner/Manager only. Returns tenant-scoped current actionable outbox counts, successful sends and latency from the configured recent window, and bounded safe actionable jobs. Raw provider errors, lock identities, tokens, and Telegram identifiers are never returned.',
+                parameters: [
+                    {
+                        in: 'query',
+                        name: 'stall_id',
+                        required: false,
+                        schema: { type: 'integer', minimum: 1 },
+                        description: 'Optional same-owner Stall scope.'
+                    }
+                ],
+                responses: {
+                    200: { description: 'Telegram operations snapshot' },
+                    400: { $ref: '#/components/responses/BadRequest' },
+                    401: { $ref: '#/components/responses/Unauthorized' },
+                    403: { $ref: '#/components/responses/Forbidden' },
+                    404: { $ref: '#/components/responses/NotFound' }
+                }
+            }
+        },
         '/api/users': {
             get: {
                 summary: 'List users',

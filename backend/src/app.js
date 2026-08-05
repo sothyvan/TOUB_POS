@@ -11,6 +11,7 @@ import categoryRoutes from './routes/category.routes.js';
 import telegramRoutes from './routes/telegram.routes.js';
 import healthRoutes from './routes/health.routes.js';
 import financialSettingsRoutes from './routes/financial-settings.routes.js';
+import operationsRoutes from './routes/operations.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { requestContext, requestLogger } from './middleware/logger.middleware.js';
 import swaggerUi from 'swagger-ui-express';
@@ -85,6 +86,7 @@ app.use('/api/stalls', stallRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/telegram', telegramRoutes);
 app.use('/api/financial-settings', financialSettingsRoutes);
+app.use('/api/operations', operationsRoutes);
 
 // ── Global Error Handler (must be last) ──────────────────
 app.use(errorHandler);

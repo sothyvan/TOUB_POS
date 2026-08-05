@@ -171,6 +171,14 @@
      generated value closes concurrency races while allowing a deleted Stall's
      former chat ID to be reused. Managed migration must stop on pre-existing
      duplicates instead of choosing a Stall or rewriting routing automatically.
+   - Telegram operations monitoring is exposed only to authenticated Owners and
+     Managers through a tenant-scoped backend snapshot. Every query joins
+     dispatch jobs through Orders and non-deleted Stalls to the resolved Owner.
+     The response may expose aggregate states, bounded actionable Order/Stall
+     references, retry timing, and delivery latency, but never raw provider
+     errors, worker lock identities, Telegram identifiers, tokens, or provider
+     response bodies. Manual retry remains limited to terminal failed jobs and
+     continues through the existing authorized Order retry command.
 8. Order item modifiers/notes must be stored as a snapshot at time of order — not linked to a live config.
 9. For the current release, the trusted final order total equals the backend-calculated item subtotal. The frontend must not invent service fees or taxes. Any future charge requires an approved backend-owned policy covering rates, rounding, exemptions, snapshots, receipts, and reports.
 10. Product USD/KHR prices are synchronized in the management UI using the Owner's saved rate; editing either field regenerates the other. Every Order stores trusted USD and whole-riel KHR totals and the Owner's business exchange rate at creation time. New cashier Orders use USD as the canonical settlement value while showing both totals. Cash confirmation may accept independent USD and KHR amounts, but conversion, underpayment checks, and both equivalent change amounts are backend-owned. Historical orders retain their original pricing-currency and rate snapshots; changing the current setting never rewrites them.

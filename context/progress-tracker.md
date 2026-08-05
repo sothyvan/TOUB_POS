@@ -22,6 +22,7 @@ Update this file after every meaningful implementation change.
   - Telegram ticket status and retry — **COMPLETE** ✅
 - Post-Phase 6 Operations & Security Hardening — **IN PROGRESS**
   - Owner/Manager Operations Watch for KHQR and Telegram ticket issues — **COMPLETE** ✅
+  - Tenant-scoped Telegram outbox metrics, latency, and safe alerts — **COMPLETE** ✅
   - Safe KHQR close and resume flow — **COMPLETE** ✅
   - KHQR pre-checkout confirmation — **COMPLETE** ✅
   - Backend-backed UI auto-refresh fallback — **COMPLETE** ✅
@@ -87,6 +88,22 @@ Update this file after every meaningful implementation change.
     unit tests pass; capped backend lint passes with 58 existing warnings. The
     live constraint test awaits disposable MySQL CI because Docker is not
     installed in the local workspace.
+- Telegram Operations Monitoring — **COMPLETE** ✅
+  - Added an Owner/Manager-only `GET /api/operations/telegram` snapshot with
+    exact Owner tenancy, optional owned-Stall filtering, complete actionable
+    job counts, window-bounded successful sends, configurable stale thresholds,
+    and a bounded recent delivery-latency sample.
+  - Added a dashboard Kitchen delivery health panel with 30-second and
+    management-event refresh, safe actionable order references, and manual retry
+    only for terminal failed jobs through the existing authorized command.
+  - Raw Telegram errors, provider responses, chat IDs, bot tokens, and worker
+    lock identities are excluded from the API; failures are mapped to stable,
+    operator-safe categories and summaries.
+  - Added six backend unit regressions, three frontend regressions, and a
+    disposable-MySQL tenant-isolation live test wired into `npm run test:live`.
+    All 96 backend and 26 frontend unit tests, both linters, the frontend
+    production build, and `git diff --check` pass. Backend lint retains 58
+    pre-existing warnings. The live test awaits disposable MySQL CI.
 - Telegram Cook Authorization Hardening — **COMPLETE** ✅
   - Added stall-scoped Telegram-only cook identities without adding a web-app cook role.
   - Owner/Manager can authorize, reactivate, list, and revoke individual cook identities from Stall Management.
@@ -1480,8 +1497,9 @@ Update this file after every meaningful implementation change.
   - Follow the audit's phased P0/P1 plan only after team review and approval.
 
 - Post-Phase 6 Operations & Security Hardening.
-  - Add payment monitoring and operational alerting for failed Bakong or Telegram operations.
-  - Add operator-facing outbox metrics/alerts beyond the existing ticket status and manual retry UI.
+  - Add payment monitoring if an approved merchant provider replaces suspended KHQR.
+  - Route production Telegram terminal-failure alerts to an external on-call
+    destination; the implemented dashboard is in-product visibility only.
 
 - Phase 7C Demo Stabilization & Polish.
   - Manually test the Owner/Manager report filters against seeded and real orders.

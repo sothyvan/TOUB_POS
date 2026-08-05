@@ -218,7 +218,12 @@ export default function OwnerWorkspace({
           )}
         >
         <div className="flex-1">
-          {visibleOwnerTab === 'dashboard' && <OwnerDashboard orders={orders} />}
+          {visibleOwnerTab === 'dashboard' && (
+            <OwnerDashboard
+              orders={orders}
+              onRetryTelegramDispatch={onRetryTelegramDispatch}
+            />
+          )}
 
           {visibleOwnerTab === 'products' && (
             <MenuCatalog
