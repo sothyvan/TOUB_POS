@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { Stall } from '../models/index.js';
 import * as connectionRepository from '../repositories/telegram-group-connection.repository.js';
 import { httpError } from '../utils/http-error.util.js';
+import { escapeTelegramHtml } from '../utils/telegram-html.util.js';
 import { getBotIdentity, sendNotification } from './telegram.service.js';
 import { emitManagementTelegramGroupUpdated } from './websocket.service.js';
 import { AUDIT_ACTIONS, writeAdministrativeAudit } from './audit.service.js';
@@ -22,13 +23,6 @@ function getExpiryMinutes() {
   return Number.isInteger(configured) && configured > 0
     ? configured
     : DEFAULT_EXPIRY_MINUTES;
-}
-
-function escapeTelegramHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;');
 }
 
 async function requireOwnedStall(rawStallId, actor) {
@@ -162,6 +156,7 @@ export async function processTelegramGroupConnection(update, dependencyOverrides
     await dependencies.sendMessage(
       chatId,
       `✅ <b>${escapeTelegramHtml(chatTitle)}</b> is now connected to <b>${escapeTelegramHtml(result.stall.name)}</b> in TouB POS.`,
+      { stallId: result.stall.id },
     ).catch(() => {});
     return true;
   }
@@ -176,6 +171,7 @@ export async function processTelegramGroupConnection(update, dependencyOverrides
   await dependencies.sendMessage(
     chatId,
     escapeTelegramHtml(responseByOutcome[result.outcome] || 'Unable to connect this Telegram group.'),
+    { stallId: result.stall?.id },
   ).catch(() => {});
   return true;
 }

@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { processTelegramCallback } from '../src/services/telegram-callback.service.js';
+import {
+  formatUpgradeCompletionNotification,
+  markTicketDone,
+  processTelegramCallback,
+} from '../src/services/telegram-callback.service.js';
 
 function buildUpdate(overrides = {}) {
   return {
@@ -124,4 +128,144 @@ test('Telegram Done callback rejects unpaid orders before completion', async () 
 
   assert.deepEqual(harness.answers, ['Only paid orders can be completed.']);
   assert.equal(harness.completions.length, 0);
+});
+
+test('Telegram group-upgrade notification escapes the cook display name', () => {
+  const message = formatUpgradeCompletionNotification(
+    { id: 42 },
+    'Cook <Admin> & Co',
+  );
+
+  assert.match(message, /<b>Order #42<\/b>/);
+  assert.match(message, /<b>Cook &lt;Admin&gt; &amp; Co<\/b>/);
+  assert.doesNotMatch(message, /Cook <Admin> & Co/);
+});
+
+test('concurrent Telegram Done completions edit and attribute a sent ticket once', async () => {
+  const ticket = {
+    id: 9,
+    order_id: 42,
+    telegram_chat_id: '-100500',
+    telegram_msg_id: '700',
+    status: 'sent',
+    saveCalls: 0,
+    save() {
+      this.saveCalls += 1;
+      return Promise.resolve();
+    },
+  };
+  let transactionQueue = Promise.resolve();
+  let transactionActive = false;
+  let editCalls = 0;
+  const runInTransaction = (work) => {
+    const result = transactionQueue.then(async () => {
+      transactionActive = true;
+      try {
+        return await work({ LOCK: { UPDATE: 'UPDATE' } });
+      } finally {
+        transactionActive = false;
+      }
+    });
+    transactionQueue = result.catch(() => {});
+    return result;
+  };
+  const atomicDependencies = {
+    runInTransaction,
+    findTicketForUpdate: () => Promise.resolve(ticket),
+  };
+  const dependencies = {
+    atomicDependencies,
+    editDone: () => {
+      assert.equal(transactionActive, false);
+      editCalls += 1;
+      return Promise.resolve();
+    },
+    emitUpdate: () => {},
+    answerQuery: () => Promise.resolve(),
+    logInfo: () => {},
+  };
+  const order = {
+    id: 42,
+    stall_id: 5,
+    cashier_id: 9,
+    Stall: { owner_id: 1 },
+  };
+  const firstCook = {
+    telegram_user_id: '111',
+    display_name: 'First Cook',
+  };
+  const secondCook = {
+    telegram_user_id: '222',
+    display_name: 'Second Cook',
+  };
+
+  const outcomes = await Promise.all([
+    markTicketDone(
+      ticket,
+      order,
+      firstCook,
+      'callback-1',
+      -100500,
+      700,
+      dependencies,
+    ),
+    markTicketDone(
+      ticket,
+      order,
+      secondCook,
+      'callback-2',
+      -100500,
+      700,
+      dependencies,
+    ),
+  ]);
+
+  assert.deepEqual(outcomes.map(({ outcome }) => outcome), ['completed', 'already_done']);
+  assert.equal(editCalls, 1);
+  assert.equal(ticket.saveCalls, 1);
+  assert.equal(ticket.status, 'done');
+  assert.equal(ticket.completed_by_telegram_user_id, '111');
+  assert.equal(ticket.completed_by_name, 'First Cook');
+});
+
+test('a post-commit Telegram edit failure keeps the authoritative completion', async () => {
+  const ticket = {
+    id: 9,
+    order_id: 42,
+    telegram_chat_id: '-100500',
+    telegram_msg_id: '700',
+    status: 'sent',
+    save: () => Promise.resolve(),
+  };
+  const answers = [];
+  const completion = await markTicketDone(
+    ticket,
+    { id: 42, stall_id: 5, cashier_id: 9, Stall: { owner_id: 1 } },
+    { telegram_user_id: '111', display_name: 'First Cook' },
+    'callback-1',
+    -100500,
+    700,
+    {
+      atomicDependencies: {
+        runInTransaction: (work) => work({ LOCK: { UPDATE: 'UPDATE' } }),
+        findTicketForUpdate: () => Promise.resolve(ticket),
+      },
+      editDone: () => Promise.reject(new Error('Telegram unavailable')),
+      handleEditFailure: (error) => Promise.reject(error),
+      emitUpdate: () => {},
+      answerQuery: (_callbackId, message) => {
+        answers.push(message);
+        return Promise.resolve();
+      },
+      logError: () => {},
+      logInfo: () => {},
+    },
+  );
+
+  assert.equal(completion.outcome, 'completed');
+  assert.equal(completion.telegramUpdate, 'failed');
+  assert.equal(ticket.status, 'done');
+  assert.equal(ticket.completed_by_telegram_user_id, '111');
+  assert.match(answers[0], /recorded as done/i);
+  assert.match(answers[0], /could not be updated/i);
 });

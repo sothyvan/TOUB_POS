@@ -38,6 +38,43 @@ Update this file after every meaningful implementation change.
   - Backend KHQR creation, explicit status checks, and the background checker are disabled by default.
   - Frontend KHQR checkout, polling modal, and resume actions are hidden by default.
   - Historical KHQR orders, reports, receipts, audit data, schema fields, and provider code are retained for a future approved merchant integration.
+- Telegram HTML Message Safety — **COMPLETE** ✅
+  - Added one shared Telegram HTML escaping utility and removed the duplicate
+    group-connection implementation.
+  - Kitchen tickets, item modifiers, cashier/stall labels, group-connection
+    labels, cook completion names, and group-upgrade notifications now escape only untrusted values
+    while preserving trusted Telegram markup.
+  - Added regression coverage for the utility, order tickets, completed
+    tickets, group connections, and group-upgrade notifications. All 78 backend unit tests pass;
+    capped backend lint passes with the 61 pre-existing warnings.
+- Telegram Done Completion Atomicity — **COMPLETE** ✅
+  - Done callbacks now re-read and lock the exact ticket inside a short MySQL
+    transaction, atomically recording the `sent` to `done` transition and cook
+    attribution before any Telegram network call.
+  - Concurrent valid callbacks serialize on the ticket row. Only the winning
+    callback performs the post-commit message edit; later callbacks receive the
+    existing “Already marked as done” response.
+  - Post-commit Telegram edit failures retain the authoritative completion,
+    return explicit cook feedback, and emit a structured diagnostic for
+    operational follow-up.
+  - Added database-free regressions covering one edit/save, first-cook
+    attribution, network calls outside the transaction, and post-commit edit
+    failure. All 80 backend unit tests pass; capped backend lint remains within
+    the existing warning baseline.
+- Telegram Supergroup Migration Integrity — **COMPLETE** ✅
+  - Replaced the low-level broad chat-ID rewrite with a dedicated stall-scoped
+    migration service and repository invoked only for Telegram's authenticated
+    `migrate_to_chat_id` response.
+  - The migration locks the exact connected Stall, verifies its current chat
+    ID, rejects destinations used by another active Stall, and updates only
+    that Stall plus its pending/sent tickets inside one transaction.
+  - Every successful migration writes a system administrative audit with
+    masked old/new chat identifiers and the affected active-ticket count. Audit
+    failure rolls back the routing changes.
+  - Added database-free regressions for scoping, conflict rejection,
+    transactional rollback, masked audit details, and removal of the broad
+    low-level update. All 85 backend unit tests pass; capped backend lint passes
+    with 58 warnings.
 - Telegram Cook Authorization Hardening — **COMPLETE** ✅
   - Added stall-scoped Telegram-only cook identities without adding a web-app cook role.
   - Owner/Manager can authorize, reactivate, list, and revoke individual cook identities from Stall Management.

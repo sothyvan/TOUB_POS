@@ -1,5 +1,7 @@
 import fetch from 'node-fetch';
 import { TelegramTicket, Stall } from '../models/index.js';
+import { escapeTelegramHtml } from '../utils/telegram-html.util.js';
+import { migrateTelegramChatRouting } from './telegram-chat-migration.service.js';
 import { emitKitchenTicketUpdated } from './websocket.service.js';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -14,7 +16,7 @@ let cachedBotIdentity = null;
  * Retries once on network failure (fetch failed) before throwing,
  * since Node v24's undici can drop connections intermittently.
  */
-async function callTelegramApi(method, body) {
+async function callTelegramApi(method, body, options = {}) {
   const url = `${TELEGRAM_API_BASE}/${method}`;
   const timeoutValue = Number(process.env.TELEGRAM_API_TIMEOUT_MS);
   const timeoutMs = Number.isInteger(timeoutValue) && timeoutValue > 0
@@ -37,29 +39,28 @@ async function callTelegramApi(method, body) {
 
       if (!json.ok) {
         if (json.parameters?.migrate_to_chat_id) {
-          const newChatId = json.parameters.migrate_to_chat_id;
-          try {
-            await Stall.update(
-              { telegram_chat_id: String(newChatId) },
-              { where: { telegram_chat_id: String(body.chat_id) } }
+          if (typeof options.onChatMigration !== 'function') {
+            const migrationError = new Error(
+              `Telegram API error [${method}]: chat migration requires stall context.`,
             );
-            console.log(`[Telegram] Auto-migrating chat ID from ${body.chat_id} to ${newChatId} due to supergroup upgrade.`);
-            
-            body.chat_id = newChatId;
-            const retryResponse = await fetch(url, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(body),
-              signal: controller.signal,
-            });
-            const retryJson = await retryResponse.json();
-            if (retryJson.ok) {
-              return retryJson.result;
-            }
-            throw new Error(`Telegram API error [${method}]: ${retryJson.description}`);
-          } catch (migrateErr) {
-            console.error('[Telegram] Failed during chat ID migration:', migrateErr.message);
+            migrationError.code = 'TELEGRAM_CHAT_MIGRATION_CONTEXT_REQUIRED';
+            throw migrationError;
           }
+          const oldChatId = String(body.chat_id);
+          const newChatId = String(json.parameters.migrate_to_chat_id);
+          await options.onChatMigration({ oldChatId, newChatId });
+
+          const retryResponse = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...body, chat_id: newChatId }),
+            signal: controller.signal,
+          });
+          const retryJson = await retryResponse.json();
+          if (retryJson.ok) {
+            return retryJson.result;
+          }
+          throw new Error(`Telegram API error [${method}]: ${retryJson.description}`);
         }
         throw new Error(`Telegram API error [${method}]: ${json.description}`);
       }
@@ -80,13 +81,24 @@ async function callTelegramApi(method, body) {
   throw lastError;
 }
 
+function createChatMigrationHandler(stallId) {
+  if (!Number.isInteger(Number(stallId)) || Number(stallId) <= 0) {
+    return undefined;
+  }
+  return ({ oldChatId, newChatId }) => migrateTelegramChatRouting({
+    stallId,
+    oldChatId,
+    newChatId,
+  });
+}
+
 // ── Message Formatting ────────────────────────────────────
 
 /**
  * Formats an order into a structured kitchen ticket message string.
  * Uses HTML parse mode so we can use <b> and <i> tags.
  */
-function formatOrderMessage(order) {
+export function formatOrderMessage(order) {
   // Sequelize can return timestamps as camelCase (createdAt) or snake_case (created_at)
   const rawDate = order.created_at ?? order.createdAt;
   const orderTime = rawDate
@@ -98,8 +110,15 @@ function formatOrderMessage(order) {
       })
     : '??:??';
 
-  const stallName = order.Stall?.name ?? `Stall #${order.stall_id}`;
-  const cashierName = order.Cashier?.username ?? `Cashier #${order.cashier_id}`;
+  const hasStallName = order.Stall?.name !== null && order.Stall?.name !== undefined;
+  const stallName = !hasStallName
+    ? `Stall #${order.stall_id}`
+    : escapeTelegramHtml(order.Stall.name);
+  const hasCashierName = order.Cashier?.username !== null
+    && order.Cashier?.username !== undefined;
+  const cashierName = !hasCashierName
+    ? `Cashier #${order.cashier_id}`
+    : escapeTelegramHtml(order.Cashier.username);
   const paymentLabel = order.payment_method?.toUpperCase() ?? 'N/A';
   const totalLabel = order.pricing_currency === 'khr'
     ? `${Number(order.total_khr ?? 0).toLocaleString('en-US')} ៛`
@@ -107,8 +126,10 @@ function formatOrderMessage(order) {
 
   // Build item lines, each with optional modifier note indented below
   const itemLines = (order.Items ?? []).map((item) => {
-    const nameLine = `• ${item.quantity}× ${item.name}`;
-    const noteLine = item.notes ? `   ↳ <i>${item.notes}</i>` : null;
+    const nameLine = `• ${item.quantity}× ${escapeTelegramHtml(item.name)}`;
+    const noteLine = item.notes
+      ? `   ↳ <i>${escapeTelegramHtml(item.notes)}</i>`
+      : null;
     return noteLine ? `${nameLine}\n${noteLine}` : nameLine;
   });
 
@@ -125,14 +146,14 @@ function formatOrderMessage(order) {
 /**
  * Builds the edited "done" version of the ticket message.
  */
-function formatDoneMessage(order, completedByName) {
+export function formatDoneMessage(order, completedByName) {
   const original = formatOrderMessage(order);
   const now = new Date();
   const pad = (n) => String(n).padStart(2, '0');
   const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
   
   const info = completedByName 
-    ? `\n\n✅ <b>Completed by ${completedByName} at ${timeStr}</b>`
+    ? `\n\n✅ <b>Completed by ${escapeTelegramHtml(completedByName)} at ${timeStr}</b>`
     : `\n\n✅ <b>Completed at ${timeStr}</b>`;
 
   // Prepend a ✅ DONE header, replace the 🍽 line, and append completion details
@@ -172,6 +193,8 @@ async function sendOrderTicket(chatId, order) {
         },
       ]],
     },
+  }, {
+    onChatMigration: createChatMigrationHandler(order.stall_id),
   });
 
   return {
@@ -191,6 +214,8 @@ export async function editMessageDone(chatId, msgId, order, completedByName) {
     text: formatDoneMessage(order, completedByName),
     parse_mode: 'HTML',
     reply_markup: { inline_keyboard: [] }, // remove the button
+  }, {
+    onChatMigration: createChatMigrationHandler(order.stall_id),
   });
 }
 
@@ -208,11 +233,13 @@ export async function answerCallbackQuery(callbackQueryId, text = '') {
 /**
  * Sends a plain text or HTML formatted notification message to a chat ID.
  */
-export async function sendNotification(chatId, text) {
+export async function sendNotification(chatId, text, options = {}) {
   await callTelegramApi('sendMessage', {
     chat_id: chatId,
     text,
     parse_mode: 'HTML',
+  }, {
+    onChatMigration: createChatMigrationHandler(options.stallId),
   });
 }
 
@@ -266,14 +293,9 @@ export async function dispatchToTelegram(order, options = {}) {
   try {
     const { msgId, chatId: returnedChatId } = await sendOrderTicket(chatId, order);
 
-    // If Telegram returned a different chat ID than requested, it means it auto-migrated on-the-fly
+    // A different returned ID was already migrated through the scoped service.
     if (String(returnedChatId) !== String(chatId)) {
       console.log(`[Telegram] Detected on-the-fly migration from ${chatId} to ${returnedChatId}`);
-      const freshStall = await Stall.findByPk(order.stall_id);
-      if (freshStall) {
-        freshStall.telegram_chat_id = returnedChatId;
-        await freshStall.save();
-      }
     }
 
     // Refresh the stall to fetch the latest chat ID in case of migration
