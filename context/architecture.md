@@ -45,7 +45,7 @@
 - `frontend/src/shared/layout/` — Cross-feature page shells and top-level layout components.
 - `frontend/src/shared/theme/` — Persistent light/dark theme state and the shared theme toggle.
 - `frontend/src/shared/notifications/` — Application-wide, accessible transient action feedback with a bounded queue and domain-neutral notification API.
-- `frontend/src/components/ui/` — Reusable, domain-neutral UI primitives such as buttons, forms, dialogs, badges, pagination, and loading states.
+- `frontend/src/components/ui/` — Reusable, domain-neutral UI primitives such as buttons, forms, dialogs, badges, pagination, loading states, and the keyboard skip link shared by public and authenticated shells.
 - `frontend/src/pages/` — Remaining route-level Cashier and Owner/Manager orchestration pages. The login route is owned by `features/auth/pages/`.
 - `frontend/src/hooks/`, `services/`, and `utils/` — Shared state/data hooks, Axios/Socket.IO clients, and domain-neutral helpers used across features.
 - `frontend/e2e/` — Playwright browser journeys for critical role, session, terminal, checkout, receipt, and route-protection behavior. CI runs these serially against disposable MySQL/API/frontend instances.
@@ -162,6 +162,7 @@
 9. For the current release, the trusted final order total equals the backend-calculated item subtotal. The frontend must not invent service fees or taxes. Any future charge requires an approved backend-owned policy covering rates, rounding, exemptions, snapshots, receipts, and reports.
 10. Product USD/KHR prices are synchronized in the management UI using the Owner's saved rate; editing either field regenerates the other. Every Order stores trusted USD and whole-riel KHR totals and the Owner's business exchange rate at creation time. New cashier Orders use USD as the canonical settlement value while showing both totals. Cash confirmation may accept independent USD and KHR amounts, but conversion, underpayment checks, and both equivalent change amounts are backend-owned. Historical orders retain their original pricing-currency and rate snapshots; changing the current setting never rewrites them.
 11. Unhandled React render and lifecycle failures must reach the root error boundary. Its fallback must not clear browser recovery records or display the thrown message/stack, and diagnostics must contain only a generated correlation ID, sanitized pathname, and component names. Event-handler and asynchronous failures remain the responsibility of their normal request/workflow error handling because React error boundaries do not catch them.
+12. Public and authenticated application shells must expose one `main-content` landmark reachable through the first keyboard-focusable skip link. Interactive controls must retain a visible focus indicator, validation errors must be announced, and icon-only controls must have an accessible name.
 
 ## Frontend State Management
 

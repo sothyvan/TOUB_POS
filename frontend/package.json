@@ -8,7 +8,7 @@
     "build": "vite build",
     "deps:check": "npm ls --depth=0",
     "lint": "eslint .",
-    "test": "node --test tests/bundle-budget.unit.test.js tests/csp.unit.test.js tests/error-boundary.unit.test.js tests/financial-policy.unit.test.js tests/notification-policy.unit.test.js",
+    "test": "node --test tests/accessibility-policy.unit.test.js tests/bundle-budget.unit.test.js tests/csp.unit.test.js tests/error-boundary.unit.test.js tests/financial-policy.unit.test.js tests/notification-policy.unit.test.js",
     "preview": "vite preview",
     "test:e2e": "playwright test"
   },

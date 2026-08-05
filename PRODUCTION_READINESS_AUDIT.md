@@ -490,6 +490,14 @@ RPO and 4-hour RTO on 2026-07-31.
 - **Evidence:** Shared modals include good focus behavior, but no automated accessibility or performance checks exist.
 - **Recommended remediation:** Add axe-based E2E checks, keyboard/touch test cases, Lighthouse budgets, and supported viewport/device definitions.
 - **Acceptance criteria:** CI enforces agreed thresholds on critical routes.
+- **Implementation baseline (2026-08-01):** Added a shared keyboard skip link,
+  correctly scoped main landmarks, global visible focus treatment, login
+  alert/PIN-status semantics, missing form/control names, and four source-policy
+  regression tests. A live Chromium check verifies the landing-page keyboard
+  and landmark behavior. This reduces confirmed accessibility defects but does
+  not close P3-3 because axe-based critical-route CI, agreed thresholds,
+  contrast/screen-reader/touch review, supported-device coverage, and Lighthouse
+  budgets are not yet implemented.
 - **Estimated size:** M
 - **Dependencies:** E2E framework.
 

@@ -181,7 +181,7 @@ export default function CashierScreen({
   const hasProductFilters = searchQuery.trim() !== '' || selectedCategory !== 'All';
 
   return (
-    <main className={`flex-1 min-h-0 relative bg-ui-bg ${
+    <main id="main-content" tabIndex={-1} className={`flex-1 min-h-0 relative bg-ui-bg ${
       activeTab === 'sale'
         ? `grid grid-cols-[minmax(0,1fr)_400px] max-[1180px]:grid-cols-1 ${
             itemCount > 0 && !isCartOpen ? 'pb-24' : 'pb-0'
