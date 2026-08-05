@@ -1287,6 +1287,20 @@ Update this file after every meaningful implementation change.
     violation thresholds, contrast and screen-reader review, supported
     browser/device coverage, touch-target checks, and Lighthouse budgets.
 
+- **Resolved accessibility-branch dependency audit failures**:
+  - GitHub's Backend quality and Frontend quality jobs reached their final
+    production-audit step successfully, then failed on high-severity advisories
+    newly surfaced by the registry audit on 2026-08-05 and unrelated to the
+    accessibility implementation.
+  - Refreshed the existing compatible transitive ranges to
+    `socket.io-parser@4.2.7` in both lockfiles and `ip-address@10.4.0` in the
+    backend lockfile. No direct dependency, API, or runtime feature contract
+    changed.
+  - The exact backend and frontend audit-policy commands now pass. Clean locked
+    installs, capped backend lint with the 61 pre-existing warnings, all 73
+    backend unit tests, frontend dependency-tree validation, frontend lint, all
+    23 frontend unit tests, the production build, and `git diff --check` pass.
+
 ## Next Up
 
 - Production-readiness remediation:

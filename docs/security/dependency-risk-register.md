@@ -1,6 +1,6 @@
 # Dependency Risk Register
 
-Last reviewed: 2026-07-31
+Last reviewed: 2026-08-05
 
 This register covers production dependency advisories that cannot currently be
 removed safely. Pull-request CI runs `npm audit --omit=dev` through
@@ -40,3 +40,7 @@ removed safely. Pull-request CI runs `npm audit --omit=dev` through
 - Updated `react-router-dom`/`react-router` to `7.18.2`.
 - Updated transitive PostCSS to `8.5.25`.
 - Updated transitive DOMPurify to `3.4.12`.
+- Updated transitive `socket.io-parser` to `4.2.7` in the backend and frontend
+  lockfiles to remove the zero-attachment memory-exhaustion finding.
+- Updated backend transitive `ip-address` to `10.4.0` to remove the address
+  parsing and special-use classification findings.
