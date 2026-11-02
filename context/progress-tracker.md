@@ -168,6 +168,17 @@ Update this file after every meaningful implementation change.
     active-product checkout is unchanged.
   - Backend unit tests, capped backend lint, and frontend lint/build pass. The
     live case runs in the disposable-MySQL CI job.
+- Backend CI Dependency Audit Gate Remediation — **COMPLETE** ✅
+  - Investigated the failing `CI Quality and Security Gates / Backend quality`
+    workflow run and confirmed the breakage came from the production dependency
+    audit step rejecting three newly reported transitive findings:
+    `body-parser` (high), `engine.io` (high), and `proxy-addr` (critical).
+  - Added backend `npm` overrides to pin patched transitive versions
+    (`body-parser@1.20.9`, `engine.io@6.6.11`, `proxy-addr@2.0.8`) without
+    changing backend runtime APIs or business logic.
+  - Regenerated `backend/package-lock.json`, reran backend lint and unit tests,
+    and verified `node ../scripts/ci/check-npm-audit.mjs backend` now passes
+    with no unapproved high/critical production findings.
 - Telegram Cook Authorization Hardening — **COMPLETE** ✅
   - Added stall-scoped Telegram-only cook identities without adding a web-app cook role.
   - Owner/Manager can authorize, reactivate, list, and revoke individual cook identities from Stall Management.
@@ -1622,4 +1633,3 @@ Intentional shortcuts taken during development that must be resolved before prod
 | 4 | **No auth endpoint rate limiting** | `POST /api/auth/login` / `POST /api/auth/pin` | ✅ Resolved — added `express-rate-limit` |
 | 5 | **Seed owner password is a placeholder hash** | `docs/database/schema.sql` | 🔴 High — generate real bcrypt hash and store securely before any live deployment |
 | 6 | **KHQR background checker is process-local** | `startup/khqr-background-checker.js` | Deferred — KHQR is disabled. Reassess worker/queue design as part of any approved replacement provider implementation. |
-

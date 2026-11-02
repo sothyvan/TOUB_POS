@@ -45,6 +45,11 @@
     "swagger-ui-express": "^5.0.1",
     "umzug": "^3.8.3"
   },
+  "overrides": {
+    "body-parser": "1.20.9",
+    "engine.io": "6.6.11",
+    "proxy-addr": "2.0.8"
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@faker-js/faker": "^9.9.0",
