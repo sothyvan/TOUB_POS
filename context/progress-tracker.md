@@ -1569,6 +1569,10 @@ Update this file after every meaningful implementation change.
     policy checks, 71 backend unit tests, backend lint at the 61-warning existing
     baseline, 16 frontend unit tests, the clean dependency check, frontend
     lint/build, and `git diff --check` pass.
+  - Frontend quality audit gate remediation is complete for PR #31. The
+    frontend lockfile now resolves patched production versions of axios,
+    dompurify, follow-redirects, nanoid, source-map-js, and vite so the
+    `check-npm-audit.mjs frontend` high/critical policy passes again.
   - Follow the audit's phased P0/P1 plan only after team review and approval.
 
 - Post-Phase 6 Operations & Security Hardening.
