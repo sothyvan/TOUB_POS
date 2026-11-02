@@ -147,6 +147,38 @@ Update this file after every meaningful implementation change.
     transaction, and the worker is still notified only after commit.
   - Added unit regressions for single-call query options, no-reset behavior, and
     propagation of insert failures so the payment transaction can roll back.
+- Product Lifecycle Guard At Order Creation — **COMPLETE** ✅
+  - A fresh 2026-11-02 post-audit review of the code merged since the
+    2026-07-30 production-readiness audit — Telegram hardening, unique
+    kitchen-chat routing, operations monitoring, order-to-kitchen latency
+    diagnostics, and the two payment performance refactors — confirmed the
+    payment/idempotency/locking, auth/session/tenant-isolation, Telegram
+    callback/webhook, and frontend token/XSS controls remain clean.
+  - Found and fixed one defect: order creation could still sell soft-deleted
+    (`is_deleted`) or deactivated (`is_active=false`) products because its
+    `ProductStall` query omitted the lifecycle filter every other read path
+    applies.
+  - `backend/src/services/orders/order-creation.service.js` now includes the
+    `Product` with `where: { is_deleted: false, is_active: true }, required: true`,
+    so affected checkout items hit the existing `404` `Product with ID <id>
+    not found.` branch inside the creation transaction with no rows committed.
+  - Added a live regression in `backend/tests/order-flow.live.test.js`: a
+    dedicated Stall A product is soft-deleted through `Owner DELETE
+    /products/:id`, then `Cashier POST /api/orders` is expected to return `404`;
+    active-product checkout is unchanged.
+  - Backend unit tests, capped backend lint, and frontend lint/build pass. The
+    live case runs in the disposable-MySQL CI job.
+- Backend CI Dependency Audit Gate Remediation — **COMPLETE** ✅
+  - Investigated the failing `CI Quality and Security Gates / Backend quality`
+    workflow run and confirmed the breakage came from the production dependency
+    audit step rejecting three newly reported transitive findings:
+    `body-parser` (high), `engine.io` (high), and `proxy-addr` (critical).
+  - Added backend `npm` overrides to pin patched transitive versions
+    (`body-parser@1.20.9`, `engine.io@6.6.11`, `proxy-addr@2.0.8`) without
+    changing backend runtime APIs or business logic.
+  - Regenerated `backend/package-lock.json`, reran backend lint and unit tests,
+    and verified `node ../scripts/ci/check-npm-audit.mjs backend` now passes
+    with no unapproved high/critical production findings.
 - Telegram Cook Authorization Hardening — **COMPLETE** ✅
   - Added stall-scoped Telegram-only cook identities without adding a web-app cook role.
   - Owner/Manager can authorize, reactivate, list, and revoke individual cook identities from Stall Management.
@@ -1537,6 +1569,10 @@ Update this file after every meaningful implementation change.
     policy checks, 71 backend unit tests, backend lint at the 61-warning existing
     baseline, 16 frontend unit tests, the clean dependency check, frontend
     lint/build, and `git diff --check` pass.
+  - Frontend quality audit gate remediation is complete for PR #31. The
+    frontend lockfile now resolves patched production versions of axios,
+    dompurify, follow-redirects, nanoid, source-map-js, and vite so the
+    `check-npm-audit.mjs frontend` high/critical policy passes again.
   - Follow the audit's phased P0/P1 plan only after team review and approval.
 
 - Post-Phase 6 Operations & Security Hardening.
@@ -1601,4 +1637,3 @@ Intentional shortcuts taken during development that must be resolved before prod
 | 4 | **No auth endpoint rate limiting** | `POST /api/auth/login` / `POST /api/auth/pin` | ✅ Resolved — added `express-rate-limit` |
 | 5 | **Seed owner password is a placeholder hash** | `docs/database/schema.sql` | 🔴 High — generate real bcrypt hash and store securely before any live deployment |
 | 6 | **KHQR background checker is process-local** | `startup/khqr-background-checker.js` | Deferred — KHQR is disabled. Reassess worker/queue design as part of any approved replacement provider implementation. |
-

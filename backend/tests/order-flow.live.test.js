@@ -298,6 +298,45 @@ test('live order flow enforces trusted totals, stall scope, cash rules, and RBAC
   });
   expectStatus(otherStallProduct, 404);
 
+  // Regression: a soft-deleted stall-assigned product must not be sellable at checkout.
+  const deletedProductCreate = await apiRequest('/products', {
+    method: 'POST',
+    token: ownerToken,
+    body: {
+      name: uniqueName('order_test_deleted'),
+      stall_ids: [stallAId],
+      category_id: ids.categoryId,
+      is_visible: true,
+      price_usd: 3,
+      price_khr: 12000,
+    },
+  });
+  expectStatus(deletedProductCreate, 201);
+  const deletedProductId = deletedProductCreate.payload.data.id;
+  ids.productIds.push(deletedProductId);
+
+  const deletedProductDeletion = await apiRequest(`/products/${deletedProductId}`, {
+    method: 'DELETE',
+    token: ownerToken,
+  });
+  expectStatus(deletedProductDeletion, 200);
+
+  const deletedProductOrder = await apiRequest('/orders', {
+    method: 'POST',
+    token: cashierToken,
+    deviceToken,
+    idempotencyKey: uniqueName('checkout'),
+    body: {
+      items: [{ product_id: deletedProductId, quantity: 1 }],
+      paymentMethod: 'cash',
+    },
+  });
+  expectStatus(deletedProductOrder, 404);
+  assert.equal(
+    deletedProductOrder.payload.message,
+    `Product with ID ${deletedProductId} not found.`,
+  );
+
   const checkoutKey = uniqueName('checkout');
   const orderBody = {
     items: [{
