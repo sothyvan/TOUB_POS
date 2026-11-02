@@ -147,6 +147,27 @@ Update this file after every meaningful implementation change.
     transaction, and the worker is still notified only after commit.
   - Added unit regressions for single-call query options, no-reset behavior, and
     propagation of insert failures so the payment transaction can roll back.
+- Product Lifecycle Guard At Order Creation — **COMPLETE** ✅
+  - A fresh 2026-11-02 post-audit review of the code merged since the
+    2026-07-30 production-readiness audit — Telegram hardening, unique
+    kitchen-chat routing, operations monitoring, order-to-kitchen latency
+    diagnostics, and the two payment performance refactors — confirmed the
+    payment/idempotency/locking, auth/session/tenant-isolation, Telegram
+    callback/webhook, and frontend token/XSS controls remain clean.
+  - Found and fixed one defect: order creation could still sell soft-deleted
+    (`is_deleted`) or deactivated (`is_active=false`) products because its
+    `ProductStall` query omitted the lifecycle filter every other read path
+    applies.
+  - `backend/src/services/orders/order-creation.service.js` now includes the
+    `Product` with `where: { is_deleted: false, is_active: true }, required: true`,
+    so affected checkout items hit the existing `404` `Product with ID <id>
+    not found.` branch inside the creation transaction with no rows committed.
+  - Added a live regression in `backend/tests/order-flow.live.test.js`: a
+    dedicated Stall A product is soft-deleted through `Owner DELETE
+    /products/:id`, then `Cashier POST /api/orders` is expected to return `404`;
+    active-product checkout is unchanged.
+  - Backend unit tests, capped backend lint, and frontend lint/build pass. The
+    live case runs in the disposable-MySQL CI job.
 - Telegram Cook Authorization Hardening — **COMPLETE** ✅
   - Added stall-scoped Telegram-only cook identities without adding a web-app cook role.
   - Owner/Manager can authorize, reactivate, list, and revoke individual cook identities from Stall Management.

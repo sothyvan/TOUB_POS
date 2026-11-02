@@ -199,7 +199,7 @@ export async function createOrder(
         product_id: { [Op.in]: requestedProductIds },
         stall_id: stallId,
       },
-      include: [{ model: Product }],
+      include: [{ model: Product, where: { is_deleted: false, is_active: true }, required: true }],
       transaction,
     });
     const stallProductMap = new Map(
