@@ -627,27 +627,33 @@ GROUP BY u.id, u.username
 ORDER BY revenue DESC;
 
 -- Hourly revenue uses UTC storage converted to the business-local Cambodia offset.
+-- MySQL syntax:
+-- SELECT HOUR(CONVERT_TZ(o.created_at, '+00:00', '+07:00')) AS local_hour, ...
+-- PostgreSQL syntax:
 SELECT
-  HOUR(CONVERT_TZ(o.created_at, '+00:00', '+07:00')) AS local_hour,
+  EXTRACT(HOUR FROM (o.created_at AT TIME ZONE 'UTC' AT TIME ZONE '+07:00')) AS local_hour,
   COUNT(o.id) AS order_count,
   COALESCE(SUM(o.total_usd), 0) AS revenue
 FROM orders o
-INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = 1
+INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = 1 AND s.is_deleted = false
 WHERE o.status = 'paid'
   AND o.created_at BETWEEN '2026-05-31 17:00:00' AND '2026-06-30 16:59:59'
-GROUP BY HOUR(CONVERT_TZ(o.created_at, '+00:00', '+07:00'))
+GROUP BY EXTRACT(HOUR FROM (o.created_at AT TIME ZONE 'UTC' AT TIME ZONE '+07:00'))
 ORDER BY local_hour ASC;
 
 -- Weekly/monthly dashboard revenue trend uses business-local calendar days.
+-- MySQL syntax:
+-- SELECT DATE_FORMAT(CONVERT_TZ(o.created_at, '+00:00', '+07:00'), '%Y-%m-%d') AS local_date, ...
+-- PostgreSQL syntax:
 SELECT
-  DATE_FORMAT(CONVERT_TZ(o.created_at, '+00:00', '+07:00'), '%Y-%m-%d') AS local_date,
+  TO_CHAR((o.created_at AT TIME ZONE 'UTC' AT TIME ZONE '+07:00'), 'YYYY-MM-DD') AS local_date,
   COUNT(o.id) AS order_count,
   COALESCE(SUM(o.total_usd), 0) AS revenue
 FROM orders o
-INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = 1 AND s.is_deleted = 0
+INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = 1 AND s.is_deleted = false
 WHERE o.status = 'paid'
   AND o.created_at BETWEEN '2026-07-05 17:00:00' AND '2026-07-12 16:59:59'
-GROUP BY DATE_FORMAT(CONVERT_TZ(o.created_at, '+00:00', '+07:00'), '%Y-%m-%d')
+GROUP BY TO_CHAR((o.created_at AT TIME ZONE 'UTC' AT TIME ZONE '+07:00'), 'YYYY-MM-DD')
 ORDER BY local_date ASC;
 
 -- Previous-period summaries reuse the same paid-order aggregation with shifted dates.
@@ -655,18 +661,18 @@ ORDER BY local_date ASC;
 -- day-of-month window in the previous calendar month.
 
 -- Custom dashboard ranges longer than 31 days use consecutive seven-day buckets.
+-- MySQL syntax:
+-- SELECT FLOOR(DATEDIFF(DATE(CONVERT_TZ(o.created_at, '+00:00', '+07:00')), '2026-06-01') / 7) ...
+-- PostgreSQL syntax:
 SELECT
-  FLOOR(DATEDIFF(
-    DATE(CONVERT_TZ(o.created_at, '+00:00', '+07:00')),
-    '2026-06-01'
-  ) / 7) AS bucket_index,
+  FLOOR((DATE((o.created_at AT TIME ZONE 'UTC' AT TIME ZONE '+07:00')) - DATE('2026-06-01')) / 7) AS bucket_index,
   COUNT(o.id) AS order_count,
   COALESCE(SUM(o.total_usd), 0) AS revenue
 FROM orders o
-INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = 1 AND s.is_deleted = 0
+INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = 1 AND s.is_deleted = false
 WHERE o.status = 'paid'
   AND o.created_at BETWEEN '2026-05-31 17:00:00' AND '2026-07-14 16:59:59'
-GROUP BY bucket_index
+GROUP BY FLOOR((DATE((o.created_at AT TIME ZONE 'UTC' AT TIME ZONE '+07:00')) - DATE('2026-06-01')) / 7)
 ORDER BY bucket_index ASC;
 
 -- Development-only legacy order status migration used before Sequelize sync
