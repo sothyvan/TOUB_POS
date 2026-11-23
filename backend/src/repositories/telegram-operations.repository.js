@@ -54,7 +54,7 @@ export async function fetchTelegramOperationsSnapshot(
     INNER JOIN orders o ON o.id = j.order_id
     INNER JOIN stalls s ON s.id = o.stall_id
     WHERE s.owner_id = :ownerId
-      AND s.is_deleted = 0
+      AND s.is_deleted = false
       ${scopedStall}
       AND (j.status <> 'sent' OR j.updated_at >= :latencySince)
     GROUP BY j.status
@@ -81,7 +81,7 @@ export async function fetchTelegramOperationsSnapshot(
     INNER JOIN orders o ON o.id = j.order_id
     INNER JOIN stalls s ON s.id = o.stall_id
     WHERE s.owner_id = :ownerId
-      AND s.is_deleted = 0
+      AND s.is_deleted = false
       ${scopedStall}
       AND (
         j.status IN ('failed', 'retry')
@@ -99,15 +99,20 @@ export async function fetchTelegramOperationsSnapshot(
     LIMIT ${ACTIONABLE_LIMIT}
   `;
 
+  const isPostgres = sequelize.getDialect() === 'postgres';
+  const latencyDiffExpr = isPostgres
+    ? 'EXTRACT(EPOCH FROM (MIN(tt.sent_at) - o.completed_at)) * 1000'
+    : 'TIMESTAMPDIFF(MICROSECOND, o.completed_at, MIN(tt.sent_at)) / 1000';
+
   const latencySql = `
     SELECT
-      TIMESTAMPDIFF(MICROSECOND, o.completed_at, MIN(tt.sent_at)) / 1000 AS latency_ms
+      ${latencyDiffExpr} AS latency_ms
     FROM telegram_dispatch_jobs j
     INNER JOIN orders o ON o.id = j.order_id
     INNER JOIN stalls s ON s.id = o.stall_id
     INNER JOIN telegram_tickets tt ON tt.order_id = o.id
     WHERE s.owner_id = :ownerId
-      AND s.is_deleted = 0
+      AND s.is_deleted = false
       ${scopedStall}
       AND o.completed_at IS NOT NULL
       AND tt.sent_at IS NOT NULL

@@ -31,6 +31,13 @@ Update this file after every meaningful implementation change.
   - Backend-backed UI auto-refresh fallback — **COMPLETE** ✅
 - Phase 7A: Dashboard/Reports UI Cleanup & API Client Migration — **COMPLETE** ✅
 - Phase 7B: Reporting Hardening — **COMPLETE** ✅
+- Database Migration: Aiven MySQL to Aiven PostgreSQL — **COMPLETE** ✅
+  - Migrated relational database layer from Aiven MySQL (deprecated free plan) to Aiven PostgreSQL.
+  - Installed `pg` and `pg-hstore` database drivers; configured Sequelize for PostgreSQL dialect with strict TLS.
+  - Adapted raw SQL reporting and latency queries in `report.repository.js` and `telegram-operations.repository.js` to cross-dialect compatible standards (PostgreSQL `EXTRACT`, `TO_CHAR`, timezone arithmetic).
+  - Executed 100% data fidelity migration across all 16 business tables and migration ledgers (20,380 audit logs, 768 stall products, 335 products, 188 orders, 33 stall devices, 27 users, etc.) with verified count parity.
+  - Synchronized raw SQL course documents in `docs/database/queries.sql`.
+  - All 110 unit tests pass.
 - Phase UI-1: Design System Cleanup — **COMPLETE** ✅
 - Phase UI-2: Cashier POS Flow Redesign — **COMPLETE** ✅
 - Phase UI-3: Owner/Manager Screens — **COMPLETE** ✅

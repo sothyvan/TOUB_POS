@@ -169,7 +169,7 @@ test('Telegram operations repository applies owner scope to every query', async 
   assert.equal(calls.length, 3);
   for (const call of calls) {
     assert.match(call.sql, /s\.owner_id\s*=\s*:ownerId/);
-    assert.match(call.sql, /s\.is_deleted\s*=\s*0/);
+    assert.match(call.sql, /s\.is_deleted\s*=\s*(?:0|false)/);
     assert.equal(call.options.replacements.ownerId, 9);
   }
   assert.match(calls[0].sql, /j\.status = 'pending' AND j\.updated_at < :pendingStaleBefore/);

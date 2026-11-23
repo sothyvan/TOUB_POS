@@ -61,7 +61,7 @@ export async function fetchSummary(ownerId, filters) {
       SUM(CASE WHEN o.status = 'paid' AND o.payment_method != 'khqr' THEN 1 ELSE 0 END) AS cashPaidCount,
       COALESCE(SUM(CASE WHEN o.status = 'paid' AND o.payment_method != 'khqr' THEN ${REPORTING_TOTAL_USD_SQL} ELSE 0 END), 0) AS cashRevenue
     FROM orders o
-    INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = :ownerId AND s.is_deleted = 0
+    INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = :ownerId AND s.is_deleted = false
     WHERE o.created_at BETWEEN :startDate AND :endDate
       ${filters.stall_id ? 'AND o.stall_id = :stallId' : ''}
       ${filters.cashier_id ? 'AND o.cashier_id = :cashierId' : ''}
@@ -83,7 +83,7 @@ export function fetchStallBreakdown(ownerId, filters) {
       COUNT(o.id) AS orderCount,
       COALESCE(SUM(${REPORTING_TOTAL_USD_SQL}), 0) AS revenue
     FROM orders o
-    INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = :ownerId AND s.is_deleted = 0
+    INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = :ownerId AND s.is_deleted = false
     WHERE o.created_at BETWEEN :startDate AND :endDate
       AND o.status = 'paid'
       ${filters.stall_id ? 'AND o.stall_id = :stallId' : ''}
@@ -123,18 +123,23 @@ export function fetchCashierBreakdown(ownerId, filters) {
 }
 
 export function fetchHourlyRevenue(ownerId, filters) {
+  const isPostgres = sequelize.getDialect() === 'postgres';
+  const hourExpr = isPostgres
+    ? "EXTRACT(HOUR FROM (o.created_at AT TIME ZONE 'UTC' AT TIME ZONE :timezoneOffset))"
+    : "HOUR(CONVERT_TZ(o.created_at, '+00:00', :timezoneOffset))";
+
   return sequelize.query(`
     SELECT
-      HOUR(CONVERT_TZ(o.created_at, '+00:00', :timezoneOffset)) AS hour,
+      ${hourExpr} AS hour,
       COUNT(o.id) AS orderCount,
       COALESCE(SUM(${REPORTING_TOTAL_USD_SQL}), 0) AS revenue
     FROM orders o
-    INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = :ownerId AND s.is_deleted = 0
+    INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = :ownerId AND s.is_deleted = false
     WHERE o.created_at BETWEEN :startDate AND :endDate
       AND o.status = 'paid'
       ${filters.stall_id ? 'AND o.stall_id = :stallId' : ''}
       ${filters.cashier_id ? 'AND o.cashier_id = :cashierId' : ''}
-    GROUP BY HOUR(CONVERT_TZ(o.created_at, '+00:00', :timezoneOffset))
+    GROUP BY ${hourExpr}
     ORDER BY hour ASC
   `, {
     replacements: buildSqlReplacements(ownerId, filters, {
@@ -145,18 +150,23 @@ export function fetchHourlyRevenue(ownerId, filters) {
 }
 
 export function fetchDailyRevenue(ownerId, filters) {
+  const isPostgres = sequelize.getDialect() === 'postgres';
+  const dateExpr = isPostgres
+    ? "TO_CHAR((o.created_at AT TIME ZONE 'UTC' AT TIME ZONE :timezoneOffset), 'YYYY-MM-DD')"
+    : "DATE_FORMAT(CONVERT_TZ(o.created_at, '+00:00', :timezoneOffset), '%Y-%m-%d')";
+
   return sequelize.query(`
     SELECT
-      DATE_FORMAT(CONVERT_TZ(o.created_at, '+00:00', :timezoneOffset), '%Y-%m-%d') AS bucketDate,
+      ${dateExpr} AS bucketDate,
       COUNT(o.id) AS orderCount,
       COALESCE(SUM(${REPORTING_TOTAL_USD_SQL}), 0) AS revenue
     FROM orders o
-    INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = :ownerId AND s.is_deleted = 0
+    INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = :ownerId AND s.is_deleted = false
     WHERE o.created_at BETWEEN :startDate AND :endDate
       AND o.status = 'paid'
       ${filters.stall_id ? 'AND o.stall_id = :stallId' : ''}
       ${filters.cashier_id ? 'AND o.cashier_id = :cashierId' : ''}
-    GROUP BY DATE_FORMAT(CONVERT_TZ(o.created_at, '+00:00', :timezoneOffset), '%Y-%m-%d')
+    GROUP BY ${dateExpr}
     ORDER BY bucketDate ASC
   `, {
     replacements: buildSqlReplacements(ownerId, filters, {
@@ -168,21 +178,23 @@ export function fetchDailyRevenue(ownerId, filters) {
 
 export function fetchWeeklyRevenue(ownerId, filters) {
   const localStartDate = formatReportDate(filters.startDate);
+  const isPostgres = sequelize.getDialect() === 'postgres';
+  const bucketIndexExpr = isPostgres
+    ? "FLOOR((DATE((o.created_at AT TIME ZONE 'UTC' AT TIME ZONE :timezoneOffset)) - DATE(:localStartDate)) / 7)"
+    : "FLOOR(DATEDIFF(DATE(CONVERT_TZ(o.created_at, '+00:00', :timezoneOffset)), :localStartDate) / 7)";
+
   return sequelize.query(`
     SELECT
-      FLOOR(DATEDIFF(
-        DATE(CONVERT_TZ(o.created_at, '+00:00', :timezoneOffset)),
-        :localStartDate
-      ) / 7) AS bucketIndex,
+      ${bucketIndexExpr} AS bucketIndex,
       COUNT(o.id) AS orderCount,
       COALESCE(SUM(${REPORTING_TOTAL_USD_SQL}), 0) AS revenue
     FROM orders o
-    INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = :ownerId AND s.is_deleted = 0
+    INNER JOIN stalls s ON s.id = o.stall_id AND s.owner_id = :ownerId AND s.is_deleted = false
     WHERE o.created_at BETWEEN :startDate AND :endDate
       AND o.status = 'paid'
       ${filters.stall_id ? 'AND o.stall_id = :stallId' : ''}
       ${filters.cashier_id ? 'AND o.cashier_id = :cashierId' : ''}
-    GROUP BY bucketIndex
+    GROUP BY ${isPostgres ? bucketIndexExpr : 'bucketIndex'}
     ORDER BY bucketIndex ASC
   `, {
     replacements: buildSqlReplacements(ownerId, filters, {

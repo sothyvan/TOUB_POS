@@ -8,7 +8,7 @@
 | API Client   | Axios                   | Centralized HTTP requests, auth/device headers, and error normalization |
 | Charts       | Recharts                | Owner/Manager dashboard and reporting visualizations |
 | Backend      | Node.js + Express.js    | REST API, WebSocket server, Telegram callback handler |
-| Database     | MySQL                   | Relational data storage                           |
+| Database     | PostgreSQL (migrated from MySQL) | Relational data storage                           |
 | Auth         | JWT                     | Secure authentication and session management      |
 | Real-Time    | WebSocket (ws / socket.io) | Cashier-specific payment confirmation push     |
 | Kitchen Bot  | Telegram Bot API        | Order relay and cook acknowledgement system       |
